@@ -41,6 +41,7 @@ export const auth = betterAuth({
       name: "fullName",
       emailVerified: "verify",
       image: "has",
+      password: "password",
     },
     additionalFields: {
       username: { type: "string", required: true },
