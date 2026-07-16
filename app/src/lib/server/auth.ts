@@ -25,9 +25,11 @@ export const auth = betterAuth({
     password: {
       // better-auth expects async hash/verify
       hash: async (password: string) => bcrypt.hashSync(password, 10),
-      verify: async (password: string, hash: string) => {
-        console.log("[AUTH DEBUG] verify called, hash=", hash?.slice(0, 12), "pwlen=", password?.length);
-        const ok = bcrypt.compareSync(password, hash);
+      verify: async (data: { password: string; hash?: string } | string, hash?: string) => {
+        const pw = typeof data === "string" ? data : data.password;
+        const h = typeof data === "string" ? hash : data.hash;
+        console.log("[AUTH DEBUG] verify called, hash=", h?.slice(0, 12), "pwlen=", pw?.length);
+        const ok = bcrypt.compareSync(pw ?? "", h ?? "");
         console.log("[AUTH DEBUG] result=", ok);
         return ok;
       },
