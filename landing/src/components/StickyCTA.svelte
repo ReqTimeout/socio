@@ -1,0 +1,42 @@
+<script>
+    import { fade, fly } from 'svelte/transition';
+    import { onMount } from 'svelte';
+
+    let showSticky = false;
+    // Link ke register trial
+    const trialLink = "https://platform.haloka.id/register?billing_type=monthly";
+
+    onMount(() => {
+        const handleScroll = () => {
+            // Muncul setelah scroll 300px
+            showSticky = window.scrollY > 300;
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    });
+</script>
+
+{#if showSticky}
+    <div transition:fly={{ y: 100, duration: 500 }} class="fixed bottom-4 left-0 w-full z-50 px-4 flex justify-center">
+        <div class="bg-primary/95 backdrop-blur-md text-white p-3 md:p-4 rounded-full shadow-2xl flex items-center gap-4 md:gap-8 border border-white/10 max-w-2xl w-full justify-between">
+            
+            <div class="hidden md:block pl-4">
+                <p class="text-sm font-light text-gray-300">Belum yakin?</p>
+                <p class="font-bold text-white text-sm">Coba fitur Juragan gratis 7 hari.</p>
+            </div>
+
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="md:hidden flex-1 pl-2">
+                    <p class="text-xs text-green-300 font-bold">Gratis 7 Hari!</p>
+                    <p class="text-[10px] text-gray-300">Tanpa kartu kredit</p>
+                </div>
+
+                <a href={trialLink} class="bg-green text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-[0_0_15px_rgba(37,211,102,0.6)] hover:scale-105 transition-transform flex items-center gap-2 whitespace-nowrap animate-pulse">
+                    Ambil Trial
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                </a>
+            </div>
+            
+        </div>
+    </div>
+{/if}

@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.svelte-kit/
+.output/
+.astro/
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+error_log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Backup (folder lama — jangan di-deploy)
+app.socio.id/
+socio.id/
+
+# DB dump
+*.sql
+*.sqlite
+
+# Test
+coverage/
