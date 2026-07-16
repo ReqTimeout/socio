@@ -25,7 +25,7 @@ export const auth = betterAuth({
     password: {
       // better-auth expects async hash/verify
       hash: async (password: string) => bcrypt.hashSync(password, 10),
-      verify: async ({ hash, password }: { hash: string; password: string }) => {
+      verify: async (password: string, hash: string) => {
         console.log("[AUTH DEBUG] verify called, hash=", hash?.slice(0, 12), "pwlen=", password?.length);
         const ok = bcrypt.compareSync(password, hash);
         console.log("[AUTH DEBUG] result=", ok);
