@@ -54,6 +54,7 @@ export const auth = betterAuth({
     },
   },
   secret: process.env.SOCIO_AUTH_SECRET ?? "dev-insecure-secret-change-me",
+  baseURL: process.env.SOCIO_APP_URL ?? process.env.BETTER_AUTH_URL ?? undefined,
 });
 
 export { db, schema };
