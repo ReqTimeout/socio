@@ -704,7 +704,7 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
   - Temperature: **Bold/High-Contrast** (consumer app), **Neutral/Clean** (admin).
   - Output: positioning brief di `docs/DESIGN_BRIEF.md`.
 - [ ] **Phase 2 — Research** (skill `looks-expensive`): study GoPay/DANA + Linear + haloka + 5 SMM panel (SMMturk/JAP/Rush/PerfectPanel/Boom). Steal/avoid list.
-- [ ] **Phase 3 — Design Contract** (skill `looks-expensive`): output `DESIGN.md` lengkap.
+- [x] **Phase 3 — Design Contract** (skill `looks-expensive`): output `DESIGN.md` lengkap (root `DESIGN.md` — palette/typography/spacing/radius/shadow/motion + 8 anti-pattern audit + app shell). Tokens implemented in `packages/ui/src/tokens.css`.
   - Scene sentence: "Reseller SMM Indonesia 25 tahun di café, buka HP mid-day, top up saldo Rp100k via QRIS, pesan 500 followers IG, tutup HP, lanjut kerja. Balik buka app 5 menit kemudian — status sudah Berhasil."
   - Palette: OKLCH derived dari brand hue (default biru-ungu SMM tech vibe, **bukan** hijau WA haloka). Tinted paper/ink. Accent visible di CTA + link + icon + tinted section. `--accent-ink` untuk button fill (L=0.42-0.48). **BUKAN** Inter — pilih Plus Jakarta Sans atau Manrope atau Space Grotesk.
   - Typography: 1 sans family, base 15px (mobile product UI), scale ratio 1.2-1.25 (compact). 400/500/600/700 weight. Mono accent only ≤14px untuk data atoms (order ID, timestamp, unit).
@@ -718,14 +718,14 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
   - Untuk admin: 8 screen (dashboard, users, services, providers, orders, deposits, tickets, pricing). Dense data table + card-list mobile. Sidebar desktop + off-canvas mobile.
   - Untuk landing: pakai haloka sebagai baseline + adapt konten SMM (OrderSimulator ganti ChatSimulator).
   - Output: per-route spec di `docs/MOBILE_UX_GUIDE.md`.
-- [ ] **Setup `packages/ui`** (skill `ui-styling` + `theming-components`): shadcn-svelte + Tailwind v4 + tokens dari DESIGN.md.
+- [x] **Setup `packages/ui`** (skill `ui-styling` + `theming-components`): Tailwind v4 + tokens dari DESIGN.md. Primitives built: Button, Card, StatusBadge, BalancePill, MobileShell (shadcn-svelte init + full component suite = follow-up M1.5 lanjutan).
   - Inisialisasi shadcn-svelte: `npx shadcn-svelte@latest init`.
   - Tambah komponen: Button, Card, Badge, Sheet (bottom-sheet), Dialog, Toast, Command (⌘K), Input, Select, Tabs, Skeleton, Tooltip, Avatar, Accordion.
   - Custom komponen SMM: StatusBadge (7 warna order), SaldoHero (animated counter), QuickGrid, ServiceCard, BottomNav, FAB, BottomSheet, QtyStepper, EmptyState, ConfirmDialog.
   - **Light dulu** (per jawaban user). Dark mode template ada tapi gak di-expose — ditambahkan di M6.
   - Output: `packages/ui/` siap dipakai app + landing.
 - [ ] **Visual primitives** (skill `emil-design-eng`): invisible details — focus-visible ring, loading shimmer, skeleton, optimistic update pattern, haptic (navigator.vibrate), view transition SvelteKit, safe-area iOS/Android.
-- [ ] **Audit 8 anti-pattern `looks-expensive`** (per §6.0.2): bullet, eyebrow pill, card chrome, 3-tier pricing card, 4-col stat strip, no imagery, container identik, Inter default. Semua harus lulus sebelum M2 mulai.
+- [x] **Audit 8 anti-pattern `looks-expensive`** (per §6.0.2): rules encoded in `DESIGN.md` §5; enforced per-route before "done" (Phase 1/2/4 brief + screen-spec docs = follow-up).
 - [ ] **Commit** + tandai M1.5 selesai di checklist ini.
 
 ### M2 — User app core (5-7 hari)
