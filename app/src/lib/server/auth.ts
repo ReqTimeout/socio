@@ -55,6 +55,7 @@ export const auth = betterAuth({
     },
   },
   secret: process.env.SOCIO_AUTH_SECRET ?? "dev-insecure-secret-change-me",
+  logger: { level: "debug", log: (msg: string) => console.log("[BA]", msg) },
 });
 
 export { db, schema };
