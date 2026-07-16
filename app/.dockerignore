@@ -1,0 +1,12 @@
+node_modules
+.svelte-kit
+build
+.output
+dist
+.git
+.env
+.env.*
+*.log
+.DS_Store
+landing
+docs
