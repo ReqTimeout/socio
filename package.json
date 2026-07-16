@@ -1,0 +1,12 @@
+{
+  "name": "socio.id-rebuild",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:generate": "pnpm --filter @socio/db generate",
+    "db:migrate": "pnpm --filter @socio/db migrate",
+    "db:studio": "pnpm --filter @socio/db studio"
+  },
+  "packageManager": "pnpm@9.15.9"
+}
