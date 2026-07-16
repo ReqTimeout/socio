@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@socio/db": "workspace:*",
+    "@socio/ui": "workspace:*",
     "better-auth": "^1.1.7",
     "bcryptjs": "^2.4.3",
     "drizzle-orm": "^0.45.2",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.9",
+    "@types/bcryptjs": "^2.4.6",
     "@sveltejs/kit": "^2.8.1",
     "@sveltejs/vite-plugin-svelte": "^4.0.1",
     "prettier": "^3.3.3",

@@ -1,11 +1,11 @@
-import { defineConfig } from 'astro/config';
-import svelte from '@astrojs/svelte';
-import tailwind from '@astrojs/tailwind'; // <--- Pastikan baris ini ada
+import { defineConfig } from "astro/config";
+import svelte from "@astrojs/svelte";
+import tailwindcss from "@tailwindcss/vite";
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [
-    svelte(), 
-    tailwind() // <--- Pastikan fungsi ini dipanggil di sini
-  ] 
+  integrations: [svelte()],
+  vite: {
+    plugins: [tailwindcss()],
+  },
 });

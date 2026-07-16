@@ -1,112 +1,157 @@
 ---
-// Import Layout Global
 import Layout from '../layouts/Layout.astro';
-
-// Import Komponen Svelte Interaktif
 import Navbar from '../components/Navbar.svelte';
-import ChatSimulator from '../components/ChatSimulator.svelte';
+import OrderSimulator from '../components/OrderSimulator.svelte';
 import TrustBadges from '../components/TrustBadges.svelte';
 import PainPoints from '../components/PainPoints.svelte';
-import Features from '../components/Features.svelte';     // Fitur Brain & CRM
-import InteractiveTutorial from '../components/InteractiveTutorial.svelte'; // Storytelling 5 Langkah
-import PricingInteractive from '../components/PricingInteractive.svelte'; // Tabel Harga
+import Features from '../components/Features.svelte';
+import HowItWorks from '../components/HowItWorks.svelte';
+import SocialProof from '../components/SocialProof.svelte';
+import PricingInteractive from '../components/PricingInteractive.svelte';
 import Faq from '../components/Faq.svelte';
 import StickyCTA from '../components/StickyCTA.svelte';
 import FinalCTA from '../components/FinalCTA.svelte';
-import SocialProof from '../components/SocialProof.svelte';
 import FloatingWhatsApp from '../components/FloatingWhatsApp.svelte';
 
-// Link Register Base
-const regBase = "https://platform.haloka.id/register?billing_type=monthly&package=";
+const regBase = 'https://app.socio.id/register';
 ---
 
 <Layout>
-    <Navbar client:load />
-    
-    <StickyCTA client:idle />
-    <FloatingWhatsApp client:load />
+  <Navbar client:load />
 
-    <header class="relative pt-32 pb-20 md:pt-44 md:pb-32 overflow-hidden bg-gradient-to-br from-[#e0f7fa] via-white to-[#e8f5e9] animate-gradient bg-[length:400%_400%]">
-        
-        <div class="container mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center relative z-10">
-            <div class="space-y-8 text-center lg:text-left">
-                
-                <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm border border-green/20 text-green-700 font-bold rounded-full text-xs tracking-wider uppercase mb-2 shadow-sm cursor-default">
-                    <span class="w-2 h-2 rounded-full bg-green animate-pulse"></span>
-                    Solusi Bisnis Otomatis 2026
-                </div>
-                
-                <h1 class="font-display font-extrabold text-5xl md:text-7xl text-primary leading-[1.1] tracking-tight">
-                    WhatsApp AI Agent untuk Customer Service,<br>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal to-green">Bayar Cuma 20rb/Hari.</span>
-                </h1>
-                
-                <p class="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl mx-auto lg:mx-0 font-light">
-                    Bayangkan punya staff CS yang tidak pernah tidur, tidak pernah mengeluh, dan hafal ribuan produk Anda. <strong>Haloka AI</strong> siap melayani pelanggan Kaka 24 jam non-stop.
-                </p>
-                
-                <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
-                    <a href={regBase} class="group relative bg-primary text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-1 transition-all overflow-hidden">
-                        <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                        <span class="relative flex items-center gap-2">
-                            Mulai Trial Gratis 7 Hari
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:translate-x-1 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                        </span>
-                    </a>
-                    <a href="#cara-kerja" class="px-8 py-4 rounded-full font-bold text-primary border border-gray-200 hover:bg-white hover:border-gray-300 transition flex items-center gap-2 justify-center">
-                        Pelajari Dulu
-                    </a>
-                </div>
-                
-                <div class="pt-4 flex items-center justify-center lg:justify-start gap-4 opacity-80">
-                    <div class="text-xs font-bold text-gray-400">INFRASTRUKTUR & INTEGRASI:</div>
-                    <img src="/whatsapp.svg" alt="WhatsApp" class="h-6 grayscale hover:grayscale-0 transition" />
-                </div>
-            </div>
+  <StickyCTA client:idle />
+  <FloatingWhatsApp client:load />
 
-            <div class="relative flex justify-center lg:justify-end perspective-1000">
-                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-r from-teal/20 to-green/20 rounded-full blur-[80px] animate-pulse"></div>
-                <div class="transform lg:rotate-y-[-8deg] lg:rotate-x-[5deg] transition duration-700 hover:rotate-0 z-10">
-                    <ChatSimulator client:visible />
-                </div>
-            </div>
+  <header
+    class="relative pt-32 pb-20 md:pt-44 md:pb-32 overflow-hidden bg-gradient-to-br from-primary-50 via-white to-accent-50 animate-gradient bg-[length:400%_400%]"
+  >
+    <div class="container mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center relative z-10">
+      <div class="space-y-8 text-center lg:text-left">
+        <div
+          class="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm border border-primary-200 text-primary-700 font-bold rounded-full text-xs tracking-wider uppercase mb-2 shadow-sm cursor-default"
+        >
+          <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+          Panel SMM #1 Indonesia 2026
         </div>
-    </header>
 
-    <TrustBadges client:visible />
-    
-    <PainPoints client:visible />
+        <h1
+          class="font-display font-extrabold text-5xl md:text-7xl text-ink-900 leading-[1.1] tracking-tight"
+        >
+          Naikkan Follower & Engagement
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent"
+            >Cuma Seminim 10 Ribu.</span
+          >
+        </h1>
 
-    <Features client:visible />
+        <p
+          class="text-lg md:text-xl text-ink-600 leading-relaxed max-w-xl mx-auto lg:mx-0 font-light"
+        >
+          Beli follower, like, views, dan layanan SEO dari <strong>Socio.id</strong> —
+          panel SMM termurah & tercepat di Indonesia. Proses otomatis, garansi, dan
+          cair dalam hitungan menit.
+        </p>
 
-    <InteractiveTutorial client:visible />
-
-    <SocialProof client:visible />
-
-    <PricingInteractive client:visible />
-
-    <FinalCTA client:visible />
-
-    <section class="py-20 bg-white">
-        <div class="container mx-auto px-6">
-            <h2 class="font-display font-bold text-3xl text-center text-primary mb-12">Yang Sering Ditanyakan</h2>
-            <Faq client:visible />
-        </div>
-    </section>
-
-    <footer class="bg-[#111827] py-10 text-center text-white/30 text-sm border-t border-white/5">
-        <div class="container mx-auto px-6">
-            <div class="flex justify-center mb-6">
-                <span class="font-display font-bold text-2xl text-white">Haloka</span>
+        <div
+          class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4"
+        >
+          <a
+            href={regBase}
+            class="group relative bg-primary text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-primary-900/20 hover:shadow-primary-900/40 hover:-translate-y-1 transition-all overflow-hidden"
+          >
+            <div
+              class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"
+            >
             </div>
-            <p>&copy; 2026 Haloka.id. Mitra Sukses Pengusaha Online.</p>
+            <span class="relative flex items-center gap-2">
+              Daftar Gratis
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 group-hover:translate-x-1 transition"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+              </svg>
+            </span>
+          </a>
+          <a
+            href="#cara-kerja"
+            class="px-8 py-4 rounded-full font-bold text-primary border border-ink-200 hover:bg-white hover:border-ink-300 transition flex items-center gap-2 justify-center"
+          >
+            Pelajari Dulu
+          </a>
         </div>
-    </footer>
+
+        <div
+          class="pt-4 flex items-center justify-center lg:justify-start gap-4 opacity-80"
+        >
+          <div class="text-xs font-bold text-ink-400">TERHUBUNG DENGAN:</div>
+          <div class="flex items-center gap-3 text-ink-400">
+            <span class="font-bold hover:text-pink-500 transition">Instagram</span>
+            <span class="font-bold hover:text-cyan-400 transition">TikTok</span>
+            <span class="font-bold hover:text-red-500 transition">YouTube</span>
+            <span class="font-bold hover:text-blue-500 transition">Facebook</span>
+            <span class="font-bold hover:text-sky-500 transition">X</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative flex justify-center lg:justify-end perspective-1000">
+        <div
+          class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-r from-primary/20 to-accent/20 rounded-full blur-[80px] animate-pulse"
+        >
+        </div>
+        <div
+          class="transform lg:rotate-y-[-8deg] lg:rotate-x-[5deg] transition duration-700 hover:rotate-0 z-10"
+        >
+          <OrderSimulator client:visible />
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <TrustBadges client:visible />
+
+  <PainPoints client:visible />
+
+  <Features client:visible />
+
+  <HowItWorks client:visible />
+
+  <SocialProof client:visible />
+
+  <PricingInteractive client:visible />
+
+  <FinalCTA client:visible />
+
+  <section class="py-20 bg-white">
+    <div class="container mx-auto px-6">
+      <h2 class="font-display font-bold text-3xl text-center text-ink-900 mb-12">
+        Yang Sering Ditanyakan
+      </h2>
+      <Faq client:visible />
+    </div>
+  </section>
+
+  <footer class="bg-ink-900 py-10 text-center text-white/30 text-sm border-t border-white/5">
+    <div class="container mx-auto px-6">
+      <div class="flex justify-center mb-6">
+        <span class="font-display font-bold text-2xl text-white">Socio.id</span>
+      </div>
+      <p>&copy; 2026 Socio.id. Panel SMM Terpercaya Indonesia.</p>
+    </div>
+  </footer>
 </Layout>
 
 <style>
-    /* Utility Tambahan untuk efek 3D Chat Simulator */
-    .perspective-1000 { perspective: 1000px; }
-    .rotate-y-\[-8deg\] { transform: rotateY(-8deg); }
-    .rotate-x-\[5deg\] { transform: rotateX(5deg); }
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .rotate-y-\[-8deg\] {
+    transform: rotateY(-8deg);
+  }
+  .rotate-x-\[5deg\] {
+    transform: rotateX(5deg);
+  }
 </style>

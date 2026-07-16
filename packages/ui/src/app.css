@@ -1,0 +1,4 @@
+/* @socio/ui — App stylesheet (SvelteKit dashboard)
+ * Imported once in app/src/app.html (or a root +layout). Pulls tokens + base.
+ */
+@import "./theme.css";

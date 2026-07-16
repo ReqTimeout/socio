@@ -1,77 +1,48 @@
-# Haloka Landing - Project Study Notes
+# Socio.id Landing — Project Study Notes
 
-Dokumen ini adalah ringkasan hasil pelajari project saat ini sebagai baseline sebelum perubahan fitur.
-
-## Scope Kerja (Disepakati)
-
-- Fokus awal: pelajari project dulu.
-- Tidak melakukan perubahan kode atau desain tanpa instruksi lanjutan.
-- Semua update berikutnya mengacu ke dokumen ini agar perubahan tetap terarah.
+Baseline setelah migrate dari clone `haloka-landing` ke stack Socio.id.
 
 ## Tech Stack
 
 - Framework: Astro 5
-- UI Components: Svelte 5
-- Styling: Tailwind CSS
-- Language mode: ESM (type: module)
+- UI Components: Svelte 5 (islands, `client:*` directives)
+- Styling: **Tailwind CSS v4** (CSS-first `@import "tailwindcss"` + `@theme`), via `@tailwindcss/vite`
+- Design tokens: `@socio/ui` (`packages/ui/src/tokens.css`) — source of truth untuk landing & app
+- Workspace: pnpm monorepo (`packages/ui`, `app`, `landing`)
+- Fonts: Plus Jakarta Sans (body) + Sora (display) via Google Fonts
 
-## Script Utama
+## Struktur
 
-- Dev: `npm run dev`
-- Build: `npm run build`
-- Preview: `npm run preview`
+- Entry: `src/pages/index.astro`
+- Layout + SEO + JSON-LD: `src/layouts/Layout.astro`
+- Global styles + token import: `src/styles/global.css`
+- Komponen (urutan render di index):
+  - `Navbar` — fixed nav, CTA ke `app.socio.id`
+  - `StickyCTA` — floating "Daftar" setelah scroll
+  - `FloatingWhatsApp` — WA float
+  - `OrderSimulator` — hero visual (simulasi form order SMM)
+  - `TrustBadges` — 4 poin kepercayaan
+  - `PainPoints` — kalkulator hemat + 3 masalah
+  - `Features` — katalog 8000+, status realtime, garansi refill
+  - `HowItWorks` — 5 langkah daftar→topup→order→pantau
+  - `SocialProof` — testimoni reseller
+  - `PricingInteractive` — paket top-up saldo
+  - `FinalCTA` — CTA besar
+  - `Faq` — FAQ SMM
 
-## Struktur Aplikasi (Ringkas)
+## Konteks Bisnis (penting)
 
-- Entry page: `src/pages/index.astro`
-- Global layout + SEO + GTM: `src/layouts/Layout.astro`
-- Global styles: `src/styles/global.css`
+- socio.id = panel SMM (jual follower/like/views/SEO via provider SMMturk).
+- CTA utama mengarah ke `https://app.socio.id/register` & `/login`.
+- Tidak ada subscription bulanan — model top-up saldo.
 
-Komponen landing utama yang dirender berurutan di entry page:
+## Catatan Teknis
 
-- `Navbar.svelte`
-- `StickyCTA.svelte`
-- Hero section + `ChatSimulator.svelte`
-- `TrustBadges.svelte`
-- `PainPoints.svelte`
-- `Features.svelte`
-- `InteractiveTutorial.svelte`
-- `SocialProof.svelte`
-- `PricingInteractive.svelte`
-- `FinalCTA.svelte`
-- `Faq.svelte`
-- Footer
+- Tailwind v4: tidak ada `tailwind.config.mjs`; warna/radius/dll didefinisikan di `@theme` (`packages/ui/src/tokens.css`).
+- Reduced-motion: global reset di `theme.css` + `prefers-reduced-motion` di FloatingWhatsApp.
+- Belum ada `og-image.png` — tambahkan di `public/` sebelum deploy Cloudflare Pages.
 
-## Ringkasan Fitur yang Sudah Ada
+## Deploy
 
-- Hero dengan CTA trial + simulasi chat visual.
-- Narasi pain points dan value proposition.
-- Showcase fitur (brain/SOP upload, CRM cold-warm-hot, auto follow-up, booking/calendar).
-- Interactive tutorial end-to-end (setup -> chat -> label intent -> dashboard revenue).
-- Pricing interaktif bulanan/tahunan + dynamic link ke register.
-- Social proof, trust badge, FAQ, sticky CTA, final CTA.
-- SEO dan tracking sudah dipasang di layout (meta, OG, Twitter card, schema, GTM).
-
-## Catatan Teknis Penting
-
-- CTA register menggunakan base URL: `https://platform.haloka.id/register?...`.
-- Beberapa konten README masih template Astro default dan belum merepresentasikan implementasi aktual.
-- Tampilan sangat visual-heavy (animasi, blur, gradient), jadi perubahan performa perlu diuji di mobile.
-
-## Guardrail Saat Update Fitur (Agar Aman)
-
-- Jangan ubah urutan section utama tanpa instruksi.
-- Jangan ubah copywriting besar-besaran tanpa approval.
-- Jangan ubah struktur tracking/SEO di layout tanpa kebutuhan jelas.
-- Prioritaskan edit minimal pada komponen target, hindari efek domino lintas komponen.
-
-## Rekomendasi Alur Kerja Perubahan Berikutnya
-
-1. Tentukan komponen target dan tujuan bisnisnya.
-2. Ubah hanya file terkait target.
-3. Jalankan validasi local (`npm run dev`, cek UI desktop + mobile).
-4. Ringkas perubahan dalam format: apa diubah, kenapa, dampaknya.
-
----
-
-Status dokumen: baseline awal setelah sync repository.
+- Build: `pnpm --filter landing build` → `dist/`
+- Target: Cloudflare Pages (`socio.id`).

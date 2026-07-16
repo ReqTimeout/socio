@@ -1,215 +1,171 @@
 <script>
-    import { fade, fly, slide } from 'svelte/transition';
-    import { onMount } from 'svelte';
+  import { fade, fly, slide } from 'svelte/transition';
+  import { onMount } from 'svelte';
 
-    let activeStep = 1;
-    let autoPlayInterval;
+  let activeStep = 1;
+  let autoPlayInterval;
 
-    // DATA MARKETING (Cerita Fiktif untuk Calon User)
-    const steps = [
-        { id: 1, title: "1. Hubungkan WhatsApp", desc: "Tidak perlu verifikasi ribet. Cukup scan QR Code, dan nomor WhatsApp toko Kaka langsung aktif di dashboard." },
-        { id: 2, title: "2. Upload Otak AI", desc: "Punya file PDF daftar harga atau katalog produk? Upload saja. AI langsung 'menelan' semua info itu dalam hitungan detik." },
-        { id: 3, title: "3. Auto Labeling", desc: "AI otomatis membedakan: Mana chat 'Cuma Tanya' (Cold) dan mana chat 'Siap Transfer' (Hot)." },
-        { id: 4, title: "4. AI Handling", desc: "Lihat bagaimana AI melayani pelanggan dengan ramah, menjawab stok, hingga memberikan totalan harga." },
-        { id: 5, title: "5. Pantau Profit", desc: "Tinggal cek dashboard. Lihat grafik penjualan naik karena tidak ada lagi chat yang terlewat." }
-    ];
+  const steps = [
+    { id: 1, title: '1. Daftar Gratis', desc: 'Buat akun Socio.id dalam 30 detik. Langsung dapat akses dashboard & saldo trial.' },
+    { id: 2, title: '2. Top Up Saldo', desc: 'Isi saldo mulai Rp10.000 via QRIS, Transfer Bank, atau e-wallet. Langsung masuk.' },
+    { id: 3, title: '3. Pilih Layanan', desc: 'Cari layanan dari 8.000+ katalog: follower, like, views, hingga SEO.' },
+    { id: 4, title: '4. Order & Bayar', desc: 'Tempel link, tentukan quantity, klik pesan. Potong saldo otomatis.' },
+    { id: 5, title: '5. Pantau Status', desc: 'Lihat order dari Pending → Proses → Selesai live di dashboard.' },
+  ];
 
-    const nextStep = () => { activeStep = activeStep < 5 ? activeStep + 1 : 1; };
-    const startAutoPlay = () => { autoPlayInterval = setInterval(nextStep, 6000); }; // Slide tiap 6 detik
-    const stopAutoPlay = () => clearInterval(autoPlayInterval);
+  const nextStep = () => {
+    activeStep = activeStep < 5 ? activeStep + 1 : 1;
+  };
+  const startAutoPlay = () => {
+    autoPlayInterval = setInterval(nextStep, 6000);
+  };
+  const stopAutoPlay = () => clearInterval(autoPlayInterval);
 
-    onMount(() => {
-        startAutoPlay();
-        return () => stopAutoPlay();
-    });
+  onMount(() => {
+    startAutoPlay();
+    return () => stopAutoPlay();
+  });
 </script>
 
-<section class="py-24 bg-gray-50 overflow-hidden" id="cara-kerja">
-    <div class="container mx-auto px-6">
-        
-        <div class="text-center mb-16">
-            <h2 class="font-display font-bold text-3xl md:text-5xl text-primary mb-4">Cara Kerja Haloka</h2>
-            <p class="text-gray-500">Ubah CS manual jadi otomatis dalam 5 langkah.</p>
-        </div>
-
-        <div class="grid lg:grid-cols-2 gap-12 items-center" on:mouseenter={stopAutoPlay} on:mouseleave={startAutoPlay}>
-            
-            <div class="space-y-3">
-                {#each steps as step}
-                    <button 
-                        class="w-full text-left p-5 rounded-2xl transition-all duration-300 border-l-4 relative overflow-hidden group
-                        {activeStep === step.id ? 'bg-white shadow-lg border-green scale-105 z-10' : 'bg-transparent border-transparent hover:bg-white/50 opacity-60 hover:opacity-100'}"
-                        on:click={() => activeStep = step.id}
-                    >
-                        <h3 class="font-bold text-lg {activeStep === step.id ? 'text-primary' : 'text-gray-500'}">{step.title}</h3>
-                        {#if activeStep === step.id}
-                            <p transition:slide class="text-sm text-gray-500 mt-2 leading-relaxed">{step.desc}</p>
-                            <div class="absolute bottom-0 left-0 h-1 bg-green/20 w-full mt-4">
-                                <div class="h-full bg-green w-full animate-[progress_6s_linear]"></div>
-                            </div>
-                        {/if}
-                    </button>
-                {/each}
-            </div>
-
-            <div class="relative h-[480px] w-full bg-white rounded-[2rem] shadow-2xl border border-gray-100 overflow-hidden flex flex-col">
-                
-                <div class="bg-white border-b border-gray-100 p-4 flex justify-between items-center shadow-sm z-20">
-                    <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded bg-green flex items-center justify-center text-white font-bold text-xs">H</div>
-                        <span class="font-bold text-primary text-sm">Haloka Dashboard</span>
-                    </div>
-                    <div class="hidden md:block bg-gray-100 px-4 py-1.5 rounded-full text-[10px] text-gray-400 font-mono w-1/2 text-center">
-                        app.haloka.id/dashboard
-                    </div>
-                    <div class="flex gap-1.5">
-                        <div class="w-2.5 h-2.5 rounded-full bg-red-400"></div>
-                        <div class="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
-                        <div class="w-2.5 h-2.5 rounded-full bg-green-400"></div>
-                    </div>
-                </div>
-
-                <div class="flex-1 relative bg-[#f8fafc] p-6 overflow-hidden flex items-center justify-center">
-
-                    {#if activeStep === 1}
-                        <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm text-center">
-                            <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 relative">
-                                <h4 class="font-bold text-primary mb-1">Hubungkan WhatsApp</h4>
-                                <p class="text-xs text-gray-400 mb-6">Scan QR Code untuk mulai</p>
-                                
-                                <div class="w-40 h-40 bg-gray-900 mx-auto rounded-xl flex items-center justify-center relative overflow-hidden group">
-                                    <div class="absolute inset-0 border-4 border-green/50 rounded-xl animate-pulse"></div>
-                                    <div class="w-32 h-32 border-2 border-dashed border-white/50 rounded animate-spin-slow"></div>
-                                    <span class="absolute text-white text-[10px] font-bold">Scanning...</span>
-                                </div>
-
-                                <div class="mt-6 flex items-center justify-center gap-2 text-xs text-green-600 font-bold bg-green-50 py-2 rounded-lg">
-                                    <span class="w-2 h-2 rounded-full bg-green animate-pulse"></span>
-                                    Status: Menunggu Koneksi
-                                </div>
-                            </div>
-                        </div>
-                    {/if}
-
-                    {#if activeStep === 2}
-                        <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-                            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                                <span class="text-xs font-bold text-primary">AI Knowledge Base</span>
-                                <span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded">Learning Mode</span>
-                            </div>
-                            
-                            <div class="p-6 text-center">
-                                <div class="border-2 border-dashed border-blue-200 bg-blue-50/30 rounded-xl p-8 mb-4 relative overflow-hidden">
-                                    <div class="text-4xl mb-2 animate-bounce">📂</div>
-                                    <div class="text-xs font-bold text-gray-600">Upload PDF/Word</div>
-                                    
-                                    <div class="absolute bottom-0 left-0 h-1 bg-blue-500 w-full animate-[progress_2s_ease-in-out]"></div>
-                                </div>
-
-                                <div class="bg-white border border-green-200 rounded-lg p-3 flex items-center gap-3 shadow-sm text-left">
-                                    <div class="w-8 h-8 bg-red-100 rounded flex items-center justify-center text-red-500 font-bold text-[10px]">PDF</div>
-                                    <div class="flex-1">
-                                        <div class="text-xs font-bold text-gray-800">Katalog_Lebaran_2026.pdf</div>
-                                        <div class="text-[9px] text-green-600">Selesai dipelajari (100%)</div>
-                                    </div>
-                                    <span class="text-green text-lg">✓</span>
-                                </div>
-                            </div>
-                        </div>
-                    {/if}
-
-                    {#if activeStep === 3 || activeStep === 4}
-                        <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-gray-100 flex flex-col h-[400px] overflow-hidden">
-                            <div class="p-3 border-b border-gray-100 flex items-center justify-between bg-white z-10">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-full bg-pink-100 text-pink-500 flex items-center justify-center text-xs font-bold">RC</div>
-                                    <div>
-                                        <div class="text-xs font-bold text-gray-800">Rina Customer</div>
-                                        <div class="text-[9px] text-gray-400">Online</div>
-                                    </div>
-                                </div>
-                                {#if activeStep === 3}
-                                    <span class="bg-gray-100 text-gray-500 text-[9px] px-2 py-1 rounded font-bold border border-gray-200">COLD LEAD</span>
-                                {:else}
-                                    <span class="bg-red-500 text-white text-[9px] px-2 py-1 rounded font-bold shadow-md animate-pulse">HOT LEAD 🔥</span>
-                                {/if}
-                            </div>
-
-                            <div class="flex-1 p-4 bg-[#ece5dd] overflow-y-auto space-y-4 font-sans text-xs">
-                                <div class="flex justify-start">
-                                    <div class="bg-white text-gray-800 p-2.5 rounded-lg rounded-tl-none shadow-sm max-w-[85%]">
-                                        Halo Min, Gamis model Aisyah warna Maroon size L ready gak?
-                                        <span class="block text-[8px] text-gray-300 text-right mt-1">10:05</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-end">
-                                    <div class="bg-[#dcf8c6] text-gray-800 p-2.5 rounded-lg rounded-tr-none shadow-sm max-w-[90%]">
-                                        Halo Ka Rina! 👋 Ready dong, stoknya tinggal dikit nih Ka. Mau aku keep-kan sekarang? 😍
-                                        <span class="block text-[8px] text-gray-400 text-right mt-1 flex justify-end gap-1">10:05 ✓✓</span>
-                                    </div>
-                                </div>
-
-                                {#if activeStep === 4}
-                                    <div in:fly={{ y: 10 }} class="flex justify-start">
-                                        <div class="bg-white text-gray-800 p-2.5 rounded-lg rounded-tl-none shadow-sm max-w-[85%]">
-                                            Boleh deh Ka, kirim ke Jakarta Selatan ya. Berapa totalnya?
-                                        </div>
-                                    </div>
-                                    
-                                    <div in:fly={{ y: 10, delay: 200 }} class="flex justify-end">
-                                        <div class="bg-[#dcf8c6] text-gray-800 p-3 rounded-lg rounded-tr-none shadow-sm max-w-[95%] border-l-4 border-green-500">
-                                            <div class="font-bold mb-1 text-green-700">Invoice Otomatis 🧾</div>
-                                            Gamis Maroon (L): Rp 185.000<br>
-                                            Ongkir JNE: Rp 10.000<br>
-                                            <strong>Total: Rp 195.000</strong><br><br>
-                                            Silakan transfer ke BCA Haloka Fashion ya Ka! 🙏
-                                        </div>
-                                    </div>
-                                {/if}
-                            </div>
-                        </div>
-                    {/if}
-
-                    {#if activeStep === 5}
-                        <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm space-y-3">
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                                    <div class="text-[10px] text-gray-400 mb-1 font-bold">Total Revenue</div>
-                                    <div class="text-xl font-bold text-green">Rp 45.2jt</div>
-                                    <div class="text-[9px] text-green-600 bg-green-50 inline-block px-1.5 py-0.5 rounded-full mt-1">↑ 24% Naik</div>
-                                </div>
-                                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                                    <div class="text-[10px] text-gray-400 mb-1 font-bold">Chat Terjawab</div>
-                                    <div class="text-xl font-bold text-primary">2,840</div>
-                                    <div class="text-[9px] text-blue-600 bg-blue-50 inline-block px-1.5 py-0.5 rounded-full mt-1">Otomatis</div>
-                                </div>
-                            </div>
-
-                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 h-32 flex items-end justify-between px-2 gap-2 relative overflow-hidden">
-                                <div class="absolute top-2 left-3 text-[10px] text-gray-400 font-bold">Grafik Penjualan</div>
-                                
-                                <div class="w-full bg-blue-50 rounded-t h-[30%]"></div>
-                                <div class="w-full bg-blue-100 rounded-t h-[45%]"></div>
-                                <div class="w-full bg-blue-200 rounded-t h-[40%]"></div>
-                                <div class="w-full bg-blue-300 rounded-t h-[65%]"></div>
-                                <div class="w-full bg-blue-400 rounded-t h-[55%]"></div>
-                                <div class="w-full bg-green rounded-t h-[85%] shadow-lg shadow-green/20 relative group">
-                                    <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-10">
-                                        Hari Ini
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {/if}
-
-                </div>
-            </div>
-        </div>
+<section class="py-24 bg-ink-50 overflow-hidden" id="cara-kerja">
+  <div class="container mx-auto px-6">
+    <div class="text-center mb-16">
+      <h2 class="font-display font-bold text-3xl md:text-5xl text-ink-900 mb-4">Cara Pakai Socio.id</h2>
+      <p class="text-ink-500">Naikkan engagement dalam 5 langkah mudah.</p>
     </div>
+
+    <div
+      class="grid lg:grid-cols-2 gap-12 items-center"
+      onmouseenter={stopAutoPlay}
+      onmouseleave={startAutoPlay}
+    >
+      <div class="space-y-3">
+        {#each steps as step}
+          <button
+            class="w-full text-left p-5 rounded-2xl transition-all duration-300 border-l-4 relative overflow-hidden group
+              {activeStep === step.id
+              ? 'bg-white shadow-lg border-primary scale-105 z-10'
+              : 'bg-transparent border-transparent hover:bg-white/50 opacity-60 hover:opacity-100'}"
+            onclick={() => (activeStep = step.id)}
+          >
+            <h3 class="font-bold text-lg {activeStep === step.id ? 'text-primary' : 'text-ink-500'}">{step.title}</h3>
+            {#if activeStep === step.id}
+              <p transition:slide class="text-sm text-ink-500 mt-2 leading-relaxed">{step.desc}</p>
+              <div class="absolute bottom-0 left-0 h-1 bg-primary/20 w-full mt-4">
+                <div class="h-full bg-primary w-full animate-[progress_6s_linear]"></div>
+              </div>
+            {/if}
+          </button>
+        {/each}
+      </div>
+
+      <div
+        class="relative h-[480px] w-full bg-white rounded-[2rem] shadow-2xl border border-ink-100 overflow-hidden flex flex-col"
+      >
+        <div class="bg-white border-b border-ink-100 p-4 flex justify-between items-center shadow-sm z-20">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white font-bold text-xs">S</div>
+            <span class="font-bold text-ink-900 text-sm">Socio.id Dashboard</span>
+          </div>
+          <div class="hidden md:block bg-ink-100 px-4 py-1.5 rounded-full text-[10px] text-ink-400 font-mono w-1/2 text-center">
+            app.socio.id/dashboard
+          </div>
+          <div class="flex gap-1.5">
+            <div class="w-2.5 h-2.5 rounded-full bg-danger/70"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-warning/70"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-success/70"></div>
+          </div>
+        </div>
+
+        <div class="flex-1 relative bg-ink-50 p-6 overflow-hidden flex items-center justify-center">
+          {#if activeStep === 1}
+            <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm text-center">
+              <div class="bg-white p-8 rounded-2xl shadow-lg border border-ink-100 relative">
+                <div class="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">✨</div>
+                <h4 class="font-bold text-ink-900 mb-1">Daftar Akun</h4>
+                <p class="text-xs text-ink-400 mb-6">Email & password saja</p>
+                <div class="bg-primary text-white rounded-full py-3 font-bold text-sm">Buat Akun Gratis</div>
+              </div>
+            </div>
+          {/if}
+
+          {#if activeStep === 2}
+            <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-ink-100 overflow-hidden">
+              <div class="p-4 border-b border-ink-100 flex justify-between items-center bg-ink-50">
+                <span class="text-xs font-bold text-ink-900">Top Up Saldo</span>
+                <span class="text-[10px] bg-accent-100 text-accent-700 px-2 py-0.5 rounded">QRIS</span>
+              </div>
+              <div class="p-6 text-center">
+                <div class="w-32 h-32 bg-ink-900 mx-auto rounded-xl flex items-center justify-center text-white text-[10px] font-bold mb-4">SCAN QRIS</div>
+                <div class="bg-success-soft text-success text-xs font-bold py-2 rounded-lg">Saldo masuk otomatis ✓</div>
+              </div>
+            </div>
+          {/if}
+
+          {#if activeStep === 3}
+            <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-ink-100 overflow-hidden">
+              <div class="p-4 border-b border-ink-100 flex justify-between items-center bg-ink-50">
+                <span class="text-xs font-bold text-ink-900">Katalog Layanan</span>
+                <span class="text-[10px] bg-primary-100 text-primary-700 px-2 py-0.5 rounded">8.185</span>
+              </div>
+              <div class="p-4 space-y-2">
+                {#each ['IG Followers 1k — Rp18', 'TT Views 1k — Rp8', 'YT Views 1k — Rp25'] as l}
+                  <div class="flex justify-between items-center bg-ink-50 rounded-lg px-3 py-2 text-xs text-ink-700">
+                    <span>{l}</span><span class="text-accent-600 font-bold">Pilih →</span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+
+          {#if activeStep === 4}
+            <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm space-y-3">
+              <div class="bg-white p-4 rounded-xl shadow-lg border border-ink-100 text-left">
+                <div class="text-[10px] text-ink-400 uppercase mb-1">Link</div>
+                <div class="text-xs text-ink-600 bg-ink-50 rounded px-2 py-1.5 mb-2">instagram.com/p/abcd</div>
+                <div class="flex justify-between text-xs text-ink-600"><span>Quantity</span><span class="font-bold">1.000</span></div>
+                <div class="flex justify-between text-sm mt-2 pt-2 border-t border-dashed border-ink-100"><span class="font-bold text-ink-800">Total</span><span class="font-display font-bold text-primary">Rp 18</span></div>
+                <div class="bg-primary text-white text-center rounded-full py-2 mt-3 text-sm font-bold">Pesan Sekarang</div>
+              </div>
+            </div>
+          {/if}
+
+          {#if activeStep === 5}
+            <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-ink-100">
+                  <div class="text-[10px] text-ink-400 mb-1 font-bold">Saldo</div>
+                  <div class="text-xl font-bold text-primary">Rp 249.982</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-ink-100">
+                  <div class="text-[10px] text-ink-400 mb-1 font-bold">Order Hari Ini</div>
+                  <div class="text-xl font-bold text-ink-800">37</div>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-xl shadow-sm border border-ink-100 space-y-2">
+                <div class="text-[10px] text-ink-400 font-bold">Status Live</div>
+                {#each [{ s: 'Proses', c: 'bg-status-progress' }, { s: 'Selesai', c: 'bg-status-complete' }] as r}
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="font-mono text-ink-500">SOC-8823{r.s === 'Proses' ? '1' : '0'}</span>
+                    <span class="text-white {r.c} px-2 py-0.5 rounded-full text-[10px] font-bold">{r.s}</span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <style>
-    @keyframes progress { 0% { width: 0%; } 100% { width: 100%; } }
-    @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes progress {
+    0% {
+      width: 0%;
+    }
+    100% {
+      width: 100%;
+    }
+  }
 </style>

@@ -1,20 +1,11 @@
 {
-  "extends": "../tsconfig.base.json",
+  "extends": "./.svelte-kit/tsconfig.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
     "allowJs": true,
     "checkJs": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true
-  },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.js",
-    "src/**/*.svelte",
-    ".svelte-kit/ambient.d.ts",
-    ".svelte-kit/types/**/$types.d.ts",
-    "../vite.config.ts"
-  ]
+    "skipLibCheck": true,
+    "strict": true
+  }
 }

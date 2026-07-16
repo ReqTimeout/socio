@@ -1,5 +1,6 @@
 import { auth } from "$lib/server/auth";
 import type { RequestHandler } from "./$types";
 
-export const GET: RequestHandler = ({ request }) => auth.handler(request);
-export const POST: RequestHandler = ({ request }) => auth.handler(request);
+export const GET: RequestHandler = (event) => auth.handler(event.request);
+export const POST: RequestHandler = (event) => auth.handler(event.request);
+

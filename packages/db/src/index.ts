@@ -7,15 +7,20 @@ const connectionString =
   process.env.SOCIO_DB_URL ??
   `mysql://${process.env.SOCIO_DB_USER}:${process.env.SOCIO_DB_PASS}@${process.env.SOCIO_DB_HOST}:${process.env.SOCIO_DB_PORT}/${process.env.SOCIO_DB_NAME}`;
 
-const pool = mysql.createPool({
-  uri: connectionString,
-  connectionLimit: 10,
-  charset: "utf8mb4",
-});
+let pool: mysql.Pool | undefined;
+let dbInstance: MySql2Database<typeof schema> | undefined;
 
-export const db: MySql2Database<typeof schema> = drizzle(pool, {
-  schema,
-  mode: "default",
-});
+// Lazy init: only connect when a DB URL is actually provided.
+// This keeps the app buildable / dev-runnable for non-DB routes (e.g. landing
+// dashboard UI) without a live database connection.
+if (connectionString && connectionString !== "mysql://undefined:undefined@undefined:undefined/undefined") {
+  pool = mysql.createPool({
+    uri: connectionString,
+    connectionLimit: 10,
+    charset: "utf8mb4",
+  });
+  dbInstance = drizzle(pool, { schema, mode: "default" });
+}
 
+export const db = dbInstance as MySql2Database<typeof schema>;
 export { pool, schema };
