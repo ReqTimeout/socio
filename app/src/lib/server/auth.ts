@@ -1,7 +1,7 @@
 import { db } from "@socio/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { users, sessions, verifications } from "@socio/db/schema";
+import { users, sessions, verifications, accounts } from "@socio/db/schema";
 import * as schema from "@socio/db/schema";
 
 /**
@@ -16,6 +16,7 @@ export const auth = betterAuth({
     schema: {
       user: users,
       session: sessions,
+      account: accounts,
       verification: verifications,
     },
   }),

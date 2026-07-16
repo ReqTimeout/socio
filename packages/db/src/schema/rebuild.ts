@@ -34,6 +34,31 @@ export const sessions = mysqlTable(
 );
 
 /**
+ * better-auth account table (links user to credential/oauth providers).
+ */
+export const accounts = mysqlTable(
+  "accounts",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    userId: varchar("user_id", { length: 64 }).notNull(),
+    accountId: varchar("account_id", { length: 255 }).notNull(),
+    providerId: varchar("provider_id", { length: 255 }).notNull(),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: datetime("access_token_expires_at"),
+    refreshTokenExpiresAt: datetime("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: varchar("password", { length: 250 }),
+    createdAt: datetime("created_at").notNull(),
+    updatedAt: datetime("updated_at").notNull(),
+  },
+  (t) => ({
+    userIdx: index("account_user_idx").on(t.userId),
+  }),
+);
+
+/**
  * better-auth verification table (email verification, password reset, 2FA).
  */
 export const verifications = mysqlTable(
