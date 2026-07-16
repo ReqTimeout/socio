@@ -28,10 +28,7 @@ export const auth = betterAuth({
       verify: async (data: { password: string; hash?: string } | string, hash?: string) => {
         const pw = typeof data === "string" ? data : data.password;
         const h = typeof data === "string" ? hash : data.hash;
-        console.log("[AUTH DEBUG] verify called, hash=", h?.slice(0, 12), "pwlen=", pw?.length);
-        const ok = bcrypt.compareSync(pw ?? "", h ?? "");
-        console.log("[AUTH DEBUG] result=", ok);
-        return ok;
+        return bcrypt.compareSync(pw ?? "", h ?? "");
       },
     },
   },
@@ -57,7 +54,6 @@ export const auth = betterAuth({
     },
   },
   secret: process.env.SOCIO_AUTH_SECRET ?? "dev-insecure-secret-change-me",
-  logger: { level: "debug", log: (msg: string) => console.log("[BA]", msg) },
 });
 
 export { db, schema };

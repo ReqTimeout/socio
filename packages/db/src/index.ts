@@ -16,13 +16,6 @@ const pool = mysql.createPool({
 export const db: MySql2Database<typeof schema> = drizzle(pool, {
   schema,
   mode: "default",
-  logger: {
-    logQuery: (query: string, params: unknown[]) => {
-      if (query.toLowerCase().includes("account")) {
-        console.log("[DB] ", query.slice(0, 120), JSON.stringify(params).slice(0, 80));
-      }
-    },
-  },
 });
 
 export { pool, schema };
