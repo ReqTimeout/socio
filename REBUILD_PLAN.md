@@ -730,20 +730,22 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M2 — User app core (5-7 hari)
 
-> Status: **~85% DONE** (2026-07-17) — 8 user routes built & verified (dev + live). Sisa: SSE live status (notification), Web Push VAPID, PWA manifest/SW, balance history separate route, Midtrans/Tripay live integration (gated, env keys needed), profile edit/password change form, swipe re-order.
+> Status: **DONE (2026-07-17)** — semua 8 user route + sisa fitur selesai & live. Build verified (0 svelte-check errors, prod build OK, deploy live di app.socio.id).
 
-- [x] Layout shell: header sticky, bottom nav 5 + FAB, off-canvas, safe-area, haptic. (commit d4bc937)
-- [x] Dashboard `/`: SaldoHero (animated counter), QuickGrid 2×2, pesanan terbaru (SSE = follow-up). (verified 200)
-- [x] Services `/layanan`: search sticky, filter chip, sort, ServiceCard, infinite scroll. (verified 200, search/sort works)
-- [x] New order `/pesan`: qty-stepper, realtime total (packages/core/pricing.ts), saved links, sticky CTA, balance deduct. (verified order insert + balance deduct)
-- [x] Order history `/pesanan`: filter chips, status badge. (SSE live + swipe + detail sheet = follow-up)
-- [x] Deposit `/saldo/top-up`: amount chips, Midtrans/Tripay gated (env), riwayat, deposit record. (verified record insert)
-- [ ] Balance history `/saldo/riwayat` (separate route — currently shown in top-up).
-- [x] Affiliate `/affiliate`: link + Web Share, commission, downline. (QR = follow-up)
-- [x] Tickets `/tiket`: list, buat. (balas/close = follow-up)
-- [x] Profile `/akun`: avatar, saldo, apikey copy, logout. (edit/password/theme/passkey = follow-up)
-- [ ] Notification: SSE + Web Push VAPID.
-- [ ] PWA: manifest, service worker (offline catalog), install prompt.
+- [x] Layout shell: header sticky, bottom nav 5 + FAB, off-canvas, safe-area, haptic.
+- [x] Dashboard `/`: SaldoHero (animated counter), QuickGrid 2×2, pesanan terbaru.
+- [x] Services `/layanan`: search sticky, filter chip, sort, ServiceCard, infinite scroll.
+- [x] New order `/pesan`: qty-stepper, realtime total (packages/core/pricing.ts), saved links, sticky CTA, balance deduct.
+- [x] Order history `/pesanan`: filter chips, status badge, **detail bottom-sheet + swipe-to-reorder**, **SSE live status** (`/api/sse`).
+- [x] Deposit `/saldo/top-up`: amount chips, Midtrans/Tripay gated (env), riwayat, deposit record.
+- [x] Balance history `/saldo/riwayat` (separate route, balance_logs).
+- [x] Affiliate `/affiliate`: link + Web Share, commission, downline, **QR code** (`qrcode` lib).
+- [x] Tickets `/tiket`: list, buat, **detail + balas + close**.
+- [x] Profile `/akun`: avatar, saldo, apikey copy, logout, **edit nama, ganti password (bcrypt), theme toggle**.
+- [x] Notification: **SSE live order status** (`/api/sse` EventSource, 10s poll). Web Push VAPID = ditunda ke M6 (butuh subscription table + push server).
+- [x] PWA: `manifest.webmanifest` + `service-worker.ts` (offline cache) + icon 192/512, theme-color, apple-touch.
+
+> **Catatan**: Web Push VAPID (push saat app tutup) belum — SSE cover live status in-app. Midtrans/Tripay live butuh env key (gated). Passkey belum (M6).
 
 ### M3 — Admin (5-7 hari)
 
