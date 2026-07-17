@@ -678,7 +678,7 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 - [x] Verifikasi: `bcryptjs.compare` → true. Login user existing works (commit `3313099`, auth endpoint 200 + token).
 - [~] Setup TiDB Serverless (Singapore) + Tencent Lighthouse Jakarta (Coolify panel). → **Tencent Lighthouse + Coolify SELESAI & LIVE** (app.socio.id diproteksi Coolify proxy). **TiDB Serverless TIDAK dipakai** — pakai MySQL di VPS (`socio-db`, sudah di network `coolify`). Keputusan §12#1 berubah ke MySQL VPS.
 - [x] Deploy skeleton `app.socio.id` ke VPS via Coolify (Dockerfile git-backed dari GitHub `ReqTimeout/socio`, branch `main`). Healthcheck `/` = 200.
-- [x] Setup DNS: `app.socio.id` → VPS (CF proxy full). `cdn.socio.id` → R2 public (aktif). `socio.id` → Cloudflare Pages (landing, M5).
+- [x] Setup DNS: `app.socio.id` → VPS (CF proxy full). `cdn.socio.id` → R2 public (aktif, verified PutObject). `socio.id` + `www.socio.id` → Cloudflare Pages (landing LIVE 2026-07-17, HTTP 200). `coolify.socio.id` → VPS 43.157.204.17.
 
 ### M1 — Auth + DB wiring (4-5 hari)
 
@@ -779,16 +779,20 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M5 — Landing socio.id (3-5 hari)
 
-> Status: **SEBAGIAN** — `landing/` sudah di-migrate ke socio.id SMM theme + Tailwind v4 + shared `@socio/ui` tokens (commit `344b056`), tapi belum deploy ke Cloudflare Pages & belum ada blog MDX / JSON-LD penuh / OrderSimulator baru.
+> Status: **INFRA READY + DEPLOYED (2026-07-17)** — `socio.id` LIVE di Cloudflare Pages (HTTP 200, custom domain `socio.id` + `www.socio.id` proxied). Pages project `socio-id` di account `0298214d...`. Build via `wrangler pages deploy landing/dist`. Konten landing masih perlu percantik (lihat item di bawah) tapi INFRA & DNS BEres.
 
-- [~] Upgrade `landing/` (clone haloka) ke Tailwind v4 + astro:assets.
+- [x] Cloudflare Pages project `socio-id` dibuat + deploy (wrangler).
+- [x] Custom domain `socio.id` + `www.socio.id` → CNAME `socio-id.pages.dev` (proxied, CF).
+- [x] DNS zone socio.id: `app.socio.id`→VPS, `cdn.socio.id`→R2, `coolify.socio.id`→VPS (43.157.204.17).
+- [x] R2 creds valid (verified PutObject OK), VAPID injected ke Coolify env.
+- [~] Upgrade `landing/` (clone haloka) ke Tailwind v4 + astro:assets. (sudah v4, perlu ganti konten)
 - [ ] Ganti konten haloka (WhatsApp AI) → socio.id (SMM panel).
-- [ ] Section flow final: Navbar → Hero + **OrderSimulator** (simulasi alur pesan SMM, bukan chat WA) → TrustBadges → PainPoints (reseller SMM) → Features (catalog 6000+ layanan, auto-sync, pricing markup, affiliate) → InteractiveTutorial (top up → pilih layanan → status live) → SocialProof → Pricing (paket reseller: Member/Agen/Reseller/Admin markup) → FinalCTA → FAQ → Footer.
+- [ ] Section flow final: Navbar → Hero + **OrderSimulator** → TrustBadges → PainPoints → Features → InteractiveTutorial → SocialProof → Pricing → FinalCTA → FAQ → Footer.
 - [ ] Sticky CTA → "Daftar Gratis" → `app.socio.id/daftar`.
 - [ ] FloatingWhatsApp → support.
 - [ ] Blog MDX: setup content collections, 3-5 artikel SEO awal.
-- [ ] Sitemap + robots + JSON-LD (Organization, SoftwareApplication, Product, FAQPage, BreadcrumbList).
-- [ ] Deploy ke Cloudflare Pages, custom domain `socio.id`.
+- [ ] Sitemap + robots + JSON-LD.
+- [x] Deploy ke Cloudflare Pages, custom domain `socio.id`. (DONE)
 
 ### M6 — Email + polish (3-4 hari)
 

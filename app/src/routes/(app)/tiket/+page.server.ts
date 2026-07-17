@@ -31,4 +31,27 @@ export const actions: Actions = {
     `);
     return { success: true, ticketId };
   },
+
+  reply: async ({ request, locals }) => {
+    const form = await request.formData();
+    const ticketId = Number(form.get("ticketId"));
+    const message = String(form.get("message") ?? "").trim();
+    if (!ticketId || !message) return fail(400, { error: "Pesan wajib diisi." });
+
+    const userId = Number(locals.user!.id);
+    await db.execute(sql`
+      INSERT INTO message (user_id, type, subject, message, status, created_at, ticket_id, is_read)
+      VALUES (${userId}, 'user', '', ${message}, 'Reply by user', NOW(), ${ticketId}, 0)
+    `);
+    await db.execute(sql`UPDATE message SET status = 'Pending' WHERE ticket_id = ${ticketId}`);
+    return { success: true };
+  },
+
+  close: async ({ request, locals }) => {
+    const form = await request.formData();
+    const ticketId = Number(form.get("ticketId"));
+    if (!ticketId) return fail(400, { error: "Tiket tidak valid." });
+    await db.execute(sql`UPDATE message SET status = 'Closed' WHERE ticket_id = ${ticketId}`);
+    return { success: true };
+  },
 };

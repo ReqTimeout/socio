@@ -68,7 +68,10 @@
   {/if}
 
   <div>
-    <h2 class="mb-2 text-sm font-semibold">Riwayat Top Up</h2>
+    <div class="mb-2 flex items-center justify-between">
+      <h2 class="text-sm font-semibold">Riwayat Top Up</h2>
+      <a href="/saldo/riwayat" class="text-xs font-semibold text-accent-ink">Semua ›</a>
+    </div>
     {#if data.history.length === 0}
       <EmptyState title="Belum ada riwayat" description="Riwayat deposit akan muncul di sini." />
     {:else}
