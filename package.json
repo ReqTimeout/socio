@@ -8,5 +8,11 @@
     "db:migrate": "pnpm --filter @socio/db migrate",
     "db:studio": "pnpm --filter @socio/db studio"
   },
-  "packageManager": "pnpm@9.15.9"
+  "packageManager": "pnpm@9.15.9",
+  "devDependencies": {
+    "@types/node": "^22.10.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  }
 }

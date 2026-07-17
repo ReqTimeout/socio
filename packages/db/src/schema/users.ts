@@ -41,6 +41,7 @@ export const users = mysqlTable(
       .notNull()
       .default("Member"),
     createdAt: datetime("created_at").notNull(),
+    updatedAt: datetime("updated_at"),
     expire: datetime("expire").notNull(),
     status: varchar("status", { length: 1 }).notNull().default("1"),
     apiKey: varchar("api_key", { length: 100 }).notNull(),

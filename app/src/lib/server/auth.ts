@@ -47,12 +47,11 @@ export const auth = betterAuth({
       });
     },
     password: {
-      // better-auth expects async hash/verify
-      hash: async (password: string) => bcrypt.hashSync(password, 10),
+      hash: async (password: string) => bcrypt.hash(password, 10),
       verify: async (data: { password: string; hash?: string } | string, hash?: string) => {
         const pw = typeof data === "string" ? data : data.password;
         const h = typeof data === "string" ? hash : data.hash;
-        return bcrypt.compareSync(pw ?? "", h ?? "");
+        return bcrypt.compare(pw ?? "", h ?? "");
       },
     },
   },
@@ -79,6 +78,9 @@ export const auth = betterAuth({
   },
   secret: process.env.SOCIO_AUTH_SECRET ?? "dev-insecure-secret-change-me",
   baseURL: process.env.SOCIO_APP_URL ?? process.env.BETTER_AUTH_URL ?? undefined,
+  advanced: {
+    generateId: () => String(Math.floor(100000 + Math.random() * 899999)),
+  },
 });
 
 /**

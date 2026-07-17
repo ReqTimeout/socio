@@ -39,3 +39,6 @@ socio.id/
 # Test
 coverage/
 accountcf.md
+
+# build artifacts
+*.tsbuildinfo

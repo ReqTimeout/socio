@@ -1,3 +1,5 @@
+import { config } from "dotenv";
+config({ path: new URL("../.env", import.meta.url).pathname });
 import { auth } from "$lib/server/auth";
 import { sequence } from "@sveltejs/kit/hooks";
 import type { Handle } from "@sveltejs/kit";
