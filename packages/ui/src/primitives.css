@@ -1,0 +1,105 @@
+/* @socio/ui — Visual primitives (emil-design-eng craft layer)
+ * Invisible details that compound: focus ring, shimmer, skeleton,
+ * safe-area, view-transition, reduced-motion. Token-driven, no inline hex.
+ */
+
+@import "./tokens.css";
+
+/* ---- Focus ring (AA ≥3:1 against fill; paper ring on accent fill) ---- */
+@layer utilities {
+  .focus-ring {
+    outline: none;
+    @apply focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+  }
+  /* Accent-filled controls (primary button) need a paper ring, not same-hue */
+  .focus-ring-on-accent {
+    outline: none;
+    @apply focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-primary;
+  }
+}
+
+/* ---- Shimmer skeleton (used during load, not empty-gradient) ---- */
+@layer components {
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-ink-100);
+    border-radius: var(--radius-sm, 8px);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.55),
+      transparent
+    );
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes skeleton-shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
+
+/* ---- Safe-area insets (notch / gesture bar) ---- */
+@layer utilities {
+  .safe-top {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+  .safe-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+  .safe-x {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* ---- View Transition (SvelteKit onNavigate slide) ---- */
+@layer utilities {
+  .vt-slide-forward {
+    animation: vt-slide-in 280ms var(--ease-out-soft, cubic-bezier(0.16, 1, 0.3, 1));
+  }
+  .vt-slide-back {
+    animation: vt-slide-out 220ms var(--ease-out-soft, cubic-bezier(0.16, 1, 0.3, 1));
+  }
+}
+@keyframes vt-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes vt-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+/* ---- Reduced motion: keep opacity, drop transform ---- */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+  .vt-slide-forward,
+  .vt-slide-back {
+    animation: none;
+  }
+}
+
+/* ---- Haptic helper (call from TS, gated by reduced-motion) ---- */
+/* See lib/haptic.ts — navigator.vibrate wrapper. */

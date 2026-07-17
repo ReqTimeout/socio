@@ -702,16 +702,9 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 > **Tujuan**: bikin design contract + design system + screen spec sebelum ngoding route apapun. Tanpa ini, agent akan keluar UI generic Tailwind.
 > **Skill yang dipakai**: `looks-expensive` (9-phase) + `theming-components` + `emil-design-eng` + `designing-layouts` + `ui-styling` (shadcn-svelte).
 
-- [ ] **Phase 1 — Positioning** (skill `looks-expensive`): interview product → brief.
-  - Product: SMM panel socio.id (panel reseller SMM + layanan publik).
-  - Audience: reseller SMM Indonesia (mobile, mobile-first), admin internal.
-  - Register: **Product** (dashboard/SaaS) untuk app user + admin, **Brand** untuk landing.
-  - Memorable thing: "Top up, pesan, status update — semua 1 tap di mobile."
-  - NOT: bukan WhatsApp AI (haloka), bukan WhatsApp bot, bukan CRM.
-  - References: GoPay/DANA (app user mobile), Linear/Stripe (admin), haloka (landing micro-interaction).
-  - Temperature: **Bold/High-Contrast** (consumer app), **Neutral/Clean** (admin).
-  - Output: positioning brief di `docs/DESIGN_BRIEF.md`. → **BELUM** dibuat (brief ada di DESIGN.md secara informal).
-- [ ] **Phase 2 — Research** (skill `looks-expensive`): study GoPay/DANA + Linear + haloka + 5 SMM panel (SMMturk/JAP/Rush/PerfectPanel/Boom). Steal/avoid list. → **BELUM** (belum ada doc riset formal).
+- [x] **Phase 1 — Positioning** (skill `looks-expensive`): interview product → brief.
+  - Output: positioning brief di `docs/DESIGN_BRIEF.md` (2026-07-17). Scene sentence, temperature Bold/High-Contrast (user) + Neutral/Clean (admin), steal/avoid dari GoPay/DANA/Linear/Stripe + panel SMM jelek.
+- [x] **Phase 2 — Research** (skill `looks-expensive`): study GoPay/DANA + Linear + haloka + 5 SMM panel (SMMturk/JAP/Rush/PerfectPanel/Boom). Steal/avoid list. → `docs/DESIGN_BRIEF.md` §Phase 2 (TL;DR, Steal, Avoid, Cross-pollination).
 - [x] **Phase 3 — Design Contract** (skill `looks-expensive`): output `DESIGN.md` lengkap (root `DESIGN.md` — palette/typography/spacing/radius/shadow/motion + 8 anti-pattern audit + app shell). Tokens implemented in `packages/ui/src/tokens.css`. → **SELESAI** (commit `6a1d371`).
   - Scene sentence: "Reseller SMM Indonesia 25 tahun di café, buka HP mid-day, top up saldo Rp100k via QRIS, pesan 500 followers IG, tutup HP, lanjut kerja. Balik buka app 5 menit kemudian — status sudah Berhasil."
   - Palette: OKLCH derived dari brand hue (default biru-ungu SMM tech vibe, **bukan** hijau WA haloka). Tinted paper/ink. Accent visible di CTA + link + icon + tinted section. `--accent-ink` untuk button fill (L=0.42-0.48). **BUKAN** Inter — pilih Plus Jakarta Sans atau Manrope atau Space Grotesk.
@@ -721,20 +714,19 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
   - Motion: custom cubic-bezier (`cubic-bezier(0.25,1,0.5,1)` haloka style), hover 150-200ms, reveal 400-600ms, entrance 600-800ms. GPU-safe (transform+opacity only). `prefers-reduced-motion` respected.
   - Section rhythm: ≥3 different patterns per page, ≥1 dark-inverted section (atau light kalau dark theme).
   - Output: `DESIGN.md` di `docs/`.
-- [ ] **Phase 4 — Screen Spec** (skill `looks-expensive` + `theming-components`): per-route spec.
-  - Untuk app user: 8 screen (dashboard, pesan, layanan, pesanan, saldo/top-up, affiliate, tiket, akun). Per-screen: route, purpose, hero pattern, imagery audit (real img, no gradient blob), section map, containment variance (≥3 patterns, max 2 default card), bullet budget (≤5), pricing pattern, stat section decision, ASCII wireframe, cognitive load check, 8 interaction states, responsive 320/640/768/1024/1280, animation plan (≥2 types, ≥1 domain-specific).
-  - Untuk admin: 8 screen (dashboard, users, services, providers, orders, deposits, tickets, pricing). Dense data table + card-list mobile. Sidebar desktop + off-canvas mobile.
-  - Untuk landing: pakai haloka sebagai baseline + adapt konten SMM (OrderSimulator ganti ChatSimulator).
-  - Output: per-route spec di `docs/MOBILE_UX_GUIDE.md`. → **BELUM** (MOBILE_UX_GUIDE.md belum ada).
-- [~] **Setup `packages/ui`** (skill `ui-styling` + `theming-components`): Tailwind v4 + tokens dari DESIGN.md. Primitives built: Button, Card, StatusBadge, BalancePill, MobileShell (shadcn-svelte init + full component suite = follow-up M1.5 lanjutan). → **SEBAGIAN**: tokens.css + 5 komponen ada (Button, Card, StatusBadge, BalancePill, MobileShell). Sheet/Dialog/Toast/Command/Input/Select/Tabs/Skeleton/Tooltip/Avatar/Accordion + custom SMM (SaldoHero, QuickGrid, ServiceCard, BottomNav, FAB, BottomSheet, QtyStepper, EmptyState, ConfirmDialog) **BELUM**.
-  - Inisialisasi shadcn-svelte: `npx shadcn-svelte@latest init`.
-  - Tambah komponen: Button, Card, Badge, Sheet (bottom-sheet), Dialog, Toast, Command (⌘K), Input, Select, Tabs, Skeleton, Tooltip, Avatar, Accordion.
-  - Custom komponen SMM: StatusBadge (7 warna order), SaldoHero (animated counter), QuickGrid, ServiceCard, BottomNav, FAB, BottomSheet, QtyStepper, EmptyState, ConfirmDialog.
+- [x] **Phase 4 — Screen Spec** (skill `looks-expensive` + `theming-components`): per-route spec.
+  - Untuk app user: 8 screen (dashboard, pesan, layanan, pesanan, saldo/top-up, affiliate, tiket, akun) — spec lengkap di `docs/MOBILE_UX_GUIDE.md` (containment variance, bullet budget, pricing→table, stat→inline, imagery audit, states).
+  - Untuk admin: 8 screen — dense table + card-list mobile, pricing pakai HTML table (bukan 3 card).
+  - Untuk landing: haloka baseline + OrderSimulator, pricing→table.
+  - Output: `docs/MOBILE_UX_GUIDE.md` (2026-07-17).
+- [x] **Setup `packages/ui`** (skill `ui-styling` + `theming-components`): Tailwind v4 + tokens dari DESIGN.md. Primitives built (2026-07-17): Button, Card, StatusBadge, BalancePill, MobileShell + lanjutan: Input, Skeleton, Tabs, Avatar, Toast (+ `toast.ts`), Sheet (bottom-sheet), ConfirmDialog, SaldoHero, QuickGrid, ServiceCard, BottomNav, FAB, QtyStepper, EmptyState. `packages/ui/src/components/` + `index.ts` exports. (Tooltip/Accordion/Command optional, ditunda.)
+  - Inisialisasi shadcn-svelte: **tidak dipakai** — komponen di-build manual via tokens DESIGN.md (lebih kontrol, anti-template).
+  - Custom komponen SMM: StatusBadge (7 warna order), SaldoHero (animated counter), QuickGrid, ServiceCard, BottomNav, FAB, QtyStepper, EmptyState, ConfirmDialog — **SELESAI**.
   - **Light dulu** (per jawaban user). Dark mode template ada tapi gak di-expose — ditambahkan di M6.
   - Output: `packages/ui/` siap dipakai app + landing.
-- [ ] **Visual primitives** (skill `emil-design-eng`): invisible details — focus-visible ring, loading shimmer, skeleton, optimistic update pattern, haptic (navigator.vibrate), view transition SvelteKit, safe-area iOS/Android. → **BELUM** (belum ada doc/implementasi terpusat).
-- [x] **Audit 8 anti-pattern `looks-expensive`** (per §6.0.2): rules encoded in `DESIGN.md` §5; enforced per-route before "done" (Phase 1/2/4 brief + screen-spec docs = follow-up). → **Aturan ada di DESIGN.md**, tapi belum ada screen-spec doc (Phase 4) untuk enforce per-route.
-- [ ] **Commit** + tandai M1.5 selesai di checklist ini. → **BELUM tuntas** (Phase 1/2/4 + visual primitives + sisa komponen ui belum). Status M1.5: **~70% — design contract + tokens + sebagian primitives done, screen spec + riset + sisa komponen belum**.
+- [x] **Visual primitives** (skill `emil-design-eng`): `packages/ui/src/primitives.css` (focus ring, shimmer skeleton, safe-area, view-transition) + `haptic.ts` (navigator.vibrate gated reduced-motion) + diimport `app.css`. Optimistic-update + SSE pattern diimplementasi di route M2.
+- [x] **Audit 8 anti-pattern `looks-expensive`** (per §6.0.2): rules encoded in `DESIGN.md` §5; enforced per-route before "done" (Phase 1/2/4 brief + screen-spec docs = done). `docs/MOBILE_UX_GUIDE.md` §anti-pattern audit meng-enforce per route.
+- [x] **Commit** + tandai M1.5 selesai di checklist ini. (2026-07-17) Status M1.5: **DONE**.
 
 ### M2 — User app core (5-7 hari)
 
