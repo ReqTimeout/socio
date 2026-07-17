@@ -1,0 +1,11 @@
+{
+  "name": "@socio/core",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    "./pricing": "./src/pricing.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

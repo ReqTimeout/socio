@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1088.0",
+    "@socio/core": "workspace:*",
     "@socio/db": "workspace:*",
     "@socio/ui": "workspace:*",
     "@zxcvbn-ts/core": "^2.2.1",
