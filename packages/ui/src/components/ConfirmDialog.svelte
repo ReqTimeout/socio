@@ -9,6 +9,7 @@
     cancelLabel = "Batal",
     danger = false,
     onConfirm,
+    children,
   }: {
     open?: boolean;
     title?: string;
@@ -17,6 +18,7 @@
     cancelLabel?: string;
     danger?: boolean;
     onConfirm?: () => void;
+    children?: import("svelte").Snippet;
   } = $props();
 
   function cancel() {
@@ -40,10 +42,14 @@
     >
       <h2 class="font-display font-bold text-lg text-ink-900">{title}</h2>
       <p class="mt-2 text-sm text-ink-500">{message}</p>
-      <div class="mt-6 flex gap-3">
-        <Button variant="ghost" full onclick={cancel}>{cancelLabel}</Button>
-        <Button variant={danger ? "danger" : "primary"} full onclick={confirm}>{confirmLabel}</Button>
-      </div>
+      {#if children}
+        <div class="mt-4">{@render children()}</div>
+      {:else}
+        <div class="mt-6 flex gap-3">
+          <Button variant="ghost" full onclick={cancel}>{cancelLabel}</Button>
+          <Button variant={danger ? "danger" : "primary"} full onclick={confirm}>{confirmLabel}</Button>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}
