@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
   if (!locals.user) throw redirect(303, "/login");
   const userId = Number(locals.user.id);
 
@@ -13,7 +13,17 @@ export const load: PageServerLoad = async ({ locals }) => {
     ORDER BY last DESC LIMIT 20
   `);
 
-  return { tickets: (tickets as any)[0] ?? [] };
+  const activeId = Number(url.searchParams.get("ticket") ?? 0);
+  let messages: any[] = [];
+  if (activeId) {
+    const res = await db.execute(sql`
+      SELECT id, type, message, status, created_at FROM message
+      WHERE ticket_id = ${activeId} AND user_id = ${userId} ORDER BY id ASC
+    `);
+    messages = (res as any)[0] ?? [];
+  }
+
+  return { tickets: (tickets as any)[0] ?? [], activeId, messages };
 };
 
 export const actions: Actions = {

@@ -16,17 +16,10 @@ interface SendArgs {
  * the email is logged to the server console (dev / pre-email-setup). This keeps
  * auth flows functional before the M6 email work is finalized.
  */
-export async function sendEmail({
-  to,
-  subject,
-  html,
-  text,
-}: SendArgs): Promise<boolean> {
+export async function sendEmail({ to, subject, html, text }: SendArgs): Promise<boolean> {
   if (!RESEND_API_KEY) {
     if (dev) {
-      console.info(
-        `[email:dev] to=${to} subject="${subject}"\n${text ?? html}`,
-      );
+      console.info(`[email:dev] to=${to} subject="${subject}"\n${text ?? html}`);
     }
     return false;
   }

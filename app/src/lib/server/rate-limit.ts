@@ -32,10 +32,7 @@ interface RateLimitOpts {
   windowSec: number;
 }
 
-export async function rateLimit(
-  key: string,
-  opts: RateLimitOpts,
-): Promise<boolean> {
+export async function rateLimit(key: string, opts: RateLimitOpts): Promise<boolean> {
   try {
     await ensureTable();
     const now = new Date();

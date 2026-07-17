@@ -7,7 +7,10 @@ import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
   const serviceId = Number(url.searchParams.get("service") ?? 0);
-  const catRows = await db.select({ id: categories.id, name: categories.name }).from(categories).limit(30);
+  const catRows = await db
+    .select({ id: categories.id, name: categories.name })
+    .from(categories)
+    .limit(30);
 
   let service: null | {
     id: number;
@@ -72,7 +75,11 @@ export const actions: Actions = {
     const level = (locals.user!.level as UserLevel) ?? "Member";
     const price = computePrice(s.price, quantity, level);
 
-    const [u] = await db.select({ balance: users.balance }).from(users).where(eq(users.id, userId)).limit(1);
+    const [u] = await db
+      .select({ balance: users.balance })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
     if (!u || u.balance < price) {
       return fail(400, { error: "Saldo tidak cukup. Silakan top up terlebih dahulu." });
     }
@@ -102,7 +109,10 @@ export const actions: Actions = {
       isRefund: 0,
     });
 
-    await db.update(users).set({ balance: sql`${users.balance} - ${price}` }).where(eq(users.id, userId));
+    await db
+      .update(users)
+      .set({ balance: sql`${users.balance} - ${price}` })
+      .where(eq(users.id, userId));
     await db.insert(balanceLogs).values({
       userId,
       type: "order",
@@ -112,7 +122,9 @@ export const actions: Actions = {
     });
 
     if (saveLink) {
-      await db.insert(savedLinks).values({ userId, label: s.serviceName.slice(0, 100), link, serviceId: s.id });
+      await db
+        .insert(savedLinks)
+        .values({ userId, label: s.serviceName.slice(0, 100), link, serviceId: s.id });
     }
 
     throw redirect(303, "/pesanan");

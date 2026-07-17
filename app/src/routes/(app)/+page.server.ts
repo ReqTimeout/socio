@@ -23,7 +23,10 @@ export const load: PageServerLoad = async ({ locals }) => {
     .orderBy(desc(orders.createdAt))
     .limit(5);
 
-  const catRows = await db.select({ id: categories.id, name: categories.name }).from(categories).limit(12);
+  const catRows = await db
+    .select({ id: categories.id, name: categories.name })
+    .from(categories)
+    .limit(12);
   const serviceCount = await db.select({ c: services.id }).from(services).limit(1);
 
   return {

@@ -102,8 +102,7 @@ export const actions: Actions = {
         });
       }
     } catch (e) {
-      const msg =
-        e instanceof Error ? e.message : "Email atau username sudah terdaftar.";
+      const msg = e instanceof Error ? e.message : "Email atau username sudah terdaftar.";
       return fail(400, { error: msg, email, username, fullName });
     }
 

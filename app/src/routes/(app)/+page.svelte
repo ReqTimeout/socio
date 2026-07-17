@@ -37,10 +37,16 @@
 
     {#if data.recent.length === 0}
       <EmptyState title="Belum ada pesanan" description="Buat pesanan pertama kamu sekarang.">
-        <a href="/pesan" class="mt-3 inline-block rounded-full bg-accent-ink px-4 py-2 text-sm font-bold text-white">Pesan Sekarang</a>
+        <a
+          href="/pesan"
+          class="mt-3 inline-block rounded-full bg-accent-ink px-4 py-2 text-sm font-bold text-white"
+          >Pesan Sekarang</a
+        >
       </EmptyState>
     {:else}
-      <ul class="divide-y divide-ink-100 overflow-hidden rounded-2xl border border-ink-100 bg-surface">
+      <ul
+        class="divide-y divide-ink-100 overflow-hidden rounded-2xl border border-ink-100 bg-surface"
+      >
         {#each data.recent as o (o.id)}
           <li class="flex items-center gap-3 px-4 py-3">
             <div class="min-w-0 flex-1">

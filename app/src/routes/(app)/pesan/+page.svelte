@@ -12,25 +12,30 @@
   let quantity = $state(data.service?.min ?? 1000);
   let saving = $state(false);
 
-  const total = $derived(
-    data.service ? computePrice(data.service.price, quantity, data.level) : 0,
-  );
+  const total = $derived(data.service ? computePrice(data.service.price, quantity, data.level) : 0);
   const enough = $derived(data.balance >= total);
 </script>
 
 <section class="space-y-4">
   {#if !data.service}
     <div class="rounded-2xl border border-ink-100 bg-surface p-4 text-sm text-ink-500">
-      Pilih layanan dari halaman <a href="/layanan" class="font-semibold text-accent-ink">Layanan</a> untuk mulai memesan.
+      Pilih layanan dari halaman <a href="/layanan" class="font-semibold text-accent-ink">Layanan</a
+      > untuk mulai memesan.
     </div>
   {:else}
     <div>
       <h1 class="font-display text-lg font-bold">{data.service.serviceName}</h1>
-      <p class="text-xs text-ink-500">{data.service.type} · Min {data.service.min.toLocaleString("id-ID")} · Max {data.service.max.toLocaleString("id-ID")}</p>
+      <p class="text-xs text-ink-500">
+        {data.service.type} · Min {data.service.min.toLocaleString("id-ID")} · Max {data.service.max.toLocaleString(
+          "id-ID",
+        )}
+      </p>
     </div>
 
     {#if form?.error}
-      <div class="rounded-xl bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{form.error}</div>
+      <div class="rounded-xl bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
+        {form.error}
+      </div>
     {/if}
 
     <form
@@ -55,26 +60,44 @@
         {#if data.saved.length > 0}
           <div class="mb-2 flex flex-wrap gap-1">
             {#each data.saved as sv}
-              <button type="button" onclick={() => (link = sv.link)} class="rounded-full bg-ink-100 px-2.5 py-1 text-xs font-medium hover:bg-ink-200">{sv.label || sv.link}</button>
+              <button
+                type="button"
+                onclick={() => (link = sv.link)}
+                class="rounded-full bg-ink-100 px-2.5 py-1 text-xs font-medium hover:bg-ink-200"
+                >{sv.label || sv.link}</button
+              >
             {/each}
           </div>
         {/if}
-        <Input name="link" bind:value={link} placeholder="https://instagram.com/username" required />
+        <Input
+          name="link"
+          bind:value={link}
+          placeholder="https://instagram.com/username"
+          required
+        />
       </div>
 
       <div>
         <label class="mb-1 block text-sm font-semibold">Jumlah</label>
-        <QtyStepper bind:value={quantity} min={data.service.min} max={data.service.max} step={data.service.min} />
+        <QtyStepper
+          bind:value={quantity}
+          min={data.service.min}
+          max={data.service.max}
+          step={data.service.min}
+        />
       </div>
 
       <div class="rounded-2xl bg-ink-900 p-4 text-white">
         <div class="flex items-center justify-between text-sm">
           <span class="text-ink-300">Total bayar</span>
-          <span class="font-display text-xl font-extrabold tabular-nums">{formatRupiah(total)}</span>
+          <span class="font-display text-xl font-extrabold tabular-nums">{formatRupiah(total)}</span
+          >
         </div>
         <div class="mt-1 flex items-center justify-between text-xs">
           <span class="text-ink-400">Saldo kamu</span>
-          <span class="tabular-nums {enough ? 'text-success' : 'text-danger'}">{formatRupiah(data.balance)}</span>
+          <span class="tabular-nums {enough ? 'text-success' : 'text-danger'}"
+            >{formatRupiah(data.balance)}</span
+          >
         </div>
       </div>
 

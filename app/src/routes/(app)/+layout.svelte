@@ -4,7 +4,7 @@
   import { haptic } from "@socio/ui";
   import { fly } from "svelte/transition";
   import { navigating } from "$app/stores";
-import { goto } from "$app/navigation";
+  import { goto } from "$app/navigation";
 
   let { data, children } = $props();
   let menuOpen = $state(false);
@@ -49,7 +49,14 @@ import { goto } from "$app/navigation";
             menuOpen = true;
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" />
           </svg>
         </button>

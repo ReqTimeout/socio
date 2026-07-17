@@ -27,7 +27,13 @@ export const auth = betterAuth({
       sendOnSignUp: true,
       autoSignInAfterVerification: false,
     },
-    sendResetPassword: async ({ user, url }: { user: { email: string; name?: string }; url: string }) => {
+    sendResetPassword: async ({
+      user,
+      url,
+    }: {
+      user: { email: string; name?: string };
+      url: string;
+    }) => {
       const { sendEmail, resetPasswordEmail } = await import("./email");
       await sendEmail({
         to: user.email,
@@ -35,7 +41,13 @@ export const auth = betterAuth({
         ...resetPasswordEmail(url),
       });
     },
-    sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string }; url: string }) => {
+    sendVerificationEmail: async ({
+      user,
+      url,
+    }: {
+      user: { email: string; name?: string };
+      url: string;
+    }) => {
       const { sendEmail, verificationEmail } = await import("./email");
       const base = process.env.SOCIO_APP_URL ?? "https://app.socio.id";
       const token = new URL(url).searchParams.get("token") ?? "";

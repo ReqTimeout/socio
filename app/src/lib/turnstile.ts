@@ -11,10 +11,7 @@ let scriptPromise: Promise<void> | null = null;
 declare global {
   interface Window {
     turnstile?: {
-      render: (
-        el: string | HTMLElement,
-        opts: Record<string, unknown>,
-      ) => string;
+      render: (el: string | HTMLElement, opts: Record<string, unknown>) => string;
       reset: (id?: string) => void;
       remove: (id?: string) => void;
     };
@@ -28,9 +25,7 @@ function loadScript(sitekey: string): Promise<void> {
   if (scriptPromise) return scriptPromise;
 
   scriptPromise = new Promise<void>((resolve) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[src="${SCRIPT_SRC}"]`,
-    );
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${SCRIPT_SRC}"]`);
     if (existing) {
       if (window.turnstile) resolve();
       else window.onTurnstileLoad = () => resolve();

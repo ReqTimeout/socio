@@ -1,8 +1,8 @@
 import { dev } from "$app/environment";
 
 const TURNSTILE_SECRET = dev
-  ? process.env.SOCIO_TURNSTILE_SECRET ?? ""
-  : process.env.SOCIO_TURNSTILE_SECRET ?? "";
+  ? (process.env.SOCIO_TURNSTILE_SECRET ?? "")
+  : (process.env.SOCIO_TURNSTILE_SECRET ?? "");
 
 interface TurnstileResponse {
   success: boolean;
@@ -42,5 +42,5 @@ export async function verifyTurnstile(token: string, remoteIp?: string): Promise
 }
 
 export const TURNSTILE_SITEKEY = dev
-  ? process.env.SOCIO_TURNSTILE_SITEKEY ?? "0x4AAAAAAD3RtU-MhZPHl3Fw"
-  : process.env.SOCIO_TURNSTILE_SITEKEY ?? "0x4AAAAAAD3RtU-MhZPHl3Fw";
+  ? (process.env.SOCIO_TURNSTILE_SITEKEY ?? "0x4AAAAAAD3RtU-MhZPHl3Fw")
+  : (process.env.SOCIO_TURNSTILE_SITEKEY ?? "0x4AAAAAAD3RtU-MhZPHl3Fw");

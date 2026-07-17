@@ -26,7 +26,10 @@ export const actions: Actions = {
     const form = await request.formData();
     const name = String(form.get("name") ?? "").trim();
     if (!name) return fail(400, { error: "Nama wajib diisi." });
-    await db.update(users).set({ fullName: name }).where(eq(users.id, Number(locals.user!.id)));
+    await db
+      .update(users)
+      .set({ fullName: name })
+      .where(eq(users.id, Number(locals.user!.id)));
     return { success: "Profil diperbarui." };
   },
 
@@ -37,18 +40,28 @@ export const actions: Actions = {
     if (!current || !next) return fail(400, { error: "Semua field wajib diisi." });
     if (next.length < 8) return fail(400, { error: "Password baru minimal 8 karakter." });
 
-    const [u] = await db.select({ password: users.password }).from(users).where(eq(users.id, Number(locals.user!.id))).limit(1);
+    const [u] = await db
+      .select({ password: users.password })
+      .from(users)
+      .where(eq(users.id, Number(locals.user!.id)))
+      .limit(1);
     if (!u || !bcrypt.compareSync(current, u.password)) {
       return fail(400, { error: "Password saat ini salah." });
     }
-    await db.update(users).set({ password: bcrypt.hashSync(next, 10) }).where(eq(users.id, Number(locals.user!.id)));
+    await db
+      .update(users)
+      .set({ password: bcrypt.hashSync(next, 10) })
+      .where(eq(users.id, Number(locals.user!.id)));
     return { success: "Password diperbarui." };
   },
 
   theme: async ({ request, locals }) => {
     const form = await request.formData();
-    const theme = String(form.get("theme") ?? "light");
-    await db.update(users).set({ theme }).where(eq(users.id, Number(locals.user!.id)));
+    const theme = String(form.get("theme") ?? "light") as "light" | "dark";
+    await db
+      .update(users)
+      .set({ theme })
+      .where(eq(users.id, Number(locals.user!.id)));
     return { success: "Tema diperbarui." };
   },
 };

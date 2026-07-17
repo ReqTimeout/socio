@@ -9,7 +9,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
   const conditions = [eq(orders.userId, userId)];
   if (filter === "pending") conditions.push(eq(orders.status, "Pending"));
-  else if (filter === "proses") conditions.push(sql`${orders.status} IN ('Processing','In progress')`);
+  else if (filter === "proses")
+    conditions.push(sql`${orders.status} IN ('Processing','In progress')`);
   else if (filter === "selesai") conditions.push(eq(orders.status, "Success"));
 
   const rows = await db

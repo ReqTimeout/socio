@@ -16,10 +16,8 @@ export const actions: Actions = {
     const confirm = String(data.get("confirm") ?? "");
 
     if (!token) return fail(400, { error: "Token tidak valid." });
-    if (password.length < 8)
-      return fail(400, { error: "Password minimal 8 karakter." });
-    if (password !== confirm)
-      return fail(400, { error: "Konfirmasi password tidak cocok." });
+    if (password.length < 8) return fail(400, { error: "Password minimal 8 karakter." });
+    if (password !== confirm) return fail(400, { error: "Konfirmasi password tidak cocok." });
 
     try {
       await auth.api.resetPassword({
