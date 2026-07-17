@@ -28,7 +28,7 @@ export async function ensureAdminSchema() {
     CREATE TABLE IF NOT EXISTS admin_settings (
       id INT AUTO_INCREMENT PRIMARY KEY,
       \`key\` VARCHAR(60) NOT NULL UNIQUE,
-      value TEXT NOT NULL DEFAULT '',
+      value TEXT NOT NULL,
       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
