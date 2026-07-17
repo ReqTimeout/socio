@@ -1,15 +1,33 @@
 # Coolify Deploy Runbook — app.socio.id
 
-> Status: **Docker image validated, live production currently served via systemd+Caddy.**
-> This runbook finishes the move to Coolify (planned in REBUILD_PLAN M7 / app deploy).
+> Status: **LIVE on Coolify (2026-07-17).** `app.socio.id` is served by Coolify:
+> Traefik (`coolify-proxy`) on :80/:443 → app container `f13y38...` (port 3000) → MySQL `socio-db`.
+> systemd `socio-app-prod` and Caddy are **stopped** (no longer used). Cloudflare SSL = **full**.
 
-## What is proven working (2026-07-17)
+## What is proven working
 
-- `app/Dockerfile` builds a working image (`socio-app:test` tested on VPS):
-  - `pnpm --filter app build` → adapter-node `build/index.js`
-  - Container serves HTTP on `:3000` (env `PORT=3000 HOST=0.0.0.0`)
-  - Auth login 200 against MySQL (`socio-db`) over the `bridge` network
-- Live public site `https://app.socio.id` → Caddy `:443` (Let's Encrypt) → Node `:3100` (systemd `socio-app-prod.service`) → MySQL. Cloudflare SSL = **full**.
+- Git-backed deploy: Coolify clones `https://github.com/ReqTimeout/socio.git` (branch `main`),
+  builds `app/Dockerfile` (multi-stage pnpm monorepo), runs container on `:3000`.
+- Auth login 200 against MySQL (`socio-db`) — container reaches DB via Docker DNS name `socio-db`
+  (DB added to the `coolify` network). `SOCIO_DB_HOST=socio-db` in app env.
+- Public `app.socio.id` = 200, `POST /api/auth/sign-in/email` = 200 with token.
+- `cdn.socio.id` (R2 public) serves correctly.
+
+## Setup notes / gotchas (so we don't redo the debugging)
+
+- **Coolify server SSH**: the `localhost` server (`ykrq4b2q3kcrsak1fnos0izq`) needs `user=ubuntu`,
+  `ip=host.docker.internal`, `port=22`, and a private key whose `private_keys.private_key` column
+  holds **`encrypt(raw_key)`** (Laravel `encrypted` cast). Store the *encrypted* value, not plaintext,
+  or the disk key file gets written as `s:432:"..."` garbage and SSH fails.
+- `server_settings.is_reachable` + `is_usable` must be `true` or deploy fails "Server is not functional".
+- `/data/coolify` must be owned by `ubuntu` (Coolify writes compose via SSH sudo).
+- Inside the coolify container, `/var/www/html/storage/app/ssh` must be owned by `www-data` (9999)
+  so the key file can be written.
+- **Coolify proxy (Traefik)** is NOT auto-started if :80/:443 are taken by Caddy. Stop Caddy first,
+  then `cd /data/coolify/proxy && docker compose up -d`.
+- **Dockerfile fix**: build stage must `COPY --from=deps /app /app` (full installed workspace),
+  not just `./node_modules` — pnpm node-linker layout otherwise hides `vite` → "vite: not found".
+- better-auth pinned to **1.2.7** in `app/package.json` (1.5+/1.6+ breaks adapter-node build).
 
 ## Why the app container must be on the DB network
 
