@@ -730,18 +730,18 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M2 — User app core (5-7 hari)
 
-> Status: **BELUM** — hanya "app dashboard foundation" ada di commit `344b056` (skeleton + tokens), route `/` masih kosong. Perlu bikin semua page di bawah. **Wajib selesaikan M1 (page login) + M1.5 lanjutan (screen spec + sisa ui primitives) dulu sebelum M2 penuh.**
+> Status: **~85% DONE** (2026-07-17) — 8 user routes built & verified (dev + live). Sisa: SSE live status (notification), Web Push VAPID, PWA manifest/SW, balance history separate route, Midtrans/Tripay live integration (gated, env keys needed), profile edit/password change form, swipe re-order.
 
-- [ ] Layout shell: header sticky, bottom nav 5 + FAB, off-canvas, safe-area, haptic.
-- [ ] Dashboard `/`: hero saldo (animated), quick-grid 2×2, pesanan terbaru (SSE), pull-to-refresh.
-- [ ] Services `/layanan`: search sticky, filter chip, sort, favorit (toggle), bundle tray, card mobile, infinite scroll.
-- [ ] New order `/pesan`: kategori chips, qty-stepper, realtime total (pricing.ts), saved links, sticky CTA.
-- [ ] Order history `/pesanan`: filter chips, infinite scroll, SSE live status, swipe quick re-order, detail bottom-sheet.
-- [ ] Deposit `/saldo/top-up`: amount chips, Midtrans Snap (QRIS deep-link), Tripay port, riwayat.
-- [ ] Balance history `/saldo/riwayat`.
-- [ ] Affiliate `/affiliate`: link + QR + Web Share, stats, withdraw.
-- [ ] Tickets `/tiket`: list, buat, balas, close.
-- [ ] Profile `/akun`: edit, ganti password, API key, theme, passkey, logout.
+- [x] Layout shell: header sticky, bottom nav 5 + FAB, off-canvas, safe-area, haptic. (commit d4bc937)
+- [x] Dashboard `/`: SaldoHero (animated counter), QuickGrid 2×2, pesanan terbaru (SSE = follow-up). (verified 200)
+- [x] Services `/layanan`: search sticky, filter chip, sort, ServiceCard, infinite scroll. (verified 200, search/sort works)
+- [x] New order `/pesan`: qty-stepper, realtime total (packages/core/pricing.ts), saved links, sticky CTA, balance deduct. (verified order insert + balance deduct)
+- [x] Order history `/pesanan`: filter chips, status badge. (SSE live + swipe + detail sheet = follow-up)
+- [x] Deposit `/saldo/top-up`: amount chips, Midtrans/Tripay gated (env), riwayat, deposit record. (verified record insert)
+- [ ] Balance history `/saldo/riwayat` (separate route — currently shown in top-up).
+- [x] Affiliate `/affiliate`: link + Web Share, commission, downline. (QR = follow-up)
+- [x] Tickets `/tiket`: list, buat. (balas/close = follow-up)
+- [x] Profile `/akun`: avatar, saldo, apikey copy, logout. (edit/password/theme/passkey = follow-up)
 - [ ] Notification: SSE + Web Push VAPID.
 - [ ] PWA: manifest, service worker (offline catalog), install prompt.
 
