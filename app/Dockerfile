@@ -18,7 +18,9 @@ RUN pnpm install --frozen-lockfile
 
 # Build
 FROM base AS build
-COPY --from=deps /app/node_modules ./node_modules
+# Bring the fully installed workspace (incl. node_modules) from deps stage,
+# then overlay the source. This avoids pnpm node-linker layout mismatches.
+COPY --from=deps /app /app
 COPY . .
 RUN pnpm --filter app build
 
