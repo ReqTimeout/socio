@@ -749,16 +749,17 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M3 — Admin (5-7 hari)
 
-> Status: **BELUM** — belum ada route `/admin/*` sama sekali. (Harus baca `docs/ADMIN_GAP.md` dulu.)
+> Status: **CORE SELESAI & LIVE (2026-07-17)** — `/admin/*` route group, role guard (level=Admin), layout sidebar+off-canvas, dashboard, users (adjust/suspend+audit), orders (table+filter), deposits (confirm/reject+audit), audit log, settings (maintenance toggle). Verified live: all routes 200 for Admin, 303 redirect for non-admin, maintenance 503, audit writes OK. (G1 audit + G8 maintenance dari ADMIN_GAP ✓; G6 RBAC partial — admin_roles table exists, enforcement belum di layout.)
+> Belum: Services/Pricing CRUD, Provider library sync UI, Tickets mgmt, Affiliate report, Banner CMS, Reporting chart/CSV, Email marketing, News CRUD, dashboard chart/realtime.
 
-- [ ] Admin layout: sidebar (desktop) + off-canvas (mobile), role guard.
-- [ ] Dashboard `/admin`: stats, chart (LayerKit/svelte-chartjs), realtime activity feed.
-- [ ] Users mgmt: server-side filter, bulk, CSV export, card-list mobile.
+- [x] Admin layout: sidebar (desktop) + off-canvas (mobile), role guard (level=Admin). → `(admin)/+layout.svelte` + `+layout.server.ts`.
+- [x] Dashboard `/admin`: stats cards (orders/deposits/users/balance). Chart + realtime feed ditunda.
+- [x] Users mgmt: server-side search/filter, suspend + adjust balance + audit log. Bulk/CSV ditunda.
 - [ ] Services + kategori CRUD.
 - [ ] Provider library: list, sync trigger, auto-sync toggle, balance, log.
 - [ ] Pricing rules: markup per level.
-- [ ] Deposit mgmt: approve/cancel.
-- [ ] Order mgmt: filter, refill, refund.
+- [x] Deposit mgmt: confirm/reject + audit log.
+- [x] Order mgmt: filter/table view. Refill/refund ditunda.
 - [ ] Tickets mgmt.
 - [ ] Affiliate laporan.
 - [ ] Banner CMS.
