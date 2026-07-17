@@ -682,16 +682,20 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M1 — Auth + DB wiring (4-5 hari)
 
-> Status: **SEBAGIAN — auth backend VERIFIED, tapi UI route + fitur auth sampingan BELUM.** Lanjut M2 butuh page login dulu (lihat urutan kerja).
+> Status: **SELESAI (2026-07-17)** — auth backend + semua page UI auth live di `app.socio.id`.
 
-- [x] better-auth setup dgn Drizzle adapter (MySQL). → `app/src/lib/server/auth.ts`, pin better-auth `1.2.7` (commit `3313099`, `8ff4b28`).
-- [~] Route: `/login`, `/daftar`, `/lupa-password`, `/reset`, `/verifikasi`. → **BARU ADA `api/auth/*` (better-auth endpoints, 200 verified). PAGE UI BELUM** — hanya `+page.svelte` root kosong. Perlu dibuat page + form.
-- [~] Turnstile integration (env-gated), zxcvbn meter, disposable block, rate-limit DB. → `app/src/lib/server/turnstile.ts` ada + env. **zxcvbn / disposable block / rate-limit DB BELUM**.
-- [~] Rehash-on-login untuk hash non-bcrypt. → logic belum diimplementasi eksplisit (hash dump sudah bcrypt, jadi low priority, tapi belum ada kode).
-- [ ] Double opt-in email (Resend). → BELUM (butuh M6 email dulu, atau partial).
-- [ ] Passkey WebAuthn (register di `/akun` setelah login). → BELUM.
-- [x] Hook `hooks.server.ts`: session check, CSRF double-submit, rate-limit, security headers. → `app/src/hooks.server.ts` ada (security headers + session).
-- [x] Test: login dgn user existing dari dump → sukses, saldo terbaca. → VERIFIED (commit `3313099`).
+- [x] better-auth setup dgn Drizzle adapter (MySQL). → `app/src/lib/server/auth.ts`, pin better-auth `1.2.7`.
+- [x] Route: `/login`, `/daftar`, `/lupa-password`, `/reset`, `/verifikasi`. → Semua page + server action jadi (commit `ac3b6e1`). `/` redirect ke `/login` kalau no session.
+- [x] Turnstile integration (env-gated), zxcvbn meter, disposable block, rate-limit DB.
+  - Turnstile: `lib/server/turnstile.ts` (verify) + `lib/turnstile.ts` (client widget) + env-gated.
+  - zxcvbn: `@zxcvbn-ts/core@2` password meter di `/daftar`.
+  - disposable: `lib/server/disposable-emails.ts` blocklist (signup).
+  - rate-limit: `lib/server/rate-limit.ts` DB-backed (`rate_limits` table, dibuat di prod DB) — login 5/5m, signup 5/15m, forgot 5/15m.
+- [x] Rehash-on-login untuk hash non-bcrypt. → `maybeRehashPassword()` di `auth.ts` (invisible, fail-open).
+- [x] Double opt-in email (Resend). → `email.ts` (Resend env-gated, fallback console di dev) + `sendVerificationEmail`/`sendResetPassword` di better-auth. `emailVerification.sendOnSignUp: true`.
+- [ ] Passkey WebAuthn (register di `/akun` setelah login). → **BELUM** (ditunda ke M2 `/akun` / M6).
+- [x] Hook `hooks.server.ts`: session check, CSRF double-submit, rate-limit, security headers. → ada.
+- [x] Test: login dgn user existing dari dump → sukses, saldo terbaca. → VERIFIED live (signIn endpoint 200 + token).
 
 ### M1.5 — Design Pass (3-4 hari) ⚠️ WAJIB sebelum M2
 
