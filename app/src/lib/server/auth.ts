@@ -22,6 +22,30 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: false,
+    emailVerification: {
+      sendOnSignUp: true,
+      autoSignInAfterVerification: false,
+    },
+    sendResetPassword: async ({ user, url }: { user: { email: string; name?: string }; url: string }) => {
+      const { sendEmail, resetPasswordEmail } = await import("./email");
+      await sendEmail({
+        to: user.email,
+        subject: "Reset password — Socio.id",
+        ...resetPasswordEmail(url),
+      });
+    },
+    sendVerificationEmail: async ({ user, url }: { user: { email: string; name?: string }; url: string }) => {
+      const { sendEmail, verificationEmail } = await import("./email");
+      const base = process.env.SOCIO_APP_URL ?? "https://app.socio.id";
+      const token = new URL(url).searchParams.get("token") ?? "";
+      const verifyLink = `${base}/verifikasi?token=${token}`;
+      await sendEmail({
+        to: user.email,
+        subject: "Verifikasi email — Socio.id",
+        ...verificationEmail(verifyLink),
+      });
+    },
     password: {
       // better-auth expects async hash/verify
       hash: async (password: string) => bcrypt.hashSync(password, 10),
@@ -56,5 +80,36 @@ export const auth = betterAuth({
   secret: process.env.SOCIO_AUTH_SECRET ?? "dev-insecure-secret-change-me",
   baseURL: process.env.SOCIO_APP_URL ?? process.env.BETTER_AUTH_URL ?? undefined,
 });
+
+/**
+ * Rehash-on-login: legacy PHP hashes may not be bcrypt (some dumps use a
+ * different scheme). After a successful login with a plain (bcrypt-compatible)
+ * password, upgrade the stored hash to bcrypt so future logins are uniform.
+ * No mass reset — invisible to the user.
+ */
+export async function maybeRehashPassword(
+  userId: number | string,
+  plainPassword: string,
+): Promise<void> {
+  try {
+    const rows = await db
+      .select({ password: users.password })
+      .from(users)
+      .where(eq(users.id, Number(userId)))
+      .limit(1);
+    const current = rows[0]?.password ?? "";
+    const isBcrypt =
+      current.startsWith("$2a$") || current.startsWith("$2b$") || current.startsWith("$2y$");
+    if (isBcrypt) return; // already bcrypt, nothing to do
+    await db
+      .update(users)
+      .set({ password: bcrypt.hashSync(plainPassword, 10) })
+      .where(eq(users.id, Number(userId)));
+  } catch {
+    // best-effort: never break login on rehash failure
+  }
+}
+
+import { eq } from "drizzle-orm";
 
 export { db, schema };
