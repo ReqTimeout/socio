@@ -669,25 +669,29 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M0 — Foundation (3-4 hari)
 
-- [ ] Verifikasi password hash di dump (`grep INSERT INTO users`).
-- [ ] Buat monorepo pnpm workspace: `landing/` (sudah ada clone haloka), `app/`, `packages/{db,ui,core}`.
-- [ ] Setup SvelteKit skeleton di `app/` dgn adapter-node, Tailwind v4, ESLint, Prettier, Vitest.
-- [ ] Setup Drizzle: introspect dump → `schema.ts`. Import dump ke TiDB lokal (Docker) untuk dev.
-- [ ] Verifikasi: `bcryptjs.compare('test123', hashFromDump)` → true. Login user existing works.
-- [ ] Setup TiDB Serverless (Singapore) + Tencent Lighthouse Jakarta (Coolify panel).
-- [ ] Deploy skeleton `app.socio.id` ke Tencent Lighthouse (halaman "coming soon" + healthcheck).
-- [ ] Setup DNS: `socio.id` di CF, `app.socio.id` pointing ke VPS.
+> Status: **SELESAI (dengan deviasi: DB pakai MySQL VPS `socio-db`, bukan TiDB Serverless — lihat note).** Selesai 2026-07-17.
+
+- [x] Verifikasi password hash di dump (`grep INSERT INTO users`). → bcrypt `$2y$` terkonfirmasi, `bcryptjs.compare` works (commit `3313099`).
+- [x] Buat monorepo pnpm workspace: `landing/`, `app/`, `packages/{db,ui,core}`.
+- [x] Setup SvelteKit skeleton di `app/` dgn adapter-node, Tailwind v4, ESLint, Prettier, Vitest.
+- [x] Setup Drizzle: `packages/db/src/schema/{users,rebuild,index}.ts`. Import dump ke MySQL VPS `socio-db` (bukan TiDB — deviasi keputusan §12#1, disetujui praktis karena VPS sudah ada MySQL).
+- [x] Verifikasi: `bcryptjs.compare` → true. Login user existing works (commit `3313099`, auth endpoint 200 + token).
+- [~] Setup TiDB Serverless (Singapore) + Tencent Lighthouse Jakarta (Coolify panel). → **Tencent Lighthouse + Coolify SELESAI & LIVE** (app.socio.id diproteksi Coolify proxy). **TiDB Serverless TIDAK dipakai** — pakai MySQL di VPS (`socio-db`, sudah di network `coolify`). Keputusan §12#1 berubah ke MySQL VPS.
+- [x] Deploy skeleton `app.socio.id` ke VPS via Coolify (Dockerfile git-backed dari GitHub `ReqTimeout/socio`, branch `main`). Healthcheck `/` = 200.
+- [x] Setup DNS: `app.socio.id` → VPS (CF proxy full). `cdn.socio.id` → R2 public (aktif). `socio.id` → Cloudflare Pages (landing, M5).
 
 ### M1 — Auth + DB wiring (4-5 hari)
 
-- [ ] better-auth setup dgn Drizzle adapter (MySQL).
-- [ ] Route: `/login`, `/daftar`, `/lupa-password`, `/reset`, `/verifikasi`.
-- [ ] Turnstile integration (env-gated), zxcvbn meter, disposable block, rate-limit DB.
-- [ ] Rehash-on-login untuk hash non-bcrypt.
-- [ ] Double opt-in email (Resend).
-- [ ] Passkey WebAuthn (register di `/akun` setelah login).
-- [ ] Hook `hooks.server.ts`: session check, CSRF double-submit, rate-limit, security headers (port `lib/security-headers.php`).
-- [ ] Test: login dgn user existing dari dump → sukses, saldo terbaca.
+> Status: **SEBAGIAN — auth backend VERIFIED, tapi UI route + fitur auth sampingan BELUM.** Lanjut M2 butuh page login dulu (lihat urutan kerja).
+
+- [x] better-auth setup dgn Drizzle adapter (MySQL). → `app/src/lib/server/auth.ts`, pin better-auth `1.2.7` (commit `3313099`, `8ff4b28`).
+- [~] Route: `/login`, `/daftar`, `/lupa-password`, `/reset`, `/verifikasi`. → **BARU ADA `api/auth/*` (better-auth endpoints, 200 verified). PAGE UI BELUM** — hanya `+page.svelte` root kosong. Perlu dibuat page + form.
+- [~] Turnstile integration (env-gated), zxcvbn meter, disposable block, rate-limit DB. → `app/src/lib/server/turnstile.ts` ada + env. **zxcvbn / disposable block / rate-limit DB BELUM**.
+- [~] Rehash-on-login untuk hash non-bcrypt. → logic belum diimplementasi eksplisit (hash dump sudah bcrypt, jadi low priority, tapi belum ada kode).
+- [ ] Double opt-in email (Resend). → BELUM (butuh M6 email dulu, atau partial).
+- [ ] Passkey WebAuthn (register di `/akun` setelah login). → BELUM.
+- [x] Hook `hooks.server.ts`: session check, CSRF double-submit, rate-limit, security headers. → `app/src/hooks.server.ts` ada (security headers + session).
+- [x] Test: login dgn user existing dari dump → sukses, saldo terbaca. → VERIFIED (commit `3313099`).
 
 ### M1.5 — Design Pass (3-4 hari) ⚠️ WAJIB sebelum M2
 
@@ -702,9 +706,9 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
   - NOT: bukan WhatsApp AI (haloka), bukan WhatsApp bot, bukan CRM.
   - References: GoPay/DANA (app user mobile), Linear/Stripe (admin), haloka (landing micro-interaction).
   - Temperature: **Bold/High-Contrast** (consumer app), **Neutral/Clean** (admin).
-  - Output: positioning brief di `docs/DESIGN_BRIEF.md`.
-- [ ] **Phase 2 — Research** (skill `looks-expensive`): study GoPay/DANA + Linear + haloka + 5 SMM panel (SMMturk/JAP/Rush/PerfectPanel/Boom). Steal/avoid list.
-- [x] **Phase 3 — Design Contract** (skill `looks-expensive`): output `DESIGN.md` lengkap (root `DESIGN.md` — palette/typography/spacing/radius/shadow/motion + 8 anti-pattern audit + app shell). Tokens implemented in `packages/ui/src/tokens.css`.
+  - Output: positioning brief di `docs/DESIGN_BRIEF.md`. → **BELUM** dibuat (brief ada di DESIGN.md secara informal).
+- [ ] **Phase 2 — Research** (skill `looks-expensive`): study GoPay/DANA + Linear + haloka + 5 SMM panel (SMMturk/JAP/Rush/PerfectPanel/Boom). Steal/avoid list. → **BELUM** (belum ada doc riset formal).
+- [x] **Phase 3 — Design Contract** (skill `looks-expensive`): output `DESIGN.md` lengkap (root `DESIGN.md` — palette/typography/spacing/radius/shadow/motion + 8 anti-pattern audit + app shell). Tokens implemented in `packages/ui/src/tokens.css`. → **SELESAI** (commit `6a1d371`).
   - Scene sentence: "Reseller SMM Indonesia 25 tahun di café, buka HP mid-day, top up saldo Rp100k via QRIS, pesan 500 followers IG, tutup HP, lanjut kerja. Balik buka app 5 menit kemudian — status sudah Berhasil."
   - Palette: OKLCH derived dari brand hue (default biru-ungu SMM tech vibe, **bukan** hijau WA haloka). Tinted paper/ink. Accent visible di CTA + link + icon + tinted section. `--accent-ink` untuk button fill (L=0.42-0.48). **BUKAN** Inter — pilih Plus Jakarta Sans atau Manrope atau Space Grotesk.
   - Typography: 1 sans family, base 15px (mobile product UI), scale ratio 1.2-1.25 (compact). 400/500/600/700 weight. Mono accent only ≤14px untuk data atoms (order ID, timestamp, unit).
@@ -717,18 +721,20 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
   - Untuk app user: 8 screen (dashboard, pesan, layanan, pesanan, saldo/top-up, affiliate, tiket, akun). Per-screen: route, purpose, hero pattern, imagery audit (real img, no gradient blob), section map, containment variance (≥3 patterns, max 2 default card), bullet budget (≤5), pricing pattern, stat section decision, ASCII wireframe, cognitive load check, 8 interaction states, responsive 320/640/768/1024/1280, animation plan (≥2 types, ≥1 domain-specific).
   - Untuk admin: 8 screen (dashboard, users, services, providers, orders, deposits, tickets, pricing). Dense data table + card-list mobile. Sidebar desktop + off-canvas mobile.
   - Untuk landing: pakai haloka sebagai baseline + adapt konten SMM (OrderSimulator ganti ChatSimulator).
-  - Output: per-route spec di `docs/MOBILE_UX_GUIDE.md`.
-- [x] **Setup `packages/ui`** (skill `ui-styling` + `theming-components`): Tailwind v4 + tokens dari DESIGN.md. Primitives built: Button, Card, StatusBadge, BalancePill, MobileShell (shadcn-svelte init + full component suite = follow-up M1.5 lanjutan).
+  - Output: per-route spec di `docs/MOBILE_UX_GUIDE.md`. → **BELUM** (MOBILE_UX_GUIDE.md belum ada).
+- [~] **Setup `packages/ui`** (skill `ui-styling` + `theming-components`): Tailwind v4 + tokens dari DESIGN.md. Primitives built: Button, Card, StatusBadge, BalancePill, MobileShell (shadcn-svelte init + full component suite = follow-up M1.5 lanjutan). → **SEBAGIAN**: tokens.css + 5 komponen ada (Button, Card, StatusBadge, BalancePill, MobileShell). Sheet/Dialog/Toast/Command/Input/Select/Tabs/Skeleton/Tooltip/Avatar/Accordion + custom SMM (SaldoHero, QuickGrid, ServiceCard, BottomNav, FAB, BottomSheet, QtyStepper, EmptyState, ConfirmDialog) **BELUM**.
   - Inisialisasi shadcn-svelte: `npx shadcn-svelte@latest init`.
   - Tambah komponen: Button, Card, Badge, Sheet (bottom-sheet), Dialog, Toast, Command (⌘K), Input, Select, Tabs, Skeleton, Tooltip, Avatar, Accordion.
   - Custom komponen SMM: StatusBadge (7 warna order), SaldoHero (animated counter), QuickGrid, ServiceCard, BottomNav, FAB, BottomSheet, QtyStepper, EmptyState, ConfirmDialog.
   - **Light dulu** (per jawaban user). Dark mode template ada tapi gak di-expose — ditambahkan di M6.
   - Output: `packages/ui/` siap dipakai app + landing.
-- [ ] **Visual primitives** (skill `emil-design-eng`): invisible details — focus-visible ring, loading shimmer, skeleton, optimistic update pattern, haptic (navigator.vibrate), view transition SvelteKit, safe-area iOS/Android.
-- [x] **Audit 8 anti-pattern `looks-expensive`** (per §6.0.2): rules encoded in `DESIGN.md` §5; enforced per-route before "done" (Phase 1/2/4 brief + screen-spec docs = follow-up).
-- [ ] **Commit** + tandai M1.5 selesai di checklist ini.
+- [ ] **Visual primitives** (skill `emil-design-eng`): invisible details — focus-visible ring, loading shimmer, skeleton, optimistic update pattern, haptic (navigator.vibrate), view transition SvelteKit, safe-area iOS/Android. → **BELUM** (belum ada doc/implementasi terpusat).
+- [x] **Audit 8 anti-pattern `looks-expensive`** (per §6.0.2): rules encoded in `DESIGN.md` §5; enforced per-route before "done" (Phase 1/2/4 brief + screen-spec docs = follow-up). → **Aturan ada di DESIGN.md**, tapi belum ada screen-spec doc (Phase 4) untuk enforce per-route.
+- [ ] **Commit** + tandai M1.5 selesai di checklist ini. → **BELUM tuntas** (Phase 1/2/4 + visual primitives + sisa komponen ui belum). Status M1.5: **~70% — design contract + tokens + sebagian primitives done, screen spec + riset + sisa komponen belum**.
 
 ### M2 — User app core (5-7 hari)
+
+> Status: **BELUM** — hanya "app dashboard foundation" ada di commit `344b056` (skeleton + tokens), route `/` masih kosong. Perlu bikin semua page di bawah. **Wajib selesaikan M1 (page login) + M1.5 lanjutan (screen spec + sisa ui primitives) dulu sebelum M2 penuh.**
 
 - [ ] Layout shell: header sticky, bottom nav 5 + FAB, off-canvas, safe-area, haptic.
 - [ ] Dashboard `/`: hero saldo (animated), quick-grid 2×2, pesanan terbaru (SSE), pull-to-refresh.
@@ -744,6 +750,8 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 - [ ] PWA: manifest, service worker (offline catalog), install prompt.
 
 ### M3 — Admin (5-7 hari)
+
+> Status: **BELUM** — belum ada route `/admin/*` sama sekali. (Harus baca `docs/ADMIN_GAP.md` dulu.)
 
 - [ ] Admin layout: sidebar (desktop) + off-canvas (mobile), role guard.
 - [ ] Dashboard `/admin`: stats, chart (LayerKit/svelte-chartjs), realtime activity feed.
@@ -762,6 +770,8 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M4 — Cron & webhooks (3-4 hari)
 
+> Status: **BELUM** — belum ada `app/src/cron/*`, `job_queue` table, atau webhook handler.
+
 - [ ] DB-backed queue (`job_queue` + worker loop).
 - [ ] `cron/provider-sync` + worker (§2.1).
 - [ ] `cron/status-polling` stratified (§2.2).
@@ -773,7 +783,9 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M5 — Landing socio.id (3-5 hari)
 
-- [ ] Upgrade `landing/` (clone haloka) ke Tailwind v4 + astro:assets.
+> Status: **SEBAGIAN** — `landing/` sudah di-migrate ke socio.id SMM theme + Tailwind v4 + shared `@socio/ui` tokens (commit `344b056`), tapi belum deploy ke Cloudflare Pages & belum ada blog MDX / JSON-LD penuh / OrderSimulator baru.
+
+- [~] Upgrade `landing/` (clone haloka) ke Tailwind v4 + astro:assets.
 - [ ] Ganti konten haloka (WhatsApp AI) → socio.id (SMM panel).
 - [ ] Section flow final: Navbar → Hero + **OrderSimulator** (simulasi alur pesan SMM, bukan chat WA) → TrustBadges → PainPoints (reseller SMM) → Features (catalog 6000+ layanan, auto-sync, pricing markup, affiliate) → InteractiveTutorial (top up → pilih layanan → status live) → SocialProof → Pricing (paket reseller: Member/Agen/Reseller/Admin markup) → FinalCTA → FAQ → Footer.
 - [ ] Sticky CTA → "Daftar Gratis" → `app.socio.id/daftar`.
@@ -783,6 +795,8 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 - [ ] Deploy ke Cloudflare Pages, custom domain `socio.id`.
 
 ### M6 — Email + polish (3-4 hari)
+
+> Status: **BELUM** — belum ada integrasi email (Resend/MailChannels).
 
 - [ ] Resend integration (atau CF Email Routing + MailChannels).
 - [ ] Email templates (svelte-email): welcome, verify, reset, deposit sukses, order status, ticket reply, affiliate komisi, marketing campaign.
@@ -795,7 +809,9 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M7 — Cutover (2-3 hari + 1 minggu paralel)
 
-- [ ] Backup dump final dari VPS lama.
+> Status: **SEBAGIAN (cutover app SUDAH dilakukan di luar urutan)** — app.socio.id sudah LIVE di Coolify (menggantikan Caddy+systemd), DB=`socio-db` (bukan TiDB). Landing `socio.id` belum cutover ke Pages. Folder lama `app.socio.id/`, `socio.id/` masih ada (belum dihapus).
+
+- [~] Backup dump final dari VPS lama.
 - [ ] Import final ke TiDB production.
 - [ ] **DNS + Cloudflare setup via skill `cloudflare`** (bukan manual):
   - Zone `socio.id` (kalau belum), NS di Cloudflare.
