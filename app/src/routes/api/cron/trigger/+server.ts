@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { runProviderSync } from "$lib/server/cron/provider-sync";
-import { runStatusPolling } from "$lib/server/cron/status-polling";
+import { runProviderSync } from "../../../../cron/provider-sync";
+import { runStatusPolling } from "../../../../cron/status-polling";
 import { db } from "@socio/db";
 import { sql } from "drizzle-orm";
 
