@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    "./pricing": "./src/pricing.ts"
+    "./pricing": "./src/pricing.ts",
+    "./smmturk": "./src/smmturk.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

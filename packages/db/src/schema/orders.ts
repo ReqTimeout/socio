@@ -52,6 +52,8 @@ export const orders = mysqlTable(
     isRefund: int("is_refund").notNull().default(0),
     apiOrderLog: text("api_order_log"),
     apiStatusLog: text("api_status_log"),
+    nextPollAt: datetime("next_poll_at"),
+    pollPriority: int("poll_priority").notNull().default(5),
   },
   (t) => ({
     userIdx: index("idx_user_id").on(t.userId),
