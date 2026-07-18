@@ -38,9 +38,17 @@ async function authByKey(apiKey: string) {
 }
 
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
-  const form = await request.formData();
-  const action = String(form.get("action") ?? "");
-  const apiKey = String(form.get("api_key") ?? "");
+  // Parse body: accept both JSON and form-encoded (JSON bypasses CSRF for cross-origin API clients)
+  const contentType = request.headers.get("content-type") ?? "";
+  let params: Record<string, string>;
+  if (contentType.includes("application/json")) {
+    params = await request.json();
+  } else {
+    const text = await request.text();
+    params = Object.fromEntries(new URLSearchParams(text));
+  }
+  const action = String(params.action ?? "");
+  const apiKey = String(params.api_key ?? "");
 
   // rate-limit: 60 req/min per IP
   const ip = getClientAddress();
@@ -51,11 +59,11 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     case "services":
       return handleServices(apiKey);
     case "order":
-      return handleOrder(apiKey, form);
+      return handleOrder(apiKey, params);
     case "status":
-      return handleStatus(apiKey, form);
+      return handleStatus(apiKey, params);
     case "refill":
-      return handleRefill(apiKey, form);
+      return handleRefill(apiKey, params);
     case "profile":
       return handleProfile(apiKey);
     default:
@@ -99,14 +107,14 @@ async function handleServices(apiKey: string): Promise<Response> {
   return ok("Access Allowed", rows);
 }
 
-async function handleOrder(apiKey: string, form: FormData): Promise<Response> {
+async function handleOrder(apiKey: string, form: Record<string,string>): Promise<Response> {
   const user = await authByKey(apiKey);
   if (!user) return fail("Wrong API Key");
 
-  const serviceId = Number(form.get("service"));
-  const link = String(form.get("data") ?? form.get("link") ?? "");
-  const quantity = Number(form.get("quantity") ?? 0);
-  const comments = String(form.get("comments") ?? "");
+  const serviceId = Number(form["service"]);
+  const link = String(form["data"] ?? form["link"] ?? "");
+  const quantity = Number(form["quantity"] ?? 0);
+  const comments = String(form["comments"] ?? "");
 
   if (!serviceId || !link || (!quantity && !comments)) {
     return fail("Wrong Request! Missing service, data (link), or quantity");
@@ -194,11 +202,11 @@ async function handleOrder(apiKey: string, form: FormData): Promise<Response> {
   return ok("Order placed", { order_id: oid, price: totalPrice });
 }
 
-async function handleStatus(apiKey: string, form: FormData): Promise<Response> {
+async function handleStatus(apiKey: string, form: Record<string,string>): Promise<Response> {
   const user = await authByKey(apiKey);
   if (!user) return fail("Wrong API Key");
 
-  const orderId = Number(form.get("id"));
+  const orderId = Number(form["id"]);
   if (!orderId) return fail("Missing order id");
 
   const [order] = await db
@@ -217,11 +225,11 @@ async function handleStatus(apiKey: string, form: FormData): Promise<Response> {
   });
 }
 
-async function handleRefill(apiKey: string, form: FormData): Promise<Response> {
+async function handleRefill(apiKey: string, form: Record<string,string>): Promise<Response> {
   const user = await authByKey(apiKey);
   if (!user) return fail("Wrong API Key");
 
-  const orderId = Number(form.get("id"));
+  const orderId = Number(form["id"]);
   if (!orderId) return fail("Missing order id");
 
   const [order] = await db
