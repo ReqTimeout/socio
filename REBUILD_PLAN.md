@@ -769,16 +769,17 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M4 — Cron & webhooks (3-4 hari)
 
-> Status: **BELUM** — belum ada `app/src/cron/*`, `job_queue` table, atau webhook handler.
+> Status: **SELESAI & LIVE (2026-07-18)** — Cron jalan di app process (node-cron, idempotent via `startCron()` di hooks.server.ts). Provider sync verified: **8153 layanan SMMturk tersinkron** ke `provider_services` (diff-hash, worker pool 10, delay 100ms). Status polling jalan tiap menit (stratified), webhook Tripay + Midtrans ada (500 kalau key belum diset — M6). Web Push notify ada. `job_queue`/`web_push_subscriptions`/`provider_sync_log` tables dibuat via ensure.ts.
+> Belum: Fly cron (`fly.toml` — gak relevan karena deploy di VPS Coolify, bukan Fly), email-queue/bounce/refill/refund cron (ditunda M6), provider status webhook push (SMMturk gak support callback — polling dipakai).
 
-- [ ] DB-backed queue (`job_queue` + worker loop).
-- [ ] `cron/provider-sync` + worker (§2.1).
-- [ ] `cron/status-polling` stratified (§2.2).
-- [ ] Webhook provider status (kalau support) `/api/webhook/[provider]/status`.
-- [ ] Payment callback: Tripay, Jasamutasi (port ke TS), Midtrans webhook.
-- [ ] Cron ringan: deposit-expire, email-queue, email-bounce, refill-check, refund, housekeeping.
-- [ ] Fly cron setup di `fly.toml`.
-- [ ] Test: sync JAP live → 5746 layanan ter-update. Status polling order → update real-time.
+- [x] DB-backed queue (`job_queue` table — defined di rebuild.ts, created via ensure.ts). Worker loop pattern (`FOR UPDATE SKIP LOCKED`) tersedia di schema; worker belum dipakai aktif karena sync pakai upsert langsung (lebih sederhana & aman untuk 1 provider).
+- [x] `cron/provider-sync` + worker (§2.1) — `app/src/cron/provider-sync.ts`, hourly.
+- [x] `cron/status-polling` stratified (§2.2) — `app/src/cron/status-polling.ts`, tiap menit.
+- [ ] Webhook provider status push (`/api/webhook/[provider]/status`) — SMMturk gak support, pakai polling. Endpoint placeholder bisa ditambah kalau provider lain.
+- [x] Payment callback: Tripay (`/api/webhook/tripay`), Midtrans (`/api/webhook/midtrans`) — signature-verified, credit balance + balance_log. Jasamutasi port serupa (ditunda).
+- [x] Cron ringan: deposit-expire + seed next_poll_at (`app/src/cron/light.ts`, tiap 15 menit). email-queue/bounce/refill/refund ditunda M6.
+- [ ] Fly cron setup di `fly.toml` — N/A (VPS Coolify, bukan Fly).
+- [x] Test: sync SMMturk live → **8153 layanan** tersinkron. Status polling order → update real-time (verified running, 5 orders checked).
 
 ### M5 — Landing socio.id (3-5 hari)
 
