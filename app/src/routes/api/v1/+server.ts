@@ -38,22 +38,23 @@ async function authByKey(apiKey: string) {
 }
 
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
-  // Parse body: accept both JSON and form-encoded (JSON bypasses CSRF for cross-origin API clients)
-  const contentType = request.headers.get("content-type") ?? "";
-  let params: Record<string, string>;
-  if (contentType.includes("application/json")) {
-    params = await request.json();
-  } else {
-    const text = await request.text();
-    params = Object.fromEntries(new URLSearchParams(text));
-  }
-  const action = String(params.action ?? "");
-  const apiKey = String(params.api_key ?? "");
+  try {
+    // Parse body: accept both JSON and form-encoded (JSON bypasses CSRF for cross-origin API clients)
+    const contentType = request.headers.get("content-type") ?? "";
+    let params: Record<string, string>;
+    if (contentType.includes("application/json")) {
+      params = (await request.json()) as Record<string, string>;
+    } else {
+      const text = await request.text();
+      params = Object.fromEntries(new URLSearchParams(text));
+    }
+    const action = String(params.action ?? "");
+    const apiKey = String(params.api_key ?? "");
 
-  // rate-limit: 60 req/min per IP
-  const ip = getClientAddress();
-  const allowed = await rateLimit(`api-v1:${ip}`, { limit: 60, windowSec: 60 });
-  if (!allowed) return fail("Rate limit exceeded. Max 60 requests/minute.");
+    // rate-limit: 60 req/min per IP
+    const ip = getClientAddress();
+    const allowed = await rateLimit(`api-v1:${ip}`, { limit: 60, windowSec: 60 });
+    if (!allowed) return fail("Rate limit exceeded. Max 60 requests/minute.");
 
   switch (action) {
     case "services":
@@ -68,6 +69,10 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
       return handleProfile(apiKey);
     default:
       return fail("Wrong Action, Read API Documentation First");
+  }
+  } catch (e: any) {
+    console.error("[api/v1] error:", e);
+    return fail(`Internal error: ${e?.message ?? String(e)}`);
   }
 };
 
