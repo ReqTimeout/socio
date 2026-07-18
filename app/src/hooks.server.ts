@@ -57,4 +57,33 @@ async function maintenanceHook({ event, resolve }: Parameters<Handle>[0]) {
   return resolve(event);
 }
 
-export const handle = sequence(authHook, maintenanceHook);
+async function securityHeadersHook({ event, resolve }: Parameters<Handle>[0]) {
+  const response = await resolve(event, {
+    preload: ({ type }) => type === "js" || type === "css" || type === "font",
+  });
+  response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), interest-cohort=()");
+  response.headers.set("X-DNS-Prefetch-Control", "on");
+  response.headers.set(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://app.midtrans.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: blob: https: https://cdn.socio.id",
+      "connect-src 'self' https: wss:",
+      "frame-src https://challenges.cloudflare.com https://app.midtrans.com",
+      "manifest-src 'self'",
+      "worker-src 'self' blob:",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; "),
+  );
+  return response;
+}
+
+export const handle = sequence(authHook, maintenanceHook, securityHeadersHook);
