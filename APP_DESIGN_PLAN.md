@@ -672,18 +672,361 @@ Manual BCA payment juga ready (admin confirm via `/admin/deposits`).
 
 ---
 
-## 17. Urutan Kerja (saran)
+## 17. Gap Analysis & Improvements (audit PHP lama → rebuild)
 
-1. **App Shell** — `(app)/+layout.svelte` (BottomNav, FAB, header).
-2. **Dashboard** `/` — saldo hero, quick grid, order terbaru, notif.
-3. **Layanan** `/layanan` — search + filter + infinite scroll.
-4. **Pesan** `/pesan` — form + price preview + confirm + optimistic.
-5. **Pesanan** `/pesanan` — list + filter + detail sheet + SSE.
-6. **Saldo** `/saldo/top-up` + `/saldo/riwayat`.
-7. **Akun** `/akun` — profile + API key + theme.
-8. **Tiket** `/tiket`.
-9. **Affiliate** `/affiliate`.
-10. **Auth polish** (login, daftar, lupa-password).
+> Audit fungsi `app.socio.id/` (PHP lama) vs rebuild SvelteKit. Setiap gap wajib di-fix di M2; setiap improvement adalah value-add opsional tapi dianjurkan.
+
+### 17.1 Gap KRITIS (user-facing, blocker fungsi) — WAJIB fix
+
+| # | Gap | Fungsi PHP lama | Status rebuild | Prioritas |
+|---|---|---|---|---|
+| G-U1 | **Saldo top-up action 404** | `balance/add-action.php` (create deposit pending + invoice + upload bukti) | ❌ Action `/create` gak terdaftar, user gak bisa top up | 🔴 P0 |
+| G-U2 | **Refill order** | `order/refill-action.php` (trigger refill ke SMMturk, log ke `refill` table) | ❌ Belum ada action di `/pesanan` | 🔴 P0 |
+| G-U3 | **Cancel order** | SMMturk `action=cancel` dipanggil dari history | ❌ Belum ada action | 🔴 P0 |
+| G-U4 | **Custom comments (multi-line)** | `order/new-action.php` handle `komen` field, kirim `comments`/`custom_comments` ke provider | ⚠️ Ada input tapi `komen: ""` hardcoded kosong di server | 🔴 P0 |
+| G-U5 | **Copy link order / repeat order** | `history-sosmed.php` ada tombol "Pesan Lagi" → prefilled form | ❌ Belum ada | 🟡 P1 |
+| G-U6 | **Avatar upload** | Profile ganti foto (legacy: gak ada, tapi user expect) | ❌ Belum ada, R2 storage siap | 🟡 P1 |
+| G-U7 | **Affiliate withdraw** | `affiliasi/wd.php` (request withdraw, min Rp50k) | ❌ Belum ada action | 🟡 P1 |
+| G-U8 | **Saved links (repeat order)** | Tabel `saved_links` ada di schema tapi gak dipakai | ❌ Belum ada UI + action | 🟢 P2 |
+
+### 17.2 Gap SECONDARY (UX/operasional) — fix untuk parity
+
+| # | Gap | Detail | Fix |
+|---|---|---|---|
+| G-U9 | **Order detail sheet minim** | PHP lama tampilkan: status timeline, refill status, provider_order_id, link (copy), qty, remains, start_count, profit hidden. Rebuild cuma list dasar. | Sheet detail lengkap + timeline status + tombol aksi (refill/cancel/copy/repeat). |
+| G-U10 | **Saldo top-up method selection** | PHP lama: BCA (manual + unique amount), Tripay (QRIS/VA), Midtrans. Rebuild: Manual BCA + Midtrans. Unique amount (3 digit anti-wrong-transfer) belum. | Generate unique amount (+Rp1-999) per deposit, match saat confirm. |
+| G-U11 | **Bukti transfer upload** | PHP lama: user upload bukti transfer image. Admin lihat bukti sebelum confirm. | Upload ke R2 (`cdn.socio.id`), attach ke deposit, preview di admin. |
+| G-U12 | **Deposit expire auto-cancel** | PHP lama: cron cancel deposit expire >24h. Rebuild: `light.ts` cron ada, tapi verify jalan. | Test + log audit saat auto-cancel. |
+| G-U13 | **Notification center** | PHP lama: `NotificationManager.php` (order/deposit/ticket/news/promo + broadcast). Rebuild: SSE + in-app notif ada, tapi gak ada halaman notif list. | Halaman `/notif` (list, mark as read, filter type). |
+| G-U14 | **Ticket attachment** | PHP lama: ticket bisa attach image. Rebuild: text only. | Upload image ke R2 + attach ke message. |
+| G-U15 | **Search layanan advanced** | PHP lama: search by name + category + min price + max price. Rebuild: search name + filter kategori aja. | Filter chip: price range, refill only, popular. |
+| G-U16 | **Order filter advanced** | PHP lama: filter by date range, status, provider. Rebuild: status chips only. | Date range picker + filter provider + search by order ID/link. |
+| G-U17 | **Profile: ganti username** | PHP lama: bisa ganti username (unique check). Rebuild: belum. | Edit username + validate unique. |
+| G-U18 | **Profile: 2FA/Passkey** | PHP lama: gak ada. Rebuild: passkey ditunda M6. | Passkey register di `/akun` (opsional). |
+| G-U19 | **Email preferences** | PHP lama: gak ada. | Toggle: email order update / deposit / marketing (opt-in). |
+| G-U20 | **Dark mode** | PHP lama: gak ada. Rebuild: theme toggle di `/akun`, tapi gak implement full. | Dark mode via `class="dark"` + tokens, persist cookie. |
+
+### 17.3 Improvement BARU (value-add, gak ada di PHP lama)
+
+| # | Improvement | Detail | Fungsi |
+|---|---|---|---|
+| I-U1 | **Coupon/voucher** | Tabel `coupons` (code, discount, min order, expiry, max usage). User apply di checkout `/pesan`. | Diskon promo, retensi. |
+| I-U2 | **Loyalty point + tier** | Tabel `loyalty_points` (user_id, points, tier). Poin per order (1pt per Rp1k). Tier: Bronze/Silver/Gold/Platinum. Diskon tier otomatis. | Retensi, gamification. |
+| I-U3 | **Order ETA estimation** | Hitung avg waktu selesai per service (dari historical `created_at` → `updatedAt` status Success). Tampilkan "Estimasi selesai ~2 jam". | Expectation management. |
+| I-U4 | **Saved payment method** | Midtrans saved token (1-click pay). User save kartu/VA. | Frictionless repeat top-up. |
+| I-U5 | **Order simulator (landing)** | Interactive phone mockup di hero landing. | Konversi (sudah di LANDING_DESIGN_PLAN). |
+| I-U6 | **Web Push notification** | VAPID already set. Opt-in prompt setelah 1st order. Background notif saat order selesai. | Engagement, retention. |
+| I-U7 | **Onboarding tour (1st login)** | 4-step tour: saldo → pesan → layanan → pesanan. Tooltip overlay. | Aktivasi user baru. |
+| I-U8 | **Smart service recommendation** | "Layanan populer", "Pernah kamu pesan", "Murah meriah". | Discovery, cross-sell. |
+| I-U9 | **Repeat order 1-tap** | Tombol "Pesan Ulang" di history → prefilled form, tinggal submit. | Frictionless repeat. |
+| I-U10 | **Deposit quick amount** | Preset chip: 50k/100k/200k/500k + custom. | Frictionless top-up. |
+| I-U11 | **Service favorite/bookmark** | User bookmark layanan sering dipakai. Tab "Favorit" di `/layanan`. | Quick access. |
+| I-U12 | **Order batch (multi-link)** | 1 order, multiple link (csv paste). Untuk reseller bulk. | Pro user feature. |
+| I-U13 | **Realtime balance update** | SSE push balance update saat deposit confirmed / order deduct. Dashboard saldo auto-update tanpa refresh. | Instant feedback. |
+| I-U14 | **Invoice generator** | Download invoice PDF per order (untuk reseller jual ke client). | B2B feature. |
+| I-U15 | **API documentation page** | `/api-docs` page (interactive, contoh curl/PHP/Node). | Reseller onboarding. |
+| I-U16 | **Service rating/review** | User rate service 1-5 bintang setelah order selesai. Tampilkan avg rating di `/layanan`. | Social proof, quality signal. |
+| I-U17 | **Refund to balance** | Kalau order gagal → auto-refund ke saldo + notif. | Trust, retention. |
+| I-U18 | **Chat WhatsApp floating** | FAB WA di dashboard (bukan landing aja). | Support access. |
+| I-U19 | **Maintenance banner** | Kalau maintenance_mode ON → banner di top "Sistem maintenance, order sementara dijeda". | Clear communication. |
+| I-U20 | **Empty state illustration** | Setiap empty state (no order, no layanan, no tiket) pakai ilustrasi kontekstual + CTA. | Onboarding, retention. |
+
+### 17.4 Detail Fungsi & Design per Gap (implementasi)
+
+#### G-U1: Saldo Top-Up Action (P0 — blocker)
+
+**Fungsi server (`/saldo/top-up/+page.server.ts` action `create`):**
+```typescript
+export const actions: Actions = {
+  create: async ({ request, locals }) => {
+    const form = await request.formData();
+    const amount = Number(form.get("amount"));
+    const method = String(form.get("method") ?? "manual"); // manual | midtrans
+
+    if (amount < 20000) return fail(400, { error: "Minimal top up Rp20.000" });
+
+    // Generate unique amount (3 digit suffix anti-wrong-transfer)
+    const unique = Math.floor(Math.random() * 900) + 100; // 100-999
+    const postAmount = method === "manual" ? amount + unique : amount;
+
+    // Generate invoice ID
+    const invoiceId = `DEP-${Date.now()}`;
+
+    const [dep] = await db.insert(deposits).values({
+      userId: locals.user!.id,
+      payment: "bank",
+      type: method === "midtrans" ? "VA" : "manual",
+      methodName: method === "manual" ? "BCA Manual" : "Midtrans VA",
+      validasi: "BCA",
+      target: "",
+      postAmount,
+      amount,
+      note: `Top up ${method}`,
+      status: "Pending",
+      createdAt: new Date(),
+      expire: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      idPm: invoiceId,
+      invoiceVirtual: "",
+      img: "",
+      untukApa: "smm",
+    }).$returningId();
+
+    // Kalau midtrans → call Snap API untuk dapat redirect URL
+    if (method === "midtrans") {
+      const snapUrl = await createMidtransSnap(invoiceId, postAmount, locals.user!);
+      return { success: true, snapUrl, depositId: dep.id };
+    }
+
+    // Manual → return instruksi BCA
+    return { success: true, depositId: dep.id, postAmount, invoiceId };
+  },
+};
+```
+
+**Design UI (`/saldo/top-up/+page.svelte`):**
+- Saldo saat ini (big, mono, count-up).
+- Nominal: 4 preset chip (50k/100k/200k/500k) + custom input (numeric).
+- Metode: radio card 2 opsi:
+  - **Manual BCA** (gratis, +unique amount, upload bukti, confirm 1-30 menit).
+  - **Midtrans VA** (instan, fee Rp4.000, BCA/BNI/BRI/Mandiri).
+- Submit → create deposit → page instruksi:
+  - Manual: nomor BCA + jumlah unik + countdown 24 jam + upload bukti button.
+  - Midtrans: redirect ke Snap payment page.
+- Status check: poll `/api/sse` event `deposit_update` setiap 10 detik.
+- Success: confetti micro + redirect dashboard + toast "Saldo bertambah Rp X".
+
+#### G-U2: Refill Order (P0)
+
+**Fungsi server (`/pesanan/[id]/+page.server.ts` action `refill`):**
+```typescript
+refill: async ({ params, locals }) => {
+  const orderId = Number(params.id);
+  const [order] = await db.select().from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.userId, locals.user!.id))).limit(1);
+  if (!order) return fail(404, { error: "Order tidak ditemukan" });
+
+  const [svc] = await db.select({ isRefill: services.isRefill })
+    .from(services).where(eq(services.id, Number(order.serviceId))).limit(1);
+  if (!svc?.isRefill) return fail(400, { error: "Layanan ini tidak mendukung refill" });
+
+  // Cek sudah refill belum (anti spam)
+  const [existing] = await db.select().from(refill)
+    .where(eq(refill.orderId, orderId)).limit(1);
+  if (existing?.status === "Pending") return fail(400, { error: "Refill sedang diproses" });
+
+  // Call SMMturk refill
+  await smmturkRefill([order.providerOrderId]);
+
+  // Log ke refill table
+  await db.insert(refill).values({
+    orderId, userId: locals.user!.id, status: "Pending", createdAt: new Date(),
+  });
+
+  return { success: "Refill diajukan. Cek status dalam 5 menit." };
+},
+```
+
+**Design:** Tombol "Refill" di detail sheet order (hanya tampil kalau `isRefill=true` + status=Success). Confirm dialog: "Ajukan refill untuk order #X?" → submit → toast.
+
+#### G-U3: Cancel Order (P0)
+
+**Fungsi server (action `cancel`):**
+```typescript
+cancel: async ({ params, locals }) => {
+  const orderId = Number(params.id);
+  const [order] = await db.select().from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.userId, locals.user!.id))).limit(1);
+  if (!order) return fail(404, { error: "Order tidak ditemukan" });
+  if (order.status !== "Pending") return fail(400, { error: "Order sudah diproses, tidak bisa dibatalkan" });
+
+  // Try cancel di SMMturk (kalau support)
+  try { await smmturkCancel([order.providerOrderId]); } catch {}
+
+  // Update status + refund saldo
+  await db.update(orders).set({ status: "Canceled", updatedAt: new Date() })
+    .where(eq(orders.id, orderId));
+  const newBal = Number(locals.user!.balance) + Number(order.price);
+  await db.update(users).set({ balance: newBal }).where(eq(users.id, locals.user!.id));
+  await db.insert(balanceLogs).values({
+    userId: locals.user!.id, type: "ref", amount: Number(order.price),
+    note: `Refund cancel order #${orderId}`, createdAt: new Date(),
+  });
+
+  return { success: "Order dibatalkan. Saldo dikembalikan Rp " + order.price };
+},
+```
+
+**Design:** Tombol "Batalkan" di detail sheet (hanya kalau status=Pending). Confirm dialog 2x.
+
+#### G-U4: Custom Comments (P0)
+
+**Fungsi server (`/pesan/+page.server.ts` action `default`):**
+- Kalau service `type === "Custom Comments"`: `quantity` = line count dari `komen` field, kirim `comments` ke SMMturk (bukan `quantity`).
+- Kalau `type === "Default"`: pakai `quantity` numeric, `komen` kosong.
+
+```typescript
+const komen = String(form.get("komen") ?? "").trim();
+const isCustomComments = s.type === "Custom Comments";
+const quantity = isCustomComments ? komen.split("\n").filter(Boolean).length : Number(form.get("quantity"));
+
+if (isCustomComments && !komen) return fail(400, { error: "Komen wajib diisi untuk layanan Custom Comments" });
+if (!isCustomComments && (!quantity || quantity < s.min)) return fail(400, { error: `Min ${s.min}` });
+
+// Kirim ke SMMturk
+const result = isCustomComments
+  ? await smmturkAdd(String(s.providerServiceId), link, 0, komen)  // comments field
+  : await smmturkAdd(String(s.providerServiceId), link, quantity); // quantity field
+```
+
+**Design UI (`/pesan/+page.svelte`):**
+- Kalau service `type === "Custom Comments"`: tampilkan textarea (bukan qty stepper). Label "Komentar (1 per baris)". Counter line count. Hint: "100 komentar = 100 qty, harga dihitung per 1000".
+- Kalau `type === "Default"`: qty stepper seperti biasa.
+
+#### G-U5: Repeat Order / Copy Link (P1)
+
+**Design:** Di detail sheet order → tombol "Pesan Ulang" (icon refresh) → navigasi ke `/pesan?service=<serviceId>&link=<encodedLink>&qty=<qty>`. Form `/pesan` baca query param, prefilled.
+
+**Fungsi `/pesan/+page.server.ts` load:**
+```typescript
+const urlParams = new URL(request.url).searchParams;
+return {
+  prefill: {
+    serviceId: urlParams.get("service"),
+    link: urlParams.get("link"),
+    quantity: urlParams.get("qty"),
+  },
+};
+```
+
+#### G-U6: Avatar Upload (P1)
+
+**Fungsi (`/akun/+page.server.ts` action `avatar`):**
+```typescript
+avatar: async ({ request, locals }) => {
+  const form = await request.formData();
+  const file = form.get("avatar") as File;
+  if (!file || file.size > 2_000_000) return fail(400, { error: "Max 2MB" });
+
+  // Upload ke R2
+  const buf = await file.arrayBuffer();
+  const key = `avatars/${locals.user!.id}-${Date.now()}.${file.type.split("/")[1]}`;
+  await r2.putObject({ Bucket: "socio", Key: key, Body: buf, ContentType: file.type });
+
+  const url = `https://cdn.socio.id/${key}`;
+  await db.update(users).set({ has: url }).where(eq(users.id, locals.user!.id));
+  return { success: "Avatar diperbarui", avatar: url };
+},
+```
+
+**Design:** Avatar di `/akun` → tap → bottom-sheet: "Ambil Foto" / "Pilih Galeri" / "Hapus". Crop circular (client-side canvas). Preview langsung.
+
+#### G-U7: Affiliate Withdraw (P1)
+
+**Fungsi (`/affiliate/+page.server.ts` action `withdraw`):**
+```typescript
+withdraw: async ({ request, locals }) => {
+  const form = await request.formData();
+  const amount = Number(form.get("amount"));
+  const method = String(form.get("method")); // BCA / DANA / OVO / GoPay
+
+  if (amount < 50000) return fail(400, { error: "Min withdraw Rp50.000" });
+
+  // Cek saldo komisi pending
+  const [row] = await db.select({ total: sql`SUM(balance)` })
+    .from(affiliate).where(and(eq(affiliate.userId, locals.user!.id), eq(affiliate.status, "Pending")));
+  const pending = Number(row?.total ?? 0);
+  if (amount > pending) return fail(400, { error: "Saldo komisi tidak cukup" });
+
+  // Create withdraw request
+  await db.insert(affiliate).values({
+    userId: locals.user!.id, userAffi: locals.user!.id,
+    balance: -amount, status: "Withdraw", createdAt: new Date(),
+    note: `Withdraw via ${method}`,
+  });
+
+  return { success: "Withdraw diajukan. Diproses 1×24 jam." };
+},
+```
+
+**Design:** Tombol "Withdraw" di `/affiliate` → bottom-sheet: input amount (preset 50k/100k/all), pilih metode (BCA/DANA/OVO/GoPay), input nomor tujuan. Confirm → toast.
+
+### 17.5 Detail Improvement per Item (design singkat)
+
+#### I-U1: Coupon/voucher
+- Admin CRUD coupon (di `/admin/coupons`).
+- User input kode di `/pesan` checkout → apply → discount.
+- Display: chip "Hemat Rp X" di price preview.
+
+#### I-U2: Loyalty point + tier
+- Poin otomatis per order (1pt per Rp1.000).
+- Tier badge di `/akun` (Bronze/Silver/Gold/Platinum).
+- Diskon tier otomatis di pricing (member tier discount).
+- Progress bar ke tier berikutnya.
+
+#### I-U3: Order ETA
+- Hitung avg `created_at` → `updatedAt` (status Success) per service.
+- Display di `/layanan` card: "⏱ Rata-rata 2 jam".
+- Display di order detail: "Estimasi selesai ~2 jam lagi".
+
+#### I-U7: Onboarding tour (1st login)
+- 4 tooltip overlay: saldo → pesan → layanan → pesanan.
+- "Lewati" / "Lanjut" button.
+- Persist via cookie `onboarded=1`.
+
+#### I-U11: Service favorite/bookmark
+- Icon star di `/layanan` card → toggle bookmark.
+- Tab "Favorit" di `/layanan`.
+- Simpan ke `saved_links` table (atau table baru `favorites`).
+
+#### I-U13: Realtime balance update
+- SSE event `balance` push ke dashboard.
+- SaldoHero count-up animation saat update.
+
+#### I-U17: Refund to balance (auto)
+- Cron `light.ts` cek order status berubah ke "Error" / "Canceled" dari provider → auto-refund saldo + notif.
+- Audit log "auto_refund".
+
+---
+
+## 18. Urutan Kerja (revised — priority fix dulu)
+
+### Phase 1: Fix Gap Kritis (P0 — blocker)
+1. **G-U1: Saldo top-up action** — create deposit + instruksi BCA + Midtrans snap.
+2. **G-U4: Custom comments** — textarea untuk Custom Comments, kirim `comments` ke provider.
+3. **G-U2: Refill order** — action + tombol di detail sheet.
+4. **G-U3: Cancel order** — action + refund saldo.
+
+### Phase 2: Fix Gap Secondary (P1)
+5. **G-U5: Repeat order** — tombol "Pesan Ulang" + prefilled form.
+6. **G-U6: Avatar upload** — R2 upload + crop.
+7. **G-U7: Affiliate withdraw** — action + form.
+8. **G-U9: Order detail sheet lengkap** — timeline + aksi.
+9. **G-U10: Unique amount** — anti-wrong-transfer.
+10. **G-U11: Bukti transfer upload** — R2 + preview admin.
+12. **G-U13: Halaman notif** — `/notif` list + mark as read.
+
+### Phase 3: Polish existing routes
+13. **App Shell** — `(app)/+layout.svelte` (BottomNav, FAB, header). ✅ done
+14. **Dashboard** `/` — saldo hero, quick grid, order terbaru, notif. ✅ done
+15. **Layanan** `/layanan` — search + filter + infinite scroll + favorite (I-U11).
+16. **Pesan** `/pesan` — form + price preview + confirm + optimistic + custom comments + coupon (I-U1).
+17. **Pesanan** `/pesanan` — list + filter + detail sheet + SSE + refill + cancel + repeat.
+18. **Saldo** `/saldo/top-up` + `/saldo/riwayat` + unique amount + bukti upload.
+19. **Akun** `/akun` — profile + API key + theme + avatar + 2FA (I-U18).
+20. **Tiket** `/tiket` + attachment (G-U14).
+21. **Affiliate** `/affiliate` + withdraw + QR code.
+22. **Notif** `/notif` — baru (G-U13).
+23. **Auth polish** (login, daftar, lupa-password).
+
+### Phase 4: Improvements (value-add)
+24. **I-U7: Onboarding tour** (1st login).
+25. **I-U3: Order ETA**.
+26. **I-U2: Loyalty point + tier**.
+27. **I-U1: Coupon** (butuh admin CRUD dulu).
+28. **I-U6: Web Push** prompt.
+29. **I-U13: Realtime balance** SSE.
+30. **I-U17: Auto-refund** cron.
+31. **I-U20: Empty state** illustration.
 
 ---
 
