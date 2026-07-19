@@ -11,7 +11,7 @@ import type { RequestHandler } from "./$types";
  */
 export const POST: RequestHandler = async ({ request }) => {
   const body = await request.json();
-  const serverKey = process.env.SOCIO_MIDTRANS_SERVER_KEY;
+  const serverKey = process.env.MIDTRANS_SERVER_KEY;
   if (!serverKey) return json({ status: "error" }, { status: 500 });
 
   const orderId = String(body.order_id ?? "");
