@@ -1,25 +1,37 @@
 <script lang="ts">
   import { haptic } from "../haptic.js";
+  import Icon from "./Icon.svelte";
 
-  type Item = { href: string; label: string; icon: string; accent?: boolean };
+  type Item = { href: string; label: string; icon: string; accent?: boolean; badge?: number };
 
   let { items }: { items: Item[] } = $props();
 </script>
 
-<div class="grid grid-cols-2 gap-3">
-  {#each items as item}
+<div class="grid grid-cols-4 gap-3">
+  {#each items as item (item.href)}
     <a
       href={item.href}
-      onclick={() => haptic()}
-      class="flex items-center gap-3 rounded-2xl border border-ink-100 bg-white p-4 shadow-card
-        transition-transform duration-150 active:scale-[0.98] hover:shadow-card-hover focus-ring"
+      onclick={() => haptic(8)}
+      class="group flex flex-col items-center gap-2 rounded-2xl border border-ink-100 bg-surface p-3
+        shadow-card transition-all duration-200
+        active:scale-95 active:shadow-sm
+        hover:shadow-card-hover hover:-translate-y-0.5 focus-ring"
     >
       <span
-        class="grid h-10 w-10 place-items-center rounded-xl text-lg
+        class="relative grid h-11 w-11 place-items-center rounded-xl transition-all duration-200
+          group-hover:scale-110
           {item.accent ? 'bg-primary/10 text-primary' : 'bg-ink-100 text-ink-600'}"
-        aria-hidden="true">{item.icon}</span
       >
-      <span class="text-sm font-semibold text-ink-800">{item.label}</span>
+        <Icon name={item.icon} size={20} stroke={1.75} />
+        {#if item.badge}
+          <span
+            class="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 grid place-items-center rounded-full bg-danger text-white text-[9px] font-bold"
+          >
+            {item.badge}
+          </span>
+        {/if}
+      </span>
+      <span class="text-[11px] font-semibold text-ink-700 text-center leading-tight">{item.label}</span>
     </a>
   {/each}
 </div>
