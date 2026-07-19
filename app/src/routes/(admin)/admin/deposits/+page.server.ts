@@ -1,5 +1,5 @@
 import { db } from "@socio/db";
-import { deposits, users } from "@socio/db/schema";
+import { deposits, users, balanceLogs } from "@socio/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit } from "$lib/server/admin";
@@ -32,9 +32,20 @@ export const actions: Actions = {
 
     await db.update(deposits).set({ status: "Success" }).where(eq(deposits.id, id));
     if (d.userId) {
-      await db.execute(
-        `UPDATE users SET balance = balance + ${Number(d.amount)} WHERE id = ${Number(d.userId)}`,
-      );
+      const [u] = await db
+        .select({ balance: users.balance })
+        .from(users)
+        .where(eq(users.id, d.userId))
+        .limit(1);
+      const newBal = Number(u?.balance ?? 0) + Number(d.amount);
+      await db.update(users).set({ balance: newBal }).where(eq(users.id, d.userId));
+      await db.insert(balanceLogs).values({
+        userId: d.userId,
+        type: "dep",
+        amount: Number(d.amount),
+        note: `Manual deposit confirm #${id} (${d.methodName})`,
+        createdAt: new Date(),
+      });
     }
     await logAudit({
       adminId: Number(locals.user!.id),
