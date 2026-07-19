@@ -3,10 +3,13 @@ import { services, categories, savedLinks, orders, users, balanceLogs } from "@s
 import { eq, desc, sql } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
 import { computePrice, type UserLevel } from "@socio/core/pricing";
+import { smmturkAdd } from "@socio/core/smmturk";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
   const serviceId = Number(url.searchParams.get("service") ?? 0);
+  const prefillLink = url.searchParams.get("link") ?? "";
+  const prefillQty = Number(url.searchParams.get("qty") ?? 0);
   const catRows = await db
     .select({ id: categories.id, name: categories.name })
     .from(categories)
@@ -19,6 +22,10 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     price: number;
     min: number;
     max: number;
+    providerId: number;
+    providerServiceId: number;
+    isRefill: number;
+    note: string;
   } = null;
 
   if (serviceId) {
@@ -30,6 +37,10 @@ export const load: PageServerLoad = async ({ url, locals }) => {
         price: services.price,
         min: services.min,
         max: services.max,
+        providerId: services.providerId,
+        providerServiceId: services.providerServiceId,
+        isRefill: services.isRefill,
+        note: services.note,
       })
       .from(services)
       .where(eq(services.id, serviceId))
@@ -50,6 +61,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     saved,
     balance: locals.user!.balance ?? 0,
     level: (locals.user!.level as UserLevel) ?? "Member",
+    prefill: { link: prefillLink, qty: prefillQty },
   };
 };
 
@@ -58,22 +70,34 @@ export const actions: Actions = {
     const form = await request.formData();
     const serviceId = Number(form.get("serviceId"));
     const link = String(form.get("link") ?? "").trim();
-    const quantity = Number(form.get("quantity"));
+    const quantity = Number(form.get("quantity")) || 0;
+    const komen = String(form.get("komen") ?? "").trim();
     const saveLink = form.get("saveLink") === "on";
 
-    if (!serviceId || !link || !quantity) {
-      return fail(400, { error: "Layanan, link, dan jumlah wajib diisi." });
+    if (!serviceId || !link) {
+      return fail(400, { error: "Layanan dan link wajib diisi." });
     }
 
     const [s] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
     if (!s) return fail(400, { error: "Layanan tidak ditemukan." });
-    if (quantity < s.min || quantity > s.max) {
-      return fail(400, { error: `Jumlah harus antara ${s.min}–${s.max}.` });
+
+    // Custom Comments: qty dari line count komen, bukan input quantity
+    const isCustomComments = s.type === "Custom Comments";
+    const finalQty = isCustomComments ? komen.split("\n").filter(Boolean).length : quantity;
+
+    if (isCustomComments && !komen) {
+      return fail(400, { error: "Komentar wajib diisi untuk layanan Custom Comments." });
+    }
+    if (!isCustomComments && (!finalQty || finalQty < s.min)) {
+      return fail(400, { error: `Jumlah minimal ${s.min}.` });
+    }
+    if (finalQty > s.max) {
+      return fail(400, { error: `Jumlah maksimal ${s.max}.` });
     }
 
     const userId = Number(locals.user!.id);
     const level = (locals.user!.level as UserLevel) ?? "Member";
-    const price = computePrice(s.price, quantity, level);
+    const price = computePrice(s.price, finalQty, level);
 
     const [u] = await db
       .select({ balance: users.balance })
@@ -84,19 +108,34 @@ export const actions: Actions = {
       return fail(400, { error: "Saldo tidak cukup. Silakan top up terlebih dahulu." });
     }
 
+    // Kirim order ke SMMturk (dapat provider_order_id)
+    let providerOrderId = "0";
+    if (s.providerId !== 1) {
+      // not manual provider
+      try {
+        const result = isCustomComments
+          ? await smmturkAdd(String(s.providerServiceId), link, 0)
+          : await smmturkAdd(String(s.providerServiceId), link, finalQty);
+        if (result.error) return fail(400, { error: `Provider error: ${result.error}` });
+        providerOrderId = result.order ?? "0";
+      } catch (e: any) {
+        return fail(500, { error: `Gagal mengirim order ke provider: ${e?.message ?? e}` });
+      }
+    }
+
     const oid = `SOC-${Date.now()}`;
     await db.insert(orders).values({
       userId,
       oid,
       sid: String(s.providerServiceId),
-      providerOrderId: "",
+      providerOrderId,
       user: link,
       serviceName: s.serviceName,
       serviceId: s.id,
       data: link,
-      komen: "",
-      quantity,
-      remains: quantity,
+      komen: isCustomComments ? komen : "",
+      quantity: finalQty,
+      remains: finalQty,
       startCount: 0,
       price,
       profit: 0,
@@ -104,9 +143,11 @@ export const actions: Actions = {
       date: new Date().toISOString().slice(0, 10),
       time: new Date().toISOString().slice(11, 19),
       createdAt: new Date(),
+      updatedAt: new Date(),
       providerId: s.providerId,
       isApi: 0,
       isRefund: 0,
+      nextPollAt: new Date(Date.now() + 60_000),
     });
 
     await db
