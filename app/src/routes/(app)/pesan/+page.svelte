@@ -13,13 +13,20 @@
   let komen = $state("");
   let saving = $state(false);
 
+  let couponInput = $state("");
+  let appliedCoupon = $state<{ code: string; discount: number; finalPrice: number } | null>(null);
+  let couponMsg = $state("");
+  let applyingCoupon = $state(false);
+
   const isCustomComments = $derived(data.service?.type === "Custom Comments");
   const lineCount = $derived(komen.split("\n").filter(Boolean).length);
   const effectiveQty = $derived(isCustomComments ? lineCount : quantity);
   const total = $derived(
     data.service ? computePrice(data.service.price, effectiveQty, data.level) : 0,
   );
-  const enough = $derived(data.balance >= total);
+  const discount = $derived(appliedCoupon?.discount ?? 0);
+  const finalTotal = $derived(Math.max(0, total - discount));
+  const enough = $derived(data.balance >= finalTotal);
   const canSubmit = $derived(
     !!link && (isCustomComments ? lineCount > 0 : quantity >= (data.service?.min ?? 0)),
   );
@@ -28,6 +35,19 @@
     haptic(8);
     quantity = v;
   }
+
+  function resetCoupon() {
+    appliedCoupon = null;
+    couponMsg = "";
+    couponInput = "";
+  }
+
+  // Coupon discount depends on subtotal; invalidate if qty changes.
+  $effect(() => {
+    effectiveQty;
+    if (appliedCoupon) resetCoupon();
+  });
+
 </script>
 
 <section class="space-y-5">
@@ -96,6 +116,7 @@
     >
       <input type="hidden" name="serviceId" value={data.service.id} />
       <input type="hidden" name="quantity" value={effectiveQty} />
+      <input type="hidden" name="coupon" value={appliedCoupon?.code ?? ""} />
 
       <!-- Link -->
       <div>
@@ -149,12 +170,76 @@
         </div>
       {/if}
 
+      <!-- Coupon (I-U1) -->
+      <div>
+        <label class="mb-1.5 block text-sm font-bold">Kupon Diskon</label>
+        {#if appliedCoupon}
+          <div
+            class="flex items-center justify-between rounded-xl border border-success/30 bg-success/10 px-3 py-2.5"
+          >
+            <div class="flex items-center gap-2 text-sm font-semibold text-success">
+              <Icon name="check" size={16} />
+              {appliedCoupon.code} · -{formatRupiah(appliedCoupon.discount)}
+            </div>
+            <button type="button" onclick={resetCoupon} class="text-xs font-medium text-ink-500">
+              Hapus
+            </button>
+          </div>
+        {:else}
+          <form
+            method="POST"
+            action="?/coupon"
+            class="flex gap-2"
+            use:enhance={({ formData }) => {
+              formData.set("serviceId", String(data.service?.id ?? ""));
+              formData.set("quantity", String(effectiveQty));
+              formData.set("komen", komen);
+              applyingCoupon = true;
+              return async ({ result }) => {
+                applyingCoupon = false;
+                if (result.type === "success" && (result.data as any)?.coupon) {
+                  const d = result.data as any;
+                  appliedCoupon = { code: d.coupon, discount: d.discount, finalPrice: d.finalPrice };
+                  couponMsg = "";
+                  haptic(20);
+                } else if (result.type === "failure") {
+                  couponMsg = (result.data as any)?.couponError ?? "Kupon tidak valid.";
+                  toast(couponMsg, "error");
+                }
+              };
+            }}
+          >
+            <Input
+              name="code"
+              bind:value={couponInput}
+              placeholder="Masukkan kode"
+              class="flex-1 uppercase"
+              oninput={() => {
+                couponMsg = "";
+              }}
+            />
+            <Button type="submit" variant="ghost" disabled={applyingCoupon || !couponInput}>
+              {applyingCoupon ? "…" : "Terapkan"}
+            </Button>
+          </form>
+          {#if couponMsg}
+            <p class="mt-1.5 text-xs text-danger">{couponMsg}</p>
+          {/if}
+        {/if}
+      </div>
+
       <!-- Price summary -->
       <div class="rounded-2xl bg-ink-900 p-4 text-white">
         <div class="flex items-center justify-between text-sm">
           <span class="text-ink-300">Total bayar</span>
-          <span class="font-display text-xl font-extrabold tabular-nums">{formatRupiah(total)}</span>
+          <span class="font-display text-xl font-extrabold tabular-nums">{formatRupiah(finalTotal)}</span>
         </div>
+        {#if discount > 0}
+          <div class="mt-1.5 flex items-center justify-between text-xs">
+            <span class="text-ink-400">Diskon ({appliedCoupon?.code})</span>
+            <span class="tabular-nums text-success">-{formatRupiah(discount)}</span>
+          </div>
+        {/if}
         <div class="mt-1.5 flex items-center justify-between text-xs">
           <span class="text-ink-400">Saldo kamu</span>
           <span class="tabular-nums {enough ? 'text-success' : 'text-danger'}">
@@ -184,7 +269,7 @@
         {:else if !enough}
           Saldo Tidak Cukup
         {:else}
-          Pesan Sekarang · {formatRupiah(total)}
+          Pesan Sekarang · {formatRupiah(finalTotal)}
         {/if}
       </Button>
     </form>

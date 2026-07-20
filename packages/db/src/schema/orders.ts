@@ -54,6 +54,8 @@ export const orders = mysqlTable(
     apiStatusLog: text("api_status_log"),
     nextPollAt: datetime("next_poll_at"),
     pollPriority: int("poll_priority").notNull().default(5),
+    couponCode: varchar("coupon_code", { length: 40 }),
+    discount: double("discount").notNull().default(0),
   },
   (t) => ({
     userIdx: index("idx_user_id").on(t.userId),

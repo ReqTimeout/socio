@@ -140,4 +140,30 @@ export async function ensureAdminSchema() {
       UNIQUE KEY uniq_user_service (user_id, service_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  // coupons (I-U1: voucher applied at checkout)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS coupons (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      code VARCHAR(40) NOT NULL,
+      type ENUM('percent','fixed') NOT NULL DEFAULT 'percent',
+      value DOUBLE NOT NULL DEFAULT 0,
+      min_order DOUBLE NOT NULL DEFAULT 0,
+      max_discount DOUBLE NOT NULL DEFAULT 0,
+      expires_at DATETIME DEFAULT NULL,
+      max_usage INT NOT NULL DEFAULT 0,
+      used INT NOT NULL DEFAULT 0,
+      active ENUM('0','1') NOT NULL DEFAULT '1',
+      created_at DATETIME NOT NULL,
+      INDEX code_idx (code)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+  // Seed one test coupon for I-U1 if table is empty.
+  await db.execute(sql`
+    INSERT IGNORE INTO coupons (id, code, type, value, min_order, max_discount, expires_at, max_usage, used, active, created_at)
+    SELECT 1, 'SOCIO10', 'percent', 10, 0, 0, DATE_ADD(NOW(), INTERVAL 1 YEAR), 0, 0, '1', NOW()
+      WHERE NOT EXISTS (SELECT 1 FROM coupons)
+  `);
+  // Record coupon on order (I-U1)
+  await db.execute(sql`ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(40) DEFAULT NULL`);
+  await db.execute(sql`ALTER TABLE orders ADD COLUMN discount DOUBLE NOT NULL DEFAULT 0`);
 }
