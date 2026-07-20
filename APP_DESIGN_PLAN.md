@@ -1008,13 +1008,13 @@ withdraw: async ({ request, locals }) => {
 ### Phase 3: Polish existing routes
 13. **App Shell** — `(app)/+layout.svelte` (BottomNav, FAB, header). ✅ done
 14. **Dashboard** `/` — saldo hero, quick grid, order terbaru, notif. ✅ done
-15. **Layanan** `/layanan` — search + filter + infinite scroll + favorite (I-U11).
-16. **Pesan** `/pesan` — form + price preview + confirm + optimistic + custom comments + coupon (I-U1).
-17. **Pesanan** `/pesanan` — list + filter + detail sheet + SSE + refill + cancel + repeat.
-18. **Saldo** `/saldo/top-up` + `/saldo/riwayat` + unique amount + bukti upload.
-19. **Akun** `/akun` — profile + API key + theme + avatar + 2FA (I-U18).
-20. **Tiket** `/tiket` + attachment (G-U14).
-21. **Affiliate** `/affiliate` + withdraw + QR code.
+15. **Layanan** `/layanan` — search + filter + infinite scroll + favorite (I-U11). ✅ done
+16. **Pesan** `/pesan` — form + price preview + confirm + optimistic + custom comments + coupon (I-U1). ✅ done
+17. **Pesanan** `/pesanan` — list + filter + detail sheet + SSE + refill + cancel + repeat + mass refund. ✅ done
+18. **Saldo** `/saldo` hub + `/saldo/top-up` + `/saldo/riwayat` + unique amount + bukti upload + QR. ✅ done
+19. **Akun** `/akun` — profile + API key + theme (G-U20 dark mode fixed) + avatar. (2FA I-U18: deferred)
+20. **Tiket** `/tiket` — list + create + chat detail + reply + close. (attachment G-U14: deferred)
+21. **Affiliate** `/affiliate` + withdraw (G-U7) + QR code. ✅ done
 22. **Notif** `/notif` — baru (G-U13).
 23. **Auth polish** (login, daftar, lupa-password).
 
