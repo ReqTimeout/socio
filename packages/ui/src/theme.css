@@ -8,6 +8,10 @@
     color-scheme: light;
   }
 
+  html.dark {
+    color-scheme: dark;
+  }
+
   html {
     scroll-behavior: smooth;
   }
@@ -28,7 +32,7 @@
   body {
     font-family: var(--font-sans);
     color: var(--color-ink-800);
-    background-color: #ffffff;
+    background-color: var(--color-surface);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }

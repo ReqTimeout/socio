@@ -207,19 +207,27 @@
         type="submit"
         name="theme"
         value="light"
-        onclick={() => haptic()}
+        onclick={() => {
+          haptic();
+          localStorage.setItem("theme", "light");
+          document.documentElement.classList.remove("dark");
+        }}
         class="rounded-full px-3 py-1.5 text-xs font-semibold {data.user.theme === 'light'
-          ? 'bg-ink-900 text-white'
-          : 'bg-ink-100'}">Light</button
+          ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+          : 'bg-ink-100 dark:bg-ink-100'}">Light</button
       >
       <button
         type="submit"
         name="theme"
         value="dark"
-        onclick={() => haptic()}
+        onclick={() => {
+          haptic();
+          localStorage.setItem("theme", "dark");
+          document.documentElement.classList.add("dark");
+        }}
         class="rounded-full px-3 py-1.5 text-xs font-semibold {data.user.theme === 'dark'
-          ? 'bg-ink-900 text-white'
-          : 'bg-ink-100'}">Dark</button
+          ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+          : 'bg-ink-100 dark:bg-ink-100'}">Dark</button
       >
     </div>
   </form>

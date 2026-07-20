@@ -35,6 +35,9 @@
   --color-accent: var(--color-accent-500);
   --color-accent-dark: var(--color-accent-700);
 
+  /* Card surface (G-U20: previously undefined) */
+  --color-surface: #ffffff;
+
   /* ---- Neutral / surface ---- */
   --color-ink-50: #f8fafc;
   --color-ink-100: #f1f5f9;
@@ -76,4 +79,23 @@
 
   /* ---- Motion (respect reduced-motion in components) ---- */
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* G-U20: dark mode — remap ink + surface scale under .dark so every
+   bg-ink-*, text-ink-*, border-ink-* and bg-surface utility flips coherently. */
+.dark {
+  --color-surface: #0f1623;
+  --color-ink-50: #0b0f1a;
+  --color-ink-100: #161e2e;
+  --color-ink-200: #243044;
+  --color-ink-300: #334155;
+  --color-ink-400: #64748b;
+  --color-ink-500: #94a3b8;
+  --color-ink-600: #aab4c5;
+  --color-ink-700: #cbd5e1;
+  --color-ink-800: #e2e8f0;
+  --color-ink-900: #f8fafc;
+  --color-danger-soft: #3b1414;
+  --color-success-soft: #0f2a17;
+  --color-warning-soft: #2e210a;
 }
