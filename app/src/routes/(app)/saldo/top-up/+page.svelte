@@ -336,6 +336,20 @@
           <Icon name="copy" size={18} />
         </button>
       </div>
+      <!-- QR scan (manual/QR) -->
+      <div class="mt-3 flex flex-col items-center rounded-xl bg-white p-3">
+        <img
+          src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=0&data={encodeURIComponent(
+            `BCA ${data.bcaNumber} ${instrPostAmount}`,
+          )}"
+          alt="QR pembayaran BCA"
+          width="180"
+          height="180"
+          class="h-40 w-40 rounded-lg"
+          loading="lazy"
+        />
+        <div class="mt-2 text-[10px] text-ink-400">Scan QR di mBanking BCA</div>
+      </div>
     </div>
 
     <div class="rounded-2xl bg-ink-900 p-4 text-center text-white">
