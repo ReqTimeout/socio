@@ -31,7 +31,7 @@ export async function notifyOrderUpdate(
       type: "order",
       title: `Order #${orderId} ${label}`,
       message: `Status order kamu telah diperbarui menjadi ${label}.`,
-      actionUrl: `/pesanan/${orderId}`,
+      actionUrl: `/pesanan`,
     });
   } catch (e) {
     console.error("[notify] insert failed:", e);

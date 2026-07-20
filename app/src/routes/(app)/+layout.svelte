@@ -46,11 +46,26 @@
         <a
           href="/saldo/top-up"
           onclick={() => haptic(8)}
-          class="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-sm
-            transition-all active:scale-95 hover:bg-primary-800"
+          class="hidden items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-sm
+            transition-all active:scale-95 hover:bg-primary-800 sm:flex"
         >
           <Icon name="plus" size={14} stroke={2.5} />
           Saldo
+        </a>
+        <a
+          href="/notif"
+          onclick={() => haptic(8)}
+          aria-label="Notifikasi"
+          class="relative grid h-9 w-9 place-items-center rounded-full hover:bg-ink-100 active:scale-90 transition"
+        >
+          <Icon name="bell" size={20} />
+          {#if data.unreadCount > 0}
+            <span
+              class="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-danger px-1 text-[9px] font-bold text-white"
+            >
+              {data.unreadCount > 99 ? "99+" : data.unreadCount}
+            </span>
+          {/if}
         </a>
         <button
           type="button"
