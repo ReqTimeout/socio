@@ -128,4 +128,16 @@ export async function ensureAdminSchema() {
       INDEX push_user_idx (user_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  // favorites (I-U11: bookmarked services)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS favorites (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      service_id INT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX user_idx (user_id),
+      INDEX user_service_idx (user_id, service_id),
+      UNIQUE KEY uniq_user_service (user_id, service_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
 }

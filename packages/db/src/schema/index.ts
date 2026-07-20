@@ -8,6 +8,7 @@ export * from "./balanceLogs.js";
 export * from "./notifications.js";
 export * from "./pricingRules.js";
 export * from "./savedLinks.js";
+export * from "./favorites.js";
 export * from "./affiliate.js";
 export * from "./admin.js";
 export * from "./cron.js";

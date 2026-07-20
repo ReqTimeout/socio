@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ServiceCard, EmptyState } from "@socio/ui";
+  import { ServiceCard, EmptyState, Icon } from "@socio/ui";
   import { formatRupiah } from "$lib/format";
   import { haptic } from "@socio/ui";
   import { goto } from "$app/navigation";
@@ -10,6 +10,9 @@
 
   let q = $state(data.params.q ?? "");
   let pending = $state(false);
+  let favState = $state<Record<number, boolean>>(
+    Object.fromEntries(data.services.filter((s) => s.fav).map((s) => [s.id, true])),
+  );
 
   function buildParams(extra: Record<string, string> = {}) {
     const p = new URLSearchParams($page.url.searchParams);
@@ -33,6 +36,24 @@
   function selectSort(s: string) {
     haptic();
     goto(buildParams({ sort: s, page: "" }));
+  }
+
+  function toggleFavTab() {
+    haptic();
+    goto(buildParams({ fav: data.params.fav ? "" : "1", page: "" }));
+  }
+
+  async function toggleFav(id: number) {
+    haptic(10);
+    const wasFav = favState[id];
+    favState[id] = !wasFav;
+    const fd = new FormData();
+    fd.append("serviceId", String(id));
+    try {
+      await fetch("?/toggleFav", { method: "POST", body: fd });
+    } catch {
+      favState[id] = wasFav; // revert on error
+    }
   }
 
   async function loadMore() {
@@ -86,10 +107,18 @@
   <div class="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
     <button
       onclick={() => selectCat(0)}
-      class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold {!data.params.cat
+      class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold {!data.params.cat && !data.params.fav
         ? 'bg-ink-900 text-white'
         : 'bg-ink-100 text-ink-700'}">Semua</button
     >
+    <button
+      onclick={toggleFavTab}
+      class="flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold
+        {data.params.fav ? 'bg-primary text-white' : 'bg-ink-100 text-ink-700'}"
+    >
+      <Icon name="star" size={13} stroke={2.5} />
+      Favorit{data.favCount ? ` (${data.favCount})` : ""}
+    </button>
     {#each data.categories as c}
       <button
         onclick={() => selectCat(c.id)}
@@ -125,7 +154,7 @@
   {:else}
     <ul class="space-y-2">
       {#each data.services as s (s.id)}
-        <li>
+        <li class="relative">
           <ServiceCard
             name={s.serviceName}
             category={s.type}
@@ -135,6 +164,20 @@
             refill={s.isRefill === 1}
             href={`/pesan?service=${s.id}`}
           />
+          <button
+            type="button"
+            onclick={() => toggleFav(s.id)}
+            aria-label={favState[s.id] ? "Hapus dari favorit" : "Tambah ke favorit"}
+            class="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full
+              bg-surface/80 backdrop-blur transition active:scale-90 hover:bg-surface"
+          >
+            <Icon
+              name="star"
+              size={18}
+              stroke={2.5}
+              class={favState[s.id] ? "fill-amber-400 text-amber-400" : "text-ink-400"}
+            />
+          </button>
         </li>
       {/each}
     </ul>
