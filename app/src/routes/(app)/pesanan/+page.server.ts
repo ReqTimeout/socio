@@ -14,6 +14,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   else if (filter === "proses")
     conditions.push(sql`${orders.status} IN ('Processing','In progress')`);
   else if (filter === "selesai") conditions.push(eq(orders.status, "Success"));
+  else if (filter === "gagal")
+    conditions.push(sql`${orders.status} IN ('Error','Canceled','Partial')`);
 
   const rows = await db
     .select({
@@ -146,5 +148,58 @@ export const actions: Actions = {
     });
 
     return { success: `Order dibatalkan. Saldo dikembalikan Rp ${order.price}` };
+  },
+
+  massCancel: async ({ request, locals }) => {
+    const form = await request.formData();
+    const ids = String(form.get("ids") ?? "")
+      .split(",")
+      .map((x) => Number(x.trim()))
+      .filter(Boolean);
+    if (!ids.length) return fail(400, { error: "Pilih minimal 1 order" });
+
+    const userId = Number(locals.user!.id);
+    const targets = await db
+      .select()
+      .from(orders)
+      .where(and(eq(orders.userId, userId), sql`${orders.id} IN (${ids.join(",")})`));
+
+    const pending = targets.filter((o) => o.status === "Pending");
+    if (!pending.length) return fail(400, { error: "Tidak ada order Pending yang bisa dibatalkan" });
+
+    let refunded = 0;
+    for (const o of pending) {
+      if (o.providerId !== 1 && o.providerOrderId) {
+        try {
+          await smmturkCancel([o.providerOrderId]);
+        } catch {
+          // ignore
+        }
+      }
+      await db
+        .update(orders)
+        .set({ status: "Canceled", updatedAt: new Date() })
+        .where(eq(orders.id, o.id));
+      refunded += Number(o.price);
+    }
+
+    const [u] = await db
+      .select({ balance: users.balance })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    await db
+      .update(users)
+      .set({ balance: Number(u?.balance ?? 0) + refunded })
+      .where(eq(users.id, userId));
+    await db.insert(balanceLogs).values({
+      userId,
+      type: "ref",
+      amount: refunded,
+      note: `Mass refund ${pending.length} order dibatalkan`,
+      createdAt: new Date(),
+    });
+
+    return { success: `Refund ${pending.length} order. Saldo +Rp ${refunded.toLocaleString("id-ID")}` };
   },
 };

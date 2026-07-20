@@ -22,10 +22,32 @@
   let confirmAction = $state<"refill" | "cancel" | null>(null);
   let confirmOpen = $state(false);
 
+  let selectMode = $state(false);
+  let checked = $state<Set<number>>(new Set());
+
   let orders = $state(data.orders);
   $effect(() => {
     orders = data.orders;
   });
+
+  const checkedIds = $derived([...checked]);
+  const massRefundable = $derived(
+    orders.filter((o) => checked.has(o.id) && o.status === "Pending"),
+  );
+  const massRefundTotal = $derived(massRefundable.reduce((s, o) => s + Number(o.price), 0));
+
+  function toggleSelectMode() {
+    haptic(8);
+    selectMode = !selectMode;
+    if (!selectMode) checked = new Set();
+  }
+  function toggleCheck(id: number) {
+    haptic(8);
+    const next = new Set(checked);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    checked = next;
+  }
 
   if (typeof window !== "undefined") {
     const es = new EventSource("/api/sse");
@@ -93,7 +115,7 @@
 
 <section class="space-y-3">
   <!-- Filter chips -->
-  <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+  <div class="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
     {#each tabs as t}
       <button
         onclick={() => select(t.f)}
@@ -105,6 +127,13 @@
         {t.label}
       </button>
     {/each}
+    <button
+      onclick={toggleSelectMode}
+      class="ml-auto shrink-0 rounded-full px-3 py-2 text-xs font-bold transition-all active:scale-95
+        {selectMode ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
+    >
+      {selectMode ? "Batal" : "Pilih"}
+    </button>
   </div>
 
   {#if orders.length === 0}
@@ -126,30 +155,86 @@
     <ul class="space-y-2.5">
       {#each orders as o, i (o.id)}
         <li
-          class="rounded-2xl border border-ink-100 bg-surface p-4 transition-all duration-200
+          class="rounded-2xl border bg-surface p-4 transition-all duration-200
+            {checked.has(o.id) ? 'border-primary ring-1 ring-primary' : 'border-ink-100'}
             motion-safe:animate-[slide-up_400ms_cubic-bezier(0.25,1,0.5,1)_backwards]"
           style="animation-delay: {i * 40}ms"
         >
-          <button onclick={() => openDetail(o.id)} class="block w-full text-left">
-            <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-bold">{o.serviceName}</p>
-                <p class="mt-0.5 truncate text-xs text-ink-500">{o.data}</p>
+          <div class="flex items-center gap-3">
+            {#if selectMode}
+              <button
+                type="button"
+                onclick={() => toggleCheck(o.id)}
+                aria-label="Pilih order"
+                class="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition active:scale-90
+                  {checked.has(o.id)
+                  ? 'border-primary bg-primary text-white'
+                  : 'border-ink-300 text-transparent'}"
+              >
+                <Icon name="check" size={14} stroke={3} />
+              </button>
+            {/if}
+            <button
+              onclick={() => (selectMode ? toggleCheck(o.id) : openDetail(o.id))}
+              class="block min-w-0 flex-1 text-left"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-bold">{o.serviceName}</p>
+                  <p class="mt-0.5 truncate text-xs text-ink-500">{o.data}</p>
+                </div>
+                <StatusBadge status={o.status} />
               </div>
-              <StatusBadge status={o.status} />
-            </div>
-            <div class="mt-2.5 flex items-center justify-between text-xs">
-              <span class="font-semibold tabular-nums text-ink-600">
-                {o.quantity.toLocaleString("id-ID")} qty · {formatRupiah(o.price)}
-              </span>
-              <span class="text-ink-400">{timeAgo(o.createdAt)}</span>
-            </div>
-          </button>
+              <div class="mt-2.5 flex items-center justify-between text-xs">
+                <span class="font-semibold tabular-nums text-ink-600">
+                  {o.quantity.toLocaleString("id-ID")} qty · {formatRupiah(o.price)}
+                </span>
+                <span class="text-ink-400">{timeAgo(o.createdAt)}</span>
+              </div>
+            </button>
+          </div>
         </li>
       {/each}
     </ul>
   {/if}
 </section>
+
+<!-- Mass action bar -->
+{#if selectMode && checkedIds.length > 0}
+  <form
+    method="POST"
+    action="?/massCancel"
+    use:enhance={() => {
+      return async ({ result }) => {
+        if (result.type === "failure") {
+          toast((result.data as any)?.error ?? "Gagal", "error");
+        } else if (result.type === "success") {
+          toast((result.data as any)?.success ?? "Refund massal berhasil", "success");
+          checked = new Set();
+          selectMode = false;
+          await applyAction(result);
+        }
+      };
+    }}
+  >
+    <input type="hidden" name="ids" value={checkedIds.join(",")} />
+    <div
+      class="fixed inset-x-0 bottom-0 z-40 border-t border-ink-100 bg-surface/95 p-3 backdrop-blur
+        pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
+    >
+      <div class="mx-auto flex max-w-lg items-center gap-3">
+        <div class="text-xs font-medium text-ink-600">
+          {massRefundable.length} order · refund
+          <span class="font-bold text-primary">{formatRupiah(massRefundTotal)}</span>
+        </div>
+        <Button type="submit" variant="danger" full disabled={!massRefundable.length}>
+          <Icon name="x" size={16} />
+          Batalkan & Refund
+        </Button>
+      </div>
+    </div>
+  </form>
+{/if}
 
 <!-- Detail Sheet -->
 <Sheet bind:open={sheetOpen} title="Detail Pesanan">
