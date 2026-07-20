@@ -34,6 +34,7 @@
   --color-primary-dark: var(--color-primary-800);
   --color-accent: var(--color-accent-500);
   --color-accent-dark: var(--color-accent-700);
+  --color-accent-ink: var(--color-accent-600);
 
   /* Card surface (G-U20: previously undefined) */
   --color-surface: #ffffff;
