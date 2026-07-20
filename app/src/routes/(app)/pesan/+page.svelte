@@ -170,64 +170,6 @@
         </div>
       {/if}
 
-      <!-- Coupon (I-U1) -->
-      <div>
-        <label class="mb-1.5 block text-sm font-bold">Kupon Diskon</label>
-        {#if appliedCoupon}
-          <div
-            class="flex items-center justify-between rounded-xl border border-success/30 bg-success/10 px-3 py-2.5"
-          >
-            <div class="flex items-center gap-2 text-sm font-semibold text-success">
-              <Icon name="check" size={16} />
-              {appliedCoupon.code} · -{formatRupiah(appliedCoupon.discount)}
-            </div>
-            <button type="button" onclick={resetCoupon} class="text-xs font-medium text-ink-500">
-              Hapus
-            </button>
-          </div>
-        {:else}
-          <form
-            method="POST"
-            action="?/coupon"
-            class="flex gap-2"
-            use:enhance={({ formData }) => {
-              formData.set("serviceId", String(data.service?.id ?? ""));
-              formData.set("quantity", String(effectiveQty));
-              formData.set("komen", komen);
-              applyingCoupon = true;
-              return async ({ result }) => {
-                applyingCoupon = false;
-                if (result.type === "success" && (result.data as any)?.coupon) {
-                  const d = result.data as any;
-                  appliedCoupon = { code: d.coupon, discount: d.discount, finalPrice: d.finalPrice };
-                  couponMsg = "";
-                  haptic(20);
-                } else if (result.type === "failure") {
-                  couponMsg = (result.data as any)?.couponError ?? "Kupon tidak valid.";
-                  toast(couponMsg, "error");
-                }
-              };
-            }}
-          >
-            <Input
-              name="code"
-              bind:value={couponInput}
-              placeholder="Masukkan kode"
-              class="flex-1 uppercase"
-              oninput={() => {
-                couponMsg = "";
-              }}
-            />
-            <Button type="submit" variant="ghost" disabled={applyingCoupon || !couponInput}>
-              {applyingCoupon ? "…" : "Terapkan"}
-            </Button>
-          </form>
-          {#if couponMsg}
-            <p class="mt-1.5 text-xs text-danger">{couponMsg}</p>
-          {/if}
-        {/if}
-      </div>
-
       <!-- Price summary -->
       <div class="rounded-2xl bg-ink-900 p-4 text-white">
         <div class="flex items-center justify-between text-sm">
@@ -273,6 +215,64 @@
         {/if}
       </Button>
     </form>
+
+    <!-- Coupon (I-U1) -->
+    <div>
+      <label class="mb-1.5 block text-sm font-bold">Kupon Diskon</label>
+      {#if appliedCoupon}
+        <div
+          class="flex items-center justify-between rounded-xl border border-success/30 bg-success/10 px-3 py-2.5"
+        >
+          <div class="flex items-center gap-2 text-sm font-semibold text-success">
+            <Icon name="check" size={16} />
+            {appliedCoupon.code} · -{formatRupiah(appliedCoupon.discount)}
+          </div>
+          <button type="button" onclick={resetCoupon} class="text-xs font-medium text-ink-500">
+            Hapus
+          </button>
+        </div>
+      {:else}
+        <form
+          method="POST"
+          action="?/coupon"
+          class="flex gap-2"
+          use:enhance={({ formData }) => {
+            formData.set("serviceId", String(data.service?.id ?? ""));
+            formData.set("quantity", String(effectiveQty));
+            formData.set("komen", komen);
+            applyingCoupon = true;
+            return async ({ result }) => {
+              applyingCoupon = false;
+              if (result.type === "success" && (result.data as any)?.coupon) {
+                const d = result.data as any;
+                appliedCoupon = { code: d.coupon, discount: d.discount, finalPrice: d.finalPrice };
+                couponMsg = "";
+                haptic(20);
+              } else if (result.type === "failure") {
+                couponMsg = (result.data as any)?.couponError ?? "Kupon tidak valid.";
+                toast(couponMsg, "error");
+              }
+            };
+          }}
+        >
+          <Input
+            name="code"
+            bind:value={couponInput}
+            placeholder="Masukkan kode"
+            class="flex-1 uppercase"
+            oninput={() => {
+              couponMsg = "";
+            }}
+          />
+          <Button type="submit" variant="ghost" disabled={applyingCoupon || !couponInput}>
+            {applyingCoupon ? "…" : "Terapkan"}
+          </Button>
+        </form>
+        {#if couponMsg}
+          <p class="mt-1.5 text-xs text-danger">{couponMsg}</p>
+        {/if}
+      {/if}
+    </div>
 
     {#if data.service.note}
       <div class="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">

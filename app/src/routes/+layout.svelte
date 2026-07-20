@@ -1,5 +1,5 @@
 <script lang="ts">
-  import "@socio/ui/app.css";
+  import "../app.css";
   let { children } = $props();
 </script>
 
