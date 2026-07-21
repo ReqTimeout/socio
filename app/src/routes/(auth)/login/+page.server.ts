@@ -45,27 +45,18 @@ export const actions: Actions = {
       return fail(401, { error: "Email atau password salah.", email });
     }
 
-    // Forward every Set-Cookie header from better-auth to SvelteKit.
+    // Forward every Set-Cookie header from better-auth via SvelteKit's cookies API.
     const setCookies: string[] = (res.headers?.getSetCookie?.() as string[] | undefined) ?? [];
     for (const sc of setCookies) {
       const [pair] = sc.split(";");
-      const [name, ...rest] = pair.split("=");
-      const value = rest.join("=");
-      // Parse attrs for proper SvelteKit cookie options.
-      const attrs = Object.fromEntries(
-        sc.split(";").slice(1).map((s) => {
-          const [k, ...v] = s.trim().split("=");
-          return [k.toLowerCase(), v.join("=") || true];
-        }),
-      );
+      const eq = pair.indexOf("=");
+      const name = pair.slice(0, eq);
+      const value = pair.slice(eq + 1);
       cookies.set(name, value, {
-        path: (attrs["path"] as string) || "/",
-        httpOnly: "httponly" in attrs,
-        secure: "secure" in attrs,
-        sameSite: (attrs["samesite"] as any) || "lax",
-        expires: attrs["max-age"]
-          ? new Date(Date.now() + Number(attrs["max-age"]) * 1000)
-          : undefined,
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
       });
     }
 
@@ -74,7 +65,6 @@ export const actions: Actions = {
       return fail(401, { error: "Email atau password salah.", email });
     }
 
-    // Rehash legacy (non-bcrypt) password to bcrypt, invisible to user.
     await maybeRehashPassword(body.user.id, password);
 
     throw redirect(303, "/");
