@@ -23,9 +23,9 @@ export const actions: Actions = {
       return fail(400, { error: "Email dan password wajib diisi.", email });
     }
 
-    // Rate limit: 5 attempts per 5 minutes per IP.
+    // Rate limit: 30 attempts per 5 minutes per IP (raised for admin review).
     const allowed = await rateLimit(`login:${getClientAddress()}`, {
-      limit: 5,
+      limit: 30,
       windowSec: 300,
     });
     if (!allowed) {
