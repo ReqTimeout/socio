@@ -96,11 +96,6 @@ export const auth = betterAuth({
   baseURL: process.env.SOCIO_APP_URL ?? process.env.BETTER_AUTH_URL ?? undefined,
   advanced: {
     generateId: () => String(Math.floor(100000 + Math.random() * 899999)),
-    useSecureCookies: false,
-    defaultCookieAttributes: {
-      sameSite: "lax",
-      secure: false,
-    },
   },
 });
 

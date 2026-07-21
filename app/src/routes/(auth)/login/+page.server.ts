@@ -33,38 +33,55 @@ export const actions: Actions = {
       });
     }
 
-    let res: any;
+    // Use better-auth's full HTTP handler so cookie signing/setting is consistent.
+    const betterAuthUrl = new URL("/api/auth/sign-in/email", request.url);
+    const betterAuthReq = new Request(betterAuthUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: request.headers.get("cookie") ?? "",
+        "x-forwarded-for": request.headers.get("x-forwarded-for") ?? "",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+    let authRes: Response;
     try {
-      res = await auth.api.signInEmail({
-        body: { email, password },
-        headers: request.headers,
-        asResponse: true,
-        returnHeaders: true,
-      });
+      authRes = await auth.handler(betterAuthReq);
     } catch {
       return fail(401, { error: "Email atau password salah.", email });
     }
-
-    // Forward every Set-Cookie header from better-auth via SvelteKit's cookies API.
-    const setCookies: string[] = (res.headers?.getSetCookie?.() as string[] | undefined) ?? [];
-    for (const sc of setCookies) {
-      const [pair] = sc.split(";");
-      const eq = pair.indexOf("=");
-      const name = pair.slice(0, eq);
-      const value = pair.slice(eq + 1);
-      cookies.set(name, value, {
-        path: "/",
-        httpOnly: true,
-        secure: false,
-        sameSite: "lax",
-      });
-    }
-
-    const body: any = await res.clone().json().catch(() => ({}));
-    if (!body || !body.user) {
+    if (!authRes.ok) {
       return fail(401, { error: "Email atau password salah.", email });
     }
 
+    // Forward each Set-Cookie verbatim via SvelteKit's cookies API.
+    const setCookies: string[] = (authRes.headers as Headers).getSetCookie?.() ?? [];
+    for (const sc of setCookies) {
+      const semi = sc.indexOf(";");
+      const pair = semi === -1 ? sc : sc.slice(0, semi);
+      const eq = pair.indexOf("=");
+      const name = pair.slice(0, eq);
+      const value = pair.slice(eq + 1);
+      const attrs: Record<string, string> = {};
+      if (semi !== -1) {
+        for (const a of sc.slice(semi + 1).split(";")) {
+          const [k, ...v] = a.trim().split("=");
+          attrs[k.toLowerCase()] = v.join("=") || "";
+        }
+      }
+      cookies.set(name, value, {
+        path: attrs["path"] || "/",
+        httpOnly: true,
+        secure: !!attrs["secure"],
+        sameSite: (attrs["samesite"] as any) || "lax",
+        expires: attrs["expires"] ? new Date(attrs["expires"]) : undefined,
+      });
+    }
+
+    const body: any = await authRes.clone().json().catch(() => ({}));
+    if (!body?.user) {
+      return fail(401, { error: "Email atau password salah.", email });
+    }
     await maybeRehashPassword(body.user.id, password);
 
     throw redirect(303, "/");
