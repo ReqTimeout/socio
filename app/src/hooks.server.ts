@@ -15,6 +15,10 @@ try {
 }
 
 async function authHook({ event, resolve }: Parameters<Handle>[0]) {
+  if (process.env.SOCIO_DEBUG_AUTH) {
+    const cookieHeader = event.request.headers.get("cookie") ?? "";
+    console.log(`[authHook] ${event.url.pathname} cookies=${cookieHeader.slice(0, 100)}`);
+  }
   const session = await auth.api.getSession({ headers: event.request.headers });
   event.locals.session = session?.session ?? null;
   event.locals.user = session?.user ?? null;

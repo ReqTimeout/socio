@@ -55,7 +55,7 @@ export const actions: Actions = {
       cookies.set(name, value, {
         path: "/",
         httpOnly: true,
-        secure: true,
+        secure: false,
         sameSite: "lax",
       });
     }
