@@ -50,6 +50,8 @@ export const actions: Actions = {
     } catch {
       return fail(401, { error: "Email atau password salah.", email });
     }
+    console.log("[login] authRes status:", authRes.status);
+    console.log("[login] authRes headers:", JSON.stringify(Object.fromEntries(authRes.headers.entries())));
     if (!authRes.ok) {
       return fail(401, { error: "Email atau password salah.", email });
     }
