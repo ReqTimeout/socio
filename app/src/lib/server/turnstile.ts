@@ -20,9 +20,8 @@ interface TurnstileResponse {
  */
 export async function verifyTurnstile(token: string, remoteIp?: string): Promise<boolean> {
   if (!TURNSTILE_SECRET) {
-    // Dev fallback: if no secret configured, allow (don't block local dev)
-    if (dev) return true;
-    return false;
+    // No secret configured → skip Turnstile gate (dev + unconfigured prod).
+    return true;
   }
   try {
     const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
