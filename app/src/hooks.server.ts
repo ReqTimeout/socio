@@ -26,6 +26,8 @@ async function readSocioSession(event: Parameters<Handle>[0]["event"]) {
   const sessionId = cookie.slice(0, dot);
   const token = cookie.slice(dot + 1);
 
+  const userIdNum = Number((await db.select({ uid: sessions.userId }).from(sessions).where(eq(sessions.token, token)).limit(1))[0]?.uid);
+  if (!Number.isFinite(userIdNum)) return null;
   const [row] = await db
     .select({
       sessionId: sessions.id,
@@ -33,7 +35,7 @@ async function readSocioSession(event: Parameters<Handle>[0]["event"]) {
       user: users,
     })
     .from(sessions)
-    .innerJoin(users, eq(users.id, Number(sessions.userId)))
+    .innerJoin(users, eq(users.id, userIdNum))
     .where(eq(sessions.token, token))
     .limit(1);
   if (!row || row.sessionId !== sessionId) return null;
