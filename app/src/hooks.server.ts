@@ -15,13 +15,18 @@ try {
 }
 
 async function authHook({ event, resolve }: Parameters<Handle>[0]) {
-  if (process.env.SOCIO_DEBUG_AUTH) {
-    const cookieHeader = event.request.headers.get("cookie") ?? "";
-    console.log(`[authHook] ${event.url.pathname} cookies=${cookieHeader.slice(0, 100)}`);
+  const cookieHeader = event.request.headers.get("cookie") ?? "";
+  console.log(`[authHook] ${event.url.pathname} cookies=${cookieHeader.slice(0, 200)}`);
+  try {
+    const session = await auth.api.getSession({ headers: event.request.headers });
+    console.log(`[authHook] session=${session?.session?.id ?? "null"} user=${(session?.user as any)?.email ?? "null"}`);
+    event.locals.session = session?.session ?? null;
+    event.locals.user = session?.user ?? null;
+  } catch (e) {
+    console.log(`[authHook] error:`, e instanceof Error ? e.message : String(e));
+    event.locals.session = null;
+    event.locals.user = null;
   }
-  const session = await auth.api.getSession({ headers: event.request.headers });
-  event.locals.session = session?.session ?? null;
-  event.locals.user = session?.user ?? null;
   (event.locals as any).ip =
     event.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     event.request.headers.get("x-real-ip") ||
