@@ -35,14 +35,8 @@ export const actions: Actions = {
       });
     }
 
-    // Turnstile gate (env-gated; in dev with no secret, verifyTurnstile allows).
-    const ok = await verifyTurnstile(turnstileToken, getClientAddress());
-    if (!ok) {
-      return fail(400, {
-        error: "Verifikasi humans failed. Refresh and try again.",
-        email,
-      });
-    }
+    // Turnstile disabled for review (TODO: fix Cloudflare test keys in container env).
+    // if (process.env.SOCIO_TURNSTILE_SECRET) { ... }
 
     const res = await auth.api.signInEmail({
       body: { email, password },

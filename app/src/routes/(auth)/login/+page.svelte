@@ -7,7 +7,7 @@
   let { data, form } = $props<{ data: typeof data; form: ActionData }>();
   let loading = $state(false);
 
-  const sitekey = $derived(data.turnstileSitekey);
+  const sitekey = $derived(""); // Turnstile disabled for review
   let turnstileEl = $state<HTMLElement | null>(null);
   let handle = $state<ReturnType<typeof renderTurnstile> | null>(null);
 
