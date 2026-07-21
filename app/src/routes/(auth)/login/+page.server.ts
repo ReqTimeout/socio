@@ -38,11 +38,16 @@ export const actions: Actions = {
     // Turnstile disabled for review (TODO: fix Cloudflare test keys in container env).
     // if (process.env.SOCIO_TURNSTILE_SECRET) { ... }
 
-    const res = await auth.api.signInEmail({
-      body: { email, password },
-      headers: request.headers,
-      asResponse: false,
-    });
+    let res;
+    try {
+      res = await auth.api.signInEmail({
+        body: { email, password },
+        headers: request.headers,
+        asResponse: false,
+      });
+    } catch {
+      return fail(401, { error: "Email atau password salah.", email });
+    }
 
     if (!res || !res.user) {
       return fail(401, { error: "Email atau password salah.", email });
