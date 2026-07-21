@@ -1,8 +1,15 @@
 import type { Actions, PageServerLoad } from "./$types";
 import { fail, redirect } from "@sveltejs/kit";
-import { auth, maybeRehashPassword } from "$lib/server/auth";
+import { db } from "@socio/db";
+import { users, accounts, sessions } from "@socio/db/schema";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { rateLimit } from "$lib/server/rate-limit";
+import { maybeRehashPassword } from "$lib/server/auth";
 import { dev } from "$app/environment";
+
+const SESSION_COOKIE = "socio_session";
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (locals.session) throw redirect(303, "/");
@@ -21,7 +28,6 @@ export const actions: Actions = {
       return fail(400, { error: "Email dan password wajib diisi.", email });
     }
 
-    // Rate limit: 30 attempts per 5 minutes per IP.
     const allowed = await rateLimit(`login:${getClientAddress()}`, {
       limit: 30,
       windowSec: 300,
@@ -33,58 +39,58 @@ export const actions: Actions = {
       });
     }
 
-    // Use better-auth's full HTTP handler so cookie signing/setting is consistent.
-    const betterAuthUrl = new URL("/api/auth/sign-in/email", request.url);
-    const betterAuthReq = new Request(betterAuthUrl, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        cookie: request.headers.get("cookie") ?? "",
-        "x-forwarded-for": request.headers.get("x-forwarded-for") ?? "",
-      },
-      body: JSON.stringify({ email, password }),
+    // 1. Find user by email
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    if (!user) {
+      return fail(401, { error: "Email atau password salah.", email });
+    }
+
+    // 2. Find credential account for this user
+    const [account] = await db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.userId, String(user.id)))
+      .limit(1);
+    if (!account || !account.password) {
+      return fail(401, { error: "Email atau password salah.", email });
+    }
+
+    // 3. Verify password (bcrypt)
+    const ok = bcrypt.compareSync(password, account.password);
+    if (!ok) {
+      return fail(401, { error: "Email atau password salah.", email });
+    }
+
+    // 4. Rehash legacy non-bcrypt hash if needed
+    await maybeRehashPassword(user.id, password);
+
+    // 5. Create session row in DB
+    const token = randomBytes(24).toString("hex");
+    const sessionId = randomBytes(16).toString("hex");
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await db.insert(sessions).values({
+      id: sessionId,
+      userId: String(user.id),
+      token,
+      expiresAt,
+      ipAddress: getClientAddress(),
+      userAgent: request.headers.get("user-agent") ?? "",
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
-    let authRes: Response;
-    try {
-      authRes = await auth.handler(betterAuthReq);
-    } catch {
-      return fail(401, { error: "Email atau password salah.", email });
-    }
-    console.log("[login] authRes status:", authRes.status);
-    console.log("[login] authRes headers:", JSON.stringify(Object.fromEntries(authRes.headers.entries())));
-    if (!authRes.ok) {
-      return fail(401, { error: "Email atau password salah.", email });
-    }
 
-    // Forward each Set-Cookie verbatim via SvelteKit's cookies API.
-    const setCookies: string[] = (authRes.headers as Headers).getSetCookie?.() ?? [];
-    for (const sc of setCookies) {
-      const semi = sc.indexOf(";");
-      const pair = semi === -1 ? sc : sc.slice(0, semi);
-      const eq = pair.indexOf("=");
-      const name = pair.slice(0, eq);
-      const value = pair.slice(eq + 1);
-      const attrs: Record<string, string> = {};
-      if (semi !== -1) {
-        for (const a of sc.slice(semi + 1).split(";")) {
-          const [k, ...v] = a.trim().split("=");
-          attrs[k.toLowerCase()] = v.join("=") || "";
-        }
-      }
-      cookies.set(name, value, {
-        path: attrs["path"] || "/",
-        httpOnly: true,
-        secure: !!attrs["secure"],
-        sameSite: (attrs["samesite"] as any) || "lax",
-        expires: attrs["expires"] ? new Date(attrs["expires"]) : undefined,
-      });
-    }
-
-    const body: any = await authRes.clone().json().catch(() => ({}));
-    if (!body?.user) {
-      return fail(401, { error: "Email atau password salah.", email });
-    }
-    await maybeRehashPassword(body.user.id, password);
+    // 6. Set our own session cookie
+    cookies.set(SESSION_COOKIE, `${sessionId}.${token}`, {
+      path: "/",
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      expires: expiresAt,
+    });
 
     throw redirect(303, "/");
   },
