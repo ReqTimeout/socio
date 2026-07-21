@@ -88,6 +88,10 @@ export const auth = betterAuth({
       apiKey: { type: "string", defaultValue: "" },
     },
   },
+  rateLimit: {
+    window: 60,
+    max: 100,
+  },
   secret: process.env.SOCIO_AUTH_SECRET ?? "dev-insecure-secret-change-me",
   baseURL: process.env.SOCIO_APP_URL ?? process.env.BETTER_AUTH_URL ?? undefined,
   advanced: {
