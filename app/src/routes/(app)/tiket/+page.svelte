@@ -30,6 +30,14 @@
   }
 </script>
 
+<svelte:head>
+  <title>Tiket Bantuan — Socio.id | Panel SMM Indonesia</title>
+  <meta
+    name="description"
+    content="Dapatkan bantuan dari tim support Socio.id. Buat tiket untuk masalah order, pembayaran, atau akun."
+  />
+</svelte:head>
+
 <section class="space-y-4">
   {#if data.activeId}
     <!-- Detail -->

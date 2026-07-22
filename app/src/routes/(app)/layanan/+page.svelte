@@ -70,6 +70,14 @@
   }
 </script>
 
+<svelte:head>
+  <title>Layanan — Socio.id | Panel SMM Indonesia</title>
+  <meta
+    name="description"
+    content="Temukan layanan SMM terbaik untuk Instagram, TikTok, YouTube, dan media sosial lainnya. Harga termurah, proses otomatis."
+  />
+</svelte:head>
+
 <section class="space-y-3">
   <!-- Search -->
   <form
@@ -107,7 +115,8 @@
   <div class="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
     <button
       onclick={() => selectCat(0)}
-      class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold {!data.params.cat && !data.params.fav
+      class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold {!data.params.cat &&
+      !data.params.fav
         ? 'bg-ink-900 text-white'
         : 'bg-ink-100 text-ink-700'}">Semua</button
     >

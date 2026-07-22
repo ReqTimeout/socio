@@ -24,9 +24,19 @@
   }
 </script>
 
+<svelte:head>
+  <title>Saldo — Socio.id | Panel SMM Indonesia</title>
+  <meta
+    name="description"
+    content="Kelola saldo Socio.id kamu. Top up via BCA, Midtrans VA, atau QRIS. Riwayat transaksi lengkap."
+  />
+</svelte:head>
+
 <section class="space-y-4">
   <!-- Balance card -->
-  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 to-ink-800 p-6 text-white">
+  <div
+    class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 to-ink-800 p-6 text-white"
+  >
     <div class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-2xl"></div>
     <div class="text-xs font-medium text-ink-300">Saldo Socio</div>
     <div class="mt-1 font-display text-4xl font-extrabold tabular-nums">
@@ -61,14 +71,18 @@
       </a>
     </div>
     {#if data.logs.length === 0}
-      <div class="rounded-2xl border border-dashed border-ink-200 bg-surface p-6 text-center text-sm text-ink-500">
+      <div
+        class="rounded-2xl border border-dashed border-ink-200 bg-surface p-6 text-center text-sm text-ink-500"
+      >
         Belum ada mutasi saldo.
       </div>
     {:else}
       <ul class="space-y-2">
         {#each data.logs as l (l.id)}
           {@const meta = logLabel[l.type] ?? { label: l.type, icon: "info", tone: "ink" }}
-          <li class="flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3">
+          <li
+            class="flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3"
+          >
             <div
               class="grid h-9 w-9 shrink-0 place-items-center rounded-lg
               {meta.tone === 'success'
@@ -83,7 +97,11 @@
               <div class="truncate text-sm font-bold">{l.note}</div>
               <div class="text-xs text-ink-400">{timeAgo(l.createdAt)}</div>
             </div>
-            <span class="font-display text-sm font-extrabold tabular-nums {l.amount < 0 ? 'text-danger' : 'text-success'}">
+            <span
+              class="font-display text-sm font-extrabold tabular-nums {l.amount < 0
+                ? 'text-danger'
+                : 'text-success'}"
+            >
               {l.amount < 0 ? "-" : "+"}{formatRupiah(Math.abs(Number(l.amount)))}
             </span>
           </li>
@@ -101,13 +119,17 @@
       </a>
     </div>
     {#if data.topups.length === 0}
-      <div class="rounded-2xl border border-dashed border-ink-200 bg-surface p-6 text-center text-sm text-ink-500">
+      <div
+        class="rounded-2xl border border-dashed border-ink-200 bg-surface p-6 text-center text-sm text-ink-500"
+      >
         Belum ada riwayat top up.
       </div>
     {:else}
       <ul class="space-y-2">
         {#each data.topups as t (t.id)}
-          <li class="flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3">
+          <li
+            class="flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3"
+          >
             <div
               class="grid h-9 w-9 shrink-0 place-items-center rounded-lg
               {t.status === 'Success'
@@ -116,7 +138,10 @@
                   ? 'bg-danger/10 text-danger'
                   : 'bg-amber-100 text-amber-700'}"
             >
-              <Icon name={t.status === "Success" ? "check" : t.status === "Canceled" ? "x" : "clock"} size={18} />
+              <Icon
+                name={t.status === "Success" ? "check" : t.status === "Canceled" ? "x" : "clock"}
+                size={18}
+              />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-sm font-bold tabular-nums">{formatRupiah(Number(t.amount))}</div>
@@ -128,8 +153,7 @@
                 ? 'bg-success/10 text-success'
                 : t.status === 'Canceled'
                   ? 'bg-danger/10 text-danger'
-                  : 'bg-amber-100 text-amber-700'}"
-              >{t.status}</span
+                  : 'bg-amber-100 text-amber-700'}">{t.status}</span
             >
           </li>
         {/each}

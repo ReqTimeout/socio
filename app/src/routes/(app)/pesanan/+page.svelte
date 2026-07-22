@@ -113,6 +113,14 @@
   );
 </script>
 
+<svelte:head>
+  <title>Pesanan — Socio.id | Panel SMM Indonesia</title>
+  <meta
+    name="description"
+    content="Lihat riwayat dan status pesanan SMM kamu secara real-time. Kelola order, refill, dan batalkan pesanan."
+  />
+</svelte:head>
+
 <section class="space-y-3">
   <!-- Filter chips -->
   <div class="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
@@ -138,7 +146,9 @@
 
   {#if orders.length === 0}
     <div class="rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center">
-      <div class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-ink-100 text-ink-400">
+      <div
+        class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-ink-100 text-ink-400"
+      >
         <Icon name="receipt" size={28} />
       </div>
       <p class="text-sm font-bold">Belum ada pesanan</p>

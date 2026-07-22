@@ -47,13 +47,22 @@
     effectiveQty;
     if (appliedCoupon) resetCoupon();
   });
-
 </script>
+
+<svelte:head>
+  <title>Buat Pesanan — Socio.id | Panel SMM Indonesia</title>
+  <meta
+    name="description"
+    content="Buat pesanan followers, likes, views, dan comments untuk Instagram, TikTok, YouTube. Harga termurah, proses otomatis."
+  />
+</svelte:head>
 
 <section class="space-y-5">
   {#if !data.service}
     <div class="rounded-2xl border border-dashed border-ink-200 bg-surface p-6 text-center">
-      <div class="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-ink-100 text-ink-400">
+      <div
+        class="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-ink-100 text-ink-400"
+      >
         <Icon name="grid" size={24} />
       </div>
       <p class="text-sm font-bold">Pilih layanan dulu</p>
@@ -70,7 +79,9 @@
     <!-- Service header -->
     <div class="rounded-2xl border border-ink-100 bg-surface p-4">
       <div class="flex items-start gap-3">
-        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+        <div
+          class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"
+        >
           <Icon name="star" size={20} />
         </div>
         <div class="min-w-0 flex-1">
@@ -78,13 +89,17 @@
           <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
             <span class="font-semibold text-ink-700">{data.service.type}</span>
             {#if data.service.isRefill}
-              <span class="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success">
+              <span
+                class="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success"
+              >
                 ✓ Refill
               </span>
             {/if}
           </div>
           <div class="mt-1 text-xs text-ink-500">
-            Min {data.service.min.toLocaleString("id-ID")} · Max {data.service.max.toLocaleString("id-ID")}
+            Min {data.service.min.toLocaleString("id-ID")} · Max {data.service.max.toLocaleString(
+              "id-ID",
+            )}
           </div>
         </div>
       </div>
@@ -137,15 +152,18 @@
             {/each}
           </div>
         {/if}
-        <Input name="link" bind:value={link} placeholder="https://instagram.com/username" required />
+        <Input
+          name="link"
+          bind:value={link}
+          placeholder="https://instagram.com/username"
+          required
+        />
       </div>
 
       <!-- Quantity or Custom Comments -->
       {#if isCustomComments}
         <div>
-          <label class="mb-1.5 block text-sm font-bold">
-            Komentar (1 per baris)
-          </label>
+          <label class="mb-1.5 block text-sm font-bold"> Komentar (1 per baris) </label>
           <textarea
             name="komen"
             bind:value={komen}
@@ -174,7 +192,9 @@
       <div class="rounded-2xl bg-ink-900 p-4 text-white">
         <div class="flex items-center justify-between text-sm">
           <span class="text-ink-300">Total bayar</span>
-          <span class="font-display text-xl font-extrabold tabular-nums">{formatRupiah(finalTotal)}</span>
+          <span class="font-display text-xl font-extrabold tabular-nums"
+            >{formatRupiah(finalTotal)}</span
+          >
         </div>
         {#if discount > 0}
           <div class="mt-1.5 flex items-center justify-between text-xs">
@@ -200,7 +220,11 @@
 
       <!-- Save link -->
       <label class="flex items-center gap-2 text-sm text-ink-600">
-        <input type="checkbox" name="saveLink" class="h-4 w-4 rounded border-ink-300 text-primary" />
+        <input
+          type="checkbox"
+          name="saveLink"
+          class="h-4 w-4 rounded border-ink-300 text-primary"
+        />
         Simpan link untuk pesan lagi nanti
       </label>
 
@@ -276,7 +300,8 @@
 
     {#if data.service.note}
       <div class="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
-        <strong>Catatan:</strong> {data.service.note}
+        <strong>Catatan:</strong>
+        {data.service.note}
       </div>
     {/if}
   {/if}

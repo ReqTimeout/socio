@@ -41,6 +41,14 @@
   }
 </script>
 
+<svelte:head>
+  <title>Affiliate — Socio.id | Panel SMM Indonesia</title>
+  <meta
+    name="description"
+    content="Dapatkan komisi dari setiap pembelian teman yang kamu ajak. Link referral, QR code, dan penarikan komisi."
+  />
+</svelte:head>
+
 <section class="space-y-4">
   <h1 class="font-display text-lg font-bold">Affiliate</h1>
 
@@ -57,7 +65,8 @@
     </div>
     <div class="mt-3">
       {#if data.canWithdraw}
-        <Button onclick={openConfirm} size="sm" variant="accent" class="w-full">Tarik Komisi</Button>
+        <Button onclick={openConfirm} size="sm" variant="accent" class="w-full">Tarik Komisi</Button
+        >
       {:else}
         <div class="rounded-xl bg-ink-800 px-3 py-2 text-center text-xs text-ink-300">
           Minimal {formatRupiah(data.minWithdraw)} untuk withdraw
@@ -104,11 +113,18 @@
     >
       <h2 class="font-display text-base font-bold">Tarik Komisi</h2>
       <p class="text-sm text-ink-500">
-        Komisi <span class="font-bold text-ink-900">{formatRupiah(data.commission)}</span> akan
-        dikredit ke saldo utama kamu. Diproses instan, tidak perlu metode pembayaran.
+        Komisi <span class="font-bold text-ink-900">{formatRupiah(data.commission)}</span> akan dikredit
+        ke saldo utama kamu. Diproses instan, tidak perlu metode pembayaran.
       </p>
       <div class="flex gap-2">
-        <Button type="button" size="sm" variant="ghost" class="flex-1" onclick={() => (confirmOpen = false)} disabled={busy}>Batal</Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          class="flex-1"
+          onclick={() => (confirmOpen = false)}
+          disabled={busy}>Batal</Button
+        >
         <Button type="submit" size="sm" variant="accent" class="flex-1" disabled={busy}>
           {busy ? "Memproses…" : "Tarik Sekarang"}
         </Button>

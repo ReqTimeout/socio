@@ -62,6 +62,14 @@
   }
 </script>
 
+<svelte:head>
+  <title>Top Up Saldo — Socio.id | Panel SMM Indonesia</title>
+  <meta
+    name="description"
+    content="Isi saldo Socio.id via BCA, Midtrans VA, atau QRIS. Proses instan, saldo langsung masuk."
+  />
+</svelte:head>
+
 <section class="space-y-5">
   <div class="flex items-center gap-2">
     <a href="/saldo" class="grid h-9 w-9 place-items-center rounded-full hover:bg-ink-100 -ml-1">
@@ -114,7 +122,8 @@
         >Nominal lain (min Rp20.000)</label
       >
       <div class="relative">
-        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-ink-400"
+        <span
+          class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-ink-400"
           >Rp</span
         >
         <input
@@ -138,7 +147,9 @@
         type="button"
         onclick={() => selectMethod("manual")}
         class="flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left transition-all duration-200 active:scale-[0.99]
-          {method === 'manual' ? 'border-primary bg-primary/5' : 'border-ink-200 hover:border-ink-300'}"
+          {method === 'manual'
+          ? 'border-primary bg-primary/5'
+          : 'border-ink-200 hover:border-ink-300'}"
       >
         <div
           class="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white font-bold text-sm
@@ -166,7 +177,9 @@
         onclick={() => selectMethod("midtrans")}
         disabled={!data.midtransReady}
         class="flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left transition-all duration-200 active:scale-[0.99] disabled:opacity-40
-          {method === 'midtrans' ? 'border-primary bg-primary/5' : 'border-ink-200 hover:border-ink-300'}"
+          {method === 'midtrans'
+          ? 'border-primary bg-primary/5'
+          : 'border-ink-200 hover:border-ink-300'}"
       >
         <div
           class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white"
@@ -202,7 +215,9 @@
       </div>
       <div class="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
         <span class="text-sm font-semibold">Total transfer</span>
-        <span class="font-display text-lg font-extrabold tabular-nums">{formatRupiah(totalPay)}</span>
+        <span class="font-display text-lg font-extrabold tabular-nums"
+          >{formatRupiah(totalPay)}</span
+        >
       </div>
     {:else}
       <div class="mt-1 flex items-center justify-between text-sm">
@@ -299,8 +314,7 @@
                 ? 'bg-success/10 text-success'
                 : h.status === 'Canceled'
                   ? 'bg-danger/10 text-danger'
-                  : 'bg-amber-100 text-amber-700'}"
-              >{h.status}</span
+                  : 'bg-amber-100 text-amber-700'}">{h.status}</span
             >
           </li>
         {/each}
@@ -313,7 +327,9 @@
 <Sheet bind:open={instructionOpen} title="Instruksi Pembayaran">
   <div class="space-y-4">
     <div class="rounded-2xl bg-success/10 p-4 text-center">
-      <div class="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-full bg-success/20 text-success">
+      <div
+        class="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-full bg-success/20 text-success"
+      >
         <Icon name="check" size={24} stroke={2.5} />
       </div>
       <div class="text-sm font-bold text-success">Invoice Dibuat</div>
@@ -354,22 +370,20 @@
 
     <div class="rounded-2xl bg-ink-900 p-4 text-center text-white">
       <div class="text-xs text-ink-300">Jumlah yang harus ditransfer</div>
-      <div class="mt-1 font-display text-3xl font-extrabold tabular-nums"
-        >{formatRupiah(instrPostAmount)}</div
-      >
-      <div class="mt-1 text-[10px] text-accent-300"
-        >Termasuk kode unik untuk pencocokan otomatis</div
-      >
+      <div class="mt-1 font-display text-3xl font-extrabold tabular-nums">
+        {formatRupiah(instrPostAmount)}
+      </div>
+      <div class="mt-1 text-[10px] text-accent-300">
+        Termasuk kode unik untuk pencocokan otomatis
+      </div>
     </div>
 
     <div class="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
-      <strong>Penting:</strong> Transfer sesuai jumlah di atas (termasuk 3 digit terakhir). Setelah
-      transfer, upload bukti di halaman riwayat top up untuk konfirmasi cepat.
+      <strong>Penting:</strong> Transfer sesuai jumlah di atas (termasuk 3 digit terakhir). Setelah transfer,
+      upload bukti di halaman riwayat top up untuk konfirmasi cepat.
     </div>
 
-    <Button onclick={() => goto("/saldo/top-up")} class="w-full" variant="ghost">
-      Tutup
-    </Button>
+    <Button onclick={() => goto("/saldo/top-up")} class="w-full" variant="ghost">Tutup</Button>
   </div>
 </Sheet>
 

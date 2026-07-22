@@ -16,6 +16,14 @@
   }
 </script>
 
+<svelte:head>
+  <title>Riwayat Saldo — Socio.id | Panel SMM Indonesia</title>
+  <meta
+    name="description"
+    content="Lihat riwayat transaksi saldo Socio.id kamu. Top up, order, refund, dan withdraw."
+  />
+</svelte:head>
+
 <section class="space-y-3">
   <h1 class="font-display text-lg font-bold">Riwayat Saldo</h1>
 

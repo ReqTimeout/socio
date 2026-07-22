@@ -62,6 +62,14 @@
   }
 </script>
 
+<svelte:head>
+  <title>Notifikasi — Socio.id | Panel SMM Indonesia</title>
+  <meta
+    name="description"
+    content="Lihat notifikasi terbaru tentang pesanan, deposit, tiket, dan promo dari Socio.id."
+  />
+</svelte:head>
+
 <section class="space-y-3">
   <div class="flex items-center justify-between">
     <h1 class="font-display text-lg font-bold tracking-tight">Notifikasi</h1>
@@ -88,7 +96,11 @@
   </div>
 
   {#if data.items.length === 0}
-    <EmptyState icon="🔔" title="Belum ada notifikasi" description="Notifikasi pesanan, deposit, dan info akan muncul di sini." />
+    <EmptyState
+      icon="🔔"
+      title="Belum ada notifikasi"
+      description="Notifikasi pesanan, deposit, dan info akan muncul di sini."
+    />
   {:else}
     <ul class="space-y-2">
       {#each data.items as n (n.id)}
@@ -106,7 +118,9 @@
             </span>
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
-                <p class="truncate text-sm font-semibold {n.read ? 'text-ink-700' : 'text-ink-900'}">
+                <p
+                  class="truncate text-sm font-semibold {n.read ? 'text-ink-700' : 'text-ink-900'}"
+                >
                   {n.title}
                 </p>
                 {#if !n.read}

@@ -14,8 +14,8 @@
 </script>
 
 <nav
-  class="fixed bottom-0 inset-x-0 z-50 bg-surface/95 backdrop-blur-xl border-t border-ink-100 safe-bottom
-    grid max-w-2xl mx-auto shadow-[0_-4px_20px_-8px_rgba(15,23,42,0.08)]"
+  class="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-surface/95 backdrop-blur-xl border-t border-ink-100 safe-bottom
+    grid shadow-[0_-4px_20px_-8px_rgba(15,23,42,0.08)]"
   style="grid-template-columns: repeat({items.length}, 1fr);"
   aria-label="Navigasi utama"
 >
@@ -32,8 +32,16 @@
           class="absolute top-0 h-1 w-8 rounded-b-full bg-primary transition-all duration-300"
         ></span>
       {/if}
-      <span class="relative transition-transform duration-200 {isActive(item.href) ? '-translate-y-0.5' : ''}">
-        <Icon name={item.icon} size={22} stroke={isActive(item.href) ? 2.25 : 1.75} />
+      <span
+        class="relative transition-transform duration-200 {isActive(item.href)
+          ? '-translate-y-0.5'
+          : ''}"
+      >
+        <Icon
+          name={item.icon}
+          size={22}
+          stroke={isActive(item.href) ? 2.25 : 1.75}
+        />
         {#if item.badge}
           <span
             class="absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 grid place-items-center rounded-full bg-danger text-white text-[9px] font-bold"

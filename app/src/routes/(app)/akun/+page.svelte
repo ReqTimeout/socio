@@ -95,6 +95,14 @@
   }
 </script>
 
+<svelte:head>
+  <title>Akun — Socio.id | Panel SMM Indonesia</title>
+  <meta
+    name="description"
+    content="Kelola profil, ganti password, dan atur pengaturan akun Socio.id kamu."
+  />
+</svelte:head>
+
 <section class="space-y-5">
   <div class="flex items-center gap-4 rounded-2xl border border-ink-100 bg-surface p-4">
     <button
@@ -115,12 +123,15 @@
         <Avatar name={data.user.name} size="lg" />
       {/if}
       {#if avatarBusy}
-        <span class="absolute inset-0 grid place-items-center rounded-full bg-ink-900/40 text-white text-[10px]">…</span>
+        <span
+          class="absolute inset-0 grid place-items-center rounded-full bg-ink-900/40 text-white text-[10px]"
+          >…</span
+        >
       {:else}
         <span
           class="absolute -bottom-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full bg-ink-900 text-[10px] text-white"
-          aria-hidden="true"
-        >✎</span>
+          aria-hidden="true">✎</span
+        >
       {/if}
     </button>
     <input
@@ -136,10 +147,15 @@
     </div>
   </div>
 
-  <div class="rounded-2xl bg-ink-900 p-4 text-white">
-    <div class="text-xs text-ink-300">Saldo</div>
-    <div class="font-display text-2xl font-extrabold tabular-nums">
-      {formatRupiah(data.user.balance)}
+  <div
+    class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary to-accent-700 p-4 text-white"
+  >
+    <div class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/15 blur-2xl"></div>
+    <div class="relative">
+      <div class="text-xs text-white/70">Saldo</div>
+      <div class="font-display text-2xl font-extrabold tabular-nums">
+        {formatRupiah(data.user.balance)}
+      </div>
     </div>
   </div>
 
@@ -235,28 +251,40 @@
   <div class="divide-y divide-ink-100 rounded-2xl border border-ink-100 bg-surface">
     <a
       href="/saldo/top-up"
-      class="flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-ink-50"
+      class="flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-ink-50"
     >
       <span>Top Up Saldo</span><span class="text-ink-400">›</span>
     </a>
     <a
+      href="/saldo/riwayat"
+      class="flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-ink-50"
+    >
+      <span>Riwayat Saldo</span><span class="text-ink-400">›</span>
+    </a>
+    <a
       href="/affiliate"
-      class="flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-ink-50"
+      class="flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-ink-50"
     >
       <span>Affiliate</span><span class="text-ink-400">›</span>
     </a>
     <a
       href="/tiket"
-      class="flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-ink-50"
+      class="flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-ink-50"
     >
       <span>Tiket Bantuan</span><span class="text-ink-400">›</span>
+    </a>
+    <a
+      href="/notif"
+      class="flex items-center justify-between px-4 py-3.5 text-sm font-medium hover:bg-ink-50"
+    >
+      <span>Notifikasi</span><span class="text-ink-400">›</span>
     </a>
     <button
       onclick={() => {
         haptic();
         fetch("/api/auth/sign-out", { method: "POST" }).then(() => (location.href = "/login"));
       }}
-      class="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-danger hover:bg-ink-50"
+      class="flex w-full items-center justify-between px-4 py-3.5 text-left text-sm font-medium text-danger hover:bg-ink-50"
     >
       <span>Keluar</span><span>›</span>
     </button>

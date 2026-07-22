@@ -18,30 +18,32 @@
 
 ## 1. Brand palette
 
-| Token | Value | Use |
-|---|---|---|
-| `--color-primary-600` (`--color-primary`) | `#4f46e5` | Primary actions, active states, links |
+| Token                                          | Value     | Use                                             |
+| ---------------------------------------------- | --------- | ----------------------------------------------- |
+| `--color-primary-600` (`--color-primary`)      | `#4f46e5` | Primary actions, active states, links           |
 | `--color-primary-800` (`--color-primary-dark`) | `#3730a3` | Hover/active of primary (DARKER, never lighter) |
-| `--color-accent-500` (`--color-accent`) | `#06b6d4` | Secondary accent, highlights, status energy |
-| `--color-accent-700` (`--color-accent-dark`) | `#0e7490` | Hover/active of accent |
+| `--color-accent-500` (`--color-accent`)        | `#06b6d4` | Secondary accent, highlights, status energy     |
+| `--color-accent-700` (`--color-accent-dark`)   | `#0e7490` | Hover/active of accent                          |
 
 **Full scales** (50–900 primary, 50–700 accent) live in `tokens.css`. Use semantic shortcuts in components.
 
 ### Status (SMM order states)
-| State | Token | Value |
-|---|---|---|
-| Pending | `--color-status-pending` | `#d97706` |
+
+| State    | Token                     | Value     |
+| -------- | ------------------------- | --------- |
+| Pending  | `--color-status-pending`  | `#d97706` |
 | Progress | `--color-status-progress` | `#2563eb` |
 | Complete | `--color-status-complete` | `#16a34a` |
 | Canceled | `--color-status-canceled` | `#dc2626` |
-| Partial | `--color-status-partial` | `#7c3aed` |
+| Partial  | `--color-status-partial`  | `#7c3aed` |
 
 ### Feedback
-| Token | Value | Soft bg |
-|---|---|---|
+
+| Token   | Value     | Soft bg   |
+| ------- | --------- | --------- |
 | success | `#16a34a` | `#dcfce7` |
 | warning | `#d97706` | `#fef3c7` |
-| danger | `#dc2626` | `#fee2e2` |
+| danger  | `#dc2626` | `#fee2e2` |
 
 ---
 
@@ -57,10 +59,10 @@
 
 ## 3. Typography
 
-| Role | Family | Notes |
-|---|---|---|
-| `--font-sans` | **Plus Jakarta Sans** | Body, UI. (NOT Inter — anti-pattern #8) |
-| `--font-display` | **Sora** | Headings, hero, numbers |
+| Role             | Family                | Notes                                   |
+| ---------------- | --------------------- | --------------------------------------- |
+| `--font-sans`    | **Plus Jakarta Sans** | Body, UI. (NOT Inter — anti-pattern #8) |
+| `--font-display` | **Sora**              | Headings, hero, numbers                 |
 
 - **Display headings**: Sora, weight 600–700, tight tracking (`-0.02em`).
 - **Body**: Plus Jakarta Sans, 14–16px, line-height 1.5.
@@ -72,15 +74,16 @@
 
 ## 4. Radius / Shadow / Motion
 
-| Token | Value |
-|---|---|
-| `--radius-card` | `1.5rem` |
-| `--radius-pill` | `9999px` |
-| `--shadow-card` | `0 1px 2px rgb(15 23 42/.04), 0 8px 30px rgb(15 23 42/.06)` |
+| Token                 | Value                                                        |
+| --------------------- | ------------------------------------------------------------ |
+| `--radius-card`       | `1.5rem`                                                     |
+| `--radius-pill`       | `9999px`                                                     |
+| `--shadow-card`       | `0 1px 2px rgb(15 23 42/.04), 0 8px 30px rgb(15 23 42/.06)`  |
 | `--shadow-card-hover` | `0 4px 12px rgb(15 23 42/.06), 0 20px 40px rgb(15 23 42/.1)` |
-| `--ease-out-soft` | `cubic-bezier(0.16, 1, 0.3, 1)` |
+| `--ease-out-soft`     | `cubic-bezier(0.16, 1, 0.3, 1)`                              |
 
 **Motion rules** (from `review-animations`):
+
 - Transform + opacity ONLY. No layout-thrash (no animating width/height/margins).
 - Duration: 150–250ms enter, 200–350ms exit. Ease `--ease-out-soft`.
 - `prefers-reduced-motion`: disable all non-essential motion.
@@ -90,18 +93,19 @@
 
 ## 5. Anti-pattern audit (MUST pass before "done")
 
-| # | Anti-pattern | Rule | Enforcement |
-|---|---|---|---|
-| 1 | **Bullet spam** | ≤5 `<li>` per page section. Excess → prose / ledger / table / definition list. | Count `<li>` per route. |
-| 2 | **Eyebrow pill** | Max 1 per page (ideally 0). Heading carries context. | `grep` for pill classes. |
-| 3 | **Card chrome sameness** | Max 2 sections use default rounded card. Others → ledger, table, full-bleed photo, prose. | Visual audit. |
-| 4 | **3-tier pricing card** | Use real HTML `<table>` or inline pricing. No generic 3 stacked cards. | Pricing routes only. |
-| 5 | **4-col stat strip** | Use inline-stat narrative or single hero stat. Counter animation NOT required. | Stat sections. |
-| 6 | **No imagery** | Real `<img>` where photo needed; never gradient blob. | Imagery audit. |
-| 7 | **Identical containers** | Variance IS the design — ≥3 distinct containment patterns per page, max 2 default cards. | Layout audit. |
-| 8 | **Inter default** | Use Plus Jakarta Sans / Sora (set in §3). Never Inter. | Font audit. |
+| #   | Anti-pattern             | Rule                                                                                      | Enforcement              |
+| --- | ------------------------ | ----------------------------------------------------------------------------------------- | ------------------------ |
+| 1   | **Bullet spam**          | ≤5 `<li>` per page section. Excess → prose / ledger / table / definition list.            | Count `<li>` per route.  |
+| 2   | **Eyebrow pill**         | Max 1 per page (ideally 0). Heading carries context.                                      | `grep` for pill classes. |
+| 3   | **Card chrome sameness** | Max 2 sections use default rounded card. Others → ledger, table, full-bleed photo, prose. | Visual audit.            |
+| 4   | **3-tier pricing card**  | Use real HTML `<table>` or inline pricing. No generic 3 stacked cards.                    | Pricing routes only.     |
+| 5   | **4-col stat strip**     | Use inline-stat narrative or single hero stat. Counter animation NOT required.            | Stat sections.           |
+| 6   | **No imagery**           | Real `<img>` where photo needed; never gradient blob.                                     | Imagery audit.           |
+| 7   | **Identical containers** | Variance IS the design — ≥3 distinct containment patterns per page, max 2 default cards.  | Layout audit.            |
+| 8   | **Inter default**        | Use Plus Jakarta Sans / Sora (set in §3). Never Inter.                                    | Font audit.              |
 
 **Contrast (AA minimum 4.5:1)**:
+
 - Accent-filled surfaces (button, badge, active tab, recommended stripe): use `--color-accent`/`--color-primary` fills with **white or near-white ink** only. Verify AA at rest + hover.
 - `--accent-hover` / `--primary-hover` = DARKER shade, never lighter.
 - Focus ring: visible contrast (≥3:1 against adjacent), `outline` + offset, never color-only.
@@ -109,7 +113,9 @@
 
 ---
 
-## 6. App shell (mobile, from REBUILD_PLAN §6.1)
+## 6. App shell (responsive: mobile bottom-nav + desktop sidebar)
+
+### Mobile (`< lg`, 1024px)
 
 ```
 ┌─────────────────────────────┐
@@ -134,9 +140,47 @@
 - **Safe-area**: `env(safe-area-inset-bottom/top)`.
 - **Haptic**: `navigator.vibrate(10)` on CTA tap / add-to-cart / order success (gated `prefers-reduced-motion`).
 
+### Desktop (`≥ lg`, 1024px) — Linear/Stripe-style sidebar
+
+```
+┌──────────┬──────────────────────────────────┐
+│ Sidebar  │  Header (sticky, page title)     │
+│ (256px)  ├──────────────────────────────────┤
+│          │                                  │
+│  Logo    │   Content (max-w-7xl, px-8)      │
+│          │   - Multi-column grids           │
+│  Nav:    │   - Dense tables                 │
+│  Beranda │   - Inline stats                 │
+│  Layanan │                                  │
+│  Pesanan │                                  │
+│  Saldo   │                                  │
+│  Akun    │                                  │
+│  ──────  │                                  │
+│  Affiliate│                                 │
+│  Tiket   │                                  │
+│          │                                  │
+│  ──────  │                                  │
+│  User    │                                  │
+│  card    │                                  │
+└──────────┴──────────────────────────────────┘
+```
+
+- **Sidebar**: fixed left, `w-64` (256px), `border-r border-ink-100`, `bg-surface`.
+  - Logo top (32px height).
+  - Nav items: Beranda, Layanan, Pesanan, Saldo, Akun, Affiliate, Tiket.
+  - Active state: `bg-primary/10 text-primary font-semibold` + left accent bar (`border-l-2 border-primary`).
+  - Inactive: `text-ink-500 hover:bg-ink-50 hover:text-ink-900`.
+  - User card bottom: avatar + name + level badge + logout.
+- **Main area**: `flex-1`, header sticky top (page title + notif), content `max-w-7xl mx-auto px-6 lg:px-8 py-6`.
+- **Bottom nav**: `lg:hidden` (hidden on desktop).
+- **FAB**: `lg:hidden` (hidden on desktop — sidebar nav covers it).
+- **Responsive breakpoint**: `lg` (1024px). Below = mobile shell, above = desktop sidebar.
+
 ### Reference vibes (REBUILD_PLAN §6.0.1)
+
 - **Landing**: Haloka clone — gradient + blur + micro-interaction, hero OrderSimulator, sticky CTA, FAQ accordion, pricing toggle → reseller SMM packages.
 - **App user (mobile)**: Indo fintech (GoPay/DANA) — bottom nav, prominent balance card, QRIS quick top-up, 2×2 action grid, transaction list with icons.
+- **App user (desktop)**: Modern SaaS (Linear/Stripe) — left sidebar nav, dense multi-column content, inline stats, no wasted whitespace.
 - **App admin**: Modern SaaS (Linear/Stripe) — desktop sidebar + mobile off-canvas, dense tables, audit log, queue/cron monitoring.
 
 ---
@@ -144,11 +188,13 @@
 ## 7. Shared components (`packages/ui`)
 
 Implemented & contract-bound:
+
 - `Button.svelte` — class passthrough, uses `--color-primary` fill, darker hover, AA ink.
 - `Card.svelte` — `--radius-card`, `--shadow-card`, hover lift.
 - `StatusBadge.svelte` — maps order status → §1 status tokens.
 - `BalancePill.svelte` — prominent balance display (fintech vibe).
-- `MobileShell.svelte` — safe-area wrapper + bottom-nav slot.
+- `MobileShell.svelte` — safe-area wrapper + bottom-nav slot (mobile only, `lg:hidden`).
+- `Sidebar.svelte` — desktop left sidebar (Linear/Stripe style, `hidden lg:flex`).
 
 **Rule**: build new UI from these primitives. Do not recreate buttons/cards inline.
 
