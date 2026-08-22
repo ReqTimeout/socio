@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
-import { orders, deposits, categories } from "@socio/db/schema";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { orders, deposits, categories, promotionBanners } from "@socio/db/schema";
+import { eq, desc, and, gte, sql, lte, or, isNull, asc } from "drizzle-orm";
 import { getSetting } from "$lib/server/admin";
 import type { PageServerLoad } from "./$types";
 
@@ -164,13 +164,38 @@ export const load: PageServerLoad = async ({ locals }) => {
     .from(categories)
     .limit(12);
 
-  // Banner promo — dari admin setting, fallback dummy
+  // Banner promo — prioritas: tabel CMS (position=dashboard, aktif, dalam jadwal)
+  // → fallback admin setting JSON `dashboard_banners` → fallback dummy.
   let banners: Banner[] = DUMMY_BANNERS;
   try {
-    const raw = await getSetting("dashboard_banners");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length) banners = parsed;
+    const now = new Date();
+    const cmsRows = await db
+      .select()
+      .from(promotionBanners)
+      .where(
+        and(
+          eq(promotionBanners.position, "dashboard"),
+          eq(promotionBanners.isActive, 1),
+          or(isNull(promotionBanners.startAt), lte(promotionBanners.startAt, now)),
+          or(isNull(promotionBanners.endAt), gte(promotionBanners.endAt, now)),
+        ),
+      )
+      .orderBy(asc(promotionBanners.sortOrder), desc(promotionBanners.id))
+      .limit(5);
+    if (cmsRows.length) {
+      banners = cmsRows.map((b) => ({
+        title: b.title,
+        subtitle: b.subtitle || undefined,
+        href: b.linkUrl || undefined,
+        img: b.imageUrl || undefined,
+        gradient: "from-primary-600 via-primary-700 to-accent-600",
+      }));
+    } else {
+      const raw = await getSetting("dashboard_banners");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) banners = parsed;
+      }
     }
   } catch {
     banners = DUMMY_BANNERS;

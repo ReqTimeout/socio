@@ -18,7 +18,8 @@ async function tryExec(stmt: ReturnType<typeof sql>) {
   try {
     await db.execute(stmt);
   } catch (e) {
-    const code = (e as { code?: string })?.code;
+    // Drizzle wraps MySQL errors in DrizzleQueryError → kode asli ada di e.cause.code.
+    const code = (e as { code?: string })?.code ?? (e as { cause?: { code?: string } })?.cause?.code;
     // 1060 dup column, 1061 dup key, 1826 dup FK, 1091 can't drop
     if (
       code &&
@@ -217,4 +218,21 @@ export async function ensureAdminSchema() {
   // saat mixed dengan InnoDB (approve withdrawal gagal). Convert ke InnoDB
   // (idempotent; no-op kalau sudah InnoDB).
   await db.execute(sql`ALTER TABLE affiliate ENGINE=InnoDB`);
+  // promotion_banners (Banner CMS — tabel baru, PHP lama tidak pernah membuatnya)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS promotion_banners (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      title VARCHAR(150) NOT NULL,
+      subtitle VARCHAR(255) NOT NULL DEFAULT '',
+      image_url VARCHAR(500) NOT NULL DEFAULT '',
+      link_url VARCHAR(500) NOT NULL DEFAULT '',
+      position ENUM('home','services','dashboard') NOT NULL DEFAULT 'dashboard',
+      sort_order INT NOT NULL DEFAULT 0,
+      is_active TINYINT NOT NULL DEFAULT 1,
+      start_at DATETIME DEFAULT NULL,
+      end_at DATETIME DEFAULT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX banner_pos_idx (position, is_active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
 }
