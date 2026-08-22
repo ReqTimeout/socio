@@ -1,12 +1,11 @@
 <script lang="ts">
   import { Icon, EmptyState, Button, toast } from "@socio/ui";
   import { haptic } from "@socio/ui";
-  import { applyAction, enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import type { PageData, ActionData } from "./$types";
+  import type { PageData } from "./$types";
 
-  let { data, form }: { data: PageData; form: ActionData } = $props();
+  let { data }: { data: PageData } = $props();
 
   const filters = [
     { v: "", label: "Semua" },

@@ -1,8 +1,8 @@
 import { db } from "@socio/db";
-import { services, categories, savedLinks, orders, users, balanceLogs, coupons } from "@socio/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { services, categories, savedLinks, orders, users, balanceLogs } from "@socio/db/schema";
+import { eq, desc, asc, sql } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
-import { computePrice, applyCoupon, type UserLevel } from "@socio/core/pricing";
+import { computePrice, type UserLevel } from "@socio/core/pricing";
 import { smmturkAdd } from "@socio/core/smmturk";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const catRows = await db
     .select({ id: categories.id, name: categories.name })
     .from(categories)
-    .limit(30);
+    .orderBy(asc(categories.name));
 
   let service: null | {
     id: number;
@@ -26,6 +26,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     providerServiceId: number;
     isRefill: number;
     note: string;
+    waktu: string;
+    categoryId: number;
   } = null;
 
   if (serviceId) {
@@ -41,6 +43,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
         providerServiceId: services.providerServiceId,
         isRefill: services.isRefill,
         note: services.note,
+        waktu: services.waktu,
+        categoryId: services.categoryId,
       })
       .from(services)
       .where(eq(services.id, serviceId))
@@ -73,7 +77,6 @@ export const actions: Actions = {
     const quantity = Number(form.get("quantity")) || 0;
     const komen = String(form.get("komen") ?? "").trim();
     const saveLink = form.get("saveLink") === "on";
-    const couponCode = String(form.get("coupon") ?? "").trim().toUpperCase();
 
     if (!serviceId || !link) {
       return fail(400, { error: "Layanan dan link wajib diisi." });
@@ -100,40 +103,7 @@ export const actions: Actions = {
     const level = (locals.user!.level as UserLevel) ?? "Member";
     const price = computePrice(s.price, finalQty, level);
 
-    // I-U1: validate + apply coupon
-    let couponDiscount = 0;
-    let appliedCoupon: string | null = null;
-    if (couponCode) {
-      const [c] = await db
-        .select()
-        .from(coupons)
-        .where(eq(coupons.code, couponCode))
-        .limit(1);
-      if (!c) {
-        return fail(400, { error: "Kupon tidak ditemukan.", coupon: couponCode });
-      }
-      const res = applyCoupon(
-        {
-          code: c.code,
-          type: c.type,
-          value: c.value,
-          minOrder: c.minOrder,
-          maxDiscount: c.maxDiscount,
-          expiresAt: c.expiresAt,
-          maxUsage: c.maxUsage,
-          used: c.used,
-          active: c.active,
-        },
-        price,
-      );
-      if (!res.valid) {
-        return fail(400, { error: res.message, coupon: couponCode });
-      }
-      couponDiscount = res.discount;
-      appliedCoupon = c.code;
-    }
-
-    const finalPrice = Math.max(0, price - couponDiscount);
+    const finalPrice = price;
 
     const [u] = await db
       .select({ balance: users.balance })
@@ -183,8 +153,8 @@ export const actions: Actions = {
       providerId: s.providerId,
       isApi: 0,
       isRefund: 0,
-      couponCode: appliedCoupon,
-      discount: couponDiscount,
+      couponCode: null,
+      discount: 0,
       nextPollAt: new Date(Date.now() + 60_000),
     });
 
@@ -196,15 +166,9 @@ export const actions: Actions = {
       userId,
       type: "order",
       amount: -finalPrice,
-      note: `Pesan ${s.serviceName} (${oid})${appliedCoupon ? ` [kupon ${appliedCoupon}]` : ""}`,
+      note: `Pesan ${s.serviceName} (${oid})`,
       createdAt: new Date(),
     });
-    if (appliedCoupon) {
-      await db
-        .update(coupons)
-        .set({ used: sql`${coupons.used} + 1` })
-        .where(eq(coupons.code, appliedCoupon));
-    }
 
     if (saveLink) {
       await db
@@ -213,41 +177,5 @@ export const actions: Actions = {
     }
 
     throw redirect(303, "/pesanan");
-  },
-
-  coupon: async ({ request, locals }) => {
-    const form = await request.formData();
-    const code = String(form.get("code") ?? "").trim().toUpperCase();
-    const serviceId = Number(form.get("serviceId") ?? 0);
-    const quantity = Number(form.get("quantity") ?? 0);
-    const komen = String(form.get("komen") ?? "").trim();
-
-    if (!serviceId) return fail(400, { couponError: "Pilih layanan dulu." });
-    const [s] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
-    if (!s) return fail(400, { couponError: "Layanan tidak ditemukan." });
-
-    const isCustom = s.type === "Custom Comments";
-    const qty = isCustom ? komen.split("\n").filter(Boolean).length : quantity;
-    const price = computePrice(s.price, qty, (locals.user!.level as UserLevel) ?? "Member");
-
-    if (!code) return fail(400, { couponError: "Masukkan kode kupon." });
-    const [c] = await db.select().from(coupons).where(eq(coupons.code, code)).limit(1);
-    if (!c) return fail(400, { couponError: "Kupon tidak ditemukan." });
-    const res = applyCoupon(
-      {
-        code: c.code,
-        type: c.type,
-        value: c.value,
-        minOrder: c.minOrder,
-        maxDiscount: c.maxDiscount,
-        expiresAt: c.expiresAt,
-        maxUsage: c.maxUsage,
-        used: c.used,
-        active: c.active,
-      },
-      price,
-    );
-    if (!res.valid) return fail(400, { couponError: res.message });
-    return { coupon: code, discount: res.discount, finalPrice: price - res.discount };
   },
 };

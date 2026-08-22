@@ -38,9 +38,11 @@ function getApiKey(): string {
 
 async function postForm(
   params: Record<string, string>,
+  endpoint = SMMTURK_ENDPOINT,
+  key = getApiKey(),
 ): Promise<any> {
-  const body = new URLSearchParams({ key: getApiKey(), ...params });
-  const res = await fetch(SMMTURK_ENDPOINT, {
+  const body = new URLSearchParams({ key, ...params });
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
@@ -54,6 +56,18 @@ async function postForm(
   }
   if (json.error) throw new Error(`SMMturk error: ${JSON.stringify(json.error)}`);
   return json;
+}
+
+/** Balance untuk provider tertentu (pakai URL + key-nya sendiri). */
+export async function smmturkBalanceFor(endpoint: string, key: string): Promise<number> {
+  const json = await postForm({ action: "balance" }, endpoint, key);
+  return Number(json.balance ?? json.remained ?? 0);
+}
+
+/** Services untuk provider tertentu (pakai URL + key-nya sendiri). */
+export async function smmturkServicesFor(endpoint: string, key: string): Promise<SmmturkService[]> {
+  const json = await postForm({ action: "services" }, endpoint, key);
+  return Array.isArray(json) ? (json as SmmturkService[]) : [];
 }
 
 export async function smmturkBalance(): Promise<number> {

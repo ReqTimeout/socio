@@ -1,19 +1,18 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { Button } from "@socio/ui";
+  import { Button, Wordmark } from "@socio/ui";
   import { renderTurnstile } from "$lib/turnstile";
   import type { ActionData } from "./$types";
 
   let { data, form } = $props<{ data: typeof data; form: ActionData }>();
   let loading = $state(false);
 
-  const sitekey = $derived(""); // Turnstile disabled for review
+  const sitekey = $derived(data.turnstileSitekey);
   let turnstileEl = $state<HTMLElement | null>(null);
-  let handle = $state<ReturnType<typeof renderTurnstile> | null>(null);
 
   $effect(() => {
     if (sitekey && turnstileEl) {
-      handle = renderTurnstile("turnstile-widget", sitekey, "login");
+      renderTurnstile("turnstile-widget", sitekey, "login");
     }
   });
 </script>
@@ -28,10 +27,10 @@
 >
   <div class="flex-1 flex flex-col justify-center max-w-sm w-full mx-auto">
     <div class="mb-8 text-center">
-      <div class="font-display font-extrabold text-3xl text-primary tracking-tight">
-        socio<span class="text-accent-500">.id</span>
+      <div class="flex justify-center">
+        <Wordmark size="lg" />
       </div>
-      <p class="text-ink-500 mt-2 text-sm">Masuk ke panel SMM reseller Anda</p>
+      <p class="text-ink-500 mt-3 text-sm">Masuk ke panel SMM reseller Anda</p>
     </div>
 
     {#if form?.error}

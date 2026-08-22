@@ -24,6 +24,7 @@ export const provider = mysqlTable("provider", {
   apiUrlOrder: varchar("api_url_order", { length: 128 }).notNull(),
   apiUrlStatus: varchar("api_url_status", { length: 128 }).notNull(),
   apiKey: varchar("api_key", { length: 128 }).notNull(),
+  balanceProvider: double("balance_provider").notNull().default(0),
 });
 
 export type Provider = typeof provider.$inferSelect;

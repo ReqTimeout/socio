@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
-import { notifications, users } from "@socio/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { notifications } from "@socio/db/schema";
+import { sql } from "drizzle-orm";
 import webpush from "web-push";
 
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -57,7 +57,7 @@ export async function notifyOrderUpdate(
         return webpush.sendNotification(sub as any, payload).catch(() => {});
       }),
     );
-  } catch (e) {
+  } catch {
     // push subscription table may not exist yet — ignore
   }
 }

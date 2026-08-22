@@ -95,6 +95,10 @@ export const auth = betterAuth({
   secret: process.env.SOCIO_AUTH_SECRET ?? "dev-insecure-secret-change-me",
   baseURL: process.env.SOCIO_APP_URL ?? process.env.BETTER_AUTH_URL ?? undefined,
   advanced: {
+    // NOTE: We do NOT rely on better-auth's session cookie — see
+    // hooks.server.ts (readSocioSession) for the custom `socio_session` cookie.
+    // useSecureCookies:false keeps better-auth's own cookies (if any) consistent
+    // with our custom cookie's secure:false default. Change both together.
     generateId: () => String(Math.floor(100000 + Math.random() * 899999)),
     useSecureCookies: false,
     defaultCookieAttributes: {
@@ -105,29 +109,46 @@ export const auth = betterAuth({
 });
 
 /**
- * Rehash-on-login: legacy PHP hashes may not be bcrypt (some dumps use a
- * different scheme). After a successful login with a plain (bcrypt-compatible)
- * password, upgrade the stored hash to bcrypt so future logins are uniform.
- * No mass reset — invisible to the user.
+ * Rehash-on-login: legacy PHP hashes may not be bcrypt. After a successful
+ * login we transparently upgrade the stored hash to bcrypt so future logins
+ * are uniform. Two stores are kept in sync:
+ *   - `users.password`    : legacy PHP store (better-auth reads this too)
+ *   - `accounts.password` : better-auth credential store (what the custom
+ *     login flow in login/+page.server.ts actually verifies)
+ * Both are upgraded when not already bcrypt. No mass reset — invisible to user.
  */
 export async function maybeRehashPassword(
   userId: number | string,
   plainPassword: string,
 ): Promise<void> {
   try {
-    const rows = await db
+    const id = Number(userId);
+    const isBcrypt = (h: string) =>
+      h.startsWith("$2a$") || h.startsWith("$2b$") || h.startsWith("$2y$");
+
+    const [u] = await db
       .select({ password: users.password })
       .from(users)
-      .where(eq(users.id, Number(userId)))
+      .where(eq(users.id, id))
       .limit(1);
-    const current = rows[0]?.password ?? "";
-    const isBcrypt =
-      current.startsWith("$2a$") || current.startsWith("$2b$") || current.startsWith("$2y$");
-    if (isBcrypt) return; // already bcrypt, nothing to do
-    await db
-      .update(users)
-      .set({ password: bcrypt.hashSync(plainPassword, 10) })
-      .where(eq(users.id, Number(userId)));
+    if (u && u.password && !isBcrypt(u.password)) {
+      await db
+        .update(users)
+        .set({ password: bcrypt.hashSync(plainPassword, 10) })
+        .where(eq(users.id, id));
+    }
+
+    const [a] = await db
+      .select({ password: accounts.password })
+      .from(accounts)
+      .where(eq(accounts.userId, String(id)))
+      .limit(1);
+    if (a && a.password && !isBcrypt(a.password)) {
+      await db
+        .update(accounts)
+        .set({ password: bcrypt.hashSync(plainPassword, 10) })
+        .where(eq(accounts.userId, String(id)));
+    }
   } catch {
     // best-effort: never break login on rehash failure
   }

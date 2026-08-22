@@ -1,7 +1,7 @@
 import { db } from "@socio/db";
 import { services, categories, favorites } from "@socio/db/schema";
 import { eq, like, desc, asc, sql, and, inArray } from "drizzle-orm";
-import { redirect, fail } from "@sveltejs/kit";
+import { fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
 const PAGE_SIZE = 20;
@@ -47,9 +47,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       max: services.max,
       isRefill: services.isRefill,
       categoryId: services.categoryId,
+      categoryName: categories.name,
       providerId: services.providerId,
     })
     .from(services)
+    .leftJoin(categories, eq(services.categoryId, categories.id))
     .where(and(...filters))
     .orderBy(orderBy)
     .limit(PAGE_SIZE)
@@ -63,7 +65,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const cats = await db
     .select({ id: categories.id, name: categories.name })
     .from(categories)
-    .limit(30);
+    .orderBy(asc(categories.name));
 
   return {
     services: rows.map((s) => ({ ...s, fav: favIds.includes(s.id) })),

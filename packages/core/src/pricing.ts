@@ -8,10 +8,27 @@ export interface PricingRule {
   isActive: boolean;
 }
 
+/**
+ * Markup rules per member level. `price` in services table is the base
+ * (modal) price per 1000 IDR (setelah konversi USD→IDR dari harga API).
+ *
+ * Konvensi markup:
+ *  - Member mendapat markup tertinggi (margin paling tebal, harga retail).
+ *  - Reseller/Agen markup lebih tipis (harga grosir).
+ *  - Admin tidak markup (harga modal, untuk internal/test).
+ *
+ * Harga jual per 1000 = modal × (1 + markup%/100) + flatPer1k.
+ *
+ * Default per konfirmasi user (13 Aug 2026):
+ *  - Member: +200% → harga jual = 3× modal
+ *  - Reseller: +180% → 2.8× modal
+ *  - Agen: +150% → 2.5× modal
+ *  - Admin: 0% → harga modal
+ */
 const DEFAULT_RULES: Record<UserLevel, PricingRule> = {
-  Member: { level: "Member", markupPercent: 0, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
-  Agen: { level: "Agen", markupPercent: -10, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
-  Reseller: { level: "Reseller", markupPercent: -20, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
+  Member: { level: "Member", markupPercent: 200, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
+  Reseller: { level: "Reseller", markupPercent: 180, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
+  Agen: { level: "Agen", markupPercent: 150, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
   Admin: { level: "Admin", markupPercent: 0, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
 };
 

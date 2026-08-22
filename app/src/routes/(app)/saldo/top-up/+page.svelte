@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Button, toast, EmptyState, Icon, Sheet } from "@socio/ui";
+  import { fly } from "svelte/transition";
+  import { Button, toast, Icon, Sheet, staggerIn } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { formatRupiah } from "$lib/format";
   import { applyAction, enhance } from "$app/forms";
@@ -12,9 +13,7 @@
   let method = $state<"manual" | "midtrans">("manual");
   let submitting = $state(false);
   let instructionOpen = $state(false);
-  let instrSnapUrl = $state("");
   let instrPostAmount = $state(0);
-  let instrInvoiceId = $state("");
   let proofDepositId = $state<number | null>(null);
   let proofOpen = $state(false);
 
@@ -42,7 +41,6 @@
         window.location.href = r.snapUrl;
       } else if (r.method === "manual") {
         instrPostAmount = r.postAmount;
-        instrInvoiceId = r.invoiceId;
         instructionOpen = true;
       }
     }
@@ -102,6 +100,7 @@
       {#each chips as c, i (c)}
         <button
           type="button"
+          in:fly={staggerIn(i, { y: 6, duration: 200, step: 40 })}
           onclick={() => setChip(c)}
           class="group relative overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-200
             {amount === c && !custom

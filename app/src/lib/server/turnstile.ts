@@ -1,8 +1,15 @@
 import { dev } from "$app/environment";
 
-const TURNSTILE_SECRET = dev
-  ? (process.env.SOCIO_TURNSTILE_SECRET ?? "")
-  : (process.env.SOCIO_TURNSTILE_SECRET ?? "");
+/**
+ * Turnstile is OPT-IN via SOCIO_TURNSTILE_ENABLED=1.
+ * When disabled (default) the widget is never rendered and verification is
+ * skipped, so auth can never be blocked by a missing/broken challenges config.
+ * This prevents the earlier incident where test keys in a container env
+ * blocked ALL logins (git: "fix(login): disable Turnstile gate").
+ */
+const TURNSTILE_ENABLED = process.env.SOCIO_TURNSTILE_ENABLED === "1";
+
+const TURNSTILE_SECRET = TURNSTILE_ENABLED ? (process.env.SOCIO_TURNSTILE_SECRET ?? "") : "";
 
 interface TurnstileResponse {
   success: boolean;
@@ -19,8 +26,13 @@ interface TurnstileResponse {
  * Docs: https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
  */
 export async function verifyTurnstile(token: string, remoteIp?: string): Promise<boolean> {
+  // Disabled (no SOCIO_TURNSTILE_ENABLED=1) → skip gate entirely (safe default).
+  if (!TURNSTILE_ENABLED) return true;
+  // Dev never renders the widget (the load fn returns an empty sitekey), so
+  // there is no token to verify — skip the gate to match client behaviour.
+  if (dev) return true;
   if (!TURNSTILE_SECRET) {
-    // No secret configured → skip Turnstile gate (dev + unconfigured prod).
+    // No secret configured → skip Turnstile gate (unconfigured prod).
     return true;
   }
   try {
@@ -40,6 +52,6 @@ export async function verifyTurnstile(token: string, remoteIp?: string): Promise
   }
 }
 
-export const TURNSTILE_SITEKEY = dev
-  ? (process.env.SOCIO_TURNSTILE_SITEKEY ?? "0x4AAAAAAD3RtU-MhZPHl3Fw")
-  : (process.env.SOCIO_TURNSTILE_SITEKEY ?? "0x4AAAAAAD3RtU-MhZPHl3Fw");
+export const TURNSTILE_SITEKEY = TURNSTILE_ENABLED
+  ? (process.env.SOCIO_TURNSTILE_SITEKEY ?? "")
+  : "";

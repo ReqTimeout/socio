@@ -1,12 +1,8 @@
 import { db } from "@socio/db";
-import { provider, providerServices, orders, jobQueue } from "@socio/db/schema";
-import { eq, and, lt, sql } from "drizzle-orm";
-import {
-  smmturkBalance,
-  smmturkServices,
-  smmturkStatus,
-  withConcurrency,
-} from "@socio/core/smmturk";
+import { provider, providerServices } from "@socio/db/schema";
+import { eq, and, sql } from "drizzle-orm";
+import { smmturkBalanceFor, smmturkServicesFor, withConcurrency } from "@socio/core/smmturk";
+import { decryptSecret } from "$lib/server/crypto";
 
 const USD_TO_IDR = Number(process.env.SOCIO_USD_TO_IDR ?? "15000");
 
@@ -56,18 +52,21 @@ function hashService(s: {
 export async function runProviderSync(providerId = 1): Promise<void> {
   const start = Date.now();
   try {
-    const [p] = await db
-      .select()
-      .from(provider)
-      .where(eq(provider.id, providerId))
-      .limit(1);
+    const [p] = await db.select().from(provider).where(eq(provider.id, providerId)).limit(1);
     if (!p) {
       await logSync(providerId, "services", "error", 0, 0, 0, "provider not found");
       return;
     }
+    // Pakai URL + key milik provider ini (bukan cuma env SMMturk)
+    const endpoint = p.apiUrlOrder || "https://smmturk.org/api/v2";
+    const key = decryptSecret(p.apiKey) || "";
+    if (!key) {
+      await logSync(providerId, "services", "error", 0, 0, 0, "provider has no api_key");
+      return;
+    }
 
-    const balance = await smmturkBalance();
-    const remote = await smmturkServices();
+    const balance = await smmturkBalanceFor(endpoint, key);
+    const remote = await smmturkServicesFor(endpoint, key);
     let changed = 0;
 
     // index existing by provider_service_id
@@ -126,7 +125,9 @@ export async function runProviderSync(providerId = 1): Promise<void> {
 
     // update balance if column exists (best-effort)
     try {
-      await db.execute(sql`UPDATE provider SET balance_provider = ${balance} WHERE id = ${providerId}`);
+      await db.execute(
+        sql`UPDATE provider SET balance_provider = ${balance} WHERE id = ${providerId}`,
+      );
     } catch {
       // column may not exist
     }
@@ -134,8 +135,51 @@ export async function runProviderSync(providerId = 1): Promise<void> {
     await logSync(providerId, "services", "ok", Date.now() - start, remote.length, changed);
     console.log(`[cron] provider-sync: fetched ${remote.length}, changed ${changed}`);
   } catch (e: any) {
-    await logSync(providerId, "services", "error", Date.now() - start, 0, 0, String(e?.message ?? e));
+    await logSync(
+      providerId,
+      "services",
+      "error",
+      Date.now() - start,
+      0,
+      0,
+      String(e?.message ?? e),
+    );
     console.error("[cron] provider-sync error:", e);
     throw e;
   }
+}
+
+// In-memory mutex supaya sync tdk overlap (cron + manual trigger)
+let syncing = false;
+
+/**
+ * Sync semua provider aktif yang punya api_key (bukan MANUAL).
+ * Dijalankan tiap jam oleh cron. Per-provider di-handle runProviderSync.
+ */
+export async function runAllProviderSync(): Promise<void> {
+  if (syncing) {
+    console.log("[cron] provider-sync: skip, already running");
+    return;
+  }
+  syncing = true;
+  try {
+    const rows = await db
+      .select({ id: provider.id, name: provider.name, apiKey: provider.apiKey })
+      .from(provider)
+      .where(and(sql`${provider.apiKey} <> ''`, sql`${provider.apiKey} IS NOT NULL`));
+    for (const r of rows) {
+      try {
+        await runProviderSync(Number(r.id));
+      } catch (e: any) {
+        console.error(`[cron] provider-sync ${r.name} failed:`, e?.message ?? e);
+      }
+    }
+  } finally {
+    syncing = false;
+  }
+}
+
+/** Cek apakah sedang sync (untuk UI). */
+export function isSyncing(): boolean {
+  return syncing;
 }

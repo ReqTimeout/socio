@@ -43,3 +43,10 @@ accountcf.md
 # build artifacts
 *.tsbuildinfo
 docs/screenshots/
+
+# Scratch/temp design artifacts
+.tmp_*
+.qoder/
+api-keys*.csv
+prod-LAYOUT-BARU.png
+db-check.mjs

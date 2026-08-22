@@ -3,9 +3,9 @@
   import { haptic } from "@socio/ui";
   import { formatRupiah } from "$lib/format";
   import { applyAction, enhance } from "$app/forms";
-  import type { ActionData, PageData } from "./$types";
+  import type { PageData } from "./$types";
 
-  let { data, form }: { data: PageData; form: ActionData } = $props();
+  let { data }: { data: PageData } = $props();
   let name = $state(data.user.name);
   let current = $state("");
   let next = $state("");
@@ -22,7 +22,7 @@
   let revealKey = $state(false);
   let keyBusy = $state(false);
 
-  function submit(action: string) {
+  function submit(_action: string) {
     return async (input: any) => {
       busy = true;
       const r = input.result;

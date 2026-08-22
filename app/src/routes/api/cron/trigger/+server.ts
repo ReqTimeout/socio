@@ -24,7 +24,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   }
   if (task === "poll") {
     await runStatusPolling();
-    const [r] = await db.execute(sql`SELECT COUNT(*) AS c FROM orders WHERE status IN ('Pending','In progress')`);
+    const [r] = await db.execute(
+      sql`SELECT COUNT(*) AS c FROM orders WHERE status IN ('Pending','In progress')`,
+    );
     const rows = (r as any).rows ?? [];
     return json({ ok: true, task: "status-polling", pending: rows[0]?.c ?? 0 });
   }

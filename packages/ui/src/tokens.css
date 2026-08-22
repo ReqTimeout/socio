@@ -67,19 +67,34 @@
   --color-status-partial: #7c3aed;
 
   /* ---- Typography ---- */
-  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Sora", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  /* "* Variable" = nama family dari @fontsource-variable (self-host di app) */
+  --font-sans:
+    "Plus Jakarta Sans Variable", "Plus Jakarta Sans", ui-sans-serif,
+    system-ui, sans-serif;
+  --font-display:
+    "Sora Variable", "Sora", "Plus Jakarta Sans Variable", ui-sans-serif,
+    system-ui, sans-serif;
 
   /* ---- Radius ---- */
+  /* Density tokens for utility chrome (table rows, queue cards, inline-stat) */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  /* Hero / marketing surface */
   --radius-card: 1.5rem;
   --radius-pill: 9999px;
 
   /* ---- Shadow ---- */
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 30px rgb(15 23 42 / 0.06);
-  --shadow-card-hover: 0 4px 12px rgb(15 23 42 / 0.06), 0 20px 40px rgb(15 23 42 / 0.1);
+  --shadow-card:
+    0 1px 2px rgb(15 23 42 / 0.04), 0 8px 30px rgb(15 23 42 / 0.06);
+  --shadow-card-hover:
+    0 4px 12px rgb(15 23 42 / 0.06), 0 20px 40px rgb(15 23 42 / 0.1);
 
   /* ---- Motion (respect reduced-motion in components) ---- */
+  /* Entrance, large reveal — paired with .reveal (animation-delay: var(--d)) */
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Tweened numerics (saldo counter, KPI) + small UI hover */
+  --ease-out-quad: cubic-bezier(0, 0, 0.2, 1);
 }
 
 /* G-U20: dark mode — remap ink + surface scale under .dark so every

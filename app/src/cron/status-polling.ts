@@ -65,8 +65,10 @@ export async function runStatusPolling(): Promise<void> {
         const newStatus = mapStatus(r.status);
         const remains = Number(r.remains ?? o.remains);
         const startCount = Number(r.start_count ?? o.startCount);
-        const wasFinal = o.status === "Success" || o.status === "Canceled" || o.status === "Partial";
-        const isFinal = newStatus === "Success" || newStatus === "Canceled" || newStatus === "Partial";
+        const wasFinal =
+          o.status === "Success" || o.status === "Canceled" || o.status === "Partial";
+        const isFinal =
+          newStatus === "Success" || newStatus === "Canceled" || newStatus === "Partial";
         const update: any = {
           remains,
           startCount,
@@ -74,7 +76,9 @@ export async function runStatusPolling(): Promise<void> {
         };
         if (newStatus) update.status = newStatus as any;
         if (!isFinal) {
-          update.nextPollAt = new Date(Date.now() + nextPollInterval(newStatus ?? o.status, o.createdAt));
+          update.nextPollAt = new Date(
+            Date.now() + nextPollInterval(newStatus ?? o.status, o.createdAt),
+          );
         } else {
           update.nextPollAt = null;
         }
@@ -89,7 +93,12 @@ export async function runStatusPolling(): Promise<void> {
       await db
         .update(orders)
         .set({ nextPollAt: new Date(Date.now() + 10 * 60 * 1000) })
-        .where(inArray(orders.id, list.map((o) => o.id)));
+        .where(
+          inArray(
+            orders.id,
+            list.map((o) => o.id),
+          ),
+        );
     }
   }
   console.log(`[cron] status-polling: checked ${due.length} orders`);

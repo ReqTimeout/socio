@@ -58,7 +58,9 @@ export const actions: Actions = {
     await db
       .update(notifications)
       .set({ readAt: new Date() })
-      .where(and(eq(notifications.userId, Number(locals.user.id)), sql`${notifications.readAt} IS NULL`));
+      .where(
+        and(eq(notifications.userId, Number(locals.user.id)), sql`${notifications.readAt} IS NULL`),
+      );
     return { success: true };
   },
 };

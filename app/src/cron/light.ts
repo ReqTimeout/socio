@@ -1,5 +1,5 @@
 import { db } from "@socio/db";
-import { deposits, orders } from "@socio/db/schema";
+import { deposits } from "@socio/db/schema";
 import { eq, and, lt, sql } from "drizzle-orm";
 
 /**

@@ -16,6 +16,7 @@ declare global {
     // PageData global is intentionally empty; per-route PageData is generated
     // from each load function. Avoid declaring required fields here or every
     // load must return them.
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     interface PageData {}
   }
 }

@@ -1,2 +1,12 @@
+/* Self-host font (gantikan Google Fonts CDN — privasi + kecepatan) */
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/sora";
+
 @import "tailwindcss";
 @import "@socio/ui/app.css";
+
+/* Tailwind v4 auto-detection skips node_modules, so utility classes used only
+   inside the symlinked @socio/ui package (e.g. bg-accent-500 in Button/Sidebar)
+   never get generated. Register the package source explicitly so every shared
+   component's classes are scanned. */
+@source "../../packages/ui/src";

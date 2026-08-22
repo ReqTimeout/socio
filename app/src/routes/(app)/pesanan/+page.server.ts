@@ -75,11 +75,11 @@ export const actions: Actions = {
       return fail(400, { error: "Hanya order Berhasil yang bisa di-refill" });
 
     // Cek sudah refill pending
-    const [existing] = await db
+    const [existing] = (await db
       .select()
       .from(sql`refill`)
       .where(eq(sql`order_id`, orderId))
-      .limit(1) as any[];
+      .limit(1)) as any[];
     if (existing && existing.status === "Pending")
       return fail(400, { error: "Refill sedang diproses" });
 
@@ -165,7 +165,8 @@ export const actions: Actions = {
       .where(and(eq(orders.userId, userId), sql`${orders.id} IN (${ids.join(",")})`));
 
     const pending = targets.filter((o) => o.status === "Pending");
-    if (!pending.length) return fail(400, { error: "Tidak ada order Pending yang bisa dibatalkan" });
+    if (!pending.length)
+      return fail(400, { error: "Tidak ada order Pending yang bisa dibatalkan" });
 
     let refunded = 0;
     for (const o of pending) {
@@ -200,6 +201,8 @@ export const actions: Actions = {
       createdAt: new Date(),
     });
 
-    return { success: `Refund ${pending.length} order. Saldo +Rp ${refunded.toLocaleString("id-ID")}` };
+    return {
+      success: `Refund ${pending.length} order. Saldo +Rp ${refunded.toLocaleString("id-ID")}`,
+    };
   },
 };

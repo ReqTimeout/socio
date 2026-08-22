@@ -57,7 +57,7 @@ export const actions: Actions = {
     return { success: true };
   },
 
-  close: async ({ request, locals }) => {
+  close: async ({ request, locals: _locals }) => {
     const form = await request.formData();
     const ticketId = Number(form.get("ticketId"));
     if (!ticketId) return fail(400, { error: "Tiket tidak valid." });

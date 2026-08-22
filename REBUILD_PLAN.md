@@ -755,9 +755,9 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 - [x] Admin layout: sidebar (desktop) + off-canvas (mobile), role guard (level=Admin). → `(admin)/+layout.svelte` + `+layout.server.ts`.
 - [x] Dashboard `/admin`: stats cards (orders/deposits/users/balance). Chart + realtime feed ditunda.
 - [x] Users mgmt: server-side search/filter, suspend + adjust balance + audit log. Bulk/CSV ditunda.
-- [ ] Services + kategori CRUD.
-- [ ] Provider library: list, sync trigger, auto-sync toggle, balance, log.
-- [ ] Pricing rules: markup per level.
+- [x] Services + kategori CRUD.
+- [x] Provider library: list, sync trigger (manual + cron hourly), balance, log. (auto-sync toggle UI ditunda — cron jalan tiap jam via `runAllProviderSync`).
+- [x] Pricing rules: markup per level (`/admin/pricing`, wiring services ke `pricing_rules`).
 - [x] Deposit mgmt: confirm/reject + audit log.
 - [x] Order mgmt: filter/table view. Refill/refund ditunda.
 - [ ] Tickets mgmt.

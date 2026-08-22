@@ -8,9 +8,8 @@
 
   const sitekey = $derived(data.turnstileSitekey);
   let turnstileEl = $state<HTMLElement | null>(null);
-  let handle = $state<ReturnType<typeof renderTurnstile> | null>(null);
   $effect(() => {
-    if (sitekey && turnstileEl) handle = renderTurnstile("turnstile-widget", sitekey, "forgot");
+    if (sitekey && turnstileEl) renderTurnstile("turnstile-widget", sitekey, "forgot");
   });
 </script>
 

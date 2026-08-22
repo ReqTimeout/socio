@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { Button, toast } from "@socio/ui";
+  import { Button, toast, hoverLift } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { formatRupiah } from "$lib/format";
   import { applyAction, enhance } from "$app/forms";
-  import type { ActionData, PageData } from "./$types";
+  import type { PageData } from "./$types";
 
-  let { data, form }: { data: PageData; form: ActionData } = $props();
+  let { data }: { data: PageData } = $props();
   let busy = $state(false);
   let confirmOpen = $state(false);
 
@@ -50,9 +50,9 @@
 </svelte:head>
 
 <section class="space-y-4">
-  <h1 class="font-display text-lg font-bold">Affiliate</h1>
+  <h1 class="reveal font-display text-lg font-bold" style="--d:0ms">Affiliate</h1>
 
-  <div class="rounded-2xl bg-ink-900 p-4 text-white">
+  <div class="reveal rounded-2xl bg-ink-900 p-4 text-white" style="--d:80ms">
     <div class="text-xs text-ink-300">Komisi Pending</div>
     <div class="font-display text-2xl font-extrabold tabular-nums">
       {formatRupiah(data.commission)}
@@ -75,7 +75,10 @@
     </div>
   </div>
 
-  <div class="rounded-2xl border border-ink-100 bg-surface p-4">
+  <div
+    class="reveal rounded-2xl border border-ink-100 bg-surface p-4 {hoverLift}"
+    style="--d:160ms"
+  >
     <label class="mb-1 block text-sm font-semibold">Link Referral</label>
     <div class="flex gap-2">
       <input

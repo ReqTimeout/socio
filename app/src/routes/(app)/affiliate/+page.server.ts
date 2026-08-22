@@ -68,10 +68,7 @@ export const actions: Actions = {
     const newBal = Number(u?.balance ?? 0) + available;
 
     await db.transaction(async (tx) => {
-      await tx
-        .update(users)
-        .set({ balance: newBal })
-        .where(eq(users.id, userId));
+      await tx.update(users).set({ balance: newBal }).where(eq(users.id, userId));
       await tx
         .update(affiliate)
         .set({ status: "Withdraw" })

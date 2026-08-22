@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, Icon } from "@socio/ui";
+  import { Icon } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { formatRupiah } from "$lib/format";
   import type { PageData } from "./$types";

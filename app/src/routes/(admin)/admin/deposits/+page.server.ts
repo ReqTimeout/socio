@@ -1,25 +1,89 @@
 import { db } from "@socio/db";
 import { deposits, users, balanceLogs } from "@socio/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { sql, desc, eq, and, ne } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit } from "$lib/server/admin";
 import type { PageServerLoad, Actions } from "./$types";
 
-export const load: PageServerLoad = async ({ locals }) => {
+const STATUSES = ["Pending", "Success", "Canceled"] as const;
+type Status = (typeof STATUSES)[number];
+
+export const load: PageServerLoad = async ({ locals, url }) => {
   if (!locals.user) throw redirect(303, "/login");
-  const rows = await db
-    .select({
-      id: deposits.id,
-      userId: deposits.userId,
-      amount: deposits.amount,
-      methodName: deposits.methodName,
-      status: deposits.status,
-      createdAt: deposits.createdAt,
-    })
-    .from(deposits)
-    .orderBy(desc(deposits.id))
-    .limit(30);
-  return { deposits: rows };
+  if (locals.user.level !== "Admin") throw redirect(303, "/");
+
+  const q = String(url.searchParams.get("q") ?? "").trim();
+  const status = String(url.searchParams.get("status") ?? "") as Status | "";
+  const page = Math.max(1, Number(url.searchParams.get("p") ?? 1));
+  const limit = 25;
+  const offset = (page - 1) * limit;
+
+  const conds: any[] = [ne(users.level, "Admin")];
+  if (status && STATUSES.includes(status as Status)) {
+    conds.push(eq(deposits.status, status as never));
+  }
+  if (q) {
+    const n = Number(q) || 0;
+    conds.push(
+      sql`(${deposits.id} = ${n} OR ${users.username} LIKE ${"%" + q + "%"} OR ${deposits.methodName} LIKE ${"%" + q + "%"} OR ${deposits.status} LIKE ${"%" + q + "%"})`,
+    );
+  }
+  const where = and(...conds);
+
+  const [rows, totalRow, statsRows] = await Promise.all([
+    db
+      .select({
+        id: deposits.id,
+        userId: deposits.userId,
+        username: users.username,
+        methodName: deposits.methodName,
+        amount: deposits.amount,
+        status: deposits.status,
+        createdAt: deposits.createdAt,
+      })
+      .from(deposits)
+      .leftJoin(users, eq(deposits.userId, users.id))
+      .where(where)
+      .orderBy(desc(deposits.id))
+      .limit(limit)
+      .offset(offset),
+    db
+      .select({ total: sql<number>`count(*)` })
+      .from(deposits)
+      .leftJoin(users, eq(deposits.userId, users.id))
+      .where(where),
+    db
+      .select({
+        status: deposits.status,
+        count: sql<number>`count(*)`,
+        total: sql<number>`COALESCE(SUM(${deposits.amount}),0)`,
+      })
+      .from(deposits)
+      .leftJoin(users, eq(deposits.userId, users.id))
+      .where(ne(users.level, "Admin"))
+      .groupBy(deposits.status),
+  ]);
+
+  const total = Number(totalRow[0]?.total ?? 0);
+  const stats: Record<Status, { count: number; total: number }> = {
+    Pending: { count: 0, total: 0 },
+    Success: { count: 0, total: 0 },
+    Canceled: { count: 0, total: 0 },
+  };
+  for (const r of statsRows) {
+    if (r.status in stats)
+      stats[r.status as Status] = { count: Number(r.count), total: Number(r.total) };
+  }
+
+  return {
+    deposits: rows,
+    q,
+    status,
+    page,
+    total,
+    pages: Math.max(1, Math.ceil(total / limit)),
+    stats,
+  };
 };
 
 export const actions: Actions = {

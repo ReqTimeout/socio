@@ -21,7 +21,8 @@ export const POST: RequestHandler = async ({ request }) => {
     .createHash("sha512")
     .update(orderId + status + amount + serverKey)
     .digest("hex");
-  if (expected !== body.signature_key) return json({ status: "invalid signature" }, { status: 403 });
+  if (expected !== body.signature_key)
+    return json({ status: "invalid signature" }, { status: 403 });
 
   const [dep] = await db
     .select()
@@ -31,11 +32,16 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!dep) return json({ status: "ok" });
 
   const paid = status === "settlement" || status === "capture";
-  const failed = status === "expire" || status === "cancel" || status === "deny" || status === "failure";
+  const failed =
+    status === "expire" || status === "cancel" || status === "deny" || status === "failure";
 
   if (paid) {
     await db.update(deposits).set({ status: "Success" }).where(eq(deposits.id, dep.id));
-    const [u] = await db.select({ balance: users.balance }).from(users).where(eq(users.id, dep.userId)).limit(1);
+    const [u] = await db
+      .select({ balance: users.balance })
+      .from(users)
+      .where(eq(users.id, dep.userId))
+      .limit(1);
     const newBal = Number(u?.balance ?? 0) + Number(dep.amount);
     await db.update(users).set({ balance: newBal }).where(eq(users.id, dep.userId));
     await db.insert(balanceLogs).values({

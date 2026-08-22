@@ -8,6 +8,31 @@ import { providerServices, providerSyncLog } from "./schema/cron";
 //  without a separate migration step. Replace with drizzle-kit migrate when pipeline ready.)
 let ensured = false;
 
+/**
+ * Run an idempotent DDL statement that MySQL cannot express with IF NOT EXISTS
+ * (e.g. ALTER TABLE ADD COLUMN). Swallows "duplicate column/key" errors so a
+ * re-run on an already-migrated DB does not abort the whole bootstrap and skip
+ * the CREATE TABLE statements that come after it.
+ */
+async function tryExec(stmt: ReturnType<typeof sql>) {
+  try {
+    await db.execute(stmt);
+  } catch (e) {
+    const code = (e as { code?: string })?.code;
+    // 1060 dup column, 1061 dup key, 1826 dup FK, 1091 can't drop
+    if (
+      code &&
+      [
+        "ER_DUP_FIELDNAME",
+        "ER_DUP_KEYNAME",
+        "ER_CANT_DROP_FIELD_OR_KEY",
+      ].includes(code)
+    )
+      return;
+    throw e;
+  }
+}
+
 export async function ensureAdminSchema() {
   if (ensured) return;
   ensured = true;
@@ -93,10 +118,21 @@ export async function ensureAdminSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
   // Add polling columns to orders if missing (idempotent).
-  await db.execute(sql`ALTER TABLE orders ADD COLUMN next_poll_at DATETIME DEFAULT NULL`);
-  await db.execute(sql`ALTER TABLE orders ADD COLUMN poll_priority INT NOT NULL DEFAULT 5`);
+  await tryExec(
+    sql`ALTER TABLE orders ADD COLUMN next_poll_at DATETIME DEFAULT NULL`,
+  );
+  await tryExec(
+    sql`ALTER TABLE orders ADD COLUMN poll_priority INT NOT NULL DEFAULT 5`,
+  );
   // Provider balance column (used by sync)
-  await db.execute(sql`ALTER TABLE provider ADD COLUMN balance_provider DOUBLE NOT NULL DEFAULT 0`);
+  await tryExec(
+    sql`ALTER TABLE provider ADD COLUMN balance_provider DOUBLE NOT NULL DEFAULT 0`,
+  );
+  // Widen provider_services.category — SMMturk category names can exceed 128 chars
+  // (cron provider-sync threw ER_DATA_TOO_LONG on long Instagram category labels).
+  await tryExec(
+    sql`ALTER TABLE provider_services MODIFY COLUMN category VARCHAR(512) NOT NULL DEFAULT ''`,
+  );
   // job_queue (defined in rebuild.ts but not yet created in DB)
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS job_queue (
@@ -164,6 +200,10 @@ export async function ensureAdminSchema() {
       WHERE NOT EXISTS (SELECT 1 FROM coupons)
   `);
   // Record coupon on order (I-U1)
-  await db.execute(sql`ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(40) DEFAULT NULL`);
-  await db.execute(sql`ALTER TABLE orders ADD COLUMN discount DOUBLE NOT NULL DEFAULT 0`);
+  await tryExec(
+    sql`ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(40) DEFAULT NULL`,
+  );
+  await tryExec(
+    sql`ALTER TABLE orders ADD COLUMN discount DOUBLE NOT NULL DEFAULT 0`,
+  );
 }

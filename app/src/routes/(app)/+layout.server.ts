@@ -11,7 +11,9 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
   const [{ unread }] = await db
     .select({ unread: sql<number>`COUNT(*)` })
     .from(notifications)
-    .where(and(eq(notifications.userId, Number(locals.user.id)), sql`${notifications.readAt} IS NULL`));
+    .where(
+      and(eq(notifications.userId, Number(locals.user.id)), sql`${notifications.readAt} IS NULL`),
+    );
   return {
     user: {
       id: locals.user.id,

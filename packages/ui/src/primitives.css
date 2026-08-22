@@ -101,5 +101,29 @@
   }
 }
 
+/* ---- Reveal stagger (admin pages: class="reveal" + style="--d:Xms") ---- */
+@layer components {
+  .reveal {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: reveal-in 520ms var(--ease-out-soft, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+    animation-delay: var(--d, 0ms);
+    will-change: opacity, transform;
+  }
+  @keyframes reveal-in {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
 /* ---- Haptic helper (call from TS, gated by reduced-motion) ---- */
 /* See lib/haptic.ts — navigator.vibrate wrapper. */

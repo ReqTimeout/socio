@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Input, Button, EmptyState, toast } from "@socio/ui";
+  import { fly } from "svelte/transition";
+  import { Input, Button, EmptyState, toast, staggerIn, hoverLift } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { applyAction, enhance } from "$app/forms";
   import { goto } from "$app/navigation";
@@ -105,17 +106,17 @@
     {/if}
   {:else}
     <!-- List -->
-    <h1 class="font-display text-lg font-bold">Tiket Bantuan</h1>
+    <h1 class="reveal font-display text-lg font-bold" style="--d:0ms">Tiket Bantuan</h1>
 
     {#if data.tickets.length === 0}
       <EmptyState title="Belum ada tiket" description="Buat tiket jika ada kendala." />
     {:else}
       <ul class="space-y-2">
-        {#each data.tickets as t (t.ticket_id)}
-          <li>
+        {#each data.tickets as t, i (t.ticket_id)}
+          <li in:fly={staggerIn(i, { y: 8, duration: 220, step: 40 })}>
             <button
               onclick={() => openTicket(t.ticket_id)}
-              class="w-full rounded-2xl border border-ink-100 bg-surface p-4 text-left hover:border-ink-200"
+              class="w-full rounded-2xl border border-ink-100 bg-surface p-4 text-left {hoverLift}"
             >
               <div class="flex items-center justify-between">
                 <span class="text-sm font-semibold">{t.subject}</span>
@@ -141,7 +142,8 @@
     <form
       method="POST"
       action="?/create"
-      class="space-y-3 rounded-2xl border border-ink-100 bg-surface p-4"
+      class="reveal space-y-3 rounded-2xl border border-ink-100 bg-surface p-4"
+      style="--d:120ms"
       use:enhance={() => {
         sending = true;
         return async ({ result }) => {

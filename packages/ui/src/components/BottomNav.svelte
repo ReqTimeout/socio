@@ -5,18 +5,29 @@
 
   type Item = { href: string; label: string; icon: string; badge?: number };
 
-  let { items }: { items: Item[] } = $props();
+  let {
+    items,
+    ticketBadge = 0,
+  }: { items: Item[]; ticketBadge?: number } = $props();
 
   function isActive(href: string): boolean {
     if (href === "/") return $page.url.pathname === "/";
     return $page.url.pathname.startsWith(href);
+  }
+
+  // Item yang dapat badge notifikasi (Tiket = balasan admin).
+  // Kita tumpang di sini agar layout tidak perlu merender badge per-item.
+  function badgeFor(href: string, own?: number): number | undefined {
+    if (own && own > 0) return own;
+    if (ticketBadge > 0 && (href === "/tiket" || href.startsWith("/tiket"))) return ticketBadge;
+    return undefined;
   }
 </script>
 
 <nav
   class="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-surface/95 backdrop-blur-xl border-t border-ink-100 safe-bottom
     grid shadow-[0_-4px_20px_-8px_rgba(15,23,42,0.08)]"
-  style="grid-template-columns: repeat({items.length}, 1fr);"
+  style="grid-template-columns: repeat({items.length}, 1fr); view-transition-name: bottom-nav;"
   aria-label="Navigasi utama"
 >
   {#each items as item (item.href)}
@@ -42,11 +53,13 @@
           size={22}
           stroke={isActive(item.href) ? 2.25 : 1.75}
         />
-        {#if item.badge}
+        {#if badgeFor(item.href, item.badge)}
           <span
             class="absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 grid place-items-center rounded-full bg-danger text-white text-[9px] font-bold"
           >
-            {item.badge > 99 ? "99+" : item.badge}
+            {(badgeFor(item.href, item.badge) ?? 0) > 99
+              ? "99+"
+              : badgeFor(item.href, item.badge)}
           </span>
         {/if}
       </span>

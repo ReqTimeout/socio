@@ -1,13 +1,6 @@
 import { json } from "@sveltejs/kit";
 import { db } from "@socio/db";
-import {
-  users,
-  services,
-  categories,
-  orders,
-  provider,
-  balanceLogs,
-} from "@socio/db/schema";
+import { users, services, categories, orders, provider, balanceLogs } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { smmturkAdd, smmturkRefill } from "@socio/core/smmturk";
 import { rateLimit } from "$lib/server/rate-limit";
@@ -29,11 +22,7 @@ function fail(message: string): Response {
 /** Authenticate by api_key, return user or null. */
 async function authByKey(apiKey: string) {
   if (!apiKey) return null;
-  const [u] = await db
-    .select()
-    .from(users)
-    .where(eq(users.apiKey, apiKey))
-    .limit(1);
+  const [u] = await db.select().from(users).where(eq(users.apiKey, apiKey)).limit(1);
   return u ?? null;
 }
 
@@ -56,20 +45,20 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     const allowed = await rateLimit(`api-v1:${ip}`, { limit: 60, windowSec: 60 });
     if (!allowed) return fail("Rate limit exceeded. Max 60 requests/minute.");
 
-  switch (action) {
-    case "services":
-      return handleServices(apiKey);
-    case "order":
-      return handleOrder(apiKey, params);
-    case "status":
-      return handleStatus(apiKey, params);
-    case "refill":
-      return handleRefill(apiKey, params);
-    case "profile":
-      return handleProfile(apiKey);
-    default:
-      return fail("Wrong Action, Read API Documentation First");
-  }
+    switch (action) {
+      case "services":
+        return handleServices(apiKey);
+      case "order":
+        return handleOrder(apiKey, params);
+      case "status":
+        return handleStatus(apiKey, params);
+      case "refill":
+        return handleRefill(apiKey, params);
+      case "profile":
+        return handleProfile(apiKey);
+      default:
+        return fail("Wrong Action, Read API Documentation First");
+    }
   } catch (e: any) {
     console.error("[api/v1] error:", e);
     return fail(`Internal error: ${e?.message ?? String(e)}`);
@@ -112,7 +101,7 @@ async function handleServices(apiKey: string): Promise<Response> {
   return ok("Access Allowed", rows);
 }
 
-async function handleOrder(apiKey: string, form: Record<string,string>): Promise<Response> {
+async function handleOrder(apiKey: string, form: Record<string, string>): Promise<Response> {
   const user = await authByKey(apiKey);
   if (!user) return fail("Wrong API Key");
 
@@ -153,11 +142,7 @@ async function handleOrder(apiKey: string, form: Record<string,string>): Promise
   if (svc.providerId !== 1) {
     // not manual
     try {
-      const result = await smmturkAdd(
-        String(svc.providerServiceId),
-        link,
-        comments ? 0 : qty,
-      );
+      const result = await smmturkAdd(String(svc.providerServiceId), link, comments ? 0 : qty);
       if (result.error) return fail(`Provider error: ${result.error}`);
       providerOrderId = result.order ?? "0";
     } catch (e: any) {
@@ -207,7 +192,7 @@ async function handleOrder(apiKey: string, form: Record<string,string>): Promise
   return ok("Order placed", { order_id: oid, price: totalPrice });
 }
 
-async function handleStatus(apiKey: string, form: Record<string,string>): Promise<Response> {
+async function handleStatus(apiKey: string, form: Record<string, string>): Promise<Response> {
   const user = await authByKey(apiKey);
   if (!user) return fail("Wrong API Key");
 
@@ -230,7 +215,7 @@ async function handleStatus(apiKey: string, form: Record<string,string>): Promis
   });
 }
 
-async function handleRefill(apiKey: string, form: Record<string,string>): Promise<Response> {
+async function handleRefill(apiKey: string, form: Record<string, string>): Promise<Response> {
   const user = await authByKey(apiKey);
   if (!user) return fail("Wrong API Key");
 

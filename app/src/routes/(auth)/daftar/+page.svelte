@@ -2,7 +2,6 @@
   import { enhance } from "$app/forms";
   import { Button } from "@socio/ui";
   import { renderTurnstile } from "$lib/turnstile";
-  import { page } from "$app/stores";
   import { onMount } from "svelte";
 
   let { data, form } = $props<{ data: typeof data; form: import("./$types").ActionData }>();
@@ -12,26 +11,37 @@
   // zxcvbn loads dynamically (client only) to keep bundle small.
   let score = $state<number | null>(null);
   let crackTime = $state("");
+  // Loaded on mount; the reactive scoring lives in a top-level $effect below
+  // (a rune cannot be created inside an async onMount callback — effect_orphan).
+  let zxcvbnFn = $state<
+    | ((
+        pw: string,
+        opts?: never,
+      ) => { score: number; crackTimesDisplay: { offlineSlowHashing1e4PerSecond?: string } })
+    | null
+  >(null);
+  let zxOpts = $state<never | null>(null);
   onMount(async () => {
     const { zxcvbn } = await import("@zxcvbn-ts/core");
     const common = (await import("@zxcvbn-ts/language-common")).default;
-    const zxOpts = { dictionary: { ...common.dictionary } } as never;
-    $effect(() => {
-      if (!password) {
-        score = null;
-        return;
-      }
-      const r = zxcvbn(password, zxOpts);
-      score = r.score;
-      crackTime = r.crackTimesDisplay.offlineSlowHashing1e4PerSecond ?? "";
-    });
+    zxOpts = { dictionary: { ...common.dictionary } } as never;
+    zxcvbnFn = zxcvbn;
+  });
+
+  $effect(() => {
+    if (!password || !zxcvbnFn || !zxOpts) {
+      score = null;
+      return;
+    }
+    const r = zxcvbnFn(password, zxOpts);
+    score = r.score;
+    crackTime = r.crackTimesDisplay.offlineSlowHashing1e4PerSecond ?? "";
   });
 
   const sitekey = $derived(data.turnstileSitekey);
   let turnstileEl = $state<HTMLElement | null>(null);
-  let handle = $state<ReturnType<typeof renderTurnstile> | null>(null);
   $effect(() => {
-    if (sitekey && turnstileEl) handle = renderTurnstile("turnstile-widget", sitekey, "signup");
+    if (sitekey && turnstileEl) renderTurnstile("turnstile-widget", sitekey, "signup");
   });
 
   const strength = ["Sangat lemah", "Lemah", "Sedang", "Kuat", "Sangat kuat"];

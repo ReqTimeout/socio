@@ -8,6 +8,7 @@ import { sequence } from "@sveltejs/kit/hooks";
 import { getSetting } from "$lib/server/admin";
 import { ensureAdminSchema } from "@socio/db/ensure";
 import { startCron } from "./cron";
+import { SESSION_COOKIE } from "$lib/server/session";
 import type { Handle } from "@sveltejs/kit";
 
 try {
@@ -16,8 +17,12 @@ try {
   // cron scheduling failure must not block app boot
 }
 
-const SESSION_COOKIE = "socio_session";
-
+// Session cookie name lives in $lib/server/session.ts (single source of truth).
+// We use a CUSTOM session cookie instead of better-auth's own because
+// better-auth's api.getSession() was not reliably round-tripping its cookies in
+// this deployment (root cause unknown; see git history). Resolving the session
+// here via a direct Drizzle lookup keeps auth stable. Do NOT revert to
+// better-auth's cookie without resolving that first.
 async function readSocioSession(event: Parameters<Handle>[0]["event"]) {
   const cookie = event.cookies.get(SESSION_COOKIE);
   if (!cookie) return null;
@@ -26,7 +31,15 @@ async function readSocioSession(event: Parameters<Handle>[0]["event"]) {
   const sessionId = cookie.slice(0, dot);
   const token = cookie.slice(dot + 1);
 
-  const userIdNum = Number((await db.select({ uid: sessions.userId }).from(sessions).where(eq(sessions.token, token)).limit(1))[0]?.uid);
+  const userIdNum = Number(
+    (
+      await db
+        .select({ uid: sessions.userId })
+        .from(sessions)
+        .where(eq(sessions.token, token))
+        .limit(1)
+    )[0]?.uid,
+  );
   if (!Number.isFinite(userIdNum)) return null;
   const [row] = await db
     .select({
@@ -68,7 +81,13 @@ async function readSocioSession(event: Parameters<Handle>[0]["event"]) {
 
 async function authHook({ event, resolve }: Parameters<Handle>[0]) {
   // Prefer our custom session cookie; fall back to better-auth if present.
-  let session: any = await readSocioSession(event);
+  // Wrap in try/catch so a DB outage yields "not logged in" instead of 500.
+  let session: any = null;
+  try {
+    session = await readSocioSession(event);
+  } catch (e) {
+    console.error("[authHook] readSocioSession failed:", (e as Error)?.message);
+  }
   if (!session) {
     try {
       const ba = await auth.api.getSession({ headers: event.request.headers });
@@ -76,7 +95,7 @@ async function authHook({ event, resolve }: Parameters<Handle>[0]) {
         session = { session: ba.session, user: ba.user };
       }
     } catch {
-      // ignore
+      // ignore — DB or auth backend unavailable
     }
   }
   event.locals.session = session?.session ?? null;
@@ -89,8 +108,9 @@ async function authHook({ event, resolve }: Parameters<Handle>[0]) {
 
   try {
     await ensureAdminSchema();
-  } catch {
-    // non-fatal
+  } catch (e) {
+    console.error("[authHook] ensureAdminSchema failed:", (e as Error)?.message);
+    // non-fatal — admin pages will fail per-route if they need new tables
   }
   return resolve(event);
 }
@@ -129,7 +149,10 @@ async function securityHeadersHook({ event, resolve }: Parameters<Handle>[0]) {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), interest-cohort=()");
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+  );
   response.headers.set("X-DNS-Prefetch-Control", "on");
   response.headers.set(
     "Content-Security-Policy",

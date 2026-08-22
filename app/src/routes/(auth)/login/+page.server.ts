@@ -7,13 +7,12 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { rateLimit } from "$lib/server/rate-limit";
 import { maybeRehashPassword } from "$lib/server/auth";
-import { dev } from "$app/environment";
-
-const SESSION_COOKIE = "socio_session";
+import { setSocioSessionCookie } from "$lib/server/session";
+import { verifyTurnstile, TURNSTILE_SITEKEY } from "$lib/server/turnstile";
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (locals.session) throw redirect(303, "/");
-  return { turnstileSitekey: dev ? "" : "" };
+  return { turnstileSitekey: TURNSTILE_SITEKEY };
 };
 
 export const actions: Actions = {
@@ -39,12 +38,14 @@ export const actions: Actions = {
       });
     }
 
+    // 0. Turnstile (skipped automatically when SOCIO_TURNSTILE_ENABLED != 1)
+    const turnstileToken = String(form.get("turnstile") ?? "");
+    if (!(await verifyTurnstile(turnstileToken, getClientAddress()))) {
+      return fail(400, { error: "Verifikasi gagal. Coba lagi.", email });
+    }
+
     // 1. Find user by email
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (!user) {
       return fail(401, { error: "Email atau password salah.", email });
     }
@@ -83,15 +84,10 @@ export const actions: Actions = {
       updatedAt: new Date(),
     });
 
-    // 6. Set our own session cookie
-    cookies.set(SESSION_COOKIE, `${sessionId}.${token}`, {
-      path: "/",
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      expires: expiresAt,
-    });
+    // 6. Set our own session cookie (custom — see $lib/server/session.ts)
+    setSocioSessionCookie(cookies, sessionId, token, expiresAt);
 
-    throw redirect(303, "/");
+    // Admin langsung ke command center, user lain ke dashboard
+    throw redirect(303, user.level === "Admin" ? "/admin" : "/");
   },
 };

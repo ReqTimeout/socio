@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { EmptyState } from "@socio/ui";
+  import { fly } from "svelte/transition";
+  import { EmptyState, staggerIn, hoverLift } from "@socio/ui";
   import { formatRupiah } from "$lib/format";
-  import type { PageData } from "./$types";
 
   let { data } = $props();
 
@@ -31,9 +31,10 @@
     <EmptyState title="Belum ada riwayat" description="Pergerakan saldo akan muncul di sini." />
   {:else}
     <ul class="space-y-2">
-      {#each data.logs as l (l.id)}
+      {#each data.logs as l, i (l.id)}
         <li
-          class="flex items-center justify-between rounded-xl border border-ink-100 bg-surface px-4 py-3"
+          in:fly={staggerIn(i, { y: 10, duration: 250, step: 40 })}
+          class="flex items-center justify-between rounded-xl border border-ink-100 bg-surface px-4 py-3 {hoverLift}"
         >
           <div class="min-w-0">
             <div class="truncate text-sm font-medium">{l.note}</div>

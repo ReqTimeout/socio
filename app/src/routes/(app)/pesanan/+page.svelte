@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { StatusBadge, EmptyState, Sheet, Button, Icon, toast } from "@socio/ui";
+  import { StatusBadge, Sheet, Button, Icon, toast } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { formatRupiah } from "$lib/format";
   import { goto } from "$app/navigation";
   import { applyAction, enhance } from "$app/forms";
   import { page } from "$app/stores";
-  import type { PageData } from "./$types";
 
   let { data } = $props();
 
@@ -19,8 +18,6 @@
 
   let selected = $state<number | null>(null);
   let sheetOpen = $state(false);
-  let confirmAction = $state<"refill" | "cancel" | null>(null);
-  let confirmOpen = $state(false);
 
   let selectMode = $state(false);
   let checked = $state<Set<number>>(new Set());
@@ -96,21 +93,6 @@
     sheetOpen = false;
     goto(`/pesan?service=${o.serviceId}&link=${encodeURIComponent(o.data)}&qty=${o.quantity}`);
   }
-
-  function askRefill() {
-    confirmAction = "refill";
-    confirmOpen = true;
-  }
-  function askCancel() {
-    confirmAction = "cancel";
-    confirmOpen = true;
-  }
-
-  const confirmText = $derived(
-    confirmAction === "refill"
-      ? "Ajukan refill untuk order ini? Refill gratis, mengisi ulang followers yang turun."
-      : "Batalkan order ini? Saldo akan dikembalikan otomatis ke akun kamu.",
-  );
 </script>
 
 <svelte:head>
@@ -121,9 +103,28 @@
   />
 </svelte:head>
 
-<section class="space-y-3">
+<section class="space-y-3 lg:space-y-5">
+  <!-- Intro header (desktop) -->
+  <div class="hidden items-end justify-between lg:flex">
+    <div>
+      <h1 class="font-display text-2xl font-extrabold tracking-tight">Riwayat Pesanan</h1>
+      <p class="mt-1 text-sm text-ink-500">
+        Pantau status tiap order secara real-time — refill & pembatalan sat-set di sini.
+      </p>
+    </div>
+    <a
+      href="/pesan"
+      class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-600 to-accent-500 px-4 py-2 text-sm font-bold text-white shadow-[0_8px_20px_-8px_rgba(79,70,229,0.6)] transition hover:-translate-y-0.5 active:scale-95"
+    >
+      <Icon name="plus" size={16} stroke={2.5} />
+      Pesan Baru
+    </a>
+  </div>
+
   <!-- Filter chips -->
-  <div class="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+  <div
+    class="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:px-0"
+  >
     {#each tabs as t}
       <button
         onclick={() => select(t.f)}
@@ -162,7 +163,7 @@
       </a>
     </div>
   {:else}
-    <ul class="space-y-2.5">
+    <ul class="grid gap-2.5 lg:grid-cols-2 xl:grid-cols-3">
       {#each orders as o, i (o.id)}
         <li
           class="rounded-2xl border bg-surface p-4 transition-all duration-200
@@ -230,7 +231,7 @@
     <input type="hidden" name="ids" value={checkedIds.join(",")} />
     <div
       class="fixed inset-x-0 bottom-0 z-40 border-t border-ink-100 bg-surface/95 p-3 backdrop-blur
-        pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
+        pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:pl-64"
     >
       <div class="mx-auto flex max-w-lg items-center gap-3">
         <div class="text-xs font-medium text-ink-600">

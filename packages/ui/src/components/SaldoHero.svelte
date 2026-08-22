@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { haptic } from "../haptic.js";
+  import { tweenNumber } from "../lib/motion.js";
   import Icon from "./Icon.svelte";
+  import Sparkline from "./Sparkline.svelte";
 
   let {
     balance = 0,
@@ -9,28 +11,24 @@
     ctaLabel = "Top Up",
     ctaHref = "/saldo/top-up",
     historyHref = "/saldo/riwayat",
+    trend,
   }: {
     balance?: number;
     label?: string;
     ctaLabel?: string;
     ctaHref?: string;
     historyHref?: string;
+    /** tren mini (mis. deposit 7 hari) — sparkline dekoratif di kartu */
+    trend?: number[];
   } = $props();
 
-  let display = $state(0);
   let el: HTMLElement;
+  const balanceTween = tweenNumber(0, { duration: 900 });
+  $effect(() => {
+    balanceTween.set(balance);
+  });
 
   onMount(() => {
-    const start = performance.now();
-    const dur = 900;
-    function tick(t: number) {
-      const p = Math.min(1, (t - start) / dur);
-      const eased = 1 - Math.pow(1 - p, 3);
-      display = Math.round(balance * eased);
-      if (p < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-
     // Tilt on pointer move (desktop)
     function onMove(e: PointerEvent) {
       const r = el.getBoundingClientRect();
@@ -56,16 +54,18 @@
 
 <section
   bind:this={el}
-  class="relative overflow-hidden rounded-card shadow-[0_12px_32px_-8px_rgba(79,70,229,0.45)]
-    bg-gradient-to-br from-primary via-primary to-accent-700 text-white p-6 safe-top
+  class="saldo-hero group relative overflow-hidden rounded-card shadow-[0_18px_48px_-12px_rgba(79,70,229,0.55)]
+    bg-gradient-to-br from-primary-600 via-primary to-accent-600 text-white p-6 safe-top
     motion-safe:[transform:perspective(800px)_rotateX(var(--rx,0))_rotateY(var(--ry,0))]
     transition-transform duration-200 ease-out"
 >
   <!-- decorative glow -->
-  <div class="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-white/15 blur-2xl"></div>
-  <div class="absolute -bottom-16 -left-8 h-40 w-40 rounded-full bg-accent/30 blur-3xl"></div>
+  <div class="absolute -top-12 -right-12 h-44 w-44 rounded-full bg-accent-400/40 blur-3xl"></div>
+  <div class="absolute -bottom-16 -left-8 h-44 w-44 rounded-full bg-primary-400/40 blur-3xl"></div>
+  <!-- shimmer sweep -->
+  <div class="shimmer pointer-events-none absolute inset-0" aria-hidden="true"></div>
   <!-- dot pattern -->
-  <svg class="absolute inset-0 h-full w-full opacity-[0.07]" aria-hidden="true">
+  <svg class="absolute inset-0 h-full w-full opacity-[0.08]" aria-hidden="true">
     <defs>
       <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
         <circle cx="2" cy="2" r="1.2" fill="white" />
@@ -74,25 +74,37 @@
     <rect width="100%" height="100%" fill="url(#dots)" />
   </svg>
 
+  <!-- trend sparkline dekoratif (bawah kanan) -->
+  {#if trend && trend.length > 1}
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 h-16 opacity-30">
+      <Sparkline data={trend} color="#ffffff" height={64} strokeWidth={2} fill={false} />
+    </div>
+  {/if}
+
   <div class="relative">
     <div class="flex items-center justify-between">
-      <p class="text-sm text-white/75 font-medium">{label}</p>
+      <p class="flex items-center gap-1.5 text-sm font-medium text-white/75">
+        <span class="grid h-6 w-6 place-items-center rounded-lg bg-white/15 backdrop-blur-sm">
+          <Icon name="wallet" size={14} stroke={2} />
+        </span>
+        {label}
+      </p>
       <a href={historyHref} class="text-white/60 hover:text-white transition" aria-label="Riwayat">
         <Icon name="list" size={18} />
       </a>
     </div>
 
-    <p class="font-display font-extrabold text-[2.6rem] leading-tight tabular-nums tracking-tight mt-1">
-      {fmt(display)}
+    <p class="font-display font-extrabold text-[2.6rem] leading-tight tabular-nums tracking-tight mt-2">
+      {fmt($balanceTween)}
     </p>
 
     <div class="mt-4 flex items-center gap-2">
       <a
         href={ctaHref}
         onclick={() => haptic(10)}
-        class="inline-flex items-center gap-1.5 rounded-full bg-white text-primary font-bold px-5 py-2.5 text-sm
+        class="inline-flex items-center gap-1.5 rounded-full bg-white text-primary-700 font-bold px-5 py-2.5 text-sm
           transition-all duration-150 active:scale-95 hover:bg-white/90 focus-ring-on-accent
-          shadow-[0_4px_12px_-2px_rgba(0,0,0,0.15)]"
+          shadow-[0_6px_18px_-4px_rgba(0,0,0,0.25)]"
       >
         <Icon name="plus" size={16} stroke={2.5} />
         {ctaLabel}
@@ -100,11 +112,41 @@
       <a
         href={historyHref}
         onclick={() => haptic(8)}
-        class="inline-flex items-center rounded-full bg-white/15 backdrop-blur-sm text-white font-semibold px-4 py-2.5 text-sm
+        class="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-sm text-white font-semibold px-4 py-2.5 text-sm
           transition-all duration-150 active:scale-95 hover:bg-white/25"
       >
+        <Icon name="clock" size={15} stroke={2} />
         Riwayat
       </a>
     </div>
   </div>
 </section>
+
+<style>
+  .shimmer {
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.14) 50%,
+      transparent 60%
+    );
+    background-size: 250% 100%;
+    background-position: 150% 0;
+    animation: sweep 5.5s ease-in-out infinite;
+  }
+  @keyframes sweep {
+    0%,
+    20% {
+      background-position: 150% 0;
+    }
+    60%,
+    100% {
+      background-position: -150% 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer {
+      animation: none;
+    }
+  }
+</style>

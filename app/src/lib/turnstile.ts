@@ -19,7 +19,7 @@ declare global {
   }
 }
 
-function loadScript(sitekey: string): Promise<void> {
+function loadScript(_sitekey: string): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
   if (window.turnstile) return Promise.resolve();
   if (scriptPromise) return scriptPromise;
@@ -73,6 +73,9 @@ export function renderTurnstile(
           widgetId = window.turnstile.render(el, {
             sitekey,
             action,
+            // Inject the response into the form as `turnstile` so the server
+            // action can read it via request.formData().get("turnstile").
+            "response-field-name": "turnstile",
             callback: (t: string) => resolve(t),
             "expired-callback": () => resolve(""),
             "error-callback": () => resolve(""),

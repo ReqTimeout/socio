@@ -25,16 +25,21 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
 
+  // Aset build ber-hash (immutable) → cache-first, cepat & aman.
+  if (ASSETS.includes(url.pathname)) {
+    event.respondWith(caches.match(request).then((cached) => cached ?? fetch(request)));
+    return;
+  }
+
+  // Halaman & resource dinamis → network-first: selalu tampilkan versi terbaru,
+  // cache hanya dipakai sebagai fallback saat offline.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy));
-          return res;
-        })
-        .catch(() => cached);
-      return cached ?? network;
-    }),
+    fetch(request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(request, copy));
+        return res;
+      })
+      .catch(() => caches.match(request).then((c) => c ?? Promise.reject(new Error("offline")))),
   );
 });

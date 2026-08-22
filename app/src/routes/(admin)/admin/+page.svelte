@@ -1,64 +1,424 @@
 <script lang="ts">
+  import { Chart, Icon, StatusBadge, tweenNumber } from "@socio/ui";
   import type { PageData } from "./$types";
 
-  let { data } = $props();
+  let { data }: { data: PageData } = $props();
 
-  const cards = [
-    { label: "Users", value: data.stats.users.toLocaleString("id-ID"), accent: false },
-    { label: "Orders", value: data.stats.orders.toLocaleString("id-ID"), accent: false },
-    { label: "Deposits", value: data.stats.deposits.toLocaleString("id-ID"), accent: false },
-    { label: "Revenue", value: "Rp" + data.stats.revenue.toLocaleString("id-ID"), accent: true },
-    {
-      label: "Total Saldo User",
-      value: "Rp" + data.stats.balance.toLocaleString("id-ID"),
-      accent: false,
-    },
-  ];
+  const m = $derived(data.metrics);
 
-  function timeAgo(d: Date | string) {
-    return new Date(d).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  function rp(n: number) {
+    return "Rp" + Math.round(n).toLocaleString("id-ID");
   }
+
+  function ago(iso: string) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const s = Math.floor(diff / 1000);
+    if (s < 60) return "baru saja";
+    const mi = Math.floor(s / 60);
+    if (mi < 60) return `${mi} menit lalu`;
+    const h = Math.floor(mi / 60);
+    if (h < 24) return `${h} jam lalu`;
+    const d = Math.floor(h / 24);
+    if (d < 7) return `${d} hari lalu`;
+    return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+  }
+
+  const feedMeta: Record<string, { icon: string; cls: string }> = {
+    order: { icon: "receipt", cls: "bg-accent-soft text-accent-ink" },
+    deposit: { icon: "wallet", cls: "bg-warning-soft text-warning" },
+    user: { icon: "user", cls: "bg-primary-soft text-primary-600" },
+    audit: { icon: "shield", cls: "bg-ink-100 text-ink-600" },
+  };
+
+  // Filter feed per tipe aktivitas
+  type FeedKind = "all" | "order" | "deposit" | "user" | "audit";
+  let filter = $state<FeedKind>("all");
+  const filters: { key: FeedKind; label: string; icon: string }[] = [
+    { key: "all", label: "Semua", icon: "activity" },
+    { key: "order", label: "Order", icon: "receipt" },
+    { key: "deposit", label: "Deposit", icon: "wallet" },
+    { key: "user", label: "User", icon: "user" },
+    { key: "audit", label: "Admin", icon: "shield" },
+  ];
+  const counts = $derived.by(() => {
+    const c: Record<string, number> = {
+      all: data.feed.length,
+      order: 0,
+      deposit: 0,
+      user: 0,
+      audit: 0,
+    };
+    for (const f of data.feed) c[f.kind]++;
+    return c;
+  });
+  const shown = $derived(filter === "all" ? data.feed : data.feed.filter((f) => f.kind === filter));
+
+  const queue: {
+    icon: string;
+    label: string;
+    value: string;
+    sub: string;
+    note: string;
+    tone: string;
+    accent: string;
+  }[] = $derived([
+    {
+      icon: "refresh",
+      label: "Provider sync",
+      value: data.queue.sync ? `${data.queue.sync.changed}` : "—",
+      sub: data.queue.sync ? `/ ${data.queue.sync.fetched}` : "",
+      note: data.queue.sync ? ago(data.queue.sync.at) : "Belum ada sync",
+      tone:
+        data.queue.sync?.status === "ok"
+          ? "text-success"
+          : data.queue.sync?.status === "error"
+            ? "text-danger"
+            : data.queue.sync
+              ? "text-warning"
+              : "text-ink-300",
+      accent: "before:bg-primary-500",
+    },
+    {
+      icon: "activity",
+      label: "Polling",
+      value: data.queue.polling.toLocaleString("id-ID"),
+      sub: "",
+      note: "order aktif",
+      tone: "text-ink-900",
+      accent: "before:bg-accent-500",
+    },
+    {
+      icon: "list",
+      label: "Queue",
+      value: data.queue.depth.toLocaleString("id-ID"),
+      sub: "",
+      note: "job pending",
+      tone: data.queue.depth > 0 ? "text-warning" : "text-ink-900",
+      accent: data.queue.depth > 0 ? "before:bg-warning" : "before:bg-ink-300",
+    },
+  ]);
+
+  const revenueTotal7d = $derived(m.revenue.spark.reduce((a, b) => a + b, 0));
+
+  // Hero moment: tween revenue counter from 0 → real (700ms cubicOut).
+  const revenueTween = tweenNumber(0);
+  $effect(() => {
+    revenueTween.set(m.revenue.today);
+  });
 </script>
 
-<section class="space-y-5">
-  <h1 class="font-display text-xl font-bold">Dashboard</h1>
+<section class="space-y-6">
+  <header class="reveal flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="font-display text-xl font-bold lg:text-2xl">Command Center</h1>
+      <p class="mt-0.5 text-sm text-ink-500">Ringkasan real-time operasional Socio hari ini.</p>
+    </div>
+    <div
+      class="flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success"
+    >
+      <span class="relative flex h-2 w-2">
+        <span
+          class="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60"
+        ></span>
+        <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
+      </span>
+      Live
+    </div>
+  </header>
 
-  <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
-    {#each cards as c}
-      <div
-        class="rounded-2xl border border-ink-100 bg-surface p-4 {c.accent
-          ? 'bg-ink-900 text-white'
-          : ''}"
+  <!-- HERO STAT (single, prominent) — fix anti-pattern #5: no 4-col stat strip -->
+  <div
+    class="reveal relative overflow-hidden rounded-3xl border border-ink-800 bg-ink-900 p-6 text-white sm:p-8"
+    style="--d:60ms"
+  >
+    <div
+      class="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-20 blur-3xl"
+    ></div>
+    <div class="relative flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="text-[11px] font-bold uppercase tracking-wide text-ink-300">Revenue hari ini</p>
+        <div class="mt-1 font-display text-4xl font-extrabold tabular-nums sm:text-5xl">
+          {rp($revenueTween)}
+        </div>
+        {#if m.revenue.delta !== undefined}
+          <p
+            class="mt-1 text-sm font-semibold {m.revenue.delta >= 0
+              ? 'text-success'
+              : 'text-danger'}"
+          >
+            {m.revenue.delta >= 0 ? "▲" : "▼"}
+            {Math.abs(m.revenue.delta).toFixed(1)}% vs kemarin
+          </p>
+        {/if}
+      </div>
+      <div class="w-full max-w-[220px] sm:w-auto">
+        <Chart
+          series={[{ label: "Revenue", data: m.revenue.spark, color: "var(--color-accent-400)" }]}
+          labels={data.chart.labels}
+          height={64}
+          formatValue={(v) => rp(v)}
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- INLINE-STAT NARRATIVE (bukan kartu) — fix anti-pattern #5 -->
+  <div
+    class="reveal flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-ink-100 bg-surface px-5 py-4 text-sm"
+    style="--d:120ms"
+  >
+    <span class="text-ink-500"
+      >User baru <strong class="text-ink-900">{m.users.today.toLocaleString("id-ID")}</strong>
+      <span class="text-ink-400">/ {m.users.total.toLocaleString("id-ID")} total</span></span
+    >
+    <span class="text-ink-200">·</span>
+    <span class="text-ink-500"
+      >Order <strong class="text-ink-900">{m.orders.today.toLocaleString("id-ID")}</strong
+      >{#if m.orders.delta !== undefined}
+        <span class={m.orders.delta >= 0 ? "text-success" : "text-danger"}
+          >{m.orders.delta >= 0 ? "+" : ""}{m.orders.delta.toFixed(1)}%</span
+        >{/if}</span
+    >
+    <span class="text-ink-200">·</span>
+    <span class="text-ink-500"
+      >Deposit pending <strong class="text-warning"
+        >{m.depositPending.count.toLocaleString("id-ID")}</strong
       >
-        <div class="text-xs {c.accent ? 'text-ink-300' : 'text-ink-500'}">{c.label}</div>
-        <div class="mt-1 font-display text-lg font-extrabold tabular-nums">{c.value}</div>
+      <span class="text-ink-400">({rp(m.depositPending.amount)})</span></span
+    >
+  </div>
+
+  <!-- Queue health -->
+  <div class="grid grid-cols-3 gap-2 sm:gap-3">
+    {#each queue as q, i (q.label)}
+      <div
+        class="reveal group relative overflow-hidden rounded-2xl border border-ink-100 bg-surface p-3 pl-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:transition-all before:duration-300 group-hover:before:inset-y-1.5 sm:p-3.5 sm:pl-4 {q.accent}"
+        style="--d:{300 + i * 60}ms"
+      >
+        <div
+          class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-ink-400 sm:text-[11px]"
+        >
+          <Icon name={q.icon} size={12} stroke={2.25} class="shrink-0" />
+          <span class="truncate">{q.label}</span>
+        </div>
+        <div
+          class="mt-1.5 truncate font-display text-sm font-extrabold tabular-nums sm:text-base {q.tone}"
+        >
+          {q.value}{#if q.sub}<span class="text-[11px] font-medium text-ink-400 sm:text-xs">
+              {q.sub}</span
+            >{/if}
+        </div>
+        <div class="truncate text-[10px] text-ink-400 sm:text-[11px]">{q.note}</div>
       </div>
     {/each}
   </div>
 
-  <div class="rounded-2xl border border-ink-100 bg-surface p-4">
-    <h2 class="mb-3 text-sm font-semibold">Aktivitas Terbaru</h2>
-    {#if data.recent.length === 0}
-      <p class="text-sm text-ink-400">Belum ada aktivitas admin.</p>
-    {:else}
-      <ul class="space-y-2">
-        {#each data.recent as r (r.id)}
-          <li
-            class="flex items-center justify-between border-b border-ink-50 pb-2 text-sm last:border-0"
+  <!-- Aktivitas terbaru (utama) + aksi terakhir -->
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <div
+      class="reveal rounded-2xl border border-ink-100 bg-surface lg:col-span-2"
+      style="--d:420ms"
+    >
+      <div class="flex items-center justify-between border-b border-ink-50 px-4 py-3.5">
+        <div class="flex items-center gap-2">
+          <span class="grid h-8 w-8 place-items-center rounded-xl bg-primary-soft text-primary-600">
+            <Icon name="activity" size={16} stroke={2.25} />
+          </span>
+          <div>
+            <h2 class="text-sm font-bold leading-tight">Aktivitas terbaru</h2>
+            <p class="text-[11px] text-ink-400">Order, deposit, user & aksi admin</p>
+          </div>
+        </div>
+        <a
+          href="/admin/audit"
+          class="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-xs font-semibold text-primary-600 transition-colors hover:bg-primary-soft"
+        >
+          Lihat semua <Icon name="arrow_right" size={13} stroke={2.25} />
+        </a>
+      </div>
+
+      <!-- filter chips -->
+      <div class="flex flex-wrap gap-1.5 px-4 pt-3">
+        {#each filters as fl (fl.key)}
+          <button
+            type="button"
+            onclick={() => (filter = fl.key)}
+            class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all duration-200
+              {filter === fl.key
+              ? 'border-transparent bg-ink-900 text-white shadow-sm'
+              : 'border-ink-100 bg-surface text-ink-500 hover:border-ink-200 hover:text-ink-700'}"
           >
-            <span>
-              <span class="font-semibold">Admin</span>
-              <span class="text-ink-500"> {r.action} {r.entity} #{r.entityId}</span>
-            </span>
-            <span class="text-xs text-ink-400">{timeAgo(r.createdAt)}</span>
-          </li>
+            <Icon name={fl.icon} size={12} stroke={2.25} />
+            {fl.label}
+            <span
+              class="rounded-full px-1.5 text-[10px] tabular-nums {filter === fl.key
+                ? 'bg-white/20'
+                : 'bg-ink-100 text-ink-500'}">{counts[fl.key]}</span
+            >
+          </button>
         {/each}
-      </ul>
-    {/if}
+      </div>
+
+      <!-- list -->
+      <div class="feed max-h-[70vh] overflow-y-auto overscroll-contain px-2 py-2 lg:max-h-[26rem]">
+        {#if shown.length === 0}
+          <p class="px-2 py-8 text-center text-sm text-ink-400">Belum ada aktivitas.</p>
+        {:else}
+          {#each shown as f, i (f.kind + f.title + f.at)}
+            <a
+              href={f.href}
+              class="reveal group flex items-start gap-3 rounded-xl px-2.5 py-2.5 transition-colors duration-200 hover:bg-ink-50"
+              style="--d:{i < 12 ? 440 + i * 35 : 0}ms"
+            >
+              <span
+                class="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-transform duration-200 group-hover:scale-110 {feedMeta[
+                  f.kind
+                ].cls}"
+              >
+                <Icon name={feedMeta[f.kind].icon} size={16} stroke={2.25} />
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="flex min-w-0 items-center gap-2">
+                  <p class="min-w-0 flex-1 truncate text-sm font-semibold text-ink-900">
+                    {f.title}
+                  </p>
+                  <span class="shrink-0 whitespace-nowrap text-[11px] text-ink-400"
+                    >{ago(f.at)}</span
+                  >
+                </div>
+                <div class="mt-0.5 flex min-w-0 items-center gap-1.5">
+                  {#if f.status}
+                    <span class="shrink-0 origin-left scale-90"
+                      ><StatusBadge status={f.status} /></span
+                    >
+                  {/if}
+                  <p class="min-w-0 flex-1 truncate text-xs text-ink-500">{f.meta}</p>
+                </div>
+              </div>
+            </a>
+          {/each}
+        {/if}
+      </div>
+    </div>
+
+    <!-- aksi terakhir kamu + shortcut -->
+    <div class="space-y-4">
+      <div
+        class="reveal relative overflow-hidden rounded-2xl border border-ink-800 bg-ink-900 p-4 text-white"
+        style="--d:480ms"
+      >
+        <div
+          class="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-20 blur-2xl"
+        ></div>
+        <div
+          class="relative flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-300"
+        >
+          <Icon name="shield" size={13} stroke={2.25} /> Aksi terakhir kamu
+        </div>
+        {#if data.lastMine}
+          <p class="relative mt-1.5 text-sm font-semibold">
+            {data.lastMine.action}
+            {data.lastMine.entity}{data.lastMine.entityId ? ` #${data.lastMine.entityId}` : ""}
+          </p>
+          <p class="relative text-xs text-ink-400">{ago(data.lastMine.at)}</p>
+        {:else}
+          <p class="relative mt-1.5 text-sm text-ink-400">Belum ada aksi admin dari akunmu.</p>
+        {/if}
+      </div>
+
+      <div class="reveal rounded-2xl border border-ink-100 bg-surface p-4" style="--d:540ms">
+        <h3 class="mb-2.5 text-[11px] font-bold uppercase tracking-wide text-ink-400">
+          Aksi cepat
+        </h3>
+        <div class="grid grid-cols-2 gap-2">
+          <a
+            href="/admin/deposits"
+            class="group flex items-center gap-2 rounded-xl border border-ink-100 px-3 py-2.5 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-warning/40 hover:text-warning"
+          >
+            <Icon name="wallet" size={16} stroke={2.25} /> Deposit
+          </a>
+          <a
+            href="/admin/orders"
+            class="group flex items-center gap-2 rounded-xl border border-ink-100 px-3 py-2.5 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-accent-500/40 hover:text-accent-ink"
+          >
+            <Icon name="receipt" size={16} stroke={2.25} /> Order
+          </a>
+          <a
+            href="/admin/users"
+            class="group flex items-center gap-2 rounded-xl border border-ink-100 px-3 py-2.5 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-primary-500/40 hover:text-primary-600"
+          >
+            <Icon name="users" size={16} stroke={2.25} /> Users
+          </a>
+          <a
+            href="/admin/audit"
+            class="group flex items-center gap-2 rounded-xl border border-ink-100 px-3 py-2.5 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-ink-300 hover:text-ink-900"
+          >
+            <Icon name="shield" size={16} stroke={2.25} /> Audit
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue chart 7 hari (bawah, full-width) -->
+  <div class="reveal rounded-2xl border border-ink-100 bg-surface p-4" style="--d:600ms">
+    <div class="mb-1 flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold">Revenue 7 hari</h2>
+        <p class="text-[11px] text-ink-400">Total {rp(revenueTotal7d)}</p>
+      </div>
+      <a
+        href="/admin/reports"
+        class="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-xs font-semibold text-primary-600 transition-colors hover:bg-primary-soft"
+      >
+        Detail <Icon name="arrow_right" size={13} stroke={2.25} />
+      </a>
+    </div>
+    <Chart
+      series={[{ label: "Revenue", data: data.chart.revenue, color: "var(--color-success)" }]}
+      labels={data.chart.labels}
+      height={220}
+      formatValue={(v) => rp(v)}
+    />
   </div>
 </section>
+
+<style>
+  /* Reveal masuk bertahap — transform + opacity only (GPU-friendly). */
+  .reveal {
+    animation: reveal 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--d, 0ms);
+  }
+  @keyframes reveal {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Scrollbar halus untuk feed */
+  .feed {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-200) transparent;
+  }
+  .feed::-webkit-scrollbar {
+    width: 6px;
+  }
+  .feed::-webkit-scrollbar-thumb {
+    background: var(--color-ink-200);
+    border-radius: 9999px;
+  }
+  .feed::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      animation: none;
+    }
+  }
+</style>

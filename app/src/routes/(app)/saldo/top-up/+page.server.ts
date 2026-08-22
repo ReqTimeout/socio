@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
-import { deposits, users } from "@socio/db/schema";
-import { eq, desc, inArray } from "drizzle-orm";
+import { deposits } from "@socio/db/schema";
+import { eq, desc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { createSnapToken } from "$lib/server/payment";
 import { uploadToR2 } from "$lib/server/r2";
@@ -96,7 +96,7 @@ export const actions: Actions = {
     return { success: true, method: "manual", postAmount, invoiceId };
   },
 
-  uploadProof: async ({ request, locals }) => {
+  uploadProof: async ({ request, locals: _locals }) => {
     const form = await request.formData();
     const depositId = Number(form.get("id"));
     const file = form.get("proof") as File;
