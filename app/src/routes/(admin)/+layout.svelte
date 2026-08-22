@@ -20,6 +20,8 @@
     { href: "/admin/providers", label: "Provider", icon: "zap" },
     { href: "/admin/reporting", label: "Reporting", icon: "chart" },
     { href: "/admin/affiliate", label: "Affiliate", icon: "gift" },
+    { href: "/admin/banners", label: "Banners", icon: "image" },
+    { href: "/admin/news", label: "Berita", icon: "newspaper" },
     { href: "/admin/audit", label: "Audit Log", icon: "shield" },
     { href: "/admin/settings", label: "Settings", icon: "settings" },
   ];
