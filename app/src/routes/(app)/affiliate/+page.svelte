@@ -64,7 +64,11 @@
       {/if}
     </div>
     <div class="mt-3">
-      {#if data.canWithdraw}
+      {#if data.requested > 0}
+        <div class="rounded-xl bg-ink-800 px-3 py-2 text-center text-xs text-ink-300">
+          {formatRupiah(data.requested)} menunggu persetujuan admin
+        </div>
+      {:else if data.canWithdraw}
         <Button onclick={openConfirm} size="sm" variant="accent" class="w-full">Tarik Komisi</Button
         >
       {:else}
@@ -116,8 +120,9 @@
     >
       <h2 class="font-display text-base font-bold">Tarik Komisi</h2>
       <p class="text-sm text-ink-500">
-        Komisi <span class="font-bold text-ink-900">{formatRupiah(data.commission)}</span> akan dikredit
-        ke saldo utama kamu. Diproses instan, tidak perlu metode pembayaran.
+        Komisi <span class="font-bold text-ink-900">{formatRupiah(data.commission)}</span> akan
+        diajukan untuk penarikan. Saldo dikredit ke akun utama kamu setelah
+        <span class="font-semibold">disetujui admin</span>.
       </p>
       <div class="flex gap-2">
         <Button

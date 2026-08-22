@@ -749,21 +749,21 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M3 — Admin (5-7 hari)
 
-> Status: **CORE SELESAI & LIVE (2026-07-17)** — `/admin/*` route group, role guard (level=Admin), layout sidebar+off-canvas, dashboard, users (adjust/suspend+audit), orders (table+filter), deposits (confirm/reject+audit), audit log, settings (maintenance toggle). Verified live: all routes 200 for Admin, 303 redirect for non-admin, maintenance 503, audit writes OK. (G1 audit + G8 maintenance dari ADMIN_GAP ✓; G6 RBAC partial — admin_roles table exists, enforcement belum di layout.)
-> Belum: Services/Pricing CRUD, Provider library sync UI, Tickets mgmt, Affiliate report, Banner CMS, Reporting chart/CSV, Email marketing, News CRUD, dashboard chart/realtime.
+> Status: **SEBAGIAN BESAR SELESAI (update 22 Agt 2026)** — core + Services/Pricing/Tickets/Reporting/Affiliate(email approval) selesai. Sisa: Banner CMS, Email marketing, News CRUD, dashboard chart/realtime.
+> (G1 audit ✓, G5 encrypt ✓, G30 confirm dialog ✓ dari ADMIN_GAP; G6 RBAC partial.)
 
 - [x] Admin layout: sidebar (desktop) + off-canvas (mobile), role guard (level=Admin). → `(admin)/+layout.svelte` + `+layout.server.ts`.
 - [x] Dashboard `/admin`: stats cards (orders/deposits/users/balance). Chart + realtime feed ditunda.
-- [x] Users mgmt: server-side search/filter, suspend + adjust balance + audit log. Bulk/CSV ditunda.
+- [x] Users mgmt: server-side search/filter, suspend + adjust balance + audit log + **ConfirmDialog (G30)**. Bulk/CSV ditunda.
 - [x] Services + kategori CRUD.
-- [x] Provider library: list, sync trigger (manual + cron hourly), balance, log. (auto-sync toggle UI ditunda — cron jalan tiap jam via `runAllProviderSync`).
-- [x] Pricing rules: markup per level (`/admin/pricing`, wiring services ke `pricing_rules`).
+- [x] Provider library: list, sync trigger (manual + cron hourly), balance, log + **API key encrypt at rest AES-256-GCM (G5)** + tombol "Encrypt semua key".
+- [x] Pricing rules: markup per level (`/admin/pricing`), calculator, live preview, seed/applyDefaults/bulkApply (+200/+150/+180).
 - [x] Deposit mgmt: confirm/reject + audit log.
-- [x] Order mgmt: filter/table view. Refill/refund ditunda.
-- [ ] Tickets mgmt.
-- [ ] Affiliate laporan.
+- [x] Order mgmt: filter/table view + **updateStatus/editProvider via ConfirmDialog (G30)**. Refill/refund ditunda.
+- [x] Tickets mgmt: list/filter + reply/close/reopen + audit log.
+- [x] Affiliate: `/admin/affiliate` — KPI, top referrer, riwayat komisi, **withdrawal approval queue** (user withdraw → Requested; admin approve = kredit saldo + Paid / reject = balik Pending; audit log). Flow auto-credit lama diganti approval (keputusan user 22 Agt 2026).
 - [ ] Banner CMS.
-- [ ] Reporting: chart + CSV export.
+- [x] Reporting: chart + CSV export (`/admin/reporting`).
 - [ ] Email marketing: campaign, segment, queue.
 - [ ] News CRUD.
 

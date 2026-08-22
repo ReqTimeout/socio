@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
-import { affiliate, users, balanceLogs } from "@socio/db/schema";
-import { eq, sql, and } from "drizzle-orm";
+import { affiliate, users } from "@socio/db/schema";
+import { eq, sql, and, inArray } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import QRCode from "qrcode";
 import type { PageServerLoad, Actions } from "./$types";
@@ -18,11 +18,18 @@ export const load: PageServerLoad = async ({ locals }) => {
     .where(and(eq(affiliate.userId, userId), eq(affiliate.status, "Pending")));
   const pending = Number(pendingRow?.total ?? 0);
 
+  // Sudah cair: legacy 'Withdraw' (auto-credit lama) + 'Paid' (approve admin)
   const [withdrawnRow] = await db
     .select({ total: sql<number>`COALESCE(SUM(${affiliate.balance}), 0)` })
     .from(affiliate)
-    .where(and(eq(affiliate.userId, userId), eq(affiliate.status, "Withdraw")));
+    .where(and(eq(affiliate.userId, userId), inArray(affiliate.status, ["Withdraw", "Paid"])));
   const withdrawn = Number(withdrawnRow?.total ?? 0);
+
+  const [requestedRow] = await db
+    .select({ total: sql<number>`COALESCE(SUM(${affiliate.balance}), 0)` })
+    .from(affiliate)
+    .where(and(eq(affiliate.userId, userId), eq(affiliate.status, "Requested")));
+  const requested = Number(requestedRow?.total ?? 0);
 
   const [{ downline }] = await db
     .select({ downline: sql<number>`count(*)` })
@@ -36,7 +43,8 @@ export const load: PageServerLoad = async ({ locals }) => {
   return {
     commission: pending,
     withdrawn,
-    canWithdraw: pending >= MIN_WITHDRAW,
+    requested,
+    canWithdraw: pending >= MIN_WITHDRAW && requested === 0,
     minWithdraw: MIN_WITHDRAW,
     downline: Number(downline),
     refLink,
@@ -46,6 +54,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
+  /**
+   * Withdraw → masuk antrian approval admin (bukan auto-credit).
+   * Semua komisi Pending diubah jadi 'Requested'; saldo dikredit saat admin approve.
+   */
   withdraw: async ({ locals }) => {
     if (!locals.user) return fail(401, { error: "Unauthorized" });
     const userId = Number(locals.user.id);
@@ -60,28 +72,21 @@ export const actions: Actions = {
       return fail(400, { error: `Minimal withdraw Rp${MIN_WITHDRAW.toLocaleString("id-ID")}.` });
     }
 
-    const [u] = await db
-      .select({ balance: users.balance })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    const newBal = Number(u?.balance ?? 0) + available;
+    const [alreadyRequested] = await db
+      .select({ c: sql<number>`COALESCE(SUM(${affiliate.balance}), 0)` })
+      .from(affiliate)
+      .where(and(eq(affiliate.userId, userId), eq(affiliate.status, "Requested")));
+    if (Number(alreadyRequested?.c ?? 0) > 0) {
+      return fail(409, { error: "Masih ada penarikan yang menunggu persetujuan admin." });
+    }
 
-    await db.transaction(async (tx) => {
-      await tx.update(users).set({ balance: newBal }).where(eq(users.id, userId));
-      await tx
-        .update(affiliate)
-        .set({ status: "Withdraw" })
-        .where(and(eq(affiliate.userId, userId), eq(affiliate.status, "Pending")));
-      await tx.insert(balanceLogs).values({
-        userId,
-        type: "wd",
-        amount: available,
-        note: `Withdraw affiliate commission (auto-credit)`,
-        createdAt: new Date(),
-      });
-    });
+    await db
+      .update(affiliate)
+      .set({ status: "Requested" })
+      .where(and(eq(affiliate.userId, userId), eq(affiliate.status, "Pending")));
 
-    return { success: `Komisi Rp${available.toLocaleString("id-ID")} berhasil ditarik ke saldo.` };
+    return {
+      success: `Pengajuan penarikan Rp${available.toLocaleString("id-ID")} dikirim. Saldo dikredit setelah disetujui admin.`,
+    };
   },
 };

@@ -206,4 +206,15 @@ export async function ensureAdminSchema() {
   await tryExec(
     sql`ALTER TABLE orders ADD COLUMN discount DOUBLE NOT NULL DEFAULT 0`,
   );
+  // Affiliate withdrawal approval queue (M3 Task #3). Extend status enum
+  // non-destruktif — 'Withdraw' legacy (auto-credit lama) tetap valid.
+  // MODIFY COLUMN itu idempotent, jadi tidak perlu tryExec.
+  await db.execute(sql`
+    ALTER TABLE affiliate
+      MODIFY COLUMN status ENUM('Pending','Withdraw','Requested','Paid','Rejected') NOT NULL DEFAULT 'Pending'
+  `);
+  // Legacy tables pakai MyISAM → tidak bisa ikut transaction + violate GTID
+  // saat mixed dengan InnoDB (approve withdrawal gagal). Convert ke InnoDB
+  // (idempotent; no-op kalau sudah InnoDB).
+  await db.execute(sql`ALTER TABLE affiliate ENGINE=InnoDB`);
 }

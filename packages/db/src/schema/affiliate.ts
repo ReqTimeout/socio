@@ -7,7 +7,9 @@ export const affiliate = mysqlTable(
     userId: int("user_id").notNull(),
     userAffi: int("user_affi").notNull().default(0),
     balance: double("balance").notNull().default(0),
-    status: mysqlEnum("status", ["Pending", "Withdraw"]).notNull().default("Pending"),
+    status: mysqlEnum("status", ["Pending", "Withdraw", "Requested", "Paid", "Rejected"])
+      .notNull()
+      .default("Pending"),
     createdAt: datetime("created_at").notNull(),
   },
   (t) => ({
