@@ -82,14 +82,21 @@
 | P1.4 `<title>` di 10 admin pages | ✅ "Users — Admin Socio.id" dkk |
 | P1.5 Focus-visible rings: BottomNav, sidebar admin nav, logout button | ✅ |
 
-### Phase 2 — Flow improvements (M3 akhir / awal M4)
+### Phase 2 — Flow improvements ✅ DONE (23 Agt 2026)
 
-| Item | Effort | Scope |
-|---|---|---|
-| P2.1 Dashboard "Favorite Services" section (dari saved_links) dengan quick Pesan button | medium | `+page.server.ts` load saved links join services, render di dashboard |
-| P2.2 Pesanan list: sticky "Ulangi" action tanpa membuka sheet | medium | quick-action column |
-| P2.3 `/pesan`: saved-links picker tampil sebagai chip di bawah qty — "Pilih dari favorit" | medium | pesan/+page.svelte + server load |
-| P2.4 Loading shimmer di Pesanan/List (reuse `LoadingDots` pattern jadi skeleton) | medium | new component + per-page |
+| Item | Status |
+|---|---|
+| P2.1 Dashboard section **"Pesan Cepat"** — 4 layanan terlaris user, 1 tap → `/pesan` prefill service + link terakhir | ✅ Playwright: section render mobile+desktop, deep-link prefill verified |
+| P2.2 Pesanan list: sticky "Pesan ulang" 44×44 tanpa buka sheet | ✅ done di Phase 1 (30 button, 0 nested) |
+| P2.3 `/pesan`: chip saved-links di bawah field Link — klik chip preselect service + link (deep-link, bukan hanya isi link) | ✅ Playwright: chip render, deep-link + prefill verified |
+| P2.4 Loading shimmer di Pesanan/List | deferred ke M4 (skeleton component baru) |
+
+**Data temuan legacy (wajib tahu)** — repeat flow mapping tidaklah trivial:
+- `orders.service_id` legacy menyimpan **provider service id lama**, dan katalog `services` pernah di-reimport (ids berubah: 41745 → 771139+, provider_service_id max 10320). Join `order.service_id = services.provider_service_id` → **hampir selalu miss**.
+- Nama layanan lama mengandung **mojibake emoji** (`â›”` alih-alih `⛔`) → exact-match nama gagal untuk sebagian besar.
+- Solusi 2-tahap di `+page.server.ts`: (1) join psid→provider_service_id aktif; (2) fallback **prefix-match** nama (`"Instagram Likes [..."` → strip brackets → `LIKE 'Instagram Likes%'`), tertip termurah, dedupe prefix. Verified: febian (5.779 order) → 2 quick chips aktif vs 0 dengan join naif.
+- Implikasi: user yang layanannya sudah tidak ada di katalog baru melihat **<4 kartu** — itu benar, bukan bug. Kirim M4: auto-update `orders.service_id` saat sync katalog SMMturk supaya mapping pulih bertahap.
+- Screenshot evidence: `docs/screenshots/phase2/` (FINAL-mobile-dashboard, FINAL-desktop-dashboard, FINAL-mobile-pesan-chips, FINAL-mobile-pesan-deeplink, deeplink-chip-prefill). Gates: lint 0 err, svelte-check 0 err, build ok.
 
 ### Phase 3 — Refinement (M5/M6, berdua design pass)
 

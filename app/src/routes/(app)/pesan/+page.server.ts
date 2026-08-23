@@ -53,7 +53,12 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   }
 
   const saved = await db
-    .select({ id: savedLinks.id, label: savedLinks.label, link: savedLinks.link })
+    .select({
+      id: savedLinks.id,
+      label: savedLinks.label,
+      link: savedLinks.link,
+      serviceId: savedLinks.serviceId,
+    })
     .from(savedLinks)
     .where(eq(savedLinks.userId, Number(locals.user!.id)))
     .orderBy(desc(savedLinks.createdAt))

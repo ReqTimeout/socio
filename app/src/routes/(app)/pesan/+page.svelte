@@ -15,6 +15,7 @@
   import { computePrice } from "@socio/core/pricing";
   import { formatRupiah } from "$lib/format";
   import { applyAction, enhance } from "$app/forms";
+  import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import type { ActionData, PageData } from "./$types";
 
@@ -244,16 +245,24 @@
         <div>
           <label class="mb-1.5 block text-sm font-bold">Link / Username</label>
           {#if data.saved.length > 0}
-            <div class="mb-2 flex flex-wrap gap-1.5">
+            <div class="mb-2 flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+              <span class="shrink-0 text-[10px] font-bold uppercase tracking-wide text-ink-400">
+                Favorit
+              </span>
               {#each data.saved as sv, i (sv.id)}
                 <button
                   type="button"
                   in:fly={staggerIn(i, { y: 6, duration: 200, step: 40 })}
                   onclick={() => {
                     haptic(8);
-                    link = sv.link;
+                    if (sv.serviceId) {
+                      goto(`/pesan?service=${sv.serviceId}&link=${encodeURIComponent(sv.link)}`);
+                    } else {
+                      link = sv.link;
+                    }
                   }}
-                  class="rounded-full bg-ink-100 px-3 py-1 text-xs font-medium transition active:scale-95 hover:bg-ink-200"
+                  title={sv.link}
+                  class="shrink-0 rounded-full bg-ink-100 px-3 py-1.5 text-xs font-medium transition active:scale-95 hover:bg-ink-200"
                 >
                   {sv.label || sv.link.slice(0, 20)}
                 </button>

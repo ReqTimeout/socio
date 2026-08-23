@@ -166,6 +166,56 @@
     </div>
   </div>
 
+  <!-- Pesan Cepat — repeat flow: layanan yang paling sering di-order, 1 tap langsung ke form -->
+  {#if data.quickOrders?.length}
+    <div in:fly={{ y: 10, duration: 300, delay: 80 }}>
+      <div class="mb-2.5 flex items-center justify-between">
+        <h2 class="flex items-center gap-1.5 font-display text-base font-bold tracking-tight">
+          <span
+            class="grid h-6 w-6 place-items-center rounded-lg bg-gradient-to-br from-accent-400 to-accent-600 text-white"
+          >
+            <Icon name="zap" size={13} stroke={2.25} />
+          </span>
+          Pesan Cepat
+        </h2>
+        <span class="text-xs text-ink-400">Layanan langgananmu</span>
+      </div>
+
+      <div
+        class="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0"
+      >
+        {#each data.quickOrders as q, i (q.serviceId)}
+          <a
+            href="/pesan?service={q.serviceId}{q.lastLink
+              ? `&link=${encodeURIComponent(q.lastLink)}`
+              : ''}"
+            onclick={() => haptic(10)}
+            in:fly={staggerIn(i, { y: 10, duration: 250, step: 50 })}
+            class="group relative flex min-h-[56px] min-w-[230px] shrink-0 items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5 shadow-card
+              transition-all duration-200 active:scale-[0.97] hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-[0_10px_24px_-12px_rgba(79,70,229,0.45)] lg:min-h-0 lg:min-w-0"
+          >
+            <span
+              class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-white transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
+            >
+              <Icon name="rocket" size={18} stroke={2} />
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-bold text-ink-800">{q.serviceName}</span>
+              <span class="block truncate text-xs text-ink-400">
+                {q.times > 1 ? `${q.times}× dipesan` : "Baru dipesan"} · tap untuk pesan lagi
+              </span>
+            </span>
+            <span
+              class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white"
+            >
+              <Icon name="chevron_right" size={14} stroke={2.5} />
+            </span>
+          </a>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
   <!-- INLINE-STAT: ringkasan akun — label-value pairs, vertical dividers on sm+ -->
   <div
     class="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-ink-100 bg-surface px-5 py-4"
@@ -201,8 +251,9 @@
     </div>
   </div>
 
-  <!-- Desktop: 2 kolom — chart + pesanan terbaru. Mobile: bertumpuk -->
-  <div class="grid gap-4 lg:grid-cols-5 lg:gap-6">
+  <!-- Desktop: 2 kolom — chart + pesanan terbaru. Mobile: bertumpuk (grid-cols-1 eksplisit
+       supaya track minmax(0,1fr) — tanpa ini nama layanan panjang mengembang implicit column → horizontal overflow) -->
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-6">
     <!-- Grafik aktivitas 7 hari -->
     <div class="lg:col-span-3">
       <div class="rounded-card border border-ink-100 bg-surface p-4 shadow-card lg:p-5">

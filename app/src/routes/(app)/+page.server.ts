@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
-import { orders, deposits, categories, promotionBanners } from "@socio/db/schema";
-import { eq, desc, and, gte, sql, lte, or, isNull, asc } from "drizzle-orm";
+import { orders, deposits, categories, promotionBanners, services } from "@socio/db/schema";
+import { eq, desc, and, gte, sql, lte, or, isNull, asc, inArray } from "drizzle-orm";
 import { getSetting } from "$lib/server/admin";
 import type { PageServerLoad } from "./$types";
 
@@ -58,6 +58,7 @@ export const load: PageServerLoad = async ({ locals }) => {
           id: orders.id,
           oid: orders.oid,
           serviceName: orders.serviceName,
+          serviceId: orders.serviceId,
           data: orders.data,
           quantity: orders.quantity,
           price: orders.price,
@@ -164,6 +165,78 @@ export const load: PageServerLoad = async ({ locals }) => {
     .from(categories)
     .limit(12);
 
+  // Pesan Cepat — layanan yang paling sering di-order user (repeat flow).
+  // Legacy orders.service_id menyimpan provider service id lama (repo services
+  // pernah di-reimport) jadi join langsung sering miss. Strategi resolve nomor 2:
+  // prefix nama layanan ("Instagram Likes [..." → "Instagram Likes") ke catalog aktif.
+  const repeatRows = await db
+    .select({
+      psid: orders.serviceId,
+      serviceName: sql<string>`max(${orders.serviceName})`,
+      count: sql<number>`count(*)`,
+      lastLink: sql<string>`max(${orders.data})`,
+    })
+    .from(orders)
+    .where(and(eq(orders.userId, userId), sql`${orders.serviceId} > 0`))
+    .groupBy(orders.serviceId)
+    .orderBy(desc(sql`count(*)`), desc(sql`max(${orders.createdAt})`))
+    .limit(8);
+
+  let quickOrders: Array<{
+    serviceId: number;
+    serviceName: string;
+    times: number;
+    lastLink: string | null;
+  }> = [];
+  if (repeatRows.length) {
+    const psids = [...new Set(repeatRows.map((r) => Math.round(Number(r.psid))))].filter(
+      (n) => n > 0,
+    );
+    const svcRows = psids.length
+      ? await db
+          .select({ providerServiceId: services.providerServiceId, id: services.id })
+          .from(services)
+          .where(and(eq(services.status, 1), inArray(services.providerServiceId, psids)))
+      : [];
+    const byPsid = new Map(svcRows.map((s) => [s.providerServiceId, s.id]));
+
+    // Prefix-based fallback: ambil kandidat aktif, dedupe prefix di JS (persist ordering).
+    const prefixes = [
+      ...new Set(
+        repeatRows
+          .map((r) => (r.serviceName.split("[")[0] ?? "").replace(/[^a-zA-Z\s]/g, "").trim())
+          .filter(Boolean),
+      ),
+    ];
+    const byPrefix = new Map<string, number>();
+    for (const p of prefixes) {
+      if (byPrefix.size >= 4) break;
+      const [hit] = await db
+        .select({ id: services.id })
+        .from(services)
+        .where(and(eq(services.status, 1), sql`${services.serviceName} LIKE CONCAT(${p}, '%')`))
+        .orderBy(asc(services.price))
+        .limit(1);
+      if (hit) byPrefix.set(p, hit.id);
+    }
+
+    const seen = new Set<number>();
+    quickOrders = repeatRows
+      .map((r) => {
+        const raw = Math.round(Number(r.psid));
+        const prefix = (r.serviceName.split("[")[0] ?? "").replace(/[^a-zA-Z\s]/g, "").trim();
+        const sid = byPsid.get(raw) ?? byPrefix.get(prefix) ?? 0;
+        return {
+          serviceId: sid,
+          serviceName: r.serviceName,
+          times: Number(r.count),
+          lastLink: r.lastLink || null,
+        };
+      })
+      .filter((r) => r.serviceId > 0 && !seen.has(r.serviceId) && seen.add(r.serviceId))
+      .slice(0, 4);
+  }
+
   // Banner promo — prioritas: tabel CMS (position=dashboard, aktif, dalam jadwal)
   // → fallback admin setting JSON `dashboard_banners` → fallback dummy.
   let banners: Banner[] = DUMMY_BANNERS;
@@ -206,6 +279,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     banners,
     categories: catRows,
     activeOrders: Number(statActive[0]?.count ?? 0),
+    quickOrders,
 
     stats: {
       totalOrders: Number(statOrders[0]?.count ?? 0),
