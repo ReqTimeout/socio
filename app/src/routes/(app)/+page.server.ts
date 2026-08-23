@@ -200,24 +200,34 @@ export const load: PageServerLoad = async ({ locals }) => {
       : [];
     const byPsid = new Map(svcRows.map((s) => [s.providerServiceId, s.id]));
 
-    // Prefix-based fallback: ambil kandidat aktif, dedupe prefix di JS (persist ordering).
+    // Prefix-based fallback — 1 query OR-conditioned untuk semua prefix (bukan N query
+    // dalam loop: dashboard high-traffic, round-trip tambahan per load mahal).
     const prefixes = [
       ...new Set(
         repeatRows
           .map((r) => (r.serviceName.split("[")[0] ?? "").replace(/[^a-zA-Z\s]/g, "").trim())
           .filter(Boolean),
       ),
-    ];
+    ].slice(0, 8);
     const byPrefix = new Map<string, number>();
-    for (const p of prefixes) {
-      if (byPrefix.size >= 4) break;
-      const [hit] = await db
-        .select({ id: services.id })
+    if (prefixes.length) {
+      const conditions = prefixes.map((p) => sql`${services.serviceName} LIKE CONCAT(${p}, '%')`);
+      const candidates = await db
+        .select({ id: services.id, price: services.price, name: services.serviceName })
         .from(services)
-        .where(and(eq(services.status, 1), sql`${services.serviceName} LIKE CONCAT(${p}, '%')`))
+        .where(and(eq(services.status, 1), sql`(${sql.join(conditions, sql` OR `)})`))
         .orderBy(asc(services.price))
-        .limit(1);
-      if (hit) byPrefix.set(p, hit.id);
+        .limit(200);
+      // Pilih termurah per prefix (sama behavior dengan ORDER BY price LIMIT 1 per prefix).
+      const seenPrefix = new Set<string>();
+      for (const c of candidates) {
+        const p = prefixes.find((px) => c.name.toLowerCase().startsWith(px.toLowerCase()));
+        if (p && !seenPrefix.has(p) && byPrefix.size < 4) {
+          byPrefix.set(p, c.id);
+          seenPrefix.add(p);
+        }
+        if (byPrefix.size >= 4) break;
+      }
     }
 
     const seen = new Set<number>();

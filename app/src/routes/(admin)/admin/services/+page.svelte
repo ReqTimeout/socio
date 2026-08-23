@@ -306,14 +306,16 @@
       description={hasFilter ? "Coba ubah filter atau kata kunci." : "Tambah layanan untuk mulai."}
     />
   {:else}
-    <!-- Desktop table — clean ledger, no card chrome -->
+    <!-- Desktop table — clean ledger, no card chrome.
+         table-fixed: max-w/truncate di td TIDAK efektif di auto-layout table —
+         tanpa ini kategori/layanan mengembang ke max-content (>22.000px). -->
     <div class="hidden overflow-x-auto lg:block">
-      <table class="w-full text-sm">
+      <table class="w-full table-fixed text-sm">
         <thead
           class="sticky top-0 z-10 border-b border-ink-100 bg-ink-50/90 text-left text-xs uppercase tracking-wide text-ink-500 backdrop-blur"
         >
           <tr>
-            <th class="p-3"
+            <th class="w-10 p-3"
               ><input
                 type="checkbox"
                 checked={allOnPage}
@@ -321,14 +323,14 @@
                 aria-label="Pilih semua"
               /></th
             >
-            <th class="p-3 font-semibold">ID</th><th class="p-3 font-semibold">Kategori</th><th
-              class="p-3 font-semibold">Layanan</th
+            <th class="w-20 p-3 font-semibold">ID</th><th class="w-40 p-3 font-semibold"
+              >Kategori</th
+            ><th class="p-3 font-semibold">Layanan</th>
+            <th class="w-28 p-3 text-right font-semibold">Harga (M/R/A)</th><th
+              class="w-28 p-3 font-semibold">Provider</th
             >
-            <th class="p-3 text-right font-semibold">Harga (M/R/A)</th><th class="p-3 font-semibold"
-              >Provider</th
-            >
-            <th class="p-3 font-semibold">Status</th><th class="p-3 text-right font-semibold"
-              >Aksi</th
+            <th class="w-20 p-3 font-semibold">Status</th><th
+              class="w-28 p-3 text-right font-semibold">Aksi</th
             >
           </tr>
         </thead>
@@ -347,9 +349,9 @@
                 /></td
               >
               <td class="p-3 font-semibold tabular-nums text-ink-900">#{s.id}</td>
-              <td class="p-3 text-ink-700">{s.categoryName ?? "—"}</td>
-              <td class="max-w-xs truncate p-3">
-                <div class="font-medium text-ink-900">{s.serviceName}</div>
+              <td class="truncate p-3 text-ink-700">{s.categoryName ?? "—"}</td>
+              <td class="overflow-hidden p-3">
+                <div class="truncate font-medium text-ink-900">{s.serviceName}</div>
                 {#if s.note}
                   <div class="truncate text-xs text-ink-400">{s.note}</div>
                 {/if}

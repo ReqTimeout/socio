@@ -109,7 +109,9 @@
     <a href="/akun" class="text-sm font-medium text-ink-500">@{data.admin.username}</a>
   </header>
 
-  <main class="flex-1 p-4 pb-28 lg:p-8 lg:pb-8">
+  <!-- min-w-0: flex item default min-width:auto → konten lebar (tabel) mendorong
+       halamannya lebih lebar dari viewport tanpa ini -->
+  <main class="min-w-0 flex-1 p-4 pb-28 lg:p-8 lg:pb-8">
     {@render children()}
   </main>
 

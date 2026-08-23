@@ -172,7 +172,7 @@
       description="Coba kata kunci lain atau ganti kategori."
     />
   {:else}
-    <ul class="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+    <ul class="grid grid-cols-1 gap-2.5 min-w-0 sm:grid-cols-2 xl:grid-cols-3">
       {#each data.services as s, i (s.id)}
         <li in:fly={staggerIn(i, { y: 8, duration: 220, step: 30 })} class="relative {hoverLift}">
           <ServiceCard

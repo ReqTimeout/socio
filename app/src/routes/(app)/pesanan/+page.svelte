@@ -163,7 +163,9 @@
       </a>
     </div>
   {:else}
-    <ul class="grid gap-2.5 lg:grid-cols-2 xl:grid-cols-3">
+    <!-- grid-cols-1 eksplisit: tanpa ini implicit column mengembang ke max-content
+         (service name nowrap) → horizontal overflow di mobile -->
+    <ul class="grid grid-cols-1 gap-2.5 min-w-0 lg:grid-cols-2 xl:grid-cols-3">
       {#each orders as o, i (o.id)}
         <li
           class="rounded-2xl border bg-surface p-4 transition-all duration-200
