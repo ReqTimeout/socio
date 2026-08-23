@@ -35,9 +35,110 @@
   }
   const inMoreActive = $derived(moreNav.some((n) => isActive(n.href)));
 
-  // A11y sheet: Esc untuk tutup
+  let helpOpen = $state(false);
+
+  function isTypingTarget(el: EventTarget | null): boolean {
+    if (!(el instanceof HTMLElement)) return false;
+    return (
+      el.tagName === "INPUT" ||
+      el.tagName === "TEXTAREA" ||
+      el.tagName === "SELECT" ||
+      el.isContentEditable
+    );
+  }
+
+  // A11y + keyboard shortcuts (P3.4): Esc tutup sheet, s/= focus search, j/k pagination, ? help
   function onKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape" && sheetOpen) sheetOpen = false;
+    if (e.key === "Escape") {
+      if (helpOpen) {
+        helpOpen = false;
+        return;
+      }
+      if (sheetOpen) {
+        sheetOpen = false;
+        return;
+      }
+      if (isTypingTarget(e.target) && e.target instanceof HTMLElement) {
+        e.target.blur();
+        return;
+      }
+    }
+    if (isTypingTarget(e.target)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    if (e.key === "s" || e.key === "/") {
+      const q = document.querySelector<HTMLInputElement>(
+        'input[type="search"], input[name="q"], input[placeholder*="Cari"]',
+      );
+      if (q) {
+        e.preventDefault();
+        q.focus();
+        q.select();
+      }
+      return;
+    }
+    if (e.key === "?") {
+      e.preventDefault();
+      helpOpen = !helpOpen;
+      return;
+    }
+    // j/k: pagination prev/next (audit, users, etc. pakai ?p=)
+    if (e.key === "j" || e.key === "k") {
+      const url = new URL($page.url.href);
+      const cur = Math.max(1, Number(url.searchParams.get("p") ?? 1));
+      // Heuristic: next/prev page existence cek dari link pagination di DOM
+      const nextLink = document.querySelector<HTMLAnchorElement>(
+        'a[rel="next"], a[aria-label*="Next"], a[href*="p="][href*="' + (cur + 1) + '"]',
+      );
+      const prevLink = document.querySelector<HTMLAnchorElement>(
+        'a[rel="prev"], a[aria-label*="Prev"]',
+      );
+      if (e.key === "j" && nextLink) {
+        e.preventDefault();
+        nextLink.click();
+      }
+      if (e.key === "k" && prevLink) {
+        e.preventDefault();
+        prevLink.click();
+      }
+      // Fallback: navigasi via URL jika link tidak ditemu tapi param p ada
+      if (e.key === "j" && !nextLink && document.querySelector('[data-has-next="true"]')) {
+        e.preventDefault();
+        url.searchParams.set("p", String(cur + 1));
+        goto(url.pathname + url.search);
+      }
+      if (e.key === "k" && cur > 1) {
+        // only if no prevLink found but we are beyond page 1
+        const hasPrev = !!prevLink;
+        if (!hasPrev) {
+          e.preventDefault();
+          url.searchParams.set("p", String(cur - 1));
+          goto(url.pathname + url.search);
+        }
+      }
+    }
+    // g h = go home, g u = users, etc. (quick nav)
+    if (e.key === "g") {
+      // two-key sequence: wait 600ms for second key
+      const handler = (ev: KeyboardEvent) => {
+        if (ev.key === "h") {
+          ev.preventDefault();
+          goto("/admin");
+        } else if (ev.key === "u") {
+          ev.preventDefault();
+          goto("/admin/users");
+        } else if (ev.key === "o") {
+          ev.preventDefault();
+          goto("/admin/orders");
+        } else if (ev.key === "a") {
+          ev.preventDefault();
+          goto("/admin/audit");
+        }
+        window.removeEventListener("keydown", handler);
+      };
+      window.addEventListener("keydown", handler, { once: true });
+      setTimeout(() => window.removeEventListener("keydown", handler), 700);
+    }
   }
   // Lock scroll body saat sheet buka
   $effect(() => {
@@ -154,6 +255,75 @@
   </nav>
 
   <!-- ===== Mobile: Bottom Sheet "Lainnya" ===== -->
+  {#if helpOpen}
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/60 backdrop-blur-sm p-4"
+      role="presentation"
+      onclick={(e) => {
+        if (e.target === e.currentTarget) helpOpen = false;
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Keyboard shortcuts"
+        class="w-full max-w-sm rounded-2xl bg-surface p-5 shadow-xl"
+      >
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="font-display text-base font-bold">Shortcuts</h2>
+          <button
+            type="button"
+            onclick={() => (helpOpen = false)}
+            class="grid h-8 w-8 place-items-center rounded-full hover:bg-ink-100"
+            aria-label="Tutup">✕</button
+          >
+        </div>
+        <dl class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-ink-500">
+              <kbd class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">s</kbd> /
+              <kbd class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">/</kbd>
+            </dt>
+            <dd class="font-medium">Fokus pencarian</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-ink-500">
+              <kbd class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">j</kbd> /
+              <kbd class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">k</kbd>
+            </dt>
+            <dd class="font-medium">Next / prev halaman</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-ink-500">
+              <kbd class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">g</kbd>
+              <kbd class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">h</kbd>/<kbd
+                class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">u</kbd
+              >/<kbd class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">o</kbd>/<kbd
+                class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">a</kbd
+              >
+            </dt>
+            <dd class="font-medium">Go home/users/orders/audit</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-ink-500">
+              <kbd class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">?</kbd>
+            </dt>
+            <dd class="font-medium">Toggle bantuan ini</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-ink-500">
+              <kbd class="rounded border bg-ink-50 px-1.5 py-0.5 font-mono text-xs">Esc</kbd>
+            </dt>
+            <dd class="font-medium">Tutup sheet / blur input</dd>
+          </div>
+        </dl>
+        <p class="mt-3 text-xs text-ink-400">
+          Tekan <kbd class="rounded border bg-ink-50 px-1 py-0.5 font-mono text-[10px]">?</kbd> lagi untuk
+          tutup.
+        </p>
+      </div>
+    </div>
+  {/if}
   {#if sheetOpen}
     <div
       class="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/40 backdrop-blur-sm lg:hidden"

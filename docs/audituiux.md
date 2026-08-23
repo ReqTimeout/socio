@@ -98,14 +98,14 @@
 - Implikasi: user yang layanannya sudah tidak ada di katalog baru melihat **<4 kartu** — itu benar, bukan bug. Kirim M4: auto-update `orders.service_id` saat sync katalog SMMturk supaya mapping pulih bertahap.
 - Screenshot evidence: `docs/screenshots/phase2/` (FINAL-mobile-dashboard, FINAL-desktop-dashboard, FINAL-mobile-pesan-chips, FINAL-mobile-pesan-deeplink, deeplink-chip-prefill). Gates: lint 0 err, svelte-check 0 err, build ok.
 
-### Phase 3 — Refinement (M5/M6, berdua design pass)
+### Phase 3 — Refinement (M5/M6) ✅ DONE 23 Agt 2026
 
-| Item | Notes |
+| Item | Status |
 |---|---|
-| P3.1 Dark mode (0 class saat ini) — Tailwind v4 `@custom-variant dark` | M6 |
-| P3.2 Email templates proper (svelte-email) ganti inline HTML | M4 cron |
-| P3.3 Admin audit filter by action-type | M3++ |
-| P3.4 Keyboard shortcut admin (j/k nav, s = search focus) | nice-to-have |
+| P3.1 Dark mode (0 class saat ini) — Tailwind v4 `@custom-variant dark` | ⏸ deferred ke M6 (butuh design-token pass; fondasi siap, no `dark:` class ditambah agar tidak half-baked) |
+| P3.2 Email templates proper — inline → `wrapEmail()` table-based, brand header, CTA bulletproof (VML), preheader, footer | ✅ `app/src/lib/server/email.ts` — `resetPasswordEmail`/`verificationEmail` pakai template baru; no deps baru; plain-text tetap ada |
+| P3.3 Admin audit filter by action-type | ✅ sudah ada sejak M3: chips `?action=` + search `?q=` di `+page.server.ts`/`+page.svelte`; verified |
+| P3.4 Keyboard shortcuts admin (s focus search, j/k prev/next halaman, g h/u/o/a quick-nav, ? help) | ✅ `app/src/routes/(admin)/+layout.svelte` — `onKeydown` global + help overlay (`?`); guarded saat typing |
 
 ---
 
