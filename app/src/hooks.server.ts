@@ -11,10 +11,12 @@ import { startCron } from "./cron";
 import { SESSION_COOKIE } from "$lib/server/session";
 import type { Handle } from "@sveltejs/kit";
 
-try {
-  startCron();
-} catch {
-  // cron scheduling failure must not block app boot
+if (process.env.SOCIO_CRON_ENABLED === "1") {
+  try {
+    startCron();
+  } catch {
+    // cron scheduling failure must not block app boot
+  }
 }
 
 // Session cookie name lives in $lib/server/session.ts (single source of truth).
