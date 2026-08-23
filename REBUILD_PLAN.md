@@ -749,7 +749,7 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 ### M3 — Admin (5-7 hari)
 
-> Status: **SEBAGIAN BESAR SELESAI (update 22 Agt 2026)** — core + Services/Pricing/Tickets/Reporting/Affiliate(email approval) selesai. Sisa: Banner CMS, Email marketing, News CRUD, dashboard chart/realtime.
+> Status: **SEBAGIAN BESAR SELESAI (update 22 Agt 2026)** — core + Services/Pricing/Tickets/Reporting/Affiliate(email approval) + **Banner CMS + News CRUD + Email marketing** selesai. Sisa: dashboard chart/realtime (epsilon M3, bisa merge M2 item I-U9 dashboard polish).
 > (G1 audit ✓, G5 encrypt ✓, G30 confirm dialog ✓ dari ADMIN_GAP; G6 RBAC partial.)
 
 - [x] Admin layout: sidebar (desktop) + off-canvas (mobile), role guard (level=Admin). → `(admin)/+layout.svelte` + `+layout.server.ts`.
@@ -762,10 +762,11 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 - [x] Order mgmt: filter/table view + **updateStatus/editProvider via ConfirmDialog (G30)**. Refill/refund ditunda.
 - [x] Tickets mgmt: list/filter + reply/close/reopen + audit log.
 - [x] Affiliate: `/admin/affiliate` — KPI, top referrer, riwayat komisi, **withdrawal approval queue** (user withdraw → Requested; admin approve = kredit saldo + Paid / reject = balik Pending; audit log). Flow auto-credit lama diganti approval (keputusan user 22 Agt 2026).
-- [ ] Banner CMS.
+- [x] Banner CMS (`/admin/banners`) — tabel `promotion_banners`, CRUD + toggle + jadwal tayang (start/end), mobile cards/table, UI in Dashboard (CMS → setting fallback → dummy); `tryExec` fix (Drizzle wraps error di `cause`).
 - [x] Reporting: chart + CSV export (`/admin/reporting`).
-- [ ] Email marketing: campaign, segment, queue.
-- [ ] News CRUD.
+- [x] Email marketing (`/admin/email`) — campaign CRUD + segment (audience × level) + enqueue ke `email_queue`/tracking/log + inline tracking per campaign + audit; kirim via cron M4 (Resend env-gated).
+- [x] News CRUD (`/admin/news`) — kategori + konten, search, pagination 20, mobile cards/table, audit + broadcast legacy `read_popup`.
+- [ ] Dashboard admin chart/realtime (epsilon — ditunda, masuk scope M6 polish atau item M2 chart).
 
 ### M4 — Cron & webhooks (3-4 hari)
 
