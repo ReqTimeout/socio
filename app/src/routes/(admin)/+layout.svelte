@@ -222,24 +222,24 @@
     {@render children()}
   </main>
 
-  <!-- ===== Mobile: Floating Bottom Dock ===== -->
+  <!-- ===== Mobile: Floating Bottom Dock — iPhone premium glass pill ===== -->
   <nav
-    class="fixed inset-x-3 bottom-3 z-40 grid grid-cols-6 items-center gap-0.5 rounded-2xl border border-ink-100 bg-surface/95 p-1 shadow-card-hover backdrop-blur lg:hidden"
-    style="padding-bottom: max(0.25rem, env(safe-area-inset-bottom));"
+    class="fixed inset-x-3 bottom-3 z-40 grid grid-cols-7 items-center gap-1 rounded-[28px] border border-white/40 bg-white/75 backdrop-blur-2xl p-2 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18),0_4px_16px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04] supports-[backdrop-filter]:bg-white/60 lg:hidden"
+    style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));"
     aria-label="Menu admin utama"
   >
     {#each primaryNav as n (n.href)}
       <a
         href={n.href}
-        onclick={() => haptic()}
+        onclick={() => haptic(isActive(n.href) ? 6 : 10)}
         aria-current={isActive(n.href) ? "page" : undefined}
-        class="flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-semibold transition-colors active:scale-95 {isActive(
+        class="flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[9px] font-bold tracking-wide leading-none transition-all duration-300 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white {isActive(
           n.href,
         )
-          ? 'bg-primary-50 text-primary-700'
-          : 'text-ink-500 hover:text-ink-800'}"
+          ? 'bg-ink-900 text-white shadow-[0_4px_16px_rgba(15,23,42,0.22)]'
+          : 'text-ink-500 hover:text-ink-700'}"
       >
-        <Icon name={n.icon} size={20} stroke={isActive(n.href) ? 2.25 : 1.75} />
+        <Icon name={n.icon} size={18} stroke={isActive(n.href) ? 2.4 : 1.9} />
         <span class="leading-none">{n.label}</span>
       </a>
     {/each}
@@ -251,11 +251,11 @@
       }}
       aria-current={inMoreActive ? "true" : undefined}
       aria-label="Menu lainnya"
-      class="flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-semibold transition-colors active:scale-95 {inMoreActive
-        ? 'bg-primary-50 text-primary-700'
-        : 'text-ink-500 hover:text-ink-800'}"
+      class="flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[9px] font-bold tracking-wide leading-none transition-all duration-300 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 {inMoreActive
+        ? 'bg-ink-900 text-white shadow-[0_4px_16px_rgba(15,23,42,0.22)]'
+        : 'text-ink-500 hover:text-ink-700'}"
     >
-      <Icon name="more_horizontal" size={20} stroke={inMoreActive ? 2.25 : 1.75} />
+      <Icon name="more_horizontal" size={18} stroke={inMoreActive ? 2.4 : 1.9} />
       <span class="leading-none">Lainnya</span>
     </button>
   </nav>
