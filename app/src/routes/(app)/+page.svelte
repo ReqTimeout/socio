@@ -38,7 +38,7 @@
     {
       href: "/pesan",
       label: "Pesan",
-      desc: "Gaskan followers & like",
+      desc: "Gas followers & likes-mu",
       icon: "rocket",
       chip: "from-primary-500 to-accent-500",
       glow: "group-hover:shadow-[0_12px_28px_-10px_rgba(79,70,229,0.6)]",
@@ -75,7 +75,10 @@
     if (diff < 60) return "baru";
     if (diff < 3600) return `${Math.floor(diff / 60)}m lalu`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}j lalu`;
-    return `${Math.floor(diff / 86400)}h lalu`;
+    const days = Math.floor(diff / 86400);
+    if (days < 7) return `${days} hari lalu`;
+    if (days < 30) return `${days} hari lalu`;
+    return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
   }
 
   const hasActivity = $derived(
@@ -138,6 +141,10 @@
         ctaHref="/saldo/top-up"
         ctaLabel="Top Up"
         trend={data.chart.deposits}
+        insight={{
+          spend7: data.chart.spend.reduce((a: number, b: number) => a + b, 0),
+          deposit7: data.chart.deposits.reduce((a: number, b: number) => a + b, 0),
+        }}
       />
     </div>
 
@@ -178,11 +185,11 @@
           </span>
           Pesan Cepat
         </h2>
-        <span class="text-xs text-ink-400">Layanan langgananmu</span>
+        <span class="text-xs text-ink-400">Tap — link terakhir otomatis terisi</span>
       </div>
 
       <div
-        class="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0"
+        class="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0"
       >
         {#each data.quickOrders as q, i (q.serviceId)}
           <a
@@ -191,8 +198,8 @@
               : ''}"
             onclick={() => haptic(10)}
             in:fly={staggerIn(i, { y: 10, duration: 250, step: 50 })}
-            class="group relative flex min-h-[56px] min-w-[230px] shrink-0 items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5 shadow-card
-              transition-all duration-200 active:scale-[0.97] hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-[0_10px_24px_-12px_rgba(79,70,229,0.45)] lg:min-h-0 lg:min-w-0"
+            class="group relative flex min-h-[56px] w-[74%] max-w-[320px] min-w-[260px] shrink-0 snap-start items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5 shadow-card
+              transition-all duration-200 active:scale-[0.97] hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-[0_10px_24px_-12px_rgba(79,70,229,0.45)] lg:w-auto lg:min-w-0 lg:max-w-none"
           >
             <span
               class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-white transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
@@ -200,9 +207,11 @@
               <Icon name="rocket" size={18} stroke={2} />
             </span>
             <span class="min-w-0 flex-1">
-              <span class="block truncate text-sm font-bold text-ink-800">{q.serviceName}</span>
-              <span class="block truncate text-xs text-ink-400">
-                {q.times > 1 ? `${q.times}× dipesan` : "Baru dipesan"} · tap untuk pesan lagi
+              <span class="block truncate text-sm font-bold leading-tight text-ink-800"
+                >{q.serviceName.split("[")[0]?.trim() || q.serviceName}</span
+              >
+              <span class="block truncate text-xs leading-snug text-ink-400">
+                {q.times > 1 ? `${q.times}×` : "Baru"} · tap untuk pesan lagi
               </span>
             </span>
             <span
@@ -225,7 +234,7 @@
       <span class="font-display text-base font-bold tabular-nums text-ink-900"
         >{data.stats.totalOrders.toLocaleString("id-ID")}</span
       >
-      {#if data.stats.deltaOrders !== undefined}
+      {#if data.stats.deltaOrders !== undefined && data.stats.deltaOrders !== 0}
         <span
           class="rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data.stats
             .deltaOrders >= 0
@@ -288,6 +297,34 @@
             labels={data.chart.labels}
             height={190}
           />
+        {:else if data.stats.totalOrders > 0}
+          <div
+            class="mx-auto flex w-full max-w-[260px] flex-col items-center gap-1.5 py-4 px-2 text-center sm:max-w-none sm:gap-2 sm:py-10 sm:px-4"
+          >
+            <div
+              class="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm sm:h-12 sm:w-12"
+            >
+              <Icon name="clock" size={18} stroke={2} class="sm:hidden" />
+              <Icon name="clock" size={22} stroke={2} class="hidden sm:inline-block" />
+            </div>
+            <p class="text-sm font-bold text-ink-700 [text-wrap:balance]">
+              Hiatus — minggu ini sepi
+            </p>
+            <p class="text-xs text-ink-400 [text-wrap:balance]">
+              Kamu punya {data.stats.totalOrders.toLocaleString("id-ID")} pesanan, tapi 7 hari terakhir
+              kosong. Pesan Cepat di atas pakai link terakhirmu.
+            </p>
+            <a
+              href={data.quickOrders?.[0]
+                ? `/pesan?service=${data.quickOrders[0].serviceId}${data.quickOrders[0].lastLink ? `&link=${encodeURIComponent(data.quickOrders[0].lastLink)}` : ""}`
+                : "/pesan"}
+              onclick={() => haptic(10)}
+              class="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition active:scale-95 hover:opacity-95 sm:mt-2"
+            >
+              <Icon name="refresh" size={14} stroke={2.5} />
+              Pesan lagi
+            </a>
+          </div>
         {:else}
           <div
             class="mx-auto flex w-full max-w-[260px] flex-col items-center gap-1.5 py-4 px-2 text-center sm:max-w-none sm:gap-2 sm:py-10 sm:px-4"
@@ -368,13 +405,11 @@
               <a
                 href="/pesanan"
                 title={o.serviceName}
-                class="group flex items-center gap-2.5 px-2.5 py-2.5 transition-colors hover:bg-ink-50 active:bg-ink-100 sm:gap-3 sm:px-4 sm:py-3.5"
+                class="group flex min-w-0 items-center gap-2.5 px-2.5 py-2.5 transition-colors hover:bg-ink-50 active:bg-ink-100 sm:gap-3 sm:px-4 sm:py-3.5"
               >
-                >
                 <div
                   class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500/15 to-accent-500/15 text-primary transition-transform duration-200 group-hover:scale-110 sm:h-10 sm:w-10"
                 >
-                  >
                   <Icon name="receipt" size={18} />
                 </div>
                 <div class="min-w-0 flex-1">
@@ -394,6 +429,41 @@
       {/if}
     </div>
   </div>
+
+  <!-- Attention: Error/Partial → CTA Refill -->
+  {#if data.attention?.length}
+    {@const a = data.attention[0]}
+    <a
+      href="/pesanan?f=gagal"
+      onclick={() => haptic(10)}
+      class="flex items-center justify-between gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm"
+    >
+      <span class="flex items-center gap-2 font-semibold text-warning">
+        <Icon name="alert" size={16} />{a.count} order perlu perhatian
+        <span class="font-normal text-ink-600">· {a.sample}</span>
+      </span>
+      <span class="shrink-0 rounded-full bg-warning px-3 py-1 text-xs font-bold text-white"
+        >Cek</span
+      >
+    </a>
+  {/if}
+
+  <!-- Nudge top-up kalau saldo tipis vs tiket termurah Pesan Cepat -->
+  {#if data.nudge}
+    {@const n = data.nudge}
+    <a
+      href="/saldo/top-up"
+      onclick={() => haptic(10)}
+      class="flex items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3"
+    >
+      <span class="text-sm font-semibold text-primary-700"
+        >Saldo {formatRupiah(n.balance)} — {n.reason}</span
+      >
+      <span class="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white"
+        >Top up</span
+      >
+    </a>
+  {/if}
 
   <!-- Trust line -->
   <div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 py-2 text-xs text-ink-400">

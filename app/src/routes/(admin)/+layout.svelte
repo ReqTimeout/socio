@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
-  import { haptic, Icon } from "@socio/ui";
+  import { haptic, Icon, NotifBell } from "@socio/ui";
 
   let { data, children } = $props();
 
@@ -162,13 +162,16 @@
     class="hidden w-60 shrink-0 border-r border-ink-100 bg-surface p-4 lg:block"
     style="view-transition-name: admin-sidebar;"
   >
-    <div class="mb-6 flex items-center gap-2 px-2">
-      <div class="grid h-8 w-8 place-items-center rounded-lg bg-accent-ink text-white">
-        <Icon name="shield" size={16} stroke={2.25} />
-      </div>
-      <span class="font-display text-lg font-bold"
-        >Socio<span class="text-accent-ink">Admin</span></span
-      >
+    <div class="mb-6 flex items-center justify-between gap-2 px-2">
+      <a href="/admin" class="flex items-center gap-2">
+        <div class="grid h-8 w-8 place-items-center rounded-lg bg-accent-ink text-white">
+          <Icon name="shield" size={16} stroke={2.25} />
+        </div>
+        <span class="font-display text-lg font-bold"
+          >Socio<span class="text-accent-ink">Admin</span></span
+        >
+      </a>
+      <NotifBell count={data.unreadCount ?? 0} href="/notif" />
     </div>
     <nav class="space-y-1">
       {#each primaryNav as n (n.href)}
@@ -207,7 +210,10 @@
     style="view-transition-name: admin-topbar;"
   >
     <span class="font-display font-bold">Admin</span>
-    <a href="/akun" class="text-sm font-medium text-ink-500">@{data.admin.username}</a>
+    <div class="flex items-center gap-2">
+      <NotifBell count={data.unreadCount ?? 0} href="/notif" />
+      <a href="/akun" class="text-sm font-medium text-ink-500">@{data.admin.username}</a>
+    </div>
   </header>
 
   <!-- min-w-0: flex item default min-width:auto → konten lebar (tabel) mendorong
@@ -227,7 +233,7 @@
         href={n.href}
         onclick={() => haptic()}
         aria-current={isActive(n.href) ? "page" : undefined}
-        class="flex flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-semibold transition-colors active:scale-95 {isActive(
+        class="flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-semibold transition-colors active:scale-95 {isActive(
           n.href,
         )
           ? 'bg-primary-50 text-primary-700'
@@ -245,7 +251,7 @@
       }}
       aria-current={inMoreActive ? "true" : undefined}
       aria-label="Menu lainnya"
-      class="flex flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-semibold transition-colors active:scale-95 {inMoreActive
+      class="flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-semibold transition-colors active:scale-95 {inMoreActive
         ? 'bg-primary-50 text-primary-700'
         : 'text-ink-500 hover:text-ink-800'}"
     >

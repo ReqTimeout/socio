@@ -12,6 +12,7 @@
     ctaHref = "/saldo/top-up",
     historyHref = "/saldo/riwayat",
     trend,
+    insight,
   }: {
     balance?: number;
     label?: string;
@@ -20,6 +21,7 @@
     historyHref?: string;
     /** tren mini (mis. deposit 7 hari) — sparkline dekoratif di kartu */
     trend?: number[];
+    insight?: { spend7: number; deposit7: number } | null;
   } = $props();
 
   let el: HTMLElement;
@@ -97,6 +99,12 @@
     <p class="font-display font-extrabold text-[2.6rem] leading-tight tabular-nums tracking-tight mt-2">
       {fmt($balanceTween)}
     </p>
+    {#if insight && (insight.deposit7 > 0 || insight.spend7 > 0)}
+      <p class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur">
+        <Icon name="activity" size={12} />
+        7 hari: masuk {fmt(insight.deposit7)} · keluar {fmt(insight.spend7)}
+      </p>
+    {/if}
 
     <div class="mt-4 flex items-center gap-2">
       <a

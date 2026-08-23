@@ -79,12 +79,12 @@
     {/if}
   </div>
 
-  <!-- Filter chips -->
+  <!-- Filter chips — min-h 44 for thumb -->
   <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
     {#each filters as f}
       <button
         onclick={() => selectType(f.v)}
-        class="shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+        class="min-h-[44px] shrink-0 rounded-full px-3.5 py-2 text-xs font-bold transition-all duration-200 active:scale-95
           {data.type === f.v
           ? 'bg-primary text-white shadow-sm'
           : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
@@ -106,7 +106,7 @@
         <li>
           <button
             onclick={() => open(n)}
-            class="flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition-all active:scale-[0.98]
+            class="flex min-h-[56px] w-full items-start gap-3 rounded-2xl border p-3 text-left transition-all active:scale-[0.98]
               {n.read ? 'border-ink-100 bg-surface' : 'border-primary/30 bg-primary/5'}"
           >
             <span

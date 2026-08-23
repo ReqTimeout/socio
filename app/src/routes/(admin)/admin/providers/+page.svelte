@@ -132,25 +132,29 @@
 <section class="space-y-6">
   <!-- Header: inline narrative (zero card chrome, no stat strip) -->
   <header class="flex flex-wrap items-end justify-between gap-3">
-    <div class="min-w-0">
+    <div class="min-w-0 flex-1">
       <h1 class="font-display text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
         Provider SMM
       </h1>
-      <p class="mt-1 text-sm text-ink-500">
-        {fmt(data.providers.length)} provider
-        <span class="mx-1 text-ink-300">·</span>
+      <p class="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-ink-500">
+        <span>{fmt(data.providers.length)} provider</span>
+        <span class="text-ink-300">·</span>
         <span class="font-semibold text-ink-700"
           >{fmt(
             data.providers.reduce((a: number, p: any) => a + Number(p.services_count ?? 0), 0),
           )}</span
         >
-        layanan terhubung
-        <span class="mx-1 text-ink-300">·</span>
-        <span class="font-semibold {data.hasSmmturkKey ? 'text-success' : 'text-warning'}"
+        <span>layanan terhubung</span>
+        <span class="hidden text-ink-300 sm:inline">·</span>
+        <span
+          class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold {data.hasSmmturkKey
+            ? 'bg-success/10 text-success'
+            : 'bg-warning/10 text-warning'}"
           >SMMturk key {data.hasSmmturkKey ? "aktif" : "belum"}</span
         >
-        <span class="mx-1 text-ink-300">·</span>
-        <span class="font-semibold text-ink-500">{fmt(data.syncLogs.length)}</span> sync log
+        <span class="text-ink-300">·</span>
+        <span class="font-semibold text-ink-500">{fmt(data.syncLogs.length)}</span>
+        <span>sync log</span>
       </p>
     </div>
     <div class="flex flex-wrap items-center gap-2">

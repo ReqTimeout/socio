@@ -117,8 +117,8 @@
       </a>
     {/each}
 
-    <!-- Spacer untuk tinggi (banner absolute) -->
-    <div class="h-40 w-full lg:h-48" aria-hidden="true"></div>
+    <!-- Spacer untuk tinggi (banner absolute) — lebih pendek di mobile -->
+    <div class="h-[140px] sm:h-[160px] lg:h-[180px]" aria-hidden="true"></div>
 
     {#if many}
       <div class="absolute bottom-3 left-5 z-10 flex items-center gap-1.5 lg:left-7">

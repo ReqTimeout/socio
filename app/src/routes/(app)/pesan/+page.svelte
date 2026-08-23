@@ -158,8 +158,10 @@
       </div>
     </div>
 
-    <!-- Order form — semua field tampil sekaligus, tanpa step tersembunyi -->
-    <div class="space-y-5 rounded-2xl border border-ink-100 bg-surface p-4 sm:p-5">
+    <!-- Order form — w-full di mobile biar Select tidak narrow -->
+    <div
+      class="mx-auto w-full max-w-none space-y-5 rounded-2xl border border-ink-100 bg-surface p-4 sm:p-5 sm:max-w-xl"
+    >
       {#if form?.error}
         <div
           class="flex items-center gap-2 rounded-xl bg-danger/10 px-3 py-2.5 text-sm font-medium text-danger"
@@ -245,7 +247,9 @@
         <div>
           <label class="mb-1.5 block text-sm font-bold">Link / Username</label>
           {#if data.saved.length > 0}
-            <div class="mb-2 flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+            <div
+              class="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+            >
               <span class="shrink-0 text-[10px] font-bold uppercase tracking-wide text-ink-400">
                 Favorit
               </span>
@@ -262,7 +266,7 @@
                     }
                   }}
                   title={sv.link}
-                  class="shrink-0 rounded-full bg-ink-100 px-3 py-1.5 text-xs font-medium transition active:scale-95 hover:bg-ink-200"
+                  class="min-h-[44px] shrink-0 rounded-full bg-ink-100 px-3 py-2 text-xs font-medium transition active:scale-95 hover:bg-ink-200"
                 >
                   {sv.label || sv.link.slice(0, 20)}
                 </button>
@@ -302,13 +306,13 @@
               max={selectedService?.max ?? 1000000}
               step={selectedService?.min || 1}
             />
-            <p class="mt-1.5 text-xs text-ink-400">
+            <p class="mt-1.5 min-h-[44px] py-2 text-xs leading-relaxed text-ink-500">
               {#if selectedService}
                 Min {selectedService.min.toLocaleString("id-ID")} · Max {selectedService.max.toLocaleString(
                   "id-ID",
                 )}
               {:else}
-                Pilih layanan dulu untuk melihat batas jumlah.
+                Pilih layanan dulu untuk melihat batas jumlah — semua angka tervalidasi otomatis.
               {/if}
             </p>
           </div>

@@ -121,14 +121,14 @@
     </a>
   </div>
 
-  <!-- Filter chips -->
+  <!-- Filter chips — min-h 44 for thumb comfort -->
   <div
     class="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:px-0"
   >
     {#each tabs as t}
       <button
         onclick={() => select(t.f)}
-        class="shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all duration-200 active:scale-95
+        class="min-h-[44px] shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all duration-200 active:scale-95
           {data.filter === t.f
           ? 'bg-primary text-white shadow-sm'
           : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
@@ -138,7 +138,7 @@
     {/each}
     <button
       onclick={toggleSelectMode}
-      class="ml-auto shrink-0 rounded-full px-3 py-2 text-xs font-bold transition-all active:scale-95
+      class="ml-auto min-h-[44px] shrink-0 rounded-full px-3 py-2 text-xs font-bold transition-all active:scale-95
         {selectMode ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
     >
       {selectMode ? "Batal" : "Pilih"}

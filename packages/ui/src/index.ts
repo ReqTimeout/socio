@@ -28,6 +28,7 @@ export { default as DataTable } from "./components/DataTable.svelte";
 export { default as Wordmark } from "./components/Wordmark.svelte";
 export { default as PromoBanner, type Banner } from "./components/PromoBanner.svelte";
 export { default as Select, type SelectOption } from "./components/Select.svelte";
+export { default as NotifBell } from "./components/NotifBell.svelte";
 export { haptic } from "./haptic.js";
 export { staggerIn, revealDelay, tweenNumber, hoverLift } from "./lib/motion.js";
 export type { StaggerInOpts, TweenNumberOpts } from "./lib/motion.js";

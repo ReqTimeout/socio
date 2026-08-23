@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
-  import { BottomNav, AppFooter, Icon, Sidebar, Fab, Wordmark } from "@socio/ui";
+  import { BottomNav, AppFooter, Icon, Sidebar, Fab, Wordmark, NotifBell } from "@socio/ui";
   import { haptic } from "@socio/ui";
 
   let { data, children } = $props();
@@ -61,21 +61,7 @@
       <a href="/" class="inline-flex items-center" aria-label="Socio.id — Beranda">
         <Wordmark size="sm" />
       </a>
-      <a
-        href="/notif"
-        onclick={() => haptic(8)}
-        aria-label="Notifikasi"
-        class="relative grid h-9 w-9 place-items-center rounded-full hover:bg-ink-100 active:scale-90 transition"
-      >
-        <Icon name="bell" size={20} />
-        {#if data.unreadCount > 0}
-          <span
-            class="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-danger px-1 text-[9px] font-bold text-white"
-          >
-            {data.unreadCount > 99 ? "99+" : data.unreadCount}
-          </span>
-        {/if}
-      </a>
+      <NotifBell count={data.unreadCount} />
     </div>
   </header>
 
@@ -87,20 +73,7 @@
     <div class="flex items-center gap-2 text-sm">
       <span class="font-display text-lg font-bold text-ink-900">{pageTitle}</span>
     </div>
-    <a
-      href="/notif"
-      aria-label="Notifikasi"
-      class="relative grid h-9 w-9 place-items-center rounded-full hover:bg-ink-100 transition"
-    >
-      <Icon name="bell" size={20} />
-      {#if data.unreadCount > 0}
-        <span
-          class="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-danger px-1 text-[9px] font-bold text-white"
-        >
-          {data.unreadCount > 99 ? "99+" : data.unreadCount}
-        </span>
-      {/if}
-    </a>
+    <NotifBell count={data.unreadCount} />
   </header>
 
   <!-- Main content — offset for sidebar on desktop -->
