@@ -13,5 +13,6 @@ export * from "./coupons.js";
 export * from "./affiliate.js";
 export * from "./promotionBanners.js";
 export * from "./news.js";
+export * from "./marketing.js";
 export * from "./admin.js";
 export * from "./cron.js";
