@@ -77,6 +77,10 @@
   });
 </script>
 
+<svelte:head>
+  <title>Deposit — Admin Socio.id</title>
+</svelte:head>
+
 <section class="space-y-6">
   <header class="flex flex-wrap items-end justify-between gap-3">
     <div class="min-w-0">

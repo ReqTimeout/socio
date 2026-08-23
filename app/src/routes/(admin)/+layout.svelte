@@ -74,11 +74,8 @@
         <a
           href={n.href}
           aria-current={isActive(n.href) ? "page" : undefined}
-          class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors {isActive(
-            n.href,
-          )
-            ? 'bg-ink-900 text-white'
-            : 'text-ink-600 hover:bg-ink-100'}"
+          class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
+            {isActive(n.href) ? 'bg-ink-900 text-white' : 'text-ink-600 hover:bg-ink-100'}"
         >
           <Icon name={n.icon} size={18} />{n.label === "Home" ? "Dashboard" : n.label}
         </a>
@@ -88,11 +85,8 @@
         <a
           href={n.href}
           aria-current={isActive(n.href) ? "page" : undefined}
-          class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors {isActive(
-            n.href,
-          )
-            ? 'bg-ink-900 text-white'
-            : 'text-ink-600 hover:bg-ink-100'}"
+          class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
+            {isActive(n.href) ? 'bg-ink-900 text-white' : 'text-ink-600 hover:bg-ink-100'}"
         >
           <Icon name={n.icon} size={18} />{n.label}
         </a>

@@ -155,6 +155,10 @@
   });
 </script>
 
+<svelte:head>
+  <title>Users — Admin Socio.id</title>
+</svelte:head>
+
 <section class="space-y-6">
   <!-- Header: inline narrative (zero card chrome, no stat strip) -->
   <header class="flex flex-wrap items-end justify-between gap-3">
@@ -256,12 +260,16 @@
         >
           <tr>
             <th class="p-3"
-              ><input
-                type="checkbox"
-                checked={allOnPage}
-                onchange={toggleAll}
+              ><label
+                class="inline-flex h-11 w-11 cursor-pointer items-center justify-center"
                 aria-label="Pilih semua di halaman ini"
-              /></th
+                ><input
+                  type="checkbox"
+                  class="h-4 w-4 cursor-pointer accent-primary"
+                  checked={allOnPage}
+                  onchange={toggleAll}
+                /></label
+              ></th
             >
             <th class="p-3 font-semibold">ID</th><th class="p-3 font-semibold">User</th><th
               class="p-3 font-semibold">Name</th
@@ -280,12 +288,15 @@
               style="--d:{240 + i * 30}ms"
             >
               <td class="p-3"
-                ><input
-                  type="checkbox"
-                  checked={selected.has(u.id)}
-                  onchange={() => toggleSel(u.id)}
-                  aria-label={`Pilih ${u.username}`}
-                /></td
+                ><label class="inline-flex h-11 w-11 cursor-pointer items-center justify-center"
+                  ><input
+                    type="checkbox"
+                    class="h-4 w-4 cursor-pointer accent-primary"
+                    checked={selected.has(u.id)}
+                    onchange={() => toggleSel(u.id)}
+                    aria-label={`Pilih ${u.username}`}
+                  /></label
+                ></td
               >
               <td class="p-3 font-semibold tabular-nums text-ink-900">#{u.id}</td>
               <td class="p-3"
@@ -345,13 +356,16 @@
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  class="mt-0.5 shrink-0"
-                  checked={selected.has(u.id)}
-                  onchange={() => toggleSel(u.id)}
-                  aria-label={`Pilih ${u.username}`}
-                />
+                <label
+                  class="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center"
+                  ><input
+                    type="checkbox"
+                    class="h-4 w-4 cursor-pointer accent-primary"
+                    checked={selected.has(u.id)}
+                    onchange={() => toggleSel(u.id)}
+                    aria-label={`Pilih ${u.username}`}
+                  /></label
+                >
                 <div class="min-w-0">
                   <div class="flex items-center gap-1.5">
                     <span class="truncate font-semibold text-ink-900">{u.username}</span>

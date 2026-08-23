@@ -6,9 +6,11 @@
 
   let { data, children } = $props();
 
-  // Nav utama mobile (floating bottom dock) — 4 item sesuai brief user
+  // Nav utama mobile (floating bottom dock) — 5 item: Katalog (repeat flow) masuk dock
+  // sesuai audit UI/UX 23 Agt 2026 (docs/audituiux.md P1.1)
   const navItems = [
     { href: "/", label: "Home", icon: "home" },
+    { href: "/layanan", label: "Layanan", icon: "grid" },
     { href: "/pesanan", label: "Pesanan", icon: "receipt" },
     { href: "/saldo", label: "Saldo", icon: "wallet" },
     { href: "/tiket", label: "Tiket", icon: "ticket" },

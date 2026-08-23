@@ -108,6 +108,10 @@
     };
 </script>
 
+<svelte:head>
+  <title>Tiket — Admin Socio.id</title>
+</svelte:head>
+
 <section class="space-y-6">
   <!-- Header: inline narrative (zero card chrome, no stat strip) -->
   <header class="min-w-0">

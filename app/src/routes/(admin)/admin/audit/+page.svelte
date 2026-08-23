@@ -84,6 +84,10 @@
   });
 </script>
 
+<svelte:head>
+  <title>Audit Log — Admin Socio.id</title>
+</svelte:head>
+
 <section class="space-y-4">
   <header class="flex flex-wrap items-end justify-between gap-2">
     <div>

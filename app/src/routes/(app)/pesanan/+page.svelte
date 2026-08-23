@@ -203,6 +203,17 @@
                 <span class="text-ink-400">{timeAgo(o.createdAt)}</span>
               </div>
             </button>
+            {#if !selectMode}
+              <button
+                type="button"
+                onclick={() => repeatOrder(o)}
+                aria-label="Pesan ulang {o.serviceName}"
+                title="Pesan ulang"
+                class="grid h-11 w-11 shrink-0 place-items-center rounded-full text-primary transition active:scale-90 hover:bg-primary/10"
+              >
+                <Icon name="refresh" size={17} />
+              </button>
+            {/if}
           </div>
         </li>
       {/each}

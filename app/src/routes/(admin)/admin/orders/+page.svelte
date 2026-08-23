@@ -102,6 +102,10 @@
   });
 </script>
 
+<svelte:head>
+  <title>Orders — Admin Socio.id</title>
+</svelte:head>
+
 <section class="space-y-6">
   <!-- Header: inline narrative (zero card chrome, no stat strip) -->
   <header class="flex flex-wrap items-end justify-between gap-3">

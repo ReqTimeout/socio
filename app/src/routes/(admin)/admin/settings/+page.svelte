@@ -84,6 +84,10 @@
   };
 </script>
 
+<svelte:head>
+  <title>Settings — Admin Socio.id</title>
+</svelte:head>
+
 <section class="space-y-4">
   <header>
     <h1 class="font-display text-xl font-bold">Settings</h1>

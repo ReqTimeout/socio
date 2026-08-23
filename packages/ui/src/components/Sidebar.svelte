@@ -131,7 +131,7 @@
       <a
         href="/saldo/top-up"
         onclick={() => haptic(10)}
-        class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/20 text-white transition hover:bg-white/30 active:scale-90"
+        class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white/20 text-white transition hover:bg-white/30 active:scale-90"
         aria-label="Top up saldo"
       >
         <Icon name="plus" size={18} stroke={2.5} />
@@ -151,7 +151,7 @@
       <button
         onclick={handleLogout}
         aria-label="Keluar"
-        class="grid h-8 w-8 place-items-center rounded-lg text-ink-400 transition-colors hover:bg-danger-soft hover:text-danger"
+        class="grid h-11 w-11 place-items-center rounded-lg text-ink-400 transition-colors hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
       >
         <Icon name="logout" size={18} />
       </button>

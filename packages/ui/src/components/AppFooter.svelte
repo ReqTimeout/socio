@@ -14,11 +14,11 @@
       <a href="/" class="font-display text-lg font-extrabold tracking-tight">
         socio<span class="text-primary">.id</span>
       </a>
-      <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+      <div class="flex flex-wrap items-center justify-center gap-x-1 gap-y-1">
         {#each links as l}
           <a
             href={l.href}
-            class="text-xs font-medium text-ink-500 hover:text-primary transition-colors"
+            class="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-500 transition-colors hover:text-primary"
             >{l.label}</a
           >
         {/each}

@@ -189,15 +189,19 @@
             type="button"
             onclick={() => toggleFav(s.id)}
             aria-label={favState[s.id] ? "Hapus dari favorit" : "Tambah ke favorit"}
-            class="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full
-              bg-surface/80 backdrop-blur transition active:scale-90 hover:bg-surface"
+            class="group absolute right-1.5 top-1.5 grid h-11 w-11 place-items-center rounded-full
+              transition active:scale-90"
           >
-            <Icon
-              name="star"
-              size={18}
-              stroke={2.5}
-              class={favState[s.id] ? "fill-amber-400 text-amber-400" : "text-ink-400"}
-            />
+            <span
+              class="grid h-8 w-8 place-items-center rounded-full bg-surface/80 backdrop-blur transition group-hover:bg-surface"
+            >
+              <Icon
+                name="star"
+                size={18}
+                stroke={2.5}
+                class={favState[s.id] ? "fill-amber-400 text-amber-400" : "text-ink-400"}
+              />
+            </span>
           </button>
         </li>
       {/each}

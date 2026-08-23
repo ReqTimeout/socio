@@ -17,6 +17,10 @@
   }
 </script>
 
+<svelte:head>
+  <title>Pricing — Admin Socio.id</title>
+</svelte:head>
+
 <section class="space-y-4">
   <div class="flex flex-wrap items-end justify-between gap-2">
     <div>

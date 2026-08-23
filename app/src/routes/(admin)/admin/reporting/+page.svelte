@@ -99,6 +99,10 @@
   ]);
 </script>
 
+<svelte:head>
+  <title>Reporting — Admin Socio.id</title>
+</svelte:head>
+
 <section class="space-y-4">
   <!-- Header -->
   <div class="flex flex-wrap items-end justify-between gap-2">

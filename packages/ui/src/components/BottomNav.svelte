@@ -36,6 +36,7 @@
       aria-current={isActive(item.href) ? "page" : undefined}
       onclick={() => haptic(8)}
       class="group relative flex flex-col items-center justify-center gap-0.5 py-2 transition-colors
+        focus-visible:outline-none focus-visible:bg-ink-100/60 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset
         {isActive(item.href) ? 'text-primary' : 'text-ink-400'}"
     >
       {#if isActive(item.href)}

@@ -182,6 +182,10 @@
     };
 </script>
 
+<svelte:head>
+  <title>Layanan — Admin Socio.id</title>
+</svelte:head>
+
 <section class="space-y-6">
   <!-- Header: prose + inline narrative (no card chrome, no stat strip) -->
   <header class="space-y-3">
