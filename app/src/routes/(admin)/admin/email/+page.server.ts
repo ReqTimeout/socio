@@ -7,7 +7,7 @@ import {
 } from "@socio/db/schema";
 import { desc, eq, sql, count } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
-import { logAudit } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
 import type { RowDataPacket } from "mysql2";
 
@@ -33,14 +33,24 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (locals.user.level !== "Admin") throw redirect(303, "/");
 
   const status = url.searchParams.get("status") ?? "";
-  const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
+  const rawP = Number(url.searchParams.get("page") ?? 1);
+  const page = Number.isFinite(rawP) && rawP >= 1 && rawP <= 1000 ? rawP : 1; // A-15
   const perPage = 15;
 
-  const rows = await db.select().from(emailCampaigns).orderBy(desc(emailCampaigns.id));
-
-  const campaigns = rows
-    .filter((r) => !status || r.status === status)
-    .slice((page - 1) * perPage, page * perPage);
+  // A-10: WHERE + LIMIT/OFFSET di DB (bukan fetch-all + JS slice).
+  const where = status ? eq(emailCampaigns.status, status as never) : undefined;
+  const [rows, totalRow] = await Promise.all([
+    db
+      .select()
+      .from(emailCampaigns)
+      .where(where)
+      .orderBy(desc(emailCampaigns.id))
+      .limit(perPage)
+      .offset((page - 1) * perPage),
+    db.select({ c: count() }).from(emailCampaigns).where(where),
+  ]);
+  const campaigns = rows;
+  const total = Number(totalRow[0]?.c ?? 0);
 
   const trackingRows = await db
     .select({
@@ -81,9 +91,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         track: { sent, opened, clicked },
       };
     }),
-    total: rows.filter((r) => !status || r.status === status).length,
     page,
     perPage,
+    total,
+    pages: Math.max(1, Math.ceil(total / perPage)),
     status,
     filterStatuses: [""].concat(STATUSES),
     queuePending: Number(pendingQ[0]?.c ?? 0),
@@ -113,6 +124,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
  */
 export const actions: Actions = {
   save: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("email-save", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const id = Number(form.get("id") ?? 0);
     const title = String(form.get("title") ?? "").trim();
@@ -188,6 +201,8 @@ export const actions: Actions = {
   },
 
   send: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("email-send", (locals as any).ip ?? "0.0.0.0", 5, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });
@@ -280,6 +295,8 @@ export const actions: Actions = {
   },
 
   cancel: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("email-cancel", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });
@@ -304,6 +321,8 @@ export const actions: Actions = {
   },
 
   delete: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("email-delete", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });

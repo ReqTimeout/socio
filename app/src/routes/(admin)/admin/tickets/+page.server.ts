@@ -1,7 +1,7 @@
 import { db } from "@socio/db";
 import { sql } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
 
 const PAGE_SIZE = 25;
@@ -9,11 +9,11 @@ const PAGE_SIZE = 25;
 export const load: PageServerLoad = async ({ locals, url }) => {
   if (!locals.user) throw redirect(303, "/login");
   if (locals.user.level !== "Admin") throw redirect(303, "/");
-
   const q = String(url.searchParams.get("q") ?? "").trim();
   const status = String(url.searchParams.get("status") ?? "").trim();
   const activeId = Number(url.searchParams.get("id") ?? 0);
-  const page = Math.max(1, Number(url.searchParams.get("p") ?? 1));
+  const rawP = Number(url.searchParams.get("p") ?? 1);
+  const page = Number.isFinite(rawP) && rawP >= 1 && rawP <= 1000 ? rawP : 1; // A-15
 
   // Aggregate: 1 row per ticket_id (pakai latest message)
   const condList: any[] = [sql`1=1`];
@@ -25,7 +25,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (status) condList.push(sql`m.status = ${status}`);
   const whereList = sql.join(condList, sql` AND `);
 
-  // Subquery: ambil row terbaru per ticket_id
+  // Helpers: db.execute() returns [rows, fields] tuple from mysql2.
+  const rowsOf = (res: unknown): any[] => {
+    const a = res as any[];
+    return Array.isArray(a[0]) ? (a[0] as any[]) : (a as any[]);
+  };
+  const firstRow = (res: unknown): any => rowsOf(res)[0] ?? {};
+
   const [ticketList, totalRow, statsRow] = await Promise.all([
     db.execute(sql`
       SELECT t.ticket_id, t.user_id, t.subject, t.status, t.is_read, t.created_at, t.last_message, t.type AS last_type, u.username, u.email
@@ -48,22 +54,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     `),
     db.execute(sql`
       SELECT
-        SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) AS pending,
-        SUM(CASE WHEN status = 'Answered' THEN 1 ELSE 0 END) AS answered,
-        SUM(CASE WHEN status = 'Reply by user' THEN 1 ELSE 0 END) AS reply_by_user,
-        SUM(CASE WHEN status = 'Closed' THEN 1 ELSE 0 END) AS closed,
-        COUNT(*) AS total_msgs,
-        COUNT(DISTINCT ticket_id) AS total_tickets
-      FROM message
+        COUNT(DISTINCT CASE WHEN m.status = 'Pending' THEN m.ticket_id END) AS pending,
+        COUNT(DISTINCT CASE WHEN m.status = 'Answered' THEN m.ticket_id END) AS answered,
+        COUNT(DISTINCT CASE WHEN m.status = 'Reply by user' THEN m.ticket_id END) AS reply_by_user,
+        COUNT(DISTINCT CASE WHEN m.status = 'Closed' THEN m.ticket_id END) AS closed,
+        COUNT(DISTINCT m.ticket_id) AS total_tickets
+      FROM message m
     `),
   ]);
 
-  const total = Number((totalRow as any)[0]?.total ?? 0);
-  const s = (statsRow as any)[0] ?? {};
+  const total = Number(firstRow(totalRow).total ?? 0);
+  const s = firstRow(statsRow);
 
-  // Helper: db.execute() returns [rows, fields] tuple from mysql2 — rows
-  // are RowDataPacket instances which SvelteKit cannot serialise.
-  // JSON round-trip is the cheapest way to get plain POJOs.
+  // Helper: JSON round-trip to get plain POJOs (RowDataPacket → serialisable).
   const plain = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
   // Detail: kalau ada ?id=... ambil semua message di ticket tsb
@@ -94,27 +97,25 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         ORDER BY m.id ASC
       `),
     ]);
-    const f = (firstRows as any)[0];
-    if (f) {
+    const tryRow = firstRow(firstRows);
+    if (tryRow && tryRow.ticket_id != null) {
       active = {
-        ticketId: Number(f.ticket_id),
-        userId: Number(f.user_id),
-        subject: f.subject || "(Tanpa subjek)",
-        status: f.status,
-        username: f.username,
-        email: f.email,
+        ticketId: Number(tryRow.ticket_id),
+        userId: Number(tryRow.user_id),
+        subject: tryRow.subject || "(Tanpa subjek)",
+        status: tryRow.status,
+        username: tryRow.username,
+        email: tryRow.email,
       };
     }
-    thread = plain((threadRows as any)[0] ?? []);
+    thread = plain(rowsOf(threadRows));
 
-    // Mark as read (admin view)
-    await db.execute(
-      sql`UPDATE message SET is_read = 1 WHERE ticket_id = ${activeId} AND type = 'user'`,
-    );
+    // A-13: side-effect UPDATE di GET dihapus. Pakai POST `markRead` di bawah
+    // (dengan fetch dari client) — non-CSRF-able read-state mutation.
   }
 
   return {
-    tickets: plain((ticketList as any)[0] ?? []),
+    tickets: plain(rowsOf(ticketList)),
     q,
     status,
     activeId,
@@ -129,24 +130,43 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       replyByUser: Number(s.reply_by_user ?? 0),
       closed: Number(s.closed ?? 0),
       totalTickets: Number(s.total_tickets ?? 0),
-      totalMessages: Number(s.total_msgs ?? 0),
     },
   };
 };
 
 export const actions: Actions = {
+  /** A-13: explicit POST action to mark admin view; replaces side-effect in load. */
+  markRead: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("ticket-mark-read", (locals as any).ip ?? "0.0.0.0", 60, 60);
+    const form = await request.formData();
+    const ticketId = Number(form.get("ticketId"));
+    if (!Number.isFinite(ticketId) || ticketId <= 0)
+      return fail(400, { error: "ID tiket tidak valid." });
+    await db.execute(
+      sql`UPDATE message SET is_read = 1 WHERE ticket_id = ${ticketId} AND type = 'user'`,
+    );
+    return { success: "OK" };
+  },
+
   reply: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("ticket-reply", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const ticketId = Number(form.get("ticketId"));
     const msg = String(form.get("message") ?? "").trim();
-    if (!ticketId || !msg) return fail(400, { error: "Pesan wajib diisi." });
+    if (!Number.isFinite(ticketId) || ticketId <= 0 || !msg)
+      return fail(400, { error: "Pesan wajib diisi." });
 
     // Get subject & user_id from first message
-    const [first] = await db.execute(
+    const firstRes = await db.execute(
       sql`SELECT user_id, subject FROM message WHERE ticket_id = ${ticketId} ORDER BY id ASC LIMIT 1`,
     );
-    const f = (first as any)[0];
-    if (!f) return fail(404, { error: "Tiket tidak ditemukan." });
+    const f =
+      (firstRes as unknown as any[])[0] && Array.isArray((firstRes as unknown as any[])[0])
+        ? (firstRes as unknown as any[])[0][0]
+        : (firstRes as unknown as any[])[0];
+    if (!f || f.user_id == null) return fail(404, { error: "Tiket tidak ditemukan." });
 
     await db.execute(sql`
       INSERT INTO message (user_id, type, subject, message, status, created_at, ticket_id, is_read)
@@ -167,9 +187,11 @@ export const actions: Actions = {
   },
 
   close: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("ticket-close", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const ticketId = Number(form.get("ticketId"));
-    if (!ticketId) return fail(400, { error: "ID tidak valid." });
+    if (!Number.isFinite(ticketId) || ticketId <= 0) return fail(400, { error: "ID tidak valid." });
     await db.execute(sql`UPDATE message SET status = 'Closed' WHERE ticket_id = ${ticketId}`);
 
     await logAudit({
@@ -183,9 +205,11 @@ export const actions: Actions = {
   },
 
   reopen: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("ticket-reopen", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const ticketId = Number(form.get("ticketId"));
-    if (!ticketId) return fail(400, { error: "ID tidak valid." });
+    if (!Number.isFinite(ticketId) || ticketId <= 0) return fail(400, { error: "ID tidak valid." });
     await db.execute(sql`UPDATE message SET status = 'Pending' WHERE ticket_id = ${ticketId}`);
 
     await logAudit({

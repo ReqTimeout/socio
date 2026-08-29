@@ -6,10 +6,13 @@ import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   if (!locals.user) throw redirect(303, "/login");
+  // A-01: viewer audit_log hanya Admin (bukan Member/Agen/Reseller).
+  if (locals.user.level !== "Admin") throw redirect(303, "/");
 
   const q = String(url.searchParams.get("q") ?? "").trim();
   const action = String(url.searchParams.get("action") ?? "").trim();
-  const page = Math.max(1, Number(url.searchParams.get("p") ?? 1));
+  const rawP = Number(url.searchParams.get("p") ?? 1);
+  const page = Number.isFinite(rawP) && rawP >= 1 && rawP <= 1000 ? rawP : 1; // A-15
   const limit = 30;
   const offset = (page - 1) * limit;
 

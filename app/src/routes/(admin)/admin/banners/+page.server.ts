@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { promotionBanners } from "@socio/db/schema";
 import { eq, asc, desc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
 
 const POSITIONS = [
@@ -53,6 +53,8 @@ function parseDate(v: string | null): Date | null {
 
 export const actions: Actions = {
   save: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("banner-save", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const id = Number(form.get("id") ?? 0);
     const title = String(form.get("title") ?? "").trim();
@@ -70,6 +72,13 @@ export const actions: Actions = {
       return fail(400, { error: "Posisi tidak valid." });
     if (startAt && endAt && endAt < startAt)
       return fail(400, { error: "Tanggal berakhir harus setelah tanggal mulai." });
+    // Validasi URL sederhana (imageUrl/linkUrl) untuk cegah javascript: dll.
+    for (const [k, v] of [
+      ["imageUrl", imageUrl],
+      ["linkUrl", linkUrl],
+    ]) {
+      if (v && !/^https?:\/\//i.test(v)) return fail(400, { error: `${k} harus http/https.` });
+    }
 
     const values = {
       title,
@@ -108,9 +117,11 @@ export const actions: Actions = {
   },
 
   toggle: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("banner-toggle", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
-    if (!id) return fail(400, { error: "ID wajib." });
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID wajib." });
 
     const [b] = await db
       .select({
@@ -126,7 +137,7 @@ export const actions: Actions = {
     const next = b.isActive ? 0 : 1;
     await db.update(promotionBanners).set({ isActive: next }).where(eq(promotionBanners.id, id));
     await logAudit({
-      adminId: Number(locals.user!.id),
+      adminId: Number(locals.user.id),
       action: next ? "activate_banner" : "deactivate_banner",
       entity: "banner",
       entityId: id,
@@ -137,9 +148,11 @@ export const actions: Actions = {
   },
 
   delete: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("banner-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
-    if (!id) return fail(400, { error: "ID wajib." });
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID wajib." });
 
     const [b] = await db
       .select({ id: promotionBanners.id, title: promotionBanners.title })
@@ -150,7 +163,7 @@ export const actions: Actions = {
 
     await db.delete(promotionBanners).where(eq(promotionBanners.id, id));
     await logAudit({
-      adminId: Number(locals.user!.id),
+      adminId: Number(locals.user.id),
       action: "delete_banner",
       entity: "banner",
       entityId: id,

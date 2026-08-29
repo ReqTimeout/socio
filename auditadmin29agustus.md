@@ -68,7 +68,7 @@ $effect(() => {
 
 **Fix yang direkomendasikan**: samakan dengan pola services di 5 halaman itu.
 
-### 1.3 ⚠️ P1 — Stat bar tickets: angka per-PESAN, tab filter per-TIKET → tidak konsisten
+### 1.3 ✅ FIXED (P1) — Stat bar tickets: angka per-PESAN, tab filter per-TIKET → tidak konsisten
 
 **Lokasi**: `app/src/routes/(admin)/admin/tickets/+page.server.ts:54-63` (stats query `FROM message` tanpa `rn=1` filter) vs list query (agregasi `rn = 1` per ticket).
 
@@ -78,15 +78,19 @@ $effect(() => {
 
 **Fix yang direkomendasikan**: hitung stat dari subquery `rn=1` (1 row per tiket, status = status pesan terakhir): `Pending 30 · Answered 7 · Closed 46 = 83`... tetap ≠ 76 karena status disimpan per-pesan dan tiket bisa punya pesan dengan status campur (30+7+46=83; 76 tiket punya 155 pesan). Opsi lain: tambahkan kolom `status` di tabel tiket (normalisasi), atau minimal samakan basis hitung + label "tiket" vs "pesan".
 
-### 1.4 ⚠️ P1 — Filter level Users menampilkan level yang tidak ada (Demo/Blacklist/Developers)
+**FIX applied**: stats query pakai `COUNT(DISTINCT CASE WHEN status=X THEN ticket_id END)` — basis hitung = per-TIKET per-status, identik dengan perilaku tab filter (tiket muncul di tab X kalau PESAN TERAKHIR yang match filter X — query list apply filter di dalam subquery rn=1, jadi tiket yang pernah Pending juga masuk tab Pending). Verifikasi DB: stat `Pending 30 · Answered 7 · Closed 46 · total 76` = jumlah baris yang benar-benar muncul saat klik tiap tab (30/7/46) ✅. `totalMessages` dihapus dari payload (tidak dipakai UI).
+
+### 1.4 ✅ FIXED (P1) — Filter level Users menampilkan level yang tidak ada (Demo/Blacklist/Developers)
 
 **Lokasi**: `app/src/routes/(admin)/admin/users/+page.svelte:116`
 
 `const levels = ["Demo","Member","Agen","Reseller","Blacklist","Admin","Developers"]` — tapi verifikasi DB: level yang ada hanya `Member 2.973 · Reseller 248 · Agen 4 · Admin 4`. Tiga filter (Demo, Blacklist, Developers) selalu kosong — noise di UI yang bikin admin bingung level mana yang real.
 
-**1.4b ⛔ terkonfirmasi — `setLevel` whitelist level mati**: `app/src/routes/(admin)/admin/users/+page.server.ts:187` — `const allowed = ["Demo","Member","Agen","Reseller","Blacklist","Admin","Developers"]`. Admin bisa set user ke `Blacklist`/`Developers`/`Demo` — level yang tidak dikenal pricing (`pricing_rules` hanya Member/Agen/Reseller/Admin) dan tidak ada enforcement status "Blacklist" di flow order → user level Blacklist **tetap bisa order** (hanya level string berubah). Naikkan 1.4b ke P1: whitelist `setLevel` harus = `["Member","Agen","Reseller","Admin"]`, dan kalau mau ada "Blacklist" sebagai blokir order, enforce `status='0'` (suspend) sebagai gantinya — mekanisme suspend sudah ada dan benar.
+**FIX applied**: `levels = ["Member","Agen","Reseller","Admin"]` (filter chips + dropdown manage setLevel). Verifikasi: 0 user di DB punya level di luar 4 real — tidak ada edge case user legacy yang option-nya hilang.
 
-### 1.5 ⚠️ P1 — 2FA admin & RBAC roles: toggle ada, enforcement tidak ada
+**1.4b ✅ FIXED (P1) — `setLevel` whitelist level mati**: `app/src/routes/(admin)/admin/users/+page.server.ts:187` — `const allowed = ["Member","Agen","Reseller","Admin"]` sekarang. Admin tidak bisa lagi set user ke `Blacklist`/`Developers`/`Demo` (level tidak dikenal pricing & tanpa enforcement order-block). Mekanisme suspend (`status='0'`) tetap ada sebagai cara blokir user yang benar.
+
+### 1.5 ✅ FIXED (P1) — 2FA admin & RBAC roles: toggle ada, enforcement tidak ada
 
 **Lokasi**: `app/src/routes/(admin)/admin/settings/+page.server.ts:115-128` (toggle2fa), `app/src/lib/server/admin.ts:15-21` (assertAdmin).
 
@@ -95,23 +99,29 @@ $effect(() => {
 
 **Fix yang direkomendasikan**: (a) jadikan toggle 2FA disabled + label "M3.5" sampai enforcement ada (hindari rasa aman palsu), atau implementasi TOTP check di login; (b) RBAC: minimal pisahkan `superadmin-only` actions (settings, provider delete, pricing apply) vs admin biasa di `assertAdmin` sebelum M3.5.
 
-### 1.6 ⚠️ P1 — `/admin/pricing` overflow horizontal di mobile (scrollWidth 578px di 390px viewport)
+**FIX applied (a)**: action `toggle2fa` dihapus dari server (dead endpoint tidak bisa di-POST manual), toggle UI → button disabled "Segera" + label "Belum di-enforce — menunggu implementasi M3.5". `api2fa` hardcode `false` + TODO M3.5. **RBAC (b) DROPPED** — keputusan user 29 Agustus 2026: ikuti PHP legacy, satu role admin penuh (`level='Admin'`), tidak ada superadmin. Tabel matriks role di settings hanya display informational.
+
+### 1.6 ✅ FIXED (P1) — `/admin/pricing` overflow horizontal di mobile (scrollWidth 578px di 390px viewport)
 
 **Lokasi**: `app/src/routes/(admin)/admin/pricing/+page.svelte:239-249` (sample cards).
 
 Grid `sm:grid-cols-3` turun ke 1 kolom di mobile — benar — tapi anak grid tidak punya `min-w-0`, dan teks `Base Rp317.010 · Modal Rp264.175` (nama layanan panjang + angka tabular) melebihi track → track melebihi viewport → horizontal scroll 578-390 = **188px**. Ini melanggar konvensi `min-w-0` yang sudah tercatat di AGENTS.md.
 
-**Fix**: tambah `min-w-0` di div anak grid (pattern sama dengan fix `audituser29agustus` sebelumnya), atau bungkus angka dengan `truncate`.
+**FIX applied**: `min-w-0` di div anak grid + `truncate` di baris "Base … · Modal …" (pattern sama dengan fix `audituser29agustus` sebelumnya).
 
-### 1.7 ⚠️ P2 — Dashboard & listing: angka exclude level Admin tanpa label
+### 1.7 ✅ FIXED (P2) — Dashboard & listing: angka exclude level Admin tanpa label
 
 **Lokasi**: `app/src/routes/(admin)/admin/deposits/+page.server.ts` (query `ne(users.level,"Admin")`), orders serupa.
 
 Angka "665 deposits · Rp116.301.257 Success" exclude order/deposit milik admin (by design, terverifikasi exact match dengan query DB). Tapi tidak ada footnote/tooltip yang menjelaskan — admin yang rekonsiliasi dengan total mentah DB (26.031 orders) akan menemukan selisih 173 dan bingung. **Fix murah**: satu baris caption "Mengexclude akun Admin" di bawah stat.
 
-### 1.8 ⛔ Data (bukan bug kode) — Deposit #1456 amount Rp22.000.008.650 status Canceled
+**FIX applied**: caption "Statistik & daftar mengexclude akun Admin…" di deposits + "Statistik mengexclude akun Admin…" di orders, di bawah KPI strip. Dashboard tidak exclude-admin → tanpa caption (perilaku benar). Playwright-verified.
+
+### 1.8 ✅ FIXED (P2, keputusan user 29 Agustus 2026) — Deposit #1456 amount Rp22.000.008.650 status Canceled
 
 Legacy trash data: satu deposit canceled bernilai Rp22 Membuat stat "Canceled Rp22.056.391.705" di dashboard admin terlihat seperti bencana keuangan. Sama pola dengan temuan user-audit (order Partial 2023). **Rekomendasi**: HANYA fix via script SQL dengan approval user (data legacy = sumber kebenaran historis), atau filter anomali amount > Rp100jt di stat display. Jangan hapus tanpa backup.
+
+**FIX applied (pilihan user: filter display, tanpa mutasi data)**: stat `Canceled` deposits kini `SUM(CASE WHEN amount > 100000000 THEN 0 ELSE amount END)` → "Tolak Rp56.390.840" (bukan Rp22 miliar). Data legacy tidak disentuh. Caption diperluas: "Total Batal mengexclude deposit legacy >Rp100jt (anomali #1456)". Playwright-verified.
 
 ### 1.9 ✅ Deposit confirm — solid (pembanding PHP)
 
@@ -128,12 +138,13 @@ Rebuild sudah melewati PHP legacy di semua aspek: idempotent (409 kalau bukan Pe
 - **Tables**: padat & informatif (username, email, level, saldo, action). Kolom aksi konsisten kanan. Truncate benar di username email panjang.
 - **Drawer/detail**: orders & deposits punya drawer detail (klik row) — bagus untuk konteks tanpa navigasi. Tickets punya panel percakapan (list kiri, thread kanan) yang berfungsi baik.
 - **Modal Kelola user** (users): form level + status + adjust saldo dalam 1 modal dengan confirm dialog terpisah untuk aksi uang (G30 ✅) — dua-step yang tepat untuk aksi destruktif.
+- ~~**Modal Kelola user tidak tersedia di mobile**~~ ✅ COVERED — tombol "Kelola" sudah ada di card view mobile (stale finding saat audit); Playwright-verified 390×844: 40 tombol Kelola, klik → modal level terbuka.
 
 ### Mobile (390×844)
 
 - **Sidebar → off-canvas drawer**: jalan (hamburger toggle). 16 menu item scrollable di drawer.
 - **Tables → card list** di users/orders/deposits ✅ — pola transform yang benar untuk mobile.
-- **Modal Kelola user tidak tersedia di mobile**: list card mobile tidak punya tombol/klik untuk buka modal Kelola — admin di HP bisa lihat tapi TIDAK BISA manage user (P3→P2 kalau admin sering mobile; catat sebagai gap).
+- ~~**Modal Kelola user tidak tersedia di mobile**~~: list card mobile tidak punya tombol/klik untuk buka modal Kelola — ✅ stale/covered (tombol Kelola ada di card view, lihat Desktop notes).
 - **Stat strip 4-kolom** men jadi 2×2 atau scroll — per halaman beda perilaku (konsistensi P3).
 - **Overflow**: hanya `/admin/pricing` (lihat 1.6). 15 halaman lain scrollWidth == viewport ✅.
 
@@ -147,9 +158,11 @@ Rebuild sudah melewati PHP legacy di semua aspek: idempotent (409 kalau bukan Pe
 | News | Tip "💡 setiap Simpan akan push ke NotifBell..." — informatif tapi panjang; placeholder form ok |
 | Umum | Campur EN/ID: menu "Users/Orders/Saldo/Layanan/Harga" + "Berita/Settings" — konsisten pilih satu bahasa untuk label menu (P3) |
 
-### 1.10 ⚠️ P2 — Kalkulator pricing di Settings: contoh layanan tidak realistis
+### 1.10 ✅ FIXED (P2) — Kalkulator pricing di Settings: contoh layanan tidak realistis
 
 "Square Bookmark [Save] | base 8.390.322/1k" → jual Member Rp25.170.966/1k. Ini bukan bug query (sample ambil 1 layanan real dari DB) tapi layanan contoh yang dipilih adalah outlier mahal — admin tidak bisa pakai kalkulator untuk "rasakan" harga normal. **Fix**: pakai layanan median harga atau hardcode contoh nominal jelas (seperti pricing page yang pakai median Rp154.728/1k — lebih baik).
+
+**FIX applied**: sample via SQL median (`ROW_NUMBER() OVER (ORDER BY price, id)` + `rp = FLOOR((n+1)/2)`) → Instagram Turkey Random Comment Rp154.728/1k (bukan outlier Rp8jt). Playwright-verified: "Square Bookmark" tidak lagi muncul.
 
 ---
 
@@ -161,11 +174,11 @@ Sudah ada & lebih baik: audit log (G1 ✅ semua action destruktif), encrypt API 
 
 | Gap | Dampak operasional | Prioritas |
 |---|---|---|
-| **Bulk price set per-kategori** | 11.063 layanan hanya bisa di-harga via: (a) markup global 2-step, (b) edit satu-satu. PHP lama punya set harga per provider-category. Admin tidak bisa "naikkan 10% semua TikTok" tanpa markup global | Tinggi |
+| ~~**Bulk price set per-kategori**~~ ✅ DONE | Action `bulkCategoryPrice` di services/+page.server.ts: mode `set_base` (modal nominal/1k) & `adjust` (±%), rekonstruksi base=`price-profit`, recompute via pricing_rules dalam transaction, audit `bulk_category_price`, rate-limit 5/60s. UI: button "Harga Kategori" saat filter kategori aktif + modal + ConfirmDialog. Playwright+DB-verified: 3 layanan test base 1000→2000 → Member 3000→6000, Agen 2500→5000, Reseller 2800→5600 | Tinggi |
 | **Bulk user actions** (select-all suspend/unsuspend, bulk level change) | Saat ini select box hanya untuk export CSV; tidak ada aksi massal | Sedang |
 | **Banner promo wizard** | Banner CRUD ada (upload via URL R2 manual) — tidak ada upload file langsung; harus upload ke R2 dulu lalu tempel URL | Sedang |
 | **News → broadcast segmented** | News push ke semua user status 1; PHP lama punya broadcast per level (member/reseller). Email campaign segment ada (M3 CRUD) tapi worker kirim baru jalan di cron M4 | Sedang |
-| **Order manual refund** (admin input order ID → refund ke saldo) | Refund sekarang hanya via cron refund worker (auto untuk status tertentu). PHP lama bisa refund manual per-order | Tinggi (klaim user "dana tidak kembali" muncul berkali-kali di tickets) |
+| ~~**Order manual refund**~~ ✅ DONE | Action `refund` di orders/+page.server.ts: `REFUNDABLE_STATUS` (Pending/Processing/In progress/Error/Partial/Canceled), amount 0=full `min(amount,price)`, CAS `SET is_refund=1 WHERE is_refund=0` → 409 idempotent, balance+`balance_logs type='ref'`+audit `manual_refund_order`+notif best-effort, rate-limit 10/60s. UI: input amount + confirm dialog di drawer. Playwright+DB-verified: full refund Rp3.000 → saldo user naik, tombol refund hilang setelah is_refund=1 | Tinggi |
 | **Quick balance top-up tanpa deposit** (deposit manual entry) | PHP lama: admin bisa input deposit manual tanpa bukti. Rebuild: hanya confirm deposit yang sudah ada — tidak bisa input manual | Rendah (bisa di-cover adjust balance + cap Rp1jt) |
 
 ---
@@ -176,19 +189,19 @@ Sudah ada & lebih baik: audit log (G1 ✅ semua action destruktif), encrypt API 
 1. ~~**Affiliate approve rollback-silent**~~ ✅ — 3 bug berlapis di-fix (`__commit` hack, enhance salah fase, affectedRows tuple) & diverifikasi fungsional via Playwright + DB (approve → Paid + saldo kredit + log wd; idempoten 400).
 2. ~~**Search 5 halaman**~~ ✅ — pola services diterapkan; diverifikasi Playwright: ketik "febian" → value persist + URL `?q=` di semua 5 halaman.
 
-### P1 — fix minggu ini
-3. Stat tickets per-tiket (1.3) + label basis hitung.
-4. Filter level users: hapus Demo/Blacklist/Developers atau dinamis dari DB (1.4) + whitelist `setLevel` → hanya Member/Agen/Reseller/Admin (1.4b terkonfirmasi line 187).
-5. 2FA toggle: disable sampai enforcement / implement (1.5a).
-6. Pricing mobile overflow `min-w-0` (1.6).
+### P1 — fix minggu ini — ✅ SELESAI 29 Agustus 2026 (verified E2E, lihat verify-p1.mjs)
+3. ~~Stat tickets per-tiket (1.3) + label basis hitung~~ ✅ — `COUNT(DISTINCT CASE WHEN m.status=X THEN m.ticket_id END)`; tab Pending 30 = match 100%.
+4. ~~Filter level users: hapus Demo/Blacklist/Developers + whitelist `setLevel`~~ ✅ — 4 real level (Member/Agen/Reseller/Admin) di filter + whitelist server (DB: 0 user di luar 4 level).
+5. ~~2FA toggle: disable sampai enforcement / implement (1.5a)~~ ✅ — action `toggle2fa` dihapus dari server; button disabled "Segera" (TODO M3.5).
+6. ~~Pricing mobile overflow `min-w-0` (1.6)~~ ✅ — sample cards `min-w-0` + `truncate`; scrollWidth 390 == viewport.
 
-### P2 — backlog dekat
-7. RBAC enforcement minimal superadmin vs admin (1.5b, M3.5 scope).
-8. Caption exclude-admin di stat (1.7).
-9. Kalkulator settings pakai layanan median (1.10).
-10. Bulk price per kategori + refund manual per order (Phase 3 gap table).
-11. Mobile: tombol Kelola user di card view (Phase 2 mobile).
-12. Cleanup data legacy deposit #1456 — via script + approval user (1.8).
+### P2 — backlog dekat — ✅ SELESAI 29 Agustus 2026
+7. ~~RBAC enforcement minimal superadmin vs admin (1.5b, M3.5 scope)~~ ✅ DROPPED — keputusan user: ikuti PHP legacy, hanya `level='Admin'` satu role admin penuh, tidak ada superadmin (`check_session_admin.php` verifikasi: PHP lama juga cuma cek `level='Admin'`).
+8. ~~Caption exclude-admin di stat (1.7)~~ ✅ — deposits + orders; Playwright-verified.
+9. ~~Kalkulator settings pakai layanan median (1.10)~~ ✅ — SQL median; Playwright-verified.
+10. ~~Bulk price per kategori + refund manual per order~~ ✅ — action `bulkCategoryPrice` + `refund`; Playwright+DB-verified (test data dibuat & dibersihkan).
+11. ~~Mobile: tombol Kelola user di card view~~ ✅ — stale finding, tombol sudah ada; Playwright-verified.
+12. ~~Cleanup data legacy deposit #1456~~ ✅ — keputusan user: filter display `amount > Rp100jt` dari stat Canceled (tanpa mutasi data legacy); "Tolak" kini Rp56.390.840; Playwright-verified.
 
 ### P3 — polish
 13. Konsistensi bahasa menu (pilih ID atau EN semua).
@@ -208,3 +221,5 @@ Sudah ada & lebih baik: audit log (G1 ✅ semua action destruktif), encrypt API 
 - **Drizzle transaction rollback**: `app/node_modules/drizzle-orm/mysql2/session.js` — `catch (err) { await tx.execute(sql\`rollback\`); throw err; }` untuk semua throw termasuk `{ __commit: true }`.
 - **Pola `__commit`**: `rg "__commit" app/src packages` → hanya affiliate/+page.server.ts.
 - **Search server-side jalan**: `/admin/users?q=febian` → 3 hasil; `/admin/audit?q=deposit` (GET form) jalan — bug murni hydration `$effect` Svelte 5.
+- **P2 verify (verify-p2*.mjs, 29 Agustus 2026)**: caption deposits/orders OK · kalkulator median sample "Instagram Turkey Random Comment Rp154.728" (bukan Square Bookmark) · mobile Kelola 40 tombol + modal terbuka · bulk price: 3 layanan test (kategori 999999 buatan) base 1000→2000 → Member 6000/Agen 5000/Reseller 5600, audit `bulk_category_price` tercatat · refund manual: order test #900001 full Rp3.000 → `is_refund=1`, `price` 3000→0, saldo testuser 0→3000, `balance_logs type='ref'`, audit `manual_refund_order`, tombol refund hilang setelah refunded · semua test data dibersihkan (orders/services/categories/audit_log/balance_logs). Fix tambahan saat verify: ConfirmDialog services kini punya `label`/`danger` per-action (bulk price pakai "Ya, Update Harga", aksi hapus tetap default "Hapus").
+- **Anomali #1456 verify**: stat "Tolak" deposits 22.062.572.280 → Rp56.390.840 setelah `SUM(CASE WHEN amount > 100000000 THEN 0 ELSE amount END)`; 496 count non-admin; angka Rp22 miliar tidak lagi muncul; caption menyebut exclude legacy >Rp100jt. RBAC superadmin di-drop per keputusan user (PHP legacy: hanya `level='Admin'`).

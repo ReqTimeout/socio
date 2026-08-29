@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { services, categories, provider, pricingRules } from "@socio/db/schema";
 import { sql, eq, and, or, desc, asc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
 
 const PAGE_SIZE = 25;
@@ -41,7 +41,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const q = String(url.searchParams.get("q") ?? "").trim();
   const cat = String(url.searchParams.get("cat") ?? "").trim();
   const status = String(url.searchParams.get("status") ?? "").trim();
-  const page = Math.max(1, Number(url.searchParams.get("p") ?? 1));
+  const rawP = Number(url.searchParams.get("p") ?? 1);
+  const page = Number.isFinite(rawP) && rawP >= 1 && rawP <= 1000 ? rawP : 1; // A-15
 
   // filters
   const conds: any[] = [];
@@ -128,6 +129,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 export const actions: Actions = {
   addService: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("service-add", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const categoryId = Number(form.get("categoryId"));
     const providerId = Number(form.get("providerId"));
@@ -141,6 +144,7 @@ export const actions: Actions = {
 
     if (!categoryId || !providerId || !providerServiceId || !serviceName || basePrice <= 0)
       return fail(400, { error: "Semua field wajib diisi." });
+    if (min > max) return fail(400, { error: "Min tidak boleh > Max." });
 
     // unique checks (samakan legacy)
     const [dupName] = await db
@@ -194,9 +198,11 @@ export const actions: Actions = {
   },
 
   editService: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("service-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
-    if (!id) return fail(400, { error: "ID layanan tidak valid." });
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID layanan tidak valid." });
 
     const basePrice = Number(form.get("profit")) || 0;
     const min = Number(form.get("min")) || 1;
@@ -207,6 +213,8 @@ export const actions: Actions = {
     const type = String(form.get("type") ?? "Default");
 
     if (!serviceName) return fail(400, { error: "Nama layanan wajib." });
+    if (basePrice <= 0) return fail(400, { error: "Profit/harga harus > 0." });
+    if (min > max) return fail(400, { error: "Min tidak boleh > Max." });
 
     const p = await computePricing(basePrice);
     await db
@@ -241,9 +249,11 @@ export const actions: Actions = {
   },
 
   deleteService: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("service-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
-    if (!id) return fail(400, { error: "ID tidak valid." });
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });
     const [s] = await db
       .select({ name: services.serviceName })
       .from(services)
@@ -262,11 +272,14 @@ export const actions: Actions = {
   },
 
   bulkDelete: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("service-bulk", (locals as any).ip ?? "0.0.0.0", 5, 60);
     const form = await request.formData();
     const ids = form
       .getAll("id")
       .map((v) => Number(v))
-      .filter((v) => v > 0);
+      .filter((v) => Number.isFinite(v) && v > 0)
+      .slice(0, 500); // safety cap — cegah IN(...10000)
     if (!ids.length) return fail(400, { error: "Pilih minimal 1 layanan." });
     await db.delete(services).where(
       sql`${services.id} IN (${sql.join(
@@ -284,10 +297,121 @@ export const actions: Actions = {
     return { success: `${ids.length} layanan dihapus.` };
   },
 
+  /**
+   * Bulk price per kategori (G16): set ulang harga semua layanan dalam satu
+   * kategori. Mode `set_base` = modal baru nominal per 1k; mode `adjust` =
+   * geser modal sebesar ±%. Harga jual per level dihitung ulang via
+   * computePricing (pricing_rules tetap sumber kebenaran markup).
+   */
+  bulkCategoryPrice: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("service-bulk-price", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const form = await request.formData();
+    const categoryId = Number(form.get("categoryId"));
+    const mode = String(form.get("mode") ?? "adjust");
+    const value = Number(form.get("value"));
+
+    if (!Number.isFinite(categoryId) || categoryId <= 0)
+      return fail(400, { error: "Kategori tidak valid." });
+    if (!["set_base", "adjust"].includes(mode)) return fail(400, { error: "Mode tidak valid." });
+    if (!Number.isFinite(value)) return fail(400, { error: "Nilai tidak valid." });
+    if (mode === "set_base" && value <= 0) return fail(400, { error: "Modal baru harus > 0." });
+    if (mode === "adjust" && (value <= -100 || value > 1000))
+      return fail(400, { error: "Persentase harus antara -100% sampai +1000%." });
+
+    const [cat] = await db
+      .select({ id: categories.id, name: categories.name })
+      .from(categories)
+      .where(eq(categories.id, categoryId))
+      .limit(1);
+    if (!cat) return fail(404, { error: "Kategori tidak ditemukan." });
+
+    const rows = await db
+      .select({
+        id: services.id,
+        price: services.price,
+        profit: services.profit,
+      })
+      .from(services)
+      .where(eq(services.categoryId, categoryId));
+
+    // Layanan tanpa modal rekonstruksi yang sehat di-skip (harga 0 / profit aneh)
+    const targets = rows.filter((r) => r.price > 0 && r.price > r.profit && r.profit >= 0);
+    if (!targets.length)
+      return fail(400, { error: "Tidak ada layanan dengan harga valid di kategori ini." });
+
+    const rules = await db.select().from(pricingRules);
+    const by: Record<string, any> = {};
+    for (const r of rules) by[r.level] = r;
+    const prices = (base: number) => {
+      const mk = (level: string, fallback: number) => {
+        const r = by[level];
+        const v = r
+          ? base * (1 + Number(r.markupPercent) / 100) + Number(r.flatPer1k)
+          : base * (1 + fallback / 100);
+        return Math.round(v * 100) / 100;
+      };
+      const price = mk("Member", 200);
+      const priceApi = mk("Agen", 150);
+      const priceReseller = mk("Reseller", 180);
+      return {
+        price,
+        priceApi,
+        priceReseller,
+        profit: price - base,
+        profitReseller: priceReseller - base,
+        profitAgen: priceApi - base,
+      };
+    };
+
+    const updated = await db.transaction(async (tx) => {
+      let n = 0;
+      for (const r of targets) {
+        const baseOld = r.price - r.profit;
+        const base =
+          mode === "set_base" ? value : Math.round(baseOld * (1 + value / 100) * 100) / 100;
+        if (base <= 0) continue;
+        const hp = prices(base);
+        await tx
+          .update(services)
+          .set({
+            price: hp.price,
+            priceApi: hp.priceApi,
+            priceReseller: hp.priceReseller,
+            profit: hp.profit,
+            profitReseller: hp.profitReseller,
+            profitAgen: hp.profitAgen,
+          })
+          .where(eq(services.id, r.id));
+        n++;
+      }
+      return n;
+    });
+
+    await logAudit({
+      adminId: Number(locals.user!.id),
+      action: "bulk_category_price",
+      entity: "service",
+      entityId: categoryId,
+      detail: {
+        category: cat.name,
+        mode,
+        value,
+        affected: updated,
+      },
+      ip: (locals as any).ip,
+    });
+    return {
+      success: `Harga ${updated} layanan kategori "${cat.name}" diupdate (mode: ${mode === "set_base" ? `modal baru ${value}/1k` : `${value > 0 ? "+" : ""}${value}%`}).`,
+    };
+  },
+
   toggleStatus: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("service-toggle", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
-    if (!id) return fail(400, { error: "ID tidak valid." });
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });
     const [cur] = await db
       .select({ status: services.status, name: services.serviceName })
       .from(services)
@@ -308,12 +432,14 @@ export const actions: Actions = {
   },
 
   addCategory: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("category-add", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const name = String(form.get("name") ?? "").trim();
     if (!name) return fail(400, { error: "Nama kategori wajib." });
     const [row] = await db.insert(categories).values({ name }).$returningId();
     await logAudit({
-      adminId: Number(locals.user!.id),
+      adminId: Number(locals.user.id),
       action: "add_category",
       entity: "category",
       entityId: row?.id,
@@ -324,13 +450,15 @@ export const actions: Actions = {
   },
 
   editCategory: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("category-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
     const name = String(form.get("name") ?? "").trim();
-    if (!id || !name) return fail(400, { error: "Field wajib diisi." });
+    if (!Number.isFinite(id) || id <= 0 || !name) return fail(400, { error: "Field wajib diisi." });
     await db.update(categories).set({ name }).where(eq(categories.id, id));
     await logAudit({
-      adminId: Number(locals.user!.id),
+      adminId: Number(locals.user.id),
       action: "edit_category",
       entity: "category",
       entityId: id,
@@ -341,10 +469,11 @@ export const actions: Actions = {
   },
 
   deleteCategory: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("category-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
-    if (!id) return fail(400, { error: "ID tidak valid." });
-    // Block delete kalau masih ada layanan yg reference kategori ini
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });
     const [used] = await db
       .select({ c: sql<number>`count(*)` })
       .from(services)
@@ -360,7 +489,7 @@ export const actions: Actions = {
       .limit(1);
     await db.delete(categories).where(eq(categories.id, id));
     await logAudit({
-      adminId: Number(locals.user!.id),
+      adminId: Number(locals.user.id),
       action: "delete_category",
       entity: "category",
       entityId: id,

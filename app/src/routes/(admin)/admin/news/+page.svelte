@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, toast } from "@socio/ui";
+  import { Button, ConfirmDialog, EmptyState, Icon, toast } from "@socio/ui";
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -24,6 +24,24 @@
   let modal = $state<"add" | number | null>(null);
   let fKategori = $state("");
   let fContent = $state("");
+  const KATEGORI_PRESET = [
+    "✅ Layanan Terbaru",
+    "✅ RECOMMENDED",
+    "✅ TRENDING NOW",
+    "? Layanan Turun Harga",
+    "Info",
+    "Promo",
+    "Maintenance",
+  ] as const;
+  function catTone(cat: string): string {
+    if (cat.includes("Terbaru")) return "bg-emerald-50 border-emerald-200 text-emerald-700";
+    if (cat.includes("RECOMMEND")) return "bg-sky-50 border-sky-200 text-sky-700";
+    if (cat.includes("TRENDING")) return "bg-violet-50 border-violet-200 text-violet-700";
+    if (cat.includes("Turun")) return "bg-amber-50 border-amber-200 text-amber-700";
+    if (cat.toLowerCase().includes("promo")) return "bg-rose-50 border-rose-200 text-rose-700";
+    if (cat.toLowerCase().includes("maintenance")) return "bg-ink-100 border-ink-200 text-ink-600";
+    return "bg-ink-900 border-transparent text-white";
+  }
 
   function openAdd() {
     modal = "add";
@@ -88,18 +106,32 @@
 </svelte:head>
 
 <section class="space-y-5">
-  <header class="flex flex-wrap items-end justify-between gap-3">
-    <div>
-      <h1 class="font-display text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
+  <header class="flex flex-wrap items-start justify-between gap-3">
+    <div class="min-w-0">
+      <h1
+        class="flex items-center gap-2.5 font-display text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl"
+      >
+        <span class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-white shadow-sm">
+          <Icon name="megaphone" size={18} stroke={2.5} />
+        </span>
         Berita
+        <span class="rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-bold text-white"
+          >{data.total}</span
+        >
+        {#if data.q}<span
+            class="ml-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700"
+            >"{data.q}"</span
+          >{/if}
       </h1>
-      <p class="mt-1 text-sm text-ink-500">
-        {data.total} berita
-        {#if data.q}<span class="mx-1 text-ink-300">·</span> filter:
-          <span class="font-semibold text-ink-700">"{data.q}"</span>{/if}
+      <p class="mt-1.5 text-xs font-medium text-ink-500">
+        Broadcast ke <span class="font-bold text-ink-700">NotifBell + /notif</span> (type info) & popup
+        user · kategori pill + jadwal broadcast
       </p>
     </div>
-    <Button size="md" onclick={openAdd}>+ Buat Berita</Button>
+    <Button size="md" onclick={openAdd}>
+      <Icon name="plus" size={16} stroke={2.5} class="-ml-0.5" />
+      Buat Berita
+    </Button>
   </header>
 
   <form
@@ -107,17 +139,25 @@
       e.preventDefault();
       doSearch();
     }}
-    class="flex gap-2"
+    class="flex items-center gap-2"
   >
-    <input
-      bind:value={q}
-      placeholder="Cari kategori / konten…"
-      class="h-10 flex-1 rounded-xl border border-ink-200 bg-surface px-3 text-sm focus:border-ink-400 focus:outline-none"
-    />
-    <Button type="submit" variant="ghost">Cari</Button>
+    <div class="relative flex-1">
+      <span
+        class="pointer-events-none absolute inset-y-0 left-3 grid place-items-center text-ink-400"
+      >
+        <Icon name="search" size={16} />
+      </span>
+      <input
+        bind:value={q}
+        placeholder="Cari kategori / konten…"
+        class="h-10 w-full rounded-xl border border-ink-200 bg-surface pl-9 pr-3 text-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+      />
+    </div>
+    <Button type="submit" size="sm">Cari</Button>
     {#if data.q}
       <Button
         type="button"
+        size="sm"
         variant="ghost"
         onclick={() => {
           q = "";
@@ -126,6 +166,14 @@
       >
     {/if}
   </form>
+
+  <p class="text-[11px] font-medium text-ink-400">
+    💡 Tip: setiap <span class="font-semibold text-ink-600">Simpan</span> akan push ke
+    <span class="font-bold">NotifBell</span>
+    semua user status `1` (muncul di
+    <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px]">/notif?type=news</code>) &
+    set <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px]">read_popup=0</code> untuk popup.
+  </p>
 
   {#if data.items.length === 0}
     <EmptyState
@@ -139,23 +187,37 @@
     <!-- Mobile cards -->
     <ul class="space-y-2 lg:hidden">
       {#each data.items as r (r.id)}
-        <li class="rounded-2xl border border-ink-100 p-3">
-          <div class="flex items-center justify-between gap-2">
-            <span class="rounded-full bg-ink-900 px-2.5 py-1 text-xs font-bold text-white"
-              >{r.kategori || "—"}</span
+        <li
+          class="reveal overflow-hidden rounded-2xl border border-ink-100 bg-surface"
+          style="--d:{0}ms"
+        >
+          <div
+            class="flex items-center justify-between gap-2 border-b border-ink-100 bg-ink-50/60 px-3 py-2"
+          >
+            <span
+              class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold {catTone(
+                r.kategori,
+              )}">{r.kategori || "—"}</span
             >
-            <span class="text-xs text-ink-400">#{r.id} · {fmtDate(r.createdAt)}</span>
+            <span class="font-mono text-[11px] text-ink-400">#{r.id} · {fmtDate(r.createdAt)}</span>
           </div>
-          <p class="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-ink-700">{r.content}</p>
-          <div class="mt-3 flex gap-2">
-            <Button size="sm" variant="ghost" class="flex-1" onclick={() => openEdit(r)}
-              >Edit</Button
+          <p
+            class="line-clamp-4 whitespace-pre-wrap px-3 py-2.5 text-sm leading-relaxed text-ink-700"
+          >
+            {r.content}
+          </p>
+          <div class="flex gap-1.5 border-t border-ink-100 bg-ink-50/30 px-3 py-2">
+            <button
+              type="button"
+              onclick={() => openEdit(r)}
+              class="flex-1 rounded-full bg-ink-900 px-3 py-2 text-xs font-bold text-white hover:bg-ink-800"
+              >Edit</button
             >
-            <Button
-              size="sm"
-              variant="ghost"
-              class="shrink-0 text-danger"
-              onclick={() => askDelete(r)}>Hapus</Button
+            <button
+              type="button"
+              onclick={() => askDelete(r)}
+              class="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-100"
+              >Hapus</button
             >
           </div>
         </li>
@@ -163,38 +225,51 @@
     </ul>
 
     <!-- Desktop table -->
-    <div class="hidden overflow-x-auto rounded-2xl border border-ink-100 lg:block">
+    <div class="hidden overflow-hidden rounded-2xl border border-ink-100 lg:block">
       <table class="w-full text-sm">
-        <thead class="bg-ink-50 text-left text-xs uppercase tracking-wide text-ink-500">
+        <thead class="bg-ink-50/80 text-left text-xs uppercase tracking-wide text-ink-500">
           <tr>
-            <th class="px-4 py-3 font-semibold">ID</th>
-            <th class="px-4 py-3 font-semibold">Kategori</th>
-            <th class="px-4 py-3 font-semibold">Konten</th>
-            <th class="px-4 py-3 font-semibold">Tanggal</th>
-            <th class="px-4 py-3 text-right font-semibold">Aksi</th>
+            <th class="px-4 py-2.5 font-semibold">ID</th>
+            <th class="px-3 py-2.5 font-semibold">Kategori</th>
+            <th class="px-4 py-2.5 font-semibold">Konten</th>
+            <th class="px-4 py-2.5 font-semibold">Tanggal</th>
+            <th class="px-4 py-2.5 text-right font-semibold">Aksi</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-ink-100">
           {#each data.items as r (r.id)}
-            <tr class="hover:bg-ink-50/60">
-              <td class="px-4 py-3 font-mono text-xs text-ink-500">#{r.id}</td>
-              <td class="px-4 py-3">
+            <tr class="group hover:bg-ink-50/60">
+              <td class="px-4 py-3 font-mono text-xs text-ink-400">#{r.id}</td>
+              <td class="px-3 py-3">
                 <span
-                  class="inline-flex rounded-full bg-ink-900 px-2.5 py-1 text-xs font-bold text-white"
-                  >{r.kategori}</span
+                  class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold {catTone(
+                    r.kategori,
+                  )}">{r.kategori}</span
                 >
               </td>
-              <td class="max-w-md px-4 py-3">
-                <div class="line-clamp-2 whitespace-pre-wrap text-ink-700">{r.content}</div>
+              <td class="max-w-[520px] px-4 py-3">
+                <div
+                  class="line-clamp-2 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-700 group-hover:text-ink-900"
+                >
+                  {r.content}
+                </div>
               </td>
-              <td class="whitespace-nowrap px-4 py-3 text-xs text-ink-400"
+              <td class="whitespace-nowrap px-4 py-3 text-xs text-ink-500"
                 >{fmtDate(r.createdAt)}</td
               >
               <td class="px-4 py-3">
-                <div class="flex justify-end gap-2">
-                  <Button size="sm" variant="ghost" onclick={() => openEdit(r)}>Edit</Button>
-                  <Button size="sm" variant="ghost" class="text-danger" onclick={() => askDelete(r)}
-                    >Hapus</Button
+                <div class="flex justify-end gap-1">
+                  <button
+                    type="button"
+                    onclick={() => openEdit(r)}
+                    class="grid h-8 w-8 place-items-center rounded-full bg-ink-900 text-white hover:bg-ink-800"
+                    title="Edit"><Icon name="settings" size={14} /></button
+                  >
+                  <button
+                    type="button"
+                    onclick={() => askDelete(r)}
+                    class="grid h-8 w-8 place-items-center rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                    title="Hapus"><Icon name="trash" size={14} /></button
                   >
                 </div>
               </td>
@@ -284,9 +359,13 @@
             bind:value={fKategori}
             required
             maxlength="128"
-            placeholder="Info, Promo, Maintenance…"
+            list="news-kategori-list"
+            placeholder="Ketik atau pilih preset…"
             class={input}
           />
+          <datalist id="news-kategori-list">
+            {#each KATEGORI_PRESET as k}<option value={k}></option>{/each}
+          </datalist>
         </div>
         <div>
           <label class="mb-1 block text-sm font-semibold" for="news-content"

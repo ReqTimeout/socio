@@ -8,6 +8,7 @@
     { key: "7d", label: "7 hari" },
     { key: "30d", label: "30 hari" },
     { key: "month", label: "Bulan ini" },
+    { key: "all", label: "All time" },
   ];
 
   const STATUS_TONE: Record<string, { bg: string; text: string; label: string }> = {
@@ -128,6 +129,20 @@
       {/each}
     </div>
   </div>
+
+  {#if data.overview.totalOrders === 0}
+    <div
+      class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
+    >
+      <Icon name="alert" size={16} stroke={2} class="mt-0.5 shrink-0 text-amber-600" />
+      <span
+        >Tidak ada order di periode ini. Coba <a
+          href="/admin/reporting?range=all"
+          class="font-bold underline">All time</a
+        > untuk melihat semua data (order terakhir 20 Jun 2026).</span
+      >
+    </div>
+  {/if}
 
   <!-- Overview stats -->
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">

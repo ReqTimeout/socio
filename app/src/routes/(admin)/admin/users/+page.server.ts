@@ -2,16 +2,18 @@ import { db } from "@socio/db";
 import { users, balanceLogs } from "@socio/db/schema";
 import { sql, eq, ne, and, desc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   if (!locals.user) throw redirect(303, "/login");
+  if (locals.user.level !== "Admin") throw redirect(303, "/");
   const q = String(url.searchParams.get("q") ?? "");
   const level = String(url.searchParams.get("level") ?? "");
   const status = String(url.searchParams.get("status") ?? ""); // "1" active | "0" suspended
   const verified = String(url.searchParams.get("verified") ?? ""); // "1" yes | "0" no
-  const page = Math.max(1, Number(url.searchParams.get("p") ?? 1));
+  const rawP = Number(url.searchParams.get("p") ?? 1);
+  const page = Number.isFinite(rawP) && rawP >= 1 && rawP <= 1000 ? rawP : 1; // A-15
   const limit = 20;
   const offset = (page - 1) * limit;
 
@@ -80,46 +82,83 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   };
 };
 
+/**
+ * A-P0a: hard cap adjustment saldo untuk cegah human error / abuse tanpa
+ * second-approver. > Rp1jt harus via deposit/channel resmi. Threshold
+ * diturunkan kalau perlu (lihat ADMIN_GAP G3 untuk dual-control proper).
+ */
+const ADJUST_HARD_CAP = 1_000_000; // Rp 1.000.000 per aksi
+
 export const actions: Actions = {
   adjust: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("user-adjust", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
     const amount = Number(form.get("amount"));
-    const reason = String(form.get("reason") ?? "");
-    if (!id || !amount || !reason) return fail(400, { error: "Semua field wajib diisi." });
+    const reason = String(form.get("reason") ?? "").trim();
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID user wajib." });
+    if (!Number.isFinite(amount) || amount === 0)
+      return fail(400, { error: "Nominal tidak valid (bukan 0)." });
+    if (reason.length < 5) return fail(400, { error: "Alasan minimal 5 karakter (audit trail)." });
+    if (Math.abs(amount) > ADJUST_HARD_CAP)
+      return fail(400, {
+        error: `Penyesuaian > Rp${ADJUST_HARD_CAP.toLocaleString(
+          "id-ID",
+        )} butuh dual-control (belum tersedia). Gunakan deposit resmi atau pecah nominal.`,
+      });
 
-    const [u] = await db
-      .select({ balance: users.balance, username: users.username })
-      .from(users)
-      .where(eq(users.id, id))
-      .limit(1);
-    if (!u) return fail(404, { error: "User tidak ditemukan." });
-
-    const before = Number(u.balance);
-    const after = before + amount;
-    await db.update(users).set({ balance: after }).where(eq(users.id, id));
-    await db.insert(balanceLogs).values({
-      userId: id,
-      type: "adj",
-      amount,
-      note: `Adjust by admin: ${reason}`,
-      createdAt: new Date(),
-    });
+    // A-P0a: ATOMIK `balance+amount` (bukan read-then-write) anti race.
+    let username = "";
+    try {
+      await db.transaction(async (tx) => {
+        // Lock baris user dulu
+        await tx.execute(sql`SELECT id FROM users WHERE id = ${id} FOR UPDATE`);
+        const [u] = await tx
+          .select({ username: users.username, balance: users.balance })
+          .from(users)
+          .where(eq(users.id, id))
+          .limit(1);
+        if (!u) throw new Error("USER_NOT_FOUND");
+        username = u.username;
+        await tx
+          .update(users)
+          .set({ balance: sql`${users.balance} + ${amount}` })
+          .where(eq(users.id, id));
+        await tx.insert(balanceLogs).values({
+          userId: id,
+          type: amount > 0 ? "plus" : "minus",
+          amount,
+          note: `Adjust admin: ${reason}`,
+          createdAt: new Date(),
+        });
+      });
+    } catch (e) {
+      if ((e as Error)?.message === "USER_NOT_FOUND")
+        return fail(404, { error: "User tidak ditemukan." });
+      console.error("[users.adjust] failed", (e as Error)?.message);
+      return fail(500, { error: "Gagal adjust saldo. Coba lagi." });
+    }
 
     await logAudit({
-      adminId: Number(locals.user!.id),
+      adminId: Number(locals.user.id),
       action: "adjust_balance",
       entity: "user",
       entityId: id,
-      detail: { from: before, to: after, reason },
+      detail: { amount, reason },
       ip: (locals as any).ip,
     });
-    return { success: `Saldo ${u.username} ${amount >= 0 ? "+" : ""}${amount}.` };
+    return {
+      success: `Saldo ${username} ${amount >= 0 ? "+" : ""}${amount.toLocaleString("id-ID")}.`,
+    };
   },
 
   suspend: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("user-suspend", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID wajib." });
     const [u] = await db
       .select({ status: users.status, username: users.username })
       .from(users)
@@ -129,22 +168,25 @@ export const actions: Actions = {
     const next = u.status === "1" ? "0" : "1";
     await db.update(users).set({ status: next }).where(eq(users.id, id));
     await logAudit({
-      adminId: Number(locals.user!.id),
+      adminId: Number(locals.user.id),
       action: "suspend_user",
       entity: "user",
       entityId: id,
       detail: { from: u.status, to: next },
       ip: (locals as any).ip,
     });
-    return { success: `${u.username} → ${next}.` };
+    return { success: `${u.username} → ${next === "1" ? "Aktif" : "Suspended"}.` };
   },
 
   setLevel: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("user-setlevel", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
     const level = String(form.get("level") ?? "");
-    const allowed = ["Demo", "Member", "Agen", "Reseller", "Blacklist", "Admin", "Developers"];
-    if (!id || !allowed.includes(level)) return fail(400, { error: "Level tidak valid." });
+    const allowed = ["Member", "Agen", "Reseller", "Admin"];
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID wajib." });
+    if (!allowed.includes(level)) return fail(400, { error: "Level tidak valid." });
     const [u] = await db
       .select({ level: users.level, username: users.username })
       .from(users)
@@ -157,7 +199,7 @@ export const actions: Actions = {
       .set({ level: level as never })
       .where(eq(users.id, id));
     await logAudit({
-      adminId: Number(locals.user!.id),
+      adminId: Number(locals.user.id),
       action: "change_level",
       entity: "user",
       entityId: id,

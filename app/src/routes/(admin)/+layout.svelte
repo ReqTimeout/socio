@@ -16,18 +16,33 @@
   ];
   /** Nav tambahan — diakses dari bottom sheet "Lainnya" (mobile) atau sidebar (desktop) */
   const moreNav = [
+    { href: "/admin/coupons", label: "Kupon", icon: "percent" },
     { href: "/admin/tickets", label: "Tickets", icon: "ticket" },
     { href: "/admin/providers", label: "Provider", icon: "zap" },
     { href: "/admin/reporting", label: "Reporting", icon: "chart" },
     { href: "/admin/affiliate", label: "Affiliate", icon: "gift" },
     { href: "/admin/banners", label: "Banners", icon: "image" },
-    { href: "/admin/news", label: "Berita", icon: "newspaper" },
+    { href: "/admin/news", label: "Berita", icon: "megaphone" },
     { href: "/admin/email", label: "Email", icon: "mail" },
     { href: "/admin/audit", label: "Audit Log", icon: "shield" },
     { href: "/admin/settings", label: "Settings", icon: "settings" },
   ];
 
   let sheetOpen = $state(false);
+  let dark = $state(false);
+  $effect(() => {
+    if (typeof document === "undefined") return;
+    dark = document.documentElement.classList.contains("dark");
+  });
+  function toggleDark() {
+    dark = !dark;
+    document.documentElement.classList.toggle("dark", dark);
+    try {
+      localStorage.setItem("theme", dark ? "dark" : "light");
+    } catch {
+      // private mode
+    }
+  }
 
   function isActive(href: string): boolean {
     if (href === "/admin") return $page.url.pathname === "/admin";
@@ -157,9 +172,9 @@
 <svelte:window onkeydown={onKeydown} />
 
 <div class="min-h-dvh bg-ink-50 lg:flex">
-  <!-- Desktop sidebar -->
+  <!-- Desktop sidebar — same width as user sidebar (w-64) for system consistency -->
   <aside
-    class="hidden w-60 shrink-0 border-r border-ink-100 bg-surface p-4 lg:block"
+    class="hidden w-64 shrink-0 border-r border-ink-100 bg-surface p-4 lg:block"
     style="view-transition-name: admin-sidebar;"
   >
     <div class="mb-6 flex items-center justify-between gap-2 px-2">
@@ -171,7 +186,17 @@
           >Socio<span class="text-accent-ink">Admin</span></span
         >
       </a>
-      <NotifBell count={data.unreadCount ?? 0} href="/notif" />
+      <div class="isolate flex items-center gap-1">
+        <button
+          type="button"
+          onclick={toggleDark}
+          class="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-700"
+          aria-label="Ganti tema terang/gelap"
+        >
+          <Icon name={dark ? "sun" : "moon"} size={17} />
+        </button>
+        <NotifBell count={data.unreadCount ?? 0} href="/notif" />
+      </div>
     </div>
     <nav class="space-y-1">
       {#each primaryNav as n (n.href)}
@@ -217,8 +242,10 @@
   </header>
 
   <!-- min-w-0: flex item default min-width:auto → konten lebar (tabel) mendorong
-       halamannya lebih lebar dari viewport tanpa ini -->
-  <main class="min-w-0 flex-1 p-4 pb-28 lg:p-8 lg:pb-8">
+       halamannya lebih lebar dari viewport tanpa ini.
+       max-w-7xl + mx-auto: stretch content comfortably on 1440px without
+       cards/supports feeling alone. -->
+  <main class="mx-auto min-w-0 w-full max-w-7xl flex-1 p-4 pb-28 lg:p-8 lg:pb-10">
     {@render children()}
   </main>
 

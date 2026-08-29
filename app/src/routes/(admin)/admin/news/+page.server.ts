@@ -1,8 +1,8 @@
 import { db } from "@socio/db";
 import { news } from "@socio/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql, count, like, or } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
-import { logAudit } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -10,46 +10,48 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (locals.user.level !== "Admin") throw redirect(303, "/");
 
   const q = (url.searchParams.get("q") ?? "").trim();
-  const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
+  const rawPage = Number(url.searchParams.get("page") ?? 1);
+  const page = Number.isFinite(rawPage) && rawPage >= 1 && rawPage <= 1000 ? rawPage : 1; // A-15
   const perPage = 20;
 
-  const plain = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+  // A-11: WHERE di DB (sebelumnya fetch-all + JS filter).
+  const where = q
+    ? or(
+        like(sql<string>`LOWER(${news.kategori})`, `%${q.toLowerCase()}%`),
+        like(sql<string>`LOWER(${news.content})`, `%${q.toLowerCase()}%`),
+      )
+    : undefined;
 
-  // Simple: fetch all ordered desc, filter in JS for q (kategori/content), paginate
-  const rows = await db.select().from(news).orderBy(desc(news.id));
-
-  let filtered = plain(rows as any[]);
-  if (q) {
-    const lq = q.toLowerCase();
-    filtered = filtered.filter(
-      (r: any) =>
-        String(r.kategori ?? "")
-          .toLowerCase()
-          .includes(lq) ||
-        String(r.content ?? "")
-          .toLowerCase()
-          .includes(lq),
-    );
-  }
-  const total = filtered.length;
-  const paged = filtered.slice((page - 1) * perPage, page * perPage);
+  const [rows, totalRow] = await Promise.all([
+    db
+      .select()
+      .from(news)
+      .where(where)
+      .orderBy(desc(news.id))
+      .limit(perPage)
+      .offset((page - 1) * perPage),
+    db.select({ c: count() }).from(news).where(where),
+  ]);
 
   return {
-    items: paged.map((r: any) => ({
+    items: rows.map((r) => ({
       id: Number(r.id),
       kategori: String(r.kategori ?? ""),
       content: String(r.content ?? ""),
-      createdAt: r.created_at ?? r.createdAt,
+      createdAt: r.createdAt,
     })),
-    total,
+    total: Number(totalRow[0]?.c ?? 0),
     page,
     perPage,
+    pages: Math.max(1, Math.ceil(Number(totalRow[0]?.c ?? 0) / perPage)),
     q,
   };
 };
 
 export const actions: Actions = {
   save: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("news-save", (locals as any).ip ?? "0.0.0.0", 20, 60);
     const form = await request.formData();
     const id = Number(form.get("id") ?? 0);
     const kategori = String(form.get("kategori") ?? "").trim();
@@ -68,7 +70,7 @@ export const actions: Actions = {
       if (!existing) return fail(404, { error: "Berita tidak ditemukan." });
       await db.update(news).set({ kategori, content }).where(eq(news.id, id));
       await logAudit({
-        adminId: Number(locals.user!.id),
+        adminId: Number(locals.user.id),
         action: "update_news",
         entity: "news",
         entityId: id,
@@ -79,17 +81,25 @@ export const actions: Actions = {
     }
 
     await db.insert(news).values({ kategori, content, createdAt: new Date() });
-    // Broadcast: tandai semua user belum baca — kompatibel legacy read_popup
-    // (tabel users.read_popup sudah ada; kalau kolom hilang, try-catch swallow)
+    // A-11: broadcast read_popup legacy. Bungkus best-effort (kalau kolom
+    // sudah di-drop, gak fatal). User.notification insert sudah di-batasi.
     try {
-      await db.execute(
-        await import("drizzle-orm").then((m) => m.sql`UPDATE users SET read_popup = '0'`),
-      );
+      await db.execute(sql`UPDATE users SET read_popup = '0' WHERE status = 1 LIMIT 10000`);
     } catch {
       // kolom legacy mungkin sudah di-drop — non-kritis
     }
+    try {
+      const msg = String(content).slice(0, 160).replace(/\s+/g, " ").trim();
+      await db.execute(sql`
+        INSERT INTO notifications (user_id, type, title, message, action_url, created_at)
+        SELECT id, 'news', ${`[${kategori}] ${msg.slice(0, 60)}`}, ${msg}, ${`/notif?type=news`}, NOW()
+        FROM users WHERE status = 1 LIMIT 10000
+      `);
+    } catch {
+      // notifications table might be missing in local dump — non-kritis
+    }
     await logAudit({
-      adminId: Number(locals.user!.id),
+      adminId: Number(locals.user.id),
       action: "create_news",
       entity: "news",
       detail: { kategori },
@@ -99,9 +109,11 @@ export const actions: Actions = {
   },
 
   delete: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("news-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
-    if (!id) return fail(400, { error: "ID wajib." });
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID wajib." });
     const [row] = await db
       .select({ id: news.id, kategori: news.kategori })
       .from(news)
@@ -110,7 +122,7 @@ export const actions: Actions = {
     if (!row) return fail(404, { error: "Berita tidak ditemukan." });
     await db.delete(news).where(eq(news.id, id));
     await logAudit({
-      adminId: Number(locals.user!.id),
+      adminId: Number(locals.user.id),
       action: "delete_news",
       entity: "news",
       entityId: id,

@@ -1,8 +1,8 @@
 import { db } from "@socio/db";
-import { adminRoles, pricingRules, services } from "@socio/db/schema";
+import { adminRoles, pricingRules } from "@socio/db/schema";
 import { sql, eq, asc, inArray } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { getSetting, setSetting, logAudit } from "$lib/server/admin";
+import { getSetting, setSetting, logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import { env } from "$env/dynamic/private";
 import { DEFAULT_PRICING_RULES } from "$lib/server/pricing-defaults";
 import type { Actions, PageServerLoad } from "./$types";
@@ -15,20 +15,29 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   // Settings umum
   const maintenance = (await getSetting("maintenance_mode")) === "1";
-  const api2fa = (await getSetting("admin_2fa_required")) === "1";
+  const api2fa = false; // TODO M3.5: (await getSetting("admin_2fa_required")) === "1" — saat enforcement ada
   const apiPublic = (await getSetting("public_api_enabled")) === "1";
   const signupVerify = (await getSetting("signup_verify_required")) === "1";
 
   // Pricing rules
   const pricingList = await db.select().from(pricingRules).orderBy(asc(pricingRules.level));
 
-  // Sample service untuk kalkulator harga (base price per 1000)
-  const [sample] = await db
-    .select({ id: services.id, name: services.serviceName, price: services.price })
-    .from(services)
-    .where(sql`${services.price} > 0`)
-    .orderBy(services.id)
-    .limit(1);
+  // Sample service untuk kalkulator harga — pakai MEDIAN harga (layanan pertama by id
+  // pernah menampilkan outlier Rp8jt/1k; median = contoh yang representatif).
+  const sampleRows = await db.execute(sql`
+    SELECT x.id, x.service_name, x.price FROM (
+      SELECT s.id, s.service_name, s.price,
+        ROW_NUMBER() OVER (ORDER BY s.price, s.id) AS rp,
+        COUNT(*) OVER () AS n
+      FROM services s
+      WHERE s.price > 0
+    ) x
+    WHERE x.rp = FLOOR((x.n + 1) / 2)
+    LIMIT 1
+  `);
+  const sample = (
+    Array.isArray((sampleRows as any)[0]) ? (sampleRows as any)[0] : (sampleRows as any)
+  )[0] as { id: number | string; service_name: string; price: number | string } | undefined;
 
   // Admin roles + list admin users
   const adminRows = await db.execute(sql`
@@ -80,7 +89,11 @@ export const load: PageServerLoad = async ({ locals }) => {
     adminUsers,
     roleList: ROLE_LIST,
     sampleService: sample
-      ? { id: Number(sample.id), name: String(sample.name), basePrice: Number(sample.price) }
+      ? {
+          id: Number(sample.id),
+          name: String(sample.service_name),
+          basePrice: Number(sample.price),
+        }
       : null,
     system: {
       usersTotal: Number((stats as any).users_total ?? 0),
@@ -98,6 +111,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
   maintenance: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("settings-maintenance", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const on = form.get("on") === "1";
     await setSetting("maintenance_mode", on ? "1" : "0");
@@ -110,20 +125,11 @@ export const actions: Actions = {
     return { success: on ? "Maintenance mode AKTIF." : "Maintenance mode nonaktif." };
   },
 
-  toggle2fa: async ({ request, locals }) => {
-    const form = await request.formData();
-    const on = form.get("on") === "1";
-    await setSetting("admin_2fa_required", on ? "1" : "0");
-    await logAudit({
-      adminId: Number(locals.user!.id),
-      action: on ? "enable_admin_2fa" : "disable_admin_2fa",
-      entity: "security",
-      ip: (locals as any).ip,
-    });
-    return { success: on ? "2FA admin AKTIF." : "2FA admin nonaktif." };
-  },
+  // toggle2fa dihapus sampai enforcement TOTP ada (M3.5) — audit 1.5: display-only toggle = false sense of security.
 
   togglePublicApi: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("settings-public-api", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const on = form.get("on") === "1";
     await setSetting("public_api_enabled", on ? "1" : "0");
@@ -137,6 +143,8 @@ export const actions: Actions = {
   },
 
   toggleSignupVerify: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("settings-signup-verify", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const on = form.get("on") === "1";
     await setSetting("signup_verify_required", on ? "1" : "0");
@@ -150,6 +158,8 @@ export const actions: Actions = {
   },
 
   updatePricing: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("settings-pricing", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const id = Number(form.get("id"));
     const markup = Number(form.get("markupPercent"));
@@ -176,6 +186,8 @@ export const actions: Actions = {
 
   /** Seed default pricing rules (hanya kalau tabel kosong). */
   seed: async ({ locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("settings-seed", (locals as any).ip ?? "0.0.0.0", 3, 60);
     const [count] = await db.select({ c: sql<number>`count(*)` }).from(pricingRules);
     if (Number(count?.c ?? 0) > 0)
       return fail(409, { error: "Pricing rule sudah ada. Pakai 'Terapkan default'." });
@@ -199,6 +211,8 @@ export const actions: Actions = {
 
   /** Terapkan default (Member+200/Agen+150/Reseller+180/Admin 0) ke semua level. */
   applyDefaults: async ({ locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("settings-apply-defaults", (locals as any).ip ?? "0.0.0.0", 3, 60);
     for (const r of DEFAULT_PRICING_RULES) {
       const [row] = await db
         .select({ id: pricingRules.id })
@@ -227,6 +241,8 @@ export const actions: Actions = {
 
   /** Salin markup Member ke semua level lain (rollback cepat). */
   bulkApply: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("settings-bulk-apply", (locals as any).ip ?? "0.0.0.0", 3, 60);
     const form = await request.formData();
     const markup = Number(form.get("markup"));
     if (Number.isNaN(markup) || markup < 0 || markup > 1000)
@@ -249,12 +265,28 @@ export const actions: Actions = {
   },
 
   assignRole: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("settings-assign-role", (locals as any).ip ?? "0.0.0.0", 5, 60);
     const form = await request.formData();
     const userId = Number(form.get("userId"));
     const role = String(form.get("role") ?? "admin");
     if (!userId) return fail(400, { error: "User wajib." });
     if (!ROLE_LIST.includes(role as (typeof ROLE_LIST)[number]))
       return fail(400, { error: "Role tidak valid." });
+
+    // P0-10: hanya SuperAdmin yang boleh assign/ubah role (anti self-escalation).
+    // Bootstrap: kalau belum ada satu pun role di tabel, admin mana pun boleh set pertama.
+    const [mine] = await db
+      .select({ role: adminRoles.role })
+      .from(adminRoles)
+      .where(eq(adminRoles.userId, Number(locals.user!.id)))
+      .limit(1);
+    if (!mine) {
+      const [any] = await db.select({ id: adminRoles.id }).from(adminRoles).limit(1);
+      if (any) return fail(403, { error: "Hanya SuperAdmin yang bisa mengubah role." });
+    } else if (mine.role !== "superadmin") {
+      return fail(403, { error: "Hanya SuperAdmin yang bisa mengubah role." });
+    }
 
     const [existing] = await db
       .select()

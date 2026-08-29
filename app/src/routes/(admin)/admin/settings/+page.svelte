@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, Icon, toast } from "@socio/ui";
+  import { Button, Icon, toast, extractActionMsg } from "@socio/ui";
   import { applyAction, enhance } from "$app/forms";
   import type { ActionData, PageData } from "./$types";
 
@@ -33,7 +33,7 @@
     async ({ result }: any) => {
       const r = result as any;
       if (result.type === "failure") toast(r.data?.error ?? "Gagal", "error");
-      else if (result.type === "success") toast(r.data?.success ?? "OK", "success");
+      else if (result.type === "success") toast(extractActionMsg(r.data) ?? "OK", "success");
       await applyAction(result);
     };
 
@@ -131,7 +131,7 @@
           async ({ result }) => {
             const r = result as any;
             if (result.type === "failure") toast(r.data?.error ?? "Gagal", "error");
-            else toast(r.data?.success ?? "OK", "success");
+            else toast(extractActionMsg(r.data) ?? "OK", "success");
             await applyAction(result);
           }}
       >
@@ -146,35 +146,18 @@
     <div class="flex items-center justify-between rounded-2xl border border-ink-100 bg-surface p-4">
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2">
-          <span
-            class="grid h-8 w-8 place-items-center rounded-lg {data.api2fa
-              ? 'bg-success-soft text-success'
-              : 'bg-ink-100 text-ink-500'}"
-          >
+          <span class="grid h-8 w-8 place-items-center rounded-lg bg-ink-100 text-ink-500">
             <Icon name="shield" size={14} stroke={2.5} />
           </span>
           <h3 class="text-sm font-semibold">2FA Admin (TOTP)</h3>
         </div>
         <p class="mt-1 text-xs text-ink-500">
-          Wajibkan kode TOTP saat login admin. (M3.5 — saat ini informational.)
+          Wajibkan kode TOTP saat login admin. Belum di-enforce — menunggu implementasi M3.5.
         </p>
       </div>
-      <form
-        method="POST"
-        action="?/toggle2fa"
-        use:enhance={() =>
-          async ({ result }) => {
-            const r = result as any;
-            if (result.type === "failure") toast(r.data?.error ?? "Gagal", "error");
-            else toast(r.data?.success ?? "OK", "success");
-            await applyAction(result);
-          }}
-      >
-        <input type="hidden" name="on" value={data.api2fa ? "0" : "1"} />
-        <Button type="submit" variant={data.api2fa ? "ghost" : "primary"}>
-          {data.api2fa ? "Nonaktifkan" : "Aktifkan"}
-        </Button>
-      </form>
+      <Button type="button" variant="ghost" disabled title="Belum diimplementasi (M3.5)">
+        Segera
+      </Button>
     </div>
 
     <!-- Public API -->
@@ -201,7 +184,7 @@
           async ({ result }) => {
             const r = result as any;
             if (result.type === "failure") toast(r.data?.error ?? "Gagal", "error");
-            else toast(r.data?.success ?? "OK", "success");
+            else toast(extractActionMsg(r.data) ?? "OK", "success");
             await applyAction(result);
           }}
       >
@@ -234,7 +217,7 @@
           async ({ result }) => {
             const r = result as any;
             if (result.type === "failure") toast(r.data?.error ?? "Gagal", "error");
-            else toast(r.data?.success ?? "OK", "success");
+            else toast(extractActionMsg(r.data) ?? "OK", "success");
             await applyAction(result);
           }}
       >
@@ -341,7 +324,7 @@
                     const r = result as any;
                     if (result.type === "failure") toast(r.data?.error ?? "Gagal", "error");
                     else {
-                      toast(r.data?.success ?? "OK", "success");
+                      toast(extractActionMsg(r.data) ?? "OK", "success");
                       editPricingId = null;
                     }
                     await applyAction(result);
@@ -518,7 +501,7 @@
                         const r = result as any;
                         if (result.type === "failure") toast(r.data?.error ?? "Gagal", "error");
                         else {
-                          toast(r.data?.success ?? "OK", "success");
+                          toast(extractActionMsg(r.data) ?? "OK", "success");
                           editPricingId = null;
                         }
                         await applyAction(result);
@@ -583,7 +566,7 @@
                 async ({ result }) => {
                   const r = result as any;
                   if (result.type === "failure") toast(r.data?.error ?? "Gagal", "error");
-                  else toast(r.data?.success ?? "OK", "success");
+                  else toast(extractActionMsg(r.data) ?? "OK", "success");
                   await applyAction(result);
                 }}
               class="flex items-center gap-2"

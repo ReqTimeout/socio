@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, toast } from "@socio/ui";
+  import { Button, ConfirmDialog, EmptyState, Icon, toast } from "@socio/ui";
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { formatRupiah } from "$lib/format";
@@ -38,17 +38,40 @@
   };
   const provClass = (name: string) => provTone[name] ?? "bg-ink-100 text-ink-600";
 
+  // Provider icon + gradient (untuk avatar)
+  const provIcon: Record<string, { icon: string; tone: string }> = {
+    SMMturk: { icon: "zap", tone: "from-primary-500 to-violet-500" },
+    JAP: { icon: "rocket", tone: "from-accent-500 to-pink-500" },
+    IRVAN: { icon: "flame", tone: "from-warning to-amber-500" },
+    SMC: { icon: "sparkles", tone: "from-success to-emerald-500" },
+    MANUAL: { icon: "shield", tone: "from-ink-700 to-ink-500" },
+  };
+  const provAvatar = (name: string) =>
+    provIcon[name] ?? { icon: "package", tone: "from-ink-700 to-ink-500" };
+
+  // Status accent bar (mobile)
+  const statusAccent: Record<string, string> = {
+    "1": "before:bg-success",
+    "0": "before:bg-ink-300",
+  };
+
   // Modal state
   let editSvc = $state<SvcRow | null>(null);
   let viewSvc = $state<SvcRow | null>(null);
   let addSvcOpen = $state(false);
   let addCatOpen = $state(false);
+  let bulkPriceOpen = $state(false);
+  let bp_categoryId = $state(0);
+  let bp_mode = $state<"adjust" | "set_base">("adjust");
+  let bp_value = $state(0);
   let editCat = $state<{ id: number; name: string } | null>(null);
   let confirm = $state<{
     open: boolean;
     title: string;
     message: string;
     action: () => Promise<void>;
+    label?: string;
+    danger?: boolean;
   } | null>(null);
   let selected = $state<Set<number>>(new Set());
 
@@ -186,106 +209,208 @@
   <title>Layanan — Admin Socio.id</title>
 </svelte:head>
 
-<section class="space-y-6">
-  <!-- Header: prose + inline narrative (no card chrome, no stat strip) -->
-  <header class="space-y-3">
-    <div class="flex flex-wrap items-end justify-between gap-3">
-      <div class="min-w-0">
-        <h1 class="font-display text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
-          Layanan
-        </h1>
-        <p class="mt-1 text-sm text-ink-500">
-          {fmt(data.total)} cocok filter
-          <span class="mx-1 text-ink-300">·</span>
-          <span class="font-semibold text-ink-700">{fmt(data.stats.total)}</span> total
-          <span class="mx-1 text-ink-300">·</span>
-          <span class="font-semibold text-success">{fmt(data.stats.active)}</span> aktif
-          <span class="mx-1 text-ink-300">·</span>
-          <span class="font-semibold text-primary-600">{fmt(data.stats.categories)}</span> kategori
-        </p>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <Button size="md" onclick={openAdd}>+ Tambah Layanan</Button>
-        <Button size="md" variant="ghost" onclick={() => (addCatOpen = true)}>+ Kategori</Button>
-      </div>
+<section class="space-y-5 lg:space-y-6">
+  <!-- Header: premium hero + KPI + add buttons -->
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div class="min-w-0">
+      <h1
+        class="flex items-center gap-2.5 font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-3xl"
+      >
+        <span
+          class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-[0_8px_22px_-8px_rgba(124,58,237,0.5)]"
+        >
+          <Icon name="package" size={20} stroke={2.5} />
+        </span>
+        Layanan
+      </h1>
+      <p class="mt-1.5 text-sm text-ink-500">
+        {fmt(data.total)} cocok filter
+        <span class="mx-1 text-ink-300">·</span>
+        <span class="font-semibold text-ink-700">{fmt(data.stats.total)}</span> total
+        <span class="mx-1 text-ink-300">·</span>
+        <span class="font-semibold text-success">{fmt(data.stats.active)}</span> aktif
+        <span class="mx-1 text-ink-300">·</span>
+        <span class="font-semibold text-primary-600">{fmt(data.stats.categories)}</span> kategori
+      </p>
+    </div>
+    <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+      <form method="GET" class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        {#if data.cat}<input type="hidden" name="cat" value={data.cat} />{/if}
+        {#if data.status}<input type="hidden" name="status" value={data.status} />{/if}
+        <div class="relative w-full min-w-0 flex-1 sm:w-72">
+          <span
+            class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-ink-400"
+          >
+            <Icon name="search" size={15} stroke={2} />
+          </span>
+          <input
+            type="search"
+            name="q"
+            bind:value={q}
+            oninput={onSearch}
+            placeholder="Cari nama / catatan / provider ID…"
+            class="h-10 w-full rounded-full border border-ink-200 bg-surface pl-10 pr-4 text-sm shadow-sm transition-all focus:border-primary-500 focus:outline-none focus:ring-4 focus:ring-primary-500/15"
+          />
+        </div>
+        {#if hasFilter}
+          <a
+            href="/admin/services"
+            class="inline-flex min-h-[40px] items-center gap-1 rounded-full border border-ink-200 bg-surface px-3 text-xs font-bold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50"
+          >
+            <Icon name="x" size={12} stroke={2.5} />
+            Reset
+          </a>
+        {/if}
+      </form>
+      <button
+        type="button"
+        onclick={openAdd}
+        class="inline-flex h-10 items-center gap-1.5 rounded-full bg-ink-900 px-4 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-ink-800 hover:shadow-md active:scale-95"
+      >
+        <Icon name="plus" size={14} stroke={2.75} />
+        Tambah Layanan
+      </button>
+      <button
+        type="button"
+        onclick={() => (addCatOpen = true)}
+        class="inline-flex h-10 items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-3 text-sm font-bold text-ink-700 transition-all hover:border-ink-300 hover:bg-ink-50 active:scale-95"
+      >
+        <Icon name="grid" size={13} stroke={2.5} />
+        Kategori
+      </button>
+      {#if data.cat}
+        <button
+          type="button"
+          onclick={() => {
+            bp_categoryId = Number(data.cat);
+            bulkPriceOpen = true;
+          }}
+          class="inline-flex h-10 items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-3 text-sm font-bold text-ink-700 transition-all hover:border-ink-300 hover:bg-ink-50 active:scale-95"
+        >
+          <Icon name="tag" size={13} stroke={2.5} />
+          Harga Kategori
+        </button>
+      {/if}
     </div>
   </header>
 
-  <!-- Search + filter -->
-  <div class="space-y-2">
-    <form method="GET" class="flex flex-wrap items-center gap-2">
-      {#if data.cat}<input type="hidden" name="cat" value={data.cat} />{/if}
-      {#if data.status}<input type="hidden" name="status" value={data.status} />{/if}
-      <div class="relative flex-1 min-w-0 sm:max-w-md">
-        <input
-          type="search"
-          name="q"
-          bind:value={q}
-          oninput={onSearch}
-          placeholder="Cari nama / catatan / provider service ID…"
-          class="w-full rounded-full border border-ink-200 bg-surface pl-4 pr-4 py-2 text-sm transition-all focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-        />
+  <!-- KPI strip (3 cards, semantic tone-on-tone) -->
+  <div class="grid grid-cols-3 gap-2 sm:gap-3">
+    <div class="reveal rounded-2xl border border-ink-100 bg-surface p-3.5 sm:p-4" style="--d:60ms">
+      <div
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-400 sm:text-[11px]"
+      >
+        <Icon name="package" size={12} stroke={2.25} />
+        Total
       </div>
-      <Button type="submit" size="md" variant="ghost">Cari</Button>
-      {#if hasFilter}
-        <a
-          href="/admin/services"
-          class="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-ink-500 transition-colors hover:bg-ink-50 hover:text-ink-700"
-        >
-          Reset filter
-        </a>
-      {/if}
-    </form>
-
-    <!-- Category chips -->
-    <div class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
-      <a
-        href={chipHref(null)}
-        class="shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200
-          {!data.cat
-          ? 'border-transparent bg-ink-900 text-white shadow-sm'
-          : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
-        >Semua</a
-      >
-      {#each data.categories as c (c.id)}
-        <a
-          href={chipHref(c.id)}
-          class="shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200
-            {Number(data.cat) === c.id
-            ? 'border-transparent bg-ink-900 text-white shadow-sm'
-            : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
-          >{c.name}</a
-        >
-      {/each}
+      <div class="mt-1.5 font-display text-xl font-extrabold tabular-nums sm:text-2xl">
+        {fmt(data.stats.total)}
+      </div>
+      <div class="mt-0.5 text-[10px] text-ink-400 sm:text-[11px]">layanan terdaftar</div>
     </div>
-
-    <!-- Status chips -->
-    <div class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
-      <a
-        href={statusChipHref("")}
-        class="shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200
-          {!data.status
-          ? 'border-transparent bg-ink-900 text-white shadow-sm'
-          : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
-        >Semua status</a
+    <div
+      class="reveal rounded-2xl border border-success-soft bg-success-soft/30 p-3.5 sm:p-4"
+      style="--d:120ms"
+    >
+      <div
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-success sm:text-[11px]"
       >
-      <a
-        href={statusChipHref("1")}
-        class="shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200
-          {data.status === '1'
-          ? 'border-transparent bg-ink-900 text-white shadow-sm'
-          : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
-        >Aktif</a
-      >
-      <a
-        href={statusChipHref("0")}
-        class="shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200
-          {data.status === '0'
-          ? 'border-transparent bg-ink-900 text-white shadow-sm'
-          : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
-        >Nonaktif</a
-      >
+        <span class="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-success"></span>
+        Aktif
+      </div>
+      <div class="mt-1.5 font-display text-xl font-extrabold tabular-nums sm:text-2xl text-success">
+        {fmt(data.stats.active)}
+      </div>
+      <div class="mt-0.5 text-[10px] text-ink-500 sm:text-[11px]">
+        {data.stats.total > 0 ? Math.round((data.stats.active / data.stats.total) * 100) : 0}% dari
+        total
+      </div>
     </div>
+    <div
+      class="reveal rounded-2xl border border-primary-500/20 bg-primary-50/40 p-3.5 sm:p-4"
+      style="--d:180ms"
+    >
+      <div
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-primary-700 sm:text-[11px]"
+      >
+        <Icon name="grid" size={12} stroke={2.25} />
+        Kategori
+      </div>
+      <div
+        class="mt-1.5 font-display text-xl font-extrabold tabular-nums sm:text-2xl text-primary-700"
+      >
+        {fmt(data.stats.categories)}
+      </div>
+      <div class="mt-0.5 text-[10px] text-ink-500 sm:text-[11px]">grup layanan</div>
+    </div>
+  </div>
+
+  <!-- Category chips -->
+  <div
+    class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+    role="tablist"
+    aria-label="Filter kategori"
+  >
+    <a
+      href={chipHref(null)}
+      class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+        {!data.cat
+        ? 'border-transparent bg-ink-900 text-white shadow-sm'
+        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
+    >
+      <Icon name="layers" size={12} stroke={2.25} />
+      Semua
+    </a>
+    {#each data.categories as c (c.id)}
+      <a
+        href={chipHref(c.id)}
+        class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+          {Number(data.cat) === c.id
+          ? 'border-transparent bg-ink-900 text-white shadow-sm'
+          : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
+      >
+        {c.name}
+      </a>
+    {/each}
+  </div>
+
+  <!-- Status chips (semantic per status, 36px tap target) -->
+  <div
+    class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+    role="tablist"
+    aria-label="Filter status"
+  >
+    <a
+      href={statusChipHref("")}
+      class="inline-flex min-h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+        {!data.status
+        ? 'border-transparent bg-ink-900 text-white shadow-sm'
+        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
+    >
+      Semua status
+    </a>
+    <a
+      href={statusChipHref("1")}
+      class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+        {data.status === '1'
+        ? 'border-transparent bg-success text-white shadow-sm'
+        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
+    >
+      <span class="h-1.5 w-1.5 rounded-full {data.status === '1' ? 'bg-white' : 'bg-success'}"
+      ></span>
+      Aktif
+    </a>
+    <a
+      href={statusChipHref("0")}
+      class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+        {data.status === '0'
+        ? 'border-transparent bg-ink-700 text-white shadow-sm'
+        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
+    >
+      <span class="h-1.5 w-1.5 rounded-full {data.status === '0' ? 'bg-white' : 'bg-ink-400'}"
+      ></span>
+      Nonaktif
+    </a>
   </div>
 
   {#if form?.error}
@@ -323,19 +448,20 @@
                 aria-label="Pilih semua"
               /></th
             >
-            <th class="w-20 p-3 font-semibold">ID</th><th class="w-40 p-3 font-semibold"
+            <th class="w-12 p-3 font-semibold">ID</th><th class="w-32 p-3 font-semibold"
               >Kategori</th
             ><th class="p-3 font-semibold">Layanan</th>
-            <th class="w-28 p-3 text-right font-semibold">Harga (M/R/A)</th><th
-              class="w-28 p-3 font-semibold">Provider</th
+            <th class="w-24 p-3 text-right font-semibold">Harga (M/R/A)</th><th
+              class="w-20 p-3 font-semibold">Provider</th
             >
             <th class="w-20 p-3 font-semibold">Status</th><th
-              class="w-28 p-3 text-right font-semibold">Aksi</th
+              class="w-24 p-3 text-right font-semibold">Aksi</th
             >
           </tr>
         </thead>
         <tbody>
           {#each data.services as s, i (s.id)}
+            {@const pav = provAvatar(s.providerName ?? "")}
             <tr
               class="reveal border-b border-ink-50 transition-colors hover:bg-ink-50/50 last:border-0"
               style="--d:{240 + i * 30}ms"
@@ -348,8 +474,14 @@
                   aria-label={`Pilih ${s.serviceName}`}
                 /></td
               >
-              <td class="p-3 font-semibold tabular-nums text-ink-900">#{s.id}</td>
-              <td class="truncate p-3 text-ink-700">{s.categoryName ?? "—"}</td>
+              <td class="p-3 text-xs font-semibold tabular-nums text-ink-500">#{s.id}</td>
+              <td class="truncate p-3 text-ink-700">
+                <span
+                  class="inline-flex items-center rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold text-ink-700"
+                >
+                  {s.categoryName ?? "—"}
+                </span>
+              </td>
               <td class="overflow-hidden p-3">
                 <div class="truncate font-medium text-ink-900">{s.serviceName}</div>
                 {#if s.note}
@@ -357,7 +489,7 @@
                 {/if}
               </td>
               <td class="p-3 text-right tabular-nums">
-                <div class="font-semibold text-ink-900">{formatRupiah(s.price)}</div>
+                <div class="font-bold text-ink-900">{formatRupiah(s.price)}</div>
                 <div class="text-[11px] text-ink-400">
                   R {formatRupiah(s.priceReseller)} · A {formatRupiah(s.priceApi)}
                 </div>
@@ -365,11 +497,16 @@
               <td class="p-3">
                 {#if s.providerName}
                   <span
-                    class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold {provClass(
+                    class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold {provClass(
                       s.providerName,
-                    )}">{s.providerName}</span
+                    )}"
                   >
-                {:else}—{/if}
+                    <Icon name={pav.icon} size={10} stroke={2.75} />
+                    {s.providerName}
+                  </span>
+                {:else}
+                  <span class="text-xs text-ink-400">—</span>
+                {/if}
               </td>
               <td class="p-3">
                 {#if s.status === 1}
@@ -380,15 +517,29 @@
                   >
                 {:else}
                   <span
-                    class="inline-flex rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold text-ink-500"
-                    >Nonaktif</span
+                    class="inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold text-ink-500"
+                    ><Icon name="lock" size={10} stroke={2.75} />Nonaktif</span
                   >
                 {/if}
               </td>
               <td class="p-3 text-right">
                 <div class="inline-flex gap-1">
-                  <Button size="sm" variant="ghost" onclick={() => (viewSvc = s)}>Lihat</Button>
-                  <Button size="sm" variant="ghost" onclick={() => openEdit(s)}>Edit</Button>
+                  <button
+                    type="button"
+                    onclick={() => (viewSvc = s)}
+                    class="grid h-9 w-9 place-items-center rounded-full text-ink-500 transition-all hover:bg-ink-100 hover:text-ink-700 active:scale-95"
+                    aria-label="Lihat detail {s.serviceName}"
+                  >
+                    <Icon name="eye" size={15} stroke={2.5} />
+                  </button>
+                  <button
+                    type="button"
+                    onclick={() => openEdit(s)}
+                    class="grid h-9 w-9 place-items-center rounded-full bg-ink-900 text-white shadow-sm transition-all hover:bg-ink-800 active:scale-95"
+                    aria-label="Edit {s.serviceName}"
+                  >
+                    <Icon name="edit" size={14} stroke={2.5} />
+                  </button>
                 </div>
               </td>
             </tr>
@@ -397,69 +548,76 @@
       </table>
     </div>
 
-    <!-- Mobile ledger (hairline rows, no card chrome) -->
+    <!-- Mobile ledger (hairline rows, accent bar per status, provider avatar) -->
     <ul class="lg:hidden">
       {#each data.services as s, i (s.id)}
+        {@const pav = provAvatar(s.providerName ?? "")}
         <li
-          class="reveal border-b border-ink-100 py-3 last:border-b-0 transition-colors hover:bg-ink-50/40"
+          class="reveal relative border-b border-ink-100 py-3 last:border-b-0 transition-colors hover:bg-ink-50/40 before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full {statusAccent[
+            String(s.status)
+          ] ?? 'before:bg-ink-200'}"
           style="--d:{240 + i * 30}ms"
         >
-          <div class="flex items-start justify-between gap-3">
+          <div class="flex items-start justify-between gap-3 pl-2">
             <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  class="mt-0.5 shrink-0"
-                  checked={selected.has(s.id)}
-                  onchange={() => toggleSel(s.id)}
-                  aria-label={`Pilih ${s.serviceName}`}
-                />
+              <div class="flex items-center gap-2.5">
+                <span
+                  class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-sm {pav.tone}"
+                >
+                  <Icon name={pav.icon} size={15} stroke={2.5} />
+                </span>
                 <div class="min-w-0">
                   <div class="truncate font-semibold text-ink-900">{s.serviceName}</div>
-                  <div class="mt-0.5 flex items-center gap-1.5 text-xs text-ink-500">
+                  <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-500">
                     <span class="tabular-nums text-ink-400">#{s.id}</span>
                     <span class="text-ink-300">·</span>
                     <span class="truncate">{s.categoryName ?? "Tanpa kategori"}</span>
                     {#if s.providerName}
-                      <span class="text-ink-300">·</span>
                       <span
-                        class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold {provClass(
+                        class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold {provClass(
                           s.providerName,
-                        )}">{s.providerName}</span
+                        )}"
                       >
+                        {s.providerName}
+                      </span>
                     {/if}
                   </div>
                 </div>
               </div>
               <!-- Margin ladder: Member / Reseller / Agen -->
-              <dl class="mt-2 grid grid-cols-3 gap-2 text-xs">
+              <dl class="mt-2.5 grid grid-cols-3 gap-2 text-xs">
                 <div>
                   <dt class="text-ink-400">Member</dt>
-                  <dd class="tabular-nums font-semibold text-ink-900">{formatRupiah(s.price)}</dd>
+                  <dd class="tabular-nums font-bold text-ink-900">{formatRupiah(s.price)}</dd>
                 </div>
                 <div>
                   <dt class="text-ink-400">Reseller</dt>
-                  <dd class="tabular-nums font-semibold text-ink-700">
+                  <dd class="tabular-nums font-bold text-ink-700">
                     {formatRupiah(s.priceReseller)}
                   </dd>
                 </div>
                 <div>
                   <dt class="text-ink-400">Agen</dt>
-                  <dd class="tabular-nums font-semibold text-ink-700">
+                  <dd class="tabular-nums font-bold text-ink-700">
                     {formatRupiah(s.priceApi)}
                   </dd>
                 </div>
               </dl>
-              <div class="mt-1.5 flex items-center gap-3 text-xs text-ink-400 tabular-nums">
-                <span>min {fmt(s.min)}</span>
-                <span class="text-ink-200">·</span>
-                <span>max {fmt(s.max)}</span>
+              <div
+                class="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-500 tabular-nums"
+              >
+                <span class="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2 py-0.5">
+                  min {fmt(s.min)}
+                </span>
+                <span class="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2 py-0.5">
+                  max {fmt(s.max)}
+                </span>
                 {#if s.type && s.type !== "Default"}
-                  <span class="text-ink-200">·</span>
                   <span
-                    class="rounded bg-ink-100 px-1.5 py-0.5 text-[10px] font-semibold text-ink-600"
-                    >{s.type}</span
+                    class="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-bold text-warning"
                   >
+                    {s.type}
+                  </span>
                 {/if}
               </div>
             </div>
@@ -477,9 +635,23 @@
               {/if}
             </div>
           </div>
-          <div class="mt-3 flex gap-2">
-            <Button size="sm" variant="ghost" full onclick={() => (viewSvc = s)}>Lihat</Button>
-            <Button size="sm" variant="ghost" full onclick={() => openEdit(s)}>Edit</Button>
+          <div class="mt-3 flex gap-2 pl-2">
+            <button
+              type="button"
+              onclick={() => (viewSvc = s)}
+              class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-ink-200 bg-surface text-xs font-bold text-ink-700 transition-all hover:bg-ink-50 active:scale-95"
+            >
+              <Icon name="eye" size={12} stroke={2.5} />
+              Lihat
+            </button>
+            <button
+              type="button"
+              onclick={() => openEdit(s)}
+              class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 text-xs font-bold text-white shadow-sm transition-all hover:bg-ink-800 active:scale-95"
+            >
+              <Icon name="edit" size={12} stroke={2.5} />
+              Edit
+            </button>
           </div>
         </li>
       {/each}
@@ -601,12 +773,16 @@
 <!-- Bulk action bar -->
 {#if selected.size > 0}
   <div
-    class="fixed inset-x-0 bottom-0 z-40 flex flex-wrap items-center justify-center gap-3 border-t border-ink-100 bg-surface/95 p-3 shadow-lg backdrop-blur lg:bottom-4 lg:left-1/2 lg:right-auto lg:w-auto lg:-translate-x-1/2 lg:rounded-2xl lg:border"
+    class="fixed inset-x-0 bottom-0 z-40 flex flex-wrap items-center justify-center gap-2 border-t border-ink-100 bg-surface/95 p-3 shadow-2xl backdrop-blur lg:bottom-4 lg:left-1/2 lg:right-auto lg:w-auto lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:px-4 lg:py-2.5"
   >
-    <span class="text-sm font-semibold">{selected.size} dipilih</span>
-    <Button
-      size="sm"
-      variant="danger"
+    <span
+      class="inline-flex items-center gap-1.5 rounded-full bg-ink-900 px-2.5 py-1 text-xs font-bold text-white"
+    >
+      <span class="h-1.5 w-1.5 rounded-full bg-accent-500"></span>
+      {selected.size} dipilih
+    </span>
+    <button
+      type="button"
       onclick={() => {
         confirm = {
           open: true,
@@ -625,9 +801,19 @@
             }
           },
         };
-      }}>Hapus</Button
+      }}
+      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-danger px-3 text-xs font-bold text-white shadow-sm transition-all active:scale-95 hover:bg-danger/90"
     >
-    <Button size="sm" variant="ghost" onclick={() => (selected = new Set())}>Batal</Button>
+      <Icon name="trash" size={12} stroke={2.5} />
+      Hapus
+    </button>
+    <button
+      type="button"
+      onclick={() => (selected = new Set())}
+      class="inline-flex h-9 items-center gap-1 rounded-full border border-ink-200 bg-surface px-3 text-xs font-bold text-ink-600 transition-colors hover:bg-ink-50"
+    >
+      Batal
+    </button>
   </div>
 {/if}
 
@@ -643,14 +829,26 @@
     <div
       class="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-t-2xl bg-surface p-5 sm:rounded-2xl"
     >
-      <div class="flex items-start justify-between gap-2">
-        <h3 class="font-display text-lg font-bold">Tambah Layanan</h3>
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span
+            class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-success to-emerald-500 text-white shadow-md"
+          >
+            <Icon name="plus" size={18} stroke={2.75} />
+          </span>
+          <div>
+            <h3 class="font-display text-lg font-extrabold">Tambah Layanan</h3>
+            <p class="text-xs text-ink-500">Harga jual dihitung otomatis dari pricing rules.</p>
+          </div>
+        </div>
         <button
           type="button"
-          class="shrink-0 rounded-lg px-2 py-1 text-ink-400 hover:bg-ink-100"
+          class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-700"
           aria-label="Tutup"
-          onclick={() => (addSvcOpen = false)}>✕</button
+          onclick={() => (addSvcOpen = false)}
         >
+          <Icon name="x" size={16} stroke={2.5} />
+        </button>
       </div>
       <form method="POST" action="?/addService" use:enhance={onResult} class="space-y-3">
         <div>
@@ -798,14 +996,26 @@
     <div
       class="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-t-2xl bg-surface p-5 sm:rounded-2xl"
     >
-      <div class="flex items-start justify-between gap-2">
-        <h3 class="font-display text-lg font-bold">Edit Layanan #{editSvc.id}</h3>
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span
+            class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-md"
+          >
+            <Icon name="edit" size={17} stroke={2.5} />
+          </span>
+          <div>
+            <h3 class="font-display text-lg font-extrabold">Edit Layanan #{editSvc.id}</h3>
+            <p class="truncate text-xs text-ink-500">{editSvc.serviceName}</p>
+          </div>
+        </div>
         <button
           type="button"
-          class="shrink-0 rounded-lg px-2 py-1 text-ink-400 hover:bg-ink-100"
+          class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-700"
           aria-label="Tutup"
-          onclick={() => (editSvc = null)}>✕</button
+          onclick={() => (editSvc = null)}
         >
+          <Icon name="x" size={16} stroke={2.5} />
+        </button>
       </div>
       <form method="POST" action="?/editService" use:enhance={onResult} class="space-y-3">
         <input type="hidden" name="id" value={editSvc.id} />
@@ -980,6 +1190,7 @@
 
 <!-- View Service modal -->
 {#if viewSvc}
+  {@const vpav = provAvatar(viewSvc.providerName ?? "")}
   <div
     class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
     role="presentation"
@@ -990,19 +1201,28 @@
     <div
       class="max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto rounded-t-2xl bg-surface p-5 sm:rounded-2xl"
     >
-      <div class="flex items-start justify-between gap-2">
-        <div class="min-w-0">
-          <h3 class="font-display text-lg font-bold">{viewSvc.serviceName}</h3>
-          <p class="truncate text-xs text-ink-400">
-            #{viewSvc.id} · {viewSvc.categoryName ?? "—"} · {viewSvc.providerName ?? "—"}
-          </p>
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span
+            class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-white shadow-md bg-gradient-to-br {vpav.tone}"
+          >
+            <Icon name={vpav.icon} size={17} stroke={2.5} />
+          </span>
+          <div class="min-w-0">
+            <h3 class="truncate font-display text-lg font-extrabold">{viewSvc.serviceName}</h3>
+            <p class="truncate text-xs text-ink-500">
+              #{viewSvc.id} · {viewSvc.categoryName ?? "—"} · {viewSvc.providerName ?? "—"}
+            </p>
+          </div>
         </div>
         <button
           type="button"
-          class="shrink-0 rounded-lg px-2 py-1 text-ink-400 hover:bg-ink-100"
+          class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-700"
           aria-label="Tutup"
-          onclick={() => (viewSvc = null)}>✕</button
+          onclick={() => (viewSvc = null)}
         >
+          <Icon name="x" size={16} stroke={2.5} />
+        </button>
       </div>
       <dl class="space-y-1.5 text-sm">
         <div class="flex justify-between gap-3">
@@ -1074,6 +1294,112 @@
   </div>
 {/if}
 
+<!-- Bulk price per kategori modal -->
+{#if bulkPriceOpen}
+  {@const bpCat = data.categories.find((c) => c.id === bp_categoryId) ?? null}
+  <div
+    class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+    role="presentation"
+    onclick={(e) => {
+      if (e.target === e.currentTarget) bulkPriceOpen = false;
+    }}
+  >
+    <div class="w-full max-w-sm space-y-3 rounded-t-2xl bg-surface p-5 sm:rounded-2xl">
+      <div class="flex items-center gap-2.5">
+        <span
+          class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-warning to-amber-500 text-white shadow-md"
+        >
+          <Icon name="tag" size={18} stroke={2.5} />
+        </span>
+        <div class="min-w-0">
+          <h3 class="font-display text-lg font-extrabold">Harga Kategori</h3>
+          <p class="truncate text-xs text-ink-500">{bpCat?.name ?? "Semua layanan"}</p>
+        </div>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-ink-500" for="bp-mode">Mode</label>
+          <select
+            id="bp-mode"
+            bind:value={bp_mode}
+            class="h-10 w-full rounded-xl border border-ink-200 bg-surface px-3 text-sm"
+          >
+            <option value="adjust">Geser modal (%)</option>
+            <option value="set_base">Set modal baru (Rp/1k)</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-ink-500" for="bp-value">
+            {bp_mode === "adjust" ? "Persentase (−100 s/d +1000)" : "Modal per 1.000 (Rp)"}
+          </label>
+          <input
+            id="bp-value"
+            type="number"
+            step={bp_mode === "adjust" ? "1" : "any"}
+            bind:value={bp_value}
+            class="h-10 w-full rounded-xl border border-ink-200 bg-surface px-3 text-sm tabular-nums"
+          />
+          <p class="mt-1 text-[11px] text-ink-400">
+            {bp_mode === "adjust"
+              ? "Contoh: 10 = naikkan modal 10% · −10 = turunkan 10%. Harga jual per level dihitung ulang dari pricing rules."
+              : "Semua layanan di kategori ini dapat modal baru — harga lama ditimpa."}
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <Button
+            type="button"
+            size="md"
+            variant="ghost"
+            full
+            onclick={() => (bulkPriceOpen = false)}>Batal</Button
+          >
+          <Button
+            type="button"
+            size="md"
+            variant="danger"
+            full
+            disabled={!Number.isFinite(bp_value) ||
+              (bp_mode === "set_base" ? bp_value <= 0 : bp_value === 0)}
+            onclick={() => {
+              const catName = bpCat?.name ?? "";
+              const val = bp_value;
+              const isSet = bp_mode === "set_base";
+              if ((isSet && val <= 0) || (!isSet && (val <= -100 || val > 1000 || val === 0)))
+                return;
+              confirm = {
+                open: true,
+                title: `Update harga kategori "${catName}"?`,
+                message: isSet
+                  ? `Modal semua layanan kategori ini akan di-set ke ${val.toLocaleString("id-ID")}/1k.`
+                  : `Modal semua layanan kategori ini akan digeser ${val > 0 ? "+" : ""}${val}%.`,
+                label: "Ya, Update Harga",
+                danger: true,
+                action: async () => {
+                  const fd = new FormData();
+                  fd.append("categoryId", String(bp_categoryId));
+                  fd.append("mode", bp_mode);
+                  fd.append("value", String(val));
+                  const r = await fetch("?/bulkCategoryPrice", { method: "POST", body: fd });
+                  const j = (await r.json().catch(() => null)) as any;
+                  if (j?.type === "success") {
+                    toast(j.data?.success ?? `${catName} diupdate`, "success");
+                    bulkPriceOpen = false;
+                    location.reload();
+                  } else {
+                    toast(j?.data?.error ?? "Gagal update harga kategori", "error");
+                  }
+                },
+              };
+            }}
+          >
+            {bp_mode === "adjust" ? "Geser" : "Set"} Harga
+          </Button>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <!-- Add Category modal -->
 {#if addCatOpen}
   <div
@@ -1084,7 +1410,14 @@
     }}
   >
     <div class="w-full max-w-sm space-y-3 rounded-t-2xl bg-surface p-5 sm:rounded-2xl">
-      <h3 class="font-display text-lg font-bold">Tambah Kategori</h3>
+      <div class="flex items-center gap-2.5">
+        <span
+          class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-md"
+        >
+          <Icon name="grid" size={18} stroke={2.5} />
+        </span>
+        <h3 class="font-display text-lg font-extrabold">Tambah Kategori</h3>
+      </div>
       <form method="POST" action="?/addCategory" use:enhance={onResult} class="space-y-3">
         <div>
           <label class="mb-1 block text-xs font-semibold text-ink-500" for="add-catname">Nama</label
@@ -1117,7 +1450,14 @@
     }}
   >
     <div class="w-full max-w-sm space-y-3 rounded-t-2xl bg-surface p-5 sm:rounded-2xl">
-      <h3 class="font-display text-lg font-bold">Edit Kategori</h3>
+      <div class="flex items-center gap-2.5">
+        <span
+          class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-warning to-amber-500 text-white shadow-md"
+        >
+          <Icon name="grid" size={18} stroke={2.5} />
+        </span>
+        <h3 class="font-display text-lg font-extrabold">Edit Kategori #{editCat.id}</h3>
+      </div>
       <form method="POST" action="?/editCategory" use:enhance={onResult} class="space-y-3">
         <input type="hidden" name="id" value={editCat.id} />
         <div>
@@ -1149,7 +1489,8 @@
     bind:open={confirm.open}
     title={confirm.title}
     message={confirm.message}
-    confirmLabel="Hapus"
+    confirmLabel={confirm.label ?? "Hapus"}
+    danger={confirm.danger ?? true}
     onConfirm={confirm.action}
   />
 {/if}

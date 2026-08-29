@@ -107,55 +107,75 @@
   });
 </script>
 
-<section class="space-y-6">
+<section class="space-y-5 lg:space-y-6">
   <header class="reveal flex flex-wrap items-end justify-between gap-3">
-    <div>
-      <h1 class="font-display text-xl font-bold lg:text-2xl">Command Center</h1>
+    <div class="min-w-0">
+      <h1
+        class="flex items-center gap-2 font-display text-xl font-extrabold tracking-tight lg:text-2xl"
+      >
+        <span class="grid h-8 w-8 place-items-center rounded-xl bg-ink-900 text-white shadow-sm">
+          <Icon name="shield" size={15} stroke={2.5} />
+        </span>
+        Command Center
+      </h1>
       <p class="mt-0.5 text-sm text-ink-500">Ringkasan real-time operasional Socio hari ini.</p>
     </div>
-    <div
-      class="flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success"
-    >
-      <span class="relative flex h-2 w-2">
-        <span
-          class="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60"
-        ></span>
-        <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
+    <div class="flex items-center gap-2">
+      <span
+        class="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-xs font-bold text-success motion-safe:animate-[pulse_2.4s_ease-in-out_infinite]"
+      >
+        <span class="relative flex h-2 w-2">
+          <span
+            class="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60"
+          ></span>
+          <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
+        </span>
+        Live · auto-refresh 10s
       </span>
-      Live
     </div>
   </header>
 
   <!-- HERO STAT (single, prominent) — fix anti-pattern #5: no 4-col stat strip -->
   <div
-    class="reveal relative overflow-hidden rounded-3xl border border-ink-800 bg-ink-900 p-6 text-white sm:p-8"
+    class="reveal relative overflow-hidden rounded-3xl border border-ink-800 bg-gradient-to-br from-ink-900 via-ink-900 to-ink-800 p-5 text-white shadow-[0_18px_44px_-16px_rgba(15,23,42,0.55)] sm:p-8"
     style="--d:60ms"
   >
     <div
-      class="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-20 blur-3xl"
+      class="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-25 blur-3xl motion-safe:animate-[pulse_6s_ease-in-out_infinite]"
     ></div>
-    <div class="relative flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <p class="text-[11px] font-bold uppercase tracking-wide text-ink-300">Revenue hari ini</p>
-        <div class="mt-1 font-display text-4xl font-extrabold tabular-nums sm:text-5xl">
+    <div
+      class="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-accent-500/30 blur-3xl"
+    ></div>
+    <div class="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div class="min-w-0 flex-1">
+        <p
+          class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-300"
+        >
+          <Icon name="trending_up" size={12} stroke={2.5} class="text-accent-400" />
+          Revenue hari ini
+        </p>
+        <div class="mt-1.5 font-display text-4xl font-extrabold tabular-nums sm:text-5xl">
           {rp($revenueTween)}
         </div>
         {#if m.revenue.delta !== undefined}
           <p
-            class="mt-1 text-sm font-semibold {m.revenue.delta >= 0
+            class="mt-1 inline-flex items-center gap-1 text-sm font-semibold {m.revenue.delta >= 0
               ? 'text-success'
               : 'text-danger'}"
           >
-            {m.revenue.delta >= 0 ? "▲" : "▼"}
-            {Math.abs(m.revenue.delta).toFixed(1)}% vs kemarin
+            <span class="rounded-full bg-white/10 px-1.5 py-0.5">
+              {m.revenue.delta >= 0 ? "▲" : "▼"}
+              {Math.abs(m.revenue.delta).toFixed(1)}%
+            </span>
+            <span class="text-ink-300">vs kemarin</span>
           </p>
         {/if}
       </div>
-      <div class="w-full max-w-[220px] sm:w-auto">
+      <div class="w-full sm:w-64 lg:w-72">
         <Chart
           series={[{ label: "Revenue", data: m.revenue.spark, color: "var(--color-accent-400)" }]}
           labels={data.chart.labels}
-          height={64}
+          height={72}
           formatValue={(v) => rp(v)}
         />
       </div>
@@ -202,7 +222,7 @@
           <span class="truncate">{q.label}</span>
         </div>
         <div
-          class="mt-1.5 truncate font-display text-sm font-extrabold tabular-nums sm:text-base {q.tone}"
+          class="mt-1.5 truncate font-display text-base font-extrabold tabular-nums sm:text-lg {q.tone}"
         >
           {q.value}{#if q.sub}<span class="text-[11px] font-medium text-ink-400 sm:text-xs">
               {q.sub}</span
@@ -221,8 +241,10 @@
     >
       <div class="flex items-center justify-between border-b border-ink-50 px-4 py-3.5">
         <div class="flex items-center gap-2">
-          <span class="grid h-8 w-8 place-items-center rounded-xl bg-primary-soft text-primary-600">
-            <Icon name="activity" size={16} stroke={2.25} />
+          <span
+            class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-sm"
+          >
+            <Icon name="activity" size={16} stroke={2.5} />
           </span>
           <div>
             <h2 class="text-sm font-bold leading-tight">Aktivitas terbaru</h2>
@@ -231,19 +253,19 @@
         </div>
         <a
           href="/admin/audit"
-          class="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-xs font-semibold text-primary-600 transition-colors hover:bg-primary-soft"
+          class="inline-flex min-h-[36px] items-center gap-1 rounded-full px-3 text-xs font-bold text-primary-600 transition-colors hover:bg-primary-soft"
         >
-          Lihat semua <Icon name="arrow_right" size={13} stroke={2.25} />
+          Lihat semua <Icon name="arrow_right" size={13} stroke={2.5} />
         </a>
       </div>
 
-      <!-- filter chips -->
-      <div class="flex flex-wrap gap-1.5 px-4 pt-3">
+      <!-- filter chips — min-h-36 tap comfort -->
+      <div class="-mx-1 flex flex-wrap gap-1.5 overflow-x-auto px-1 pt-3 [scrollbar-width:none]">
         {#each filters as fl (fl.key)}
           <button
             type="button"
             onclick={() => (filter = fl.key)}
-            class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all duration-200
+            class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 active:scale-95
               {filter === fl.key
               ? 'border-transparent bg-ink-900 text-white shadow-sm'
               : 'border-ink-100 bg-surface text-ink-500 hover:border-ink-200 hover:text-ink-700'}"
@@ -252,7 +274,7 @@
             {fl.label}
             <span
               class="rounded-full px-1.5 text-[10px] tabular-nums {filter === fl.key
-                ? 'bg-white/20'
+                ? 'bg-white/20 text-white'
                 : 'bg-ink-100 text-ink-500'}">{counts[fl.key]}</span
             >
           </button>
@@ -362,24 +384,35 @@
 
   <!-- Revenue chart 7 hari (bawah, full-width) -->
   <div class="reveal rounded-2xl border border-ink-100 bg-surface p-4" style="--d:600ms">
-    <div class="mb-1 flex items-center justify-between">
-      <div>
-        <h2 class="text-sm font-semibold">Revenue 7 hari</h2>
-        <p class="text-[11px] text-ink-400">Total {rp(revenueTotal7d)}</p>
+    <div class="mb-2 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span
+          class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-success/15 to-success/5 text-success"
+        >
+          <Icon name="trending_up" size={16} stroke={2.5} />
+        </span>
+        <div>
+          <h2 class="text-sm font-bold leading-tight">Revenue 7 hari</h2>
+          <p class="text-[11px] text-ink-400">
+            Total {rp(revenueTotal7d)} · {data.chart.labels.length} hari
+          </p>
+        </div>
       </div>
       <a
-        href="/admin/reports"
-        class="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-xs font-semibold text-primary-600 transition-colors hover:bg-primary-soft"
+        href="/admin/reporting"
+        class="inline-flex min-h-[36px] items-center gap-1 rounded-full px-3 text-xs font-bold text-primary-600 transition-colors hover:bg-primary-soft"
       >
-        Detail <Icon name="arrow_right" size={13} stroke={2.25} />
+        Detail <Icon name="arrow_right" size={13} stroke={2.5} />
       </a>
     </div>
-    <Chart
-      series={[{ label: "Revenue", data: data.chart.revenue, color: "var(--color-success)" }]}
-      labels={data.chart.labels}
-      height={220}
-      formatValue={(v) => rp(v)}
-    />
+    <div class="mx-auto w-full max-w-3xl">
+      <Chart
+        series={[{ label: "Revenue", data: data.chart.revenue, color: "var(--color-success)" }]}
+        labels={data.chart.labels}
+        height={200}
+        formatValue={(v) => rp(v)}
+      />
+    </div>
   </div>
 </section>
 

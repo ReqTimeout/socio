@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, toast } from "@socio/ui";
+  import { Button, ConfirmDialog, EmptyState, Icon, toast } from "@socio/ui";
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -144,21 +144,42 @@
 </svelte:head>
 
 <section class="space-y-5">
-  <header class="flex flex-wrap items-end justify-between gap-3">
-    <div>
-      <h1 class="font-display text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
+  <header class="flex flex-wrap items-start justify-between gap-3">
+    <div class="min-w-0">
+      <h1
+        class="flex items-center gap-2.5 font-display text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl"
+      >
+        <span class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-white shadow-sm">
+          <Icon name="mail" size={18} stroke={2.5} />
+        </span>
         Email Marketing
+        <span class="rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-bold text-white"
+          >{data.total}</span
+        >
       </h1>
-      <p class="mt-1 text-sm text-ink-500">
-        {data.total} campaign
-        <span class="mx-1 text-ink-300">·</span>
-        queue: <span class="font-semibold text-ink-700">{data.queuePending} pending</span>
+      <p class="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs font-medium text-ink-500">
+        <span
+          class="inline-flex items-center gap-1 rounded-full border border-ink-200 bg-surface px-2.5 py-1"
+        >
+          <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>queue {data.queuePending} pending
+        </span>
         {#if data.queueFailed}
-          <span class="text-danger"> · {data.queueFailed} gagal</span>
+          <span
+            class="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-red-600"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>{data.queueFailed} gagal
+          </span>
         {/if}
+        <span class="hidden sm:inline text-ink-300">·</span>
+        <span class="rounded-full bg-ink-50 px-2.5 py-1 text-ink-500"
+          >6 segment · templated CTA via Resend</span
+        >
       </p>
     </div>
-    <Button size="md" onclick={openAdd}>+ Buat Campaign</Button>
+    <Button size="md" onclick={openAdd}>
+      <Icon name="plus" size={16} stroke={2.5} class="-ml-0.5" />
+      Buat Campaign
+    </Button>
   </header>
 
   <div class="flex flex-wrap items-center justify-between gap-2">
@@ -166,13 +187,19 @@
       {#each data.filterStatuses as s (s || "all")}
         <button
           type="button"
-          class="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors {data.status === s
-            ? 'bg-ink-900 text-white'
-            : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
+          class="rounded-full border px-3 py-1.5 text-xs font-bold transition-colors {data.status ===
+          s
+            ? 'border-transparent bg-ink-900 text-white shadow-sm'
+            : 'border-ink-200 bg-surface text-ink-600 hover:bg-ink-50'}"
           onclick={() => setFilter(s)}>{s === "" ? "Semua" : statusLabel(s)}</button
         >
       {/each}
     </div>
+    <span class="text-[11px] font-medium text-ink-400"
+      >Segment: all / active 7d / high_spender 30d / churn_risk — blast via <code
+        class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px]">email_queue</code
+      ></span
+    >
   </div>
 
   {#if data.campaigns.length === 0}
@@ -187,51 +214,65 @@
     <!-- Mobile cards -->
     <ul class="space-y-2 lg:hidden">
       {#each data.campaigns as c (c.id)}
-        <li class="rounded-2xl border border-ink-100 p-3">
-          <div class="flex items-center justify-between gap-2">
-            <span class="truncate text-sm font-semibold text-ink-900">{c.title}</span>
+        <li class="overflow-hidden rounded-2xl border border-ink-100 bg-surface">
+          <div
+            class="flex items-center justify-between gap-2 border-b border-ink-100 bg-ink-50/60 px-3 py-2"
+          >
+            <span class="truncate text-sm font-bold text-ink-900">{c.title}</span>
             <span
-              class="inline-flex shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold {statusBadge(
+              class="inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold {statusBadge(
                 c.status,
               )}">{statusLabel(c.status)}</span
             >
           </div>
-          <p class="mt-0.5 truncate text-xs text-ink-500">{c.subject}</p>
-          <div class="mt-1.5 grid grid-cols-3 gap-1 text-center text-[11px] text-ink-500">
-            <div class="rounded-lg bg-ink-50 py-1.5">
-              <div class="font-bold text-ink-800">{c.track.sent}</div>
+          <p class="truncate px-3 pt-1.5 text-xs font-medium text-ink-600">{c.subject}</p>
+          <p class="px-3 text-[11px] text-ink-400">
+            {c.audience} · {c.group}
+            {#if c.ctaText}· CTA: {c.ctaText}{/if}
+          </p>
+          <div class="grid grid-cols-3 gap-1.5 px-3 pt-1.5 text-center text-[11px] text-ink-500">
+            <div class="rounded-xl bg-ink-50 py-1.5">
+              <div class="font-extrabold text-ink-800">{c.track.sent}</div>
               kirim
             </div>
-            <div class="rounded-lg bg-ink-50 py-1.5">
-              <div class="font-bold text-ink-800">{c.track.opened}</div>
+            <div class="rounded-xl bg-ink-50 py-1.5">
+              <div class="font-extrabold text-ink-800">{c.track.opened}</div>
               buka
             </div>
-            <div class="rounded-lg bg-ink-50 py-1.5">
-              <div class="font-bold text-ink-800">{c.track.clicked}</div>
+            <div class="rounded-xl bg-ink-50 py-1.5">
+              <div class="font-extrabold text-ink-800">{c.track.clicked}</div>
               klik
             </div>
           </div>
-          <p class="mt-1.5 text-xs text-ink-400">{fmtDate(c.sentAt ?? c.scheduledAt)}</p>
-          <div class="mt-2 flex gap-2">
+          <p class="px-3 pt-1.5 text-xs text-ink-400">{fmtDate(c.sentAt ?? c.scheduledAt)}</p>
+          <div class="flex gap-1.5 border-t border-ink-100 bg-ink-50/30 px-3 py-2">
             {#if c.status === "draft" || c.status === "paused"}
-              <Button size="sm" variant="ghost" class="flex-1" onclick={() => openEdit(c)}
-                >Edit</Button
+              <button
+                type="button"
+                onclick={() => openEdit(c)}
+                class="flex-1 rounded-full border border-ink-200 bg-surface px-3 py-2 text-xs font-bold text-ink-700 hover:bg-ink-50"
+                >Edit</button
               >
-              <Button size="sm" class="flex-1" onclick={() => askAction(c, "send")}>Kirim</Button>
+              <button
+                type="button"
+                onclick={() => askAction(c, "send")}
+                class="flex-1 rounded-full bg-ink-900 px-3 py-2 text-xs font-bold text-white hover:bg-ink-800"
+                >Kirim</button
+              >
             {:else if c.status !== "cancelled"}
-              <Button
-                size="sm"
-                variant="ghost"
-                class="flex-1 text-danger"
-                onclick={() => askAction(c, "cancel")}>Batalkan</Button
+              <button
+                type="button"
+                onclick={() => askAction(c, "cancel")}
+                class="flex-1 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-100"
+                >Batalkan</button
               >
             {/if}
             {#if c.status !== "sent"}
-              <Button
-                size="sm"
-                variant="ghost"
-                class="shrink-0 text-danger"
-                onclick={() => askAction(c, "delete")}>Hapus</Button
+              <button
+                type="button"
+                onclick={() => askAction(c, "delete")}
+                class="rounded-full border border-ink-200 bg-surface px-3 py-2 text-xs font-bold text-ink-500 hover:bg-ink-50"
+                >Hapus</button
               >
             {/if}
           </div>
@@ -240,60 +281,83 @@
     </ul>
 
     <!-- Desktop table -->
-    <div class="hidden overflow-x-auto rounded-2xl border border-ink-100 lg:block">
+    <div class="hidden overflow-hidden rounded-2xl border border-ink-100 lg:block">
       <table class="w-full text-sm">
-        <thead class="bg-ink-50 text-left text-xs uppercase tracking-wide text-ink-500">
+        <thead class="bg-ink-50/80 text-left text-xs uppercase tracking-wide text-ink-500">
           <tr>
-            <th class="px-4 py-3 font-semibold">Campaign</th>
-            <th class="px-4 py-3 font-semibold">Segment</th>
-            <th class="px-4 py-3 text-center font-semibold">Statistik</th>
-            <th class="px-4 py-3 font-semibold">Terakhir</th>
-            <th class="px-4 py-3 font-semibold">Status</th>
-            <th class="px-4 py-3 text-right font-semibold">Aksi</th>
+            <th class="px-4 py-2.5 font-semibold">Campaign</th>
+            <th class="px-3 py-2.5 font-semibold">Segment</th>
+            <th class="px-4 py-2.5 text-center font-semibold">Statistik</th>
+            <th class="px-4 py-2.5 font-semibold">Terakhir</th>
+            <th class="px-4 py-2.5 font-semibold">Status</th>
+            <th class="px-4 py-2.5 text-right font-semibold">Aksi</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-ink-100">
           {#each data.campaigns as c (c.id)}
-            <tr class="hover:bg-ink-50/60">
-              <td class="max-w-xs px-4 py-3">
-                <div class="truncate font-medium text-ink-900">{c.title}</div>
-                <div class="truncate text-xs text-ink-400">{c.subject}</div>
+            <tr class="group hover:bg-ink-50/60">
+              <td class="max-w-[280px] px-4 py-3">
+                <div class="truncate font-bold text-ink-900">{c.title}</div>
+                <div class="truncate text-xs text-ink-500">
+                  {c.subject}
+                  {#if c.ctaText}· <span
+                      class="rounded-full bg-ink-100 px-1.5 py-0.5 text-[10px] font-bold"
+                      >{c.ctaText}</span
+                    >{/if}
+                </div>
               </td>
-              <td class="px-4 py-3 text-xs text-ink-500">{c.audience} / {c.group}</td>
-              <td class="px-4 py-3 text-center text-xs text-ink-500">
-                <span class="rounded-full bg-ink-50 px-2 py-1 font-medium text-ink-600">
-                  {c.track.sent} kirim · {c.track.opened} buka · {c.track.clicked} klik
-                </span>
-              </td>
-              <td class="whitespace-nowrap px-4 py-3 text-xs text-ink-400"
+              <td class="px-3 py-3 text-xs"
+                ><span
+                  class="rounded-full border border-ink-200 bg-ink-50 px-2 py-0.5 font-bold text-ink-600"
+                  >{c.audience}</span
+                > <span class="text-ink-300">/</span>
+                <span class="font-medium text-ink-500">{c.group}</span></td
+              >
+              <td class="px-4 py-3 text-center text-xs"
+                ><span
+                  class="inline-flex items-center gap-1 rounded-full border border-ink-200 bg-ink-50 px-2.5 py-1 font-bold text-ink-700"
+                  >{c.track.sent} · {c.track.opened} · {c.track.clicked}</span
+                > <span class="ml-1 text-[11px] text-ink-400">kirim · buka · klik</span></td
+              >
+              <td class="whitespace-nowrap px-4 py-3 text-xs text-ink-500"
                 >{fmtDate(c.sentAt ?? c.scheduledAt)}</td
               >
-              <td class="px-4 py-3">
-                <span
-                  class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold {statusBadge(
+              <td class="px-4 py-3"
+                ><span
+                  class="inline-flex rounded-full border px-2.5 py-1 text-xs font-bold {statusBadge(
                     c.status,
                   )}">{statusLabel(c.status)}</span
-                >
-              </td>
+                ></td
+              >
               <td class="px-4 py-3">
-                <div class="flex justify-end gap-1.5">
+                <div class="flex justify-end gap-1">
                   {#if c.status === "draft" || c.status === "paused"}
-                    <Button size="sm" variant="ghost" onclick={() => openEdit(c)}>Edit</Button>
-                    <Button size="sm" onclick={() => askAction(c, "send")}>Kirim</Button>
+                    <button
+                      type="button"
+                      onclick={() => openEdit(c)}
+                      class="grid h-8 w-8 place-items-center rounded-full border border-ink-200 bg-surface text-ink-600 hover:bg-ink-50"
+                      title="Edit"><Icon name="settings" size={14} /></button
+                    >
+                    <button
+                      type="button"
+                      onclick={() => askAction(c, "send")}
+                      class="inline-flex items-center gap-1 rounded-full bg-ink-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-ink-800"
+                      ><Icon name="mail" size={12} />Kirim</button
+                    >
                   {:else if c.status !== "cancelled"}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      class="text-danger"
-                      onclick={() => askAction(c, "cancel")}>Batalkan</Button
+                    <button
+                      type="button"
+                      onclick={() => askAction(c, "cancel")}
+                      class="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100"
+                      >Batalkan</button
                     >
                   {/if}
                   {#if c.status !== "sent"}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      class="text-danger"
-                      onclick={() => askAction(c, "delete")}>Hapus</Button
+                    <button
+                      type="button"
+                      onclick={() => askAction(c, "delete")}
+                      class="grid h-8 w-8 place-items-center rounded-full border border-ink-200 bg-surface text-ink-500 hover:bg-ink-50"
+                      title="Hapus"><Icon name="trash" size={14} /></button
                     >
                   {/if}
                 </div>

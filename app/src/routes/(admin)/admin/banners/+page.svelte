@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, Icon, toast } from "@socio/ui";
+  import { Button, ConfirmDialog, EmptyState, Icon, toast, extractActionMsg } from "@socio/ui";
   import { applyAction, enhance } from "$app/forms";
   import type { ActionData, PageData } from "./$types";
 
@@ -31,6 +31,60 @@
   let fActive = $state(true);
   let fStart = $state("");
   let fEnd = $state("");
+  let uploadFile: File | null = $state(null);
+  let uploadPreview: string | null = $state(null);
+  let uploading = $state(false);
+  let uploadProgress = $state("");
+  let imageInputEl: HTMLInputElement | undefined = $state(undefined);
+
+  function onPickFile(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    uploadFile = file;
+    if (uploadPreview) URL.revokeObjectURL(uploadPreview);
+    uploadPreview = file ? URL.createObjectURL(file) : null;
+    uploadProgress = "";
+  }
+  async function doUpload(): Promise<string | null> {
+    if (!uploadFile) return fImageUrl.trim() || null;
+    const fd = new FormData();
+    fd.set("file", uploadFile);
+    uploading = true;
+    uploadProgress = "Mengunggah…";
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const j = await res.json();
+      if (!res.ok || !j.url) {
+        toast(j.error ?? j.message ?? "Upload gagal", "error");
+        uploadProgress = j.error ?? "Gagal";
+        return null;
+      }
+      fImageUrl = j.url;
+      uploadProgress = "Berhasil";
+      // revoke preview after url set (keep showing via fImageUrl)
+      if (uploadPreview) {
+        URL.revokeObjectURL(uploadPreview);
+        uploadPreview = null;
+      }
+      uploadFile = null;
+      if (imageInputEl) imageInputEl.value = "";
+      return j.url as string;
+    } catch (e: any) {
+      toast(e?.message ?? "Upload gagal", "error");
+      uploadProgress = "Gagal";
+      return null;
+    } finally {
+      uploading = false;
+    }
+  }
+  function clearUpload() {
+    uploadFile = null;
+    if (uploadPreview) URL.revokeObjectURL(uploadPreview);
+    uploadPreview = null;
+    fImageUrl = "";
+    uploadProgress = "";
+    if (imageInputEl) imageInputEl.value = "";
+  }
 
   function openAdd() {
     modal = "add";
@@ -55,9 +109,17 @@
     fActive = b.isActive;
     fStart = b.startAt ? String(b.startAt).replace(" ", "T").slice(0, 16) : "";
     fEnd = b.endAt ? String(b.endAt).replace(" ", "T").slice(0, 16) : "";
+    uploadFile = null;
+    if (uploadPreview) URL.revokeObjectURL(uploadPreview);
+    uploadPreview = null;
+    uploadProgress = "";
   }
   function closeModal() {
     modal = null;
+    uploadFile = null;
+    if (uploadPreview) URL.revokeObjectURL(uploadPreview);
+    uploadPreview = null;
+    uploadProgress = "";
   }
 
   // G30: aksi destruktif via ConfirmDialog (pola sama dengan providers page)
@@ -250,10 +312,14 @@
         method="POST"
         action="?/save"
         use:enhance={() => async (input: any) => {
+          if (uploadFile) {
+            toast("Klik 'Upload ke R2' dulu sebelum Simpan — atau pakai URL manual.", "error");
+            return;
+          }
           const r = input.result;
           if (r.type === "failure") toast(r.data?.error ?? "Gagal", "error");
           else {
-            toast(r.data?.success ?? "OK", "success");
+            toast(extractActionMsg(r.data) ?? "OK", "success");
             closeModal();
             await input.update();
           }
@@ -278,15 +344,67 @@
           <label class="mb-1 block text-sm font-semibold" for="bn-sub">Subjudul</label>
           <input id="bn-sub" name="subtitle" bind:value={fSubtitle} maxlength="255" class={input} />
         </div>
+        <div class="space-y-2">
+          <label class="mb-1 block text-sm font-semibold" for="bn-file"
+            >Gambar banner — upload file (max 4MB) atau paste URL di bawah</label
+          >
+          <input
+            bind:this={imageInputEl}
+            id="bn-file"
+            type="file"
+            accept="image/*"
+            onchange={onPickFile}
+            class="block w-full cursor-pointer rounded-xl border border-ink-200 bg-surface px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-ink-900 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-ink-800"
+          />
+          {#if uploadPreview}
+            <div class="overflow-hidden rounded-xl border border-ink-200 bg-ink-50">
+              <img src={uploadPreview} alt="Preview" class="h-36 w-full object-cover" />
+            </div>
+          {:else if fImageUrl}
+            <div class="overflow-hidden rounded-xl border border-ink-200 bg-ink-50">
+              <img
+                src={fImageUrl}
+                alt="Preview URL"
+                class="h-36 w-full object-cover"
+                onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+              />
+            </div>
+          {/if}
+          <div class="flex items-center gap-2">
+            {#if uploadFile}
+              <Button type="button" size="sm" onclick={doUpload} disabled={uploading}>
+                {uploading ? "Mengunggah…" : "Upload ke R2"}
+              </Button>
+            {/if}
+            {#if fImageUrl || uploadPreview}
+              <button
+                type="button"
+                onclick={clearUpload}
+                class="text-xs font-semibold text-ink-500 hover:underline">Hapus gambar</button
+              >
+            {/if}
+            {#if uploadProgress}<span
+                class="text-xs font-medium {uploadProgress === 'Berhasil'
+                  ? 'text-success'
+                  : 'text-ink-500'}">{uploadProgress}</span
+              >{/if}
+          </div>
+          <p class="text-[11px] text-amber-600">
+            ⚠️ R2 signature belum sinkron (403). Sementara paste URL manual dulu; upload file auto
+            aktif setelah key diperbaiki di Coolify.
+          </p>
+        </div>
         <div class="grid gap-3 sm:grid-cols-2">
           <div>
-            <label class="mb-1 block text-sm font-semibold" for="bn-img">URL Gambar</label>
+            <label class="mb-1 block text-sm font-semibold" for="bn-img"
+              >URL Gambar (otomatis setelah upload)</label
+            >
             <input
               id="bn-img"
               name="imageUrl"
               bind:value={fImageUrl}
               type="url"
-              placeholder="https://…"
+              placeholder="https://cdn.socio.id/banners/…"
               class={input}
             />
           </div>
