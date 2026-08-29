@@ -21,7 +21,7 @@
     }, 350);
   }
   $effect(() => {
-    if (q !== data.q) q = data.q;
+    q = data.q;
   });
   let confirmId = $state<number | null>(null);
   let rejectId = $state<number | null>(null);

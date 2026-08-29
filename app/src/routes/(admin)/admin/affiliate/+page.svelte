@@ -19,7 +19,7 @@
     }, 350);
   }
   $effect(() => {
-    if (q !== data.q) q = data.q;
+    q = data.q;
   });
 
   function setStatus(s: string) {
@@ -46,15 +46,17 @@
     mode: "approve" | "reject";
   } | null>(null);
 
-  function onResult() {
-    return async (input: any) => {
-      const { result, update } = input;
+  // P0-audit fix: enhance dua-fase — fase-1 (submit) return callback fase-2
+  // (result). Versi lama `async (input) => { result.type }` dijalankan di fase
+  // submit → input.result undefined → TypeError sebelum POST terkirim.
+  const onResult =
+    () =>
+    async ({ result, update }: { result: any; update: () => Promise<void> }) => {
       confirmTarget = null;
       if (result.type === "failure") toast((result.data as any)?.error ?? "Gagal", "error");
       else toast((result.data as any)?.success ?? "OK", "success");
       await update();
     };
-  }
 
   type St = "Pending" | "Requested" | "Paid" | "Withdraw" | "Rejected";
   const STATUS_LABEL: Record<St, string> = {
@@ -338,7 +340,7 @@
     <form
       method="POST"
       action={confirmTarget.mode === "approve" ? "?/approve" : "?/reject"}
-      use:enhance={onResult()}
+      use:enhance={onResult}
       class="flex gap-3"
     >
       <input type="hidden" name="userId" value={confirmTarget.userId} />

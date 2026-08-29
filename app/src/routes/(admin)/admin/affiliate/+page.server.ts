@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { affiliate, users, balanceLogs } from "@socio/db/schema";
 import { sql, eq, and } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
 
 const LIMIT = 50;
@@ -142,45 +142,78 @@ export const actions: Actions = {
   /**
    * Approve withdrawal: kredit saldo user + affiliate Requested → Paid.
    * Single admin approval (keputusan user M3 §8.3 — tanpa dual control).
+   * A-09: SELECT FOR UPDATE di dalam transaksi untuk anti double-credit
+   * konkuren. Cek affectedRows setelah UPDATE — kalau 0 = sudah di-approve
+   * admin lain sebelumnya, return 409 idempotent.
    */
   approve: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("affiliate-approve", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const userId = Number(form.get("userId"));
-    if (!userId) return fail(400, { error: "ID user wajib." });
+    if (!Number.isFinite(userId) || userId <= 0) return fail(400, { error: "ID user wajib." });
 
-    const [sumRow] = await db
-      .select({ total: sql<number>`COALESCE(SUM(${affiliate.balance}), 0)` })
-      .from(affiliate)
-      .where(and(eq(affiliate.userId, userId), eq(affiliate.status, "Requested")));
-    const total = Number(sumRow?.total ?? 0);
-    if (total <= 0) return fail(400, { error: "Tidak ada penarikan menunggu." });
+    let total = 0;
+    try {
+      // Transaksi serialize-able: lock baris user + affiliate, baca total,
+      // kredit, flip status, insert log. SELECT FOR UPDATE biar 2 admin gak
+      // bisa approve amount yang sama (MySQL InnoDB default isolation).
+      // P0-audit fix: return normal dari callback — throw apa pun di dalam
+      // db.transaction() = ROLLBACK (drizzle mysql2), bukan commit.
+      await db.transaction(async (tx) => {
+        // Lock baris user dulu supaya deposit/order paralel gak ganggu.
+        await tx.execute(sql`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`);
+        // Hitung Requested total (in-session lock aman).
+        const [sumRow] = await tx
+          .select({ total: sql<number>`COALESCE(SUM(${affiliate.balance}), 0)` })
+          .from(affiliate)
+          .where(and(eq(affiliate.userId, userId), eq(affiliate.status, "Requested")));
+        total = Number(sumRow?.total ?? 0);
+        if (total <= 0) {
+          // No-op: jangan terus transaksi
+          throw new Error("NO_PENDING");
+        }
 
-    const [u] = await db
-      .select({ balance: users.balance, username: users.username })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    if (!u) return fail(404, { error: "User tidak ditemukan." });
+        // Flip Requested → Paid sebelum kredit; affectedRows == guard idempoten.
+        // P0-audit fix: tx.execute() return tuple [ResultSetHeader, fields]
+        // (drizzle mysql2) — affectedRows ada di elemen [0], bukan di res langsung.
+        const flip = await tx.execute(sql`
+          UPDATE affiliate SET status = 'Paid'
+          WHERE user_id = ${userId} AND status = 'Requested'
+        `);
+        const flipRes = (Array.isArray(flip) ? flip[0] : flip) as { affectedRows?: number };
+        const affected = Number(flipRes?.affectedRows ?? 0);
+        if (!affected) {
+          throw new Error("ALREADY_PROCESSED");
+        }
 
-    await db.transaction(async (tx) => {
-      // SQL increment — aman dari race dengan deposit/order paralel
-      await tx
-        .update(users)
-        .set({ balance: sql`${users.balance} + ${total}` })
-        .where(eq(users.id, userId));
-      await tx
-        .update(affiliate)
-        .set({ status: "Paid" })
-        .where(and(eq(affiliate.userId, userId), eq(affiliate.status, "Requested")));
-      await tx.insert(balanceLogs).values({
-        userId,
-        type: "wd",
-        amount: total,
-        note: "Withdraw affiliate commission (approved by admin)",
-        createdAt: new Date(),
+        await tx
+          .update(users)
+          .set({ balance: sql`${users.balance} + ${total}` })
+          .where(eq(users.id, userId));
+        await tx.insert(balanceLogs).values({
+          userId,
+          type: "wd",
+          amount: total,
+          note: `Withdraw affiliate commission disetujui admin #${locals.user!.id}`,
+          createdAt: new Date(),
+        });
       });
-    });
+    } catch (e: any) {
+      if (e?.message === "NO_PENDING") {
+        return fail(400, { error: "Tidak ada penarikan menunggu." });
+      }
+      if (e?.message === "ALREADY_PROCESSED") {
+        return fail(409, {
+          error: "Withdrawal sudah diproses admin lain. Refresh halaman.",
+        });
+      }
+      console.error("[affiliate] approve failed", (e as Error)?.message);
+      return fail(500, { error: "Gagal approve withdrawal. Coba lagi." });
+    }
 
+    // Audit di luar transaksi — kalau gagal, sudah committed; lebih baik
+    // ada withdrawal sukses tanpa audit entry (sangat jarang).
     await logAudit({
       adminId: Number(locals.user!.id),
       action: "approve_affiliate_withdrawal",
@@ -189,14 +222,23 @@ export const actions: Actions = {
       detail: { amount: total },
       ip: (locals as any).ip,
     });
-    return { success: `Withdrawal ${u.username} disetujui (+${total.toLocaleString("id-ID")}).` };
+    const [u] = await db
+      .select({ username: users.username })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    return {
+      success: `Withdrawal ${u?.username ?? userId} disetujui (+${total.toLocaleString("id-ID")}).`,
+    };
   },
 
   /** Reject withdrawal: Requested → Pending (komisi balik, saldo tidak disentuh). */
   reject: async ({ request, locals }) => {
+    assertAdmin(locals);
+    await assertAdminRate("affiliate-reject", (locals as any).ip ?? "0.0.0.0", 10, 60);
     const form = await request.formData();
     const userId = Number(form.get("userId"));
-    if (!userId) return fail(400, { error: "ID user wajib." });
+    if (!Number.isFinite(userId) || userId <= 0) return fail(400, { error: "ID user wajib." });
 
     const [sumRow] = await db
       .select({ total: sql<number>`COALESCE(SUM(${affiliate.balance}), 0)` })

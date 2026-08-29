@@ -18,7 +18,7 @@
     }, 350);
   }
   $effect(() => {
-    if (q !== data.q) q = data.q;
+    q = data.q;
   });
   let reply = $state("");
 

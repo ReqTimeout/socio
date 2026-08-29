@@ -23,7 +23,7 @@
     }, 350);
   }
   $effect(() => {
-    if (q !== data.q) q = data.q;
+    q = data.q;
   });
   let manage = $state<UserRow | null>(null);
   let manageLevel = $state("");

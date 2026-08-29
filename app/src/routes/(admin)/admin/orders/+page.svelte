@@ -21,7 +21,7 @@
     }, 350);
   }
   $effect(() => {
-    if (q !== data.q) q = data.q;
+    q = data.q;
   });
   let detail = $state<OrderRow | null>(null);
   let poid = $state("");
