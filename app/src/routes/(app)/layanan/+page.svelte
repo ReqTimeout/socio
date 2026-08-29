@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fly } from "svelte/transition";
-  import { ServiceCard, EmptyState, Icon, Select, staggerIn, hoverLift } from "@socio/ui";
+  import { ServiceCard, EmptyState, Icon, Select, staggerIn } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -87,31 +87,35 @@
   />
 </svelte:head>
 
-<section class="space-y-3 lg:space-y-5">
-  <!-- Intro header (desktop) -->
+<section class="space-y-3 lg:space-y-4">
+  <!-- Intro header (desktop) — tighter -->
   <div class="hidden lg:block">
-    <h1 class="font-display text-2xl font-extrabold tracking-tight">Katalog Layanan</h1>
-    <p class="mt-1 text-sm text-ink-500">Pilih kategori, atur jumlah, langsung gas.</p>
+    <h1
+      class="font-display text-[1.55rem] font-extrabold tracking-tight leading-none tracking-[-0.01em]"
+    >
+      Katalog Layanan
+    </h1>
+    <p class="mt-1.5 text-[14px] text-ink-500">Pilih kategori, atur jumlah, langsung gas.</p>
   </div>
 
-  <!-- Search -->
+  <!-- Search — playful floating -->
   <form
     onsubmit={(e) => {
       e.preventDefault();
       onSearch();
     }}
-    class="sticky top-14 z-30 -mx-4 border-b border-ink-100 bg-surface/95 px-4 py-2 backdrop-blur
+    class="sticky top-14 z-30 -mx-4 border-b border-ink-100 bg-surface/95 px-4 py-2 backdrop-blur shadow-[0_4px_16px_-8px_rgba(15,23,42,0.08)] lg:shadow-none
       lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
   >
     <div class="flex gap-2">
       <input
         bind:value={q}
         placeholder="Cari layanan… (mis. followers instagram)"
-        class="h-11 flex-1 rounded-xl border border-ink-200 bg-surface px-4 text-sm outline-none transition focus:border-accent-ink focus-visible:ring-2 focus-visible:ring-accent-500/30"
+        class="h-11 flex-1 rounded-xl border border-ink-200 bg-surface px-4 text-sm outline-none transition shadow-sm focus:border-accent-ink focus:shadow-[0_4px_16px_-8px_rgba(6,182,212,0.30)] focus-visible:ring-2 focus-visible:ring-accent-500/30 hover:border-ink-300 hover:shadow-md"
       />
       <button
         type="submit"
-        class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent-ink text-white transition active:scale-95 hover:opacity-90"
+        class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent-ink text-white shadow-[0_6px_16px_-6px_rgba(6,182,212,0.45)] transition-all duration-200 hover:shadow-[0_8px_20px_-6px_rgba(6,182,212,0.55)] hover:-translate-y-0.5 active:scale-95 hover:opacity-90"
         aria-label="Cari"
       >
         <svg
@@ -157,7 +161,9 @@
           : 'border-ink-200 bg-surface text-ink-600 hover:border-ink-300'}"
       >
         <Icon name="star" size={16} stroke={2.5} class={data.params.fav ? "fill-white" : ""} />
-        <span class="hidden sm:inline">Favorit</span>{data.favCount ? ` ${data.favCount}` : ""}
+        <span class="hidden sm:inline">Favorit</span><span
+          >{data.favCount ? ` ${data.favCount}` : ""}</span
+        >
       </button>
     </div>
   </div>
@@ -172,12 +178,12 @@
       description="Coba kata kunci lain atau ganti kategori."
     />
   {:else}
-    <ul class="grid grid-cols-1 gap-2.5 min-w-0 sm:grid-cols-2 xl:grid-cols-3">
+    <ul class="grid grid-cols-1 gap-2.5 min-w-0 sm:grid-cols-2 lg:gap-3.5 xl:grid-cols-3">
       {#each data.services as s, i (s.id)}
-        <li in:fly={staggerIn(i, { y: 8, duration: 220, step: 30 })} class="relative {hoverLift}">
+        <li in:fly={staggerIn(i, { y: 8, duration: 220, step: 30 })} class="relative group">
           <ServiceCard
             name={s.serviceName}
-            category={s.type}
+            category={s.type && s.type !== "Default" ? s.type : (s.categoryName ?? "")}
             platform={s.categoryName ?? s.serviceName}
             pricePer1k={s.price}
             min={s.min}
@@ -210,7 +216,7 @@
       <button
         onclick={loadMore}
         disabled={pending}
-        class="w-full rounded-xl border border-ink-200 py-3 text-sm font-semibold text-ink-600 hover:bg-ink-50"
+        class="w-full rounded-xl border border-ink-200 bg-surface py-3 text-sm font-semibold text-ink-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-md active:scale-[0.99]"
       >
         {pending ? "Memuat…" : "Muat lebih banyak"}
       </button>

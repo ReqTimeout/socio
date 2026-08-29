@@ -3,69 +3,123 @@
   import { haptic } from "@socio/ui";
   import { fly } from "svelte/transition";
   import { onMount } from "svelte";
-  import { formatRupiah } from "$lib/format";
+  import { formatRupiah, serviceDisplayName } from "$lib/format";
 
   let { data } = $props();
 
   const firstName = $derived((data.user?.name ?? "Kawan").split(" ")[0]);
 
-  // Sapaan berdasarkan waktu — di-set di client supaya tidak bentrok hydration
-  // (zona waktu server vs browser bisa beda).
+  // Time-aware greeting (WIB) — client clock → Asia/Jakarta.
+  // Range: pagi 04-10, siang 11-14, sore 15-17, malam 18-03.
+  type TimePhase = "dawn" | "day" | "dusk" | "night";
+  const phaseMeta: Record<TimePhase, { greeting: string; emoji: string; ambient: string }> = {
+    dawn: {
+      greeting: "Selamat pagi",
+      emoji: "🌅",
+      ambient: "from-amber-200/40 via-orange-100/20 to-transparent",
+    },
+    day: {
+      greeting: "Selamat siang",
+      emoji: "☀️",
+      ambient: "from-sky-200/30 via-cyan-100/20 to-transparent",
+    },
+    dusk: {
+      greeting: "Selamat sore",
+      emoji: "🌇",
+      ambient: "from-violet-200/40 via-amber-100/25 to-transparent",
+    },
+    night: {
+      greeting: "Selamat malam",
+      emoji: "🌙",
+      ambient: "from-indigo-200/30 via-violet-100/15 to-transparent",
+    },
+  };
+  function phaseOf(h: number): TimePhase {
+    if (h >= 4 && h < 11) return "dawn";
+    if (h >= 11 && h < 15) return "day";
+    if (h >= 15 && h < 18) return "dusk";
+    return "night";
+  }
+  function hourWIB(d = new Date()): number {
+    // Cheap WIB (UTC+7) via Intl — true Jakarta wall-clock, not browser local
+    try {
+      const fmt = new Intl.DateTimeFormat("id-ID", {
+        hour: "numeric",
+        hour12: false,
+        timeZone: "Asia/Jakarta",
+      });
+      return Number(fmt.format(d));
+    } catch {
+      return d.getHours();
+    }
+  }
+
+  let phase = $state<TimePhase>("day");
   let greeting = $state("Halo");
   let greetEmoji = $state("👋");
+  let ambient = $state(phaseMeta.day.ambient);
+
   onMount(() => {
-    const h = new Date().getHours();
-    greeting =
-      h < 11
-        ? "Selamat pagi"
-        : h < 15
-          ? "Selamat siang"
-          : h < 18
-            ? "Selamat sore"
-            : "Selamat malam";
-    greetEmoji = h < 11 ? "☀️" : h < 18 ? "🌤️" : "🌙";
+    const h = hourWIB();
+    const p = phaseOf(h);
+    phase = p;
+    greeting = phaseMeta[p].greeting;
+    greetEmoji = phaseMeta[p].emoji;
+    ambient = phaseMeta[p].ambient;
+    // Keep phase fresh if user leaves tab open across the hour
+    const id = setInterval(() => {
+      const nh = hourWIB();
+      const np = phaseOf(nh);
+      if (np !== phase) {
+        phase = np;
+        greeting = phaseMeta[np].greeting;
+        greetEmoji = phaseMeta[np].emoji;
+        ambient = phaseMeta[np].ambient;
+      }
+    }, 60_000);
+    return () => clearInterval(id);
   });
 
-  // Sub-teks dinamis: kalau ada order berjalan, tampilkan status live.
-  const subtitle = $derived(
-    data.activeOrders > 0
-      ? `${data.activeOrders} pesanan lagi diproses — kami pantau sampai kelar.`
-      : "Sosmed nggak naik sendiri. Yuk gas hari ini 🚀",
-  );
+  // Copy profesional, tenang — satu template konsisten (bergantian tiap menit
+  // bikin teks "berubah sendiri" yang membingungkan saat dibaca ulang).
+  const subtitle = $derived.by(() => {
+    if (data.activeOrders <= 0) return "Siap bantu naikin performa sosmed — cepat & aman.";
+    return `${data.activeOrders} pesanan berjalan — kami proses otomatis hingga selesai.`;
+  });
 
-  // Quick actions — chip gradient + glow, copy pendek (mobile) / lengkap (desktop)
+  // Quick actions — copy hangat + glow brand saat hover (layered dgn card-lift)
   const quick = [
     {
       href: "/pesan",
       label: "Pesan",
-      desc: "Gas followers & likes-mu",
+      desc: "Followers & likes, proses otomatis",
       icon: "rocket",
       chip: "from-primary-500 to-accent-500",
-      glow: "group-hover:shadow-[0_12px_28px_-10px_rgba(79,70,229,0.6)]",
+      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(79,70,229,0.32)]",
     },
     {
       href: "/layanan",
-      label: "Layanan",
-      desc: "Ribuan layanan siap pakai",
+      label: "Katalog",
+      desc: "6.000+ layanan, satu dashboard",
       icon: "grid",
       chip: "from-accent-400 to-accent-600",
-      glow: "group-hover:shadow-[0_12px_28px_-10px_rgba(6,182,212,0.6)]",
+      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(6,182,212,0.32)]",
     },
     {
       href: "/tiket",
       label: "Bantuan",
-      desc: "Admin siaga 24 jam",
+      desc: "Tiket dibalas < 5 menit",
       icon: "ticket",
       chip: "from-violet-500 to-primary-600",
-      glow: "group-hover:shadow-[0_12px_28px_-10px_rgba(124,58,237,0.55)]",
+      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(124,58,237,0.30)]",
     },
     {
       href: "/affiliate",
       label: "Affiliate",
-      desc: "Ajak teman, cuan komisi",
+      desc: "Ajak teman, dapat komisi",
       icon: "gift",
       chip: "from-emerald-400 to-emerald-600",
-      glow: "group-hover:shadow-[0_12px_28px_-10px_rgba(16,163,74,0.5)]",
+      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(16,163,74,0.28)]",
     },
   ];
 
@@ -100,32 +154,67 @@
   <meta property="og:type" content="website" />
 </svelte:head>
 
-<section class="space-y-5 lg:space-y-6">
-  <!-- Greeting -->
-  <header in:fly={{ y: -8, duration: 300 }} class="flex items-center justify-between gap-3">
+<section class="space-y-5 lg:space-y-6 relative">
+  <!-- Ambient time-wash — compact on desktop -->
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute -inset-x-4 -top-4 h-[140px] lg:h-[160px] -z-10 overflow-hidden rounded-b-[20px] opacity-60 lg:-inset-x-8"
+    style="contain: paint;"
+  >
+    <div class="absolute inset-0 bg-gradient-to-b {ambient} blur-[18px]"></div>
+    <div
+      class="absolute inset-0 opacity-[0.04] [background:radial-gradient(circle_at_30%_20%,white,transparent_40%),radial-gradient(circle_at_80%_10%,white,transparent_35%)]"
+    ></div>
+  </div>
+
+  <!-- Greeting — time-aware (WIB) + dismiss excess motion -->
+  <header
+    in:fly={{ y: -8, duration: 280 }}
+    class="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
+  >
     <div class="min-w-0">
-      <h1 class="font-display text-xl font-extrabold tracking-tight lg:text-2xl">
+      <h1
+        class="font-display text-xl font-extrabold tracking-tight lg:text-[1.85rem] lg:leading-none lg:tracking-[-0.015em]"
+      >
         {greeting}, {firstName}
         <span class="inline-block motion-safe:animate-[wave_2s_ease-in-out_1]">{greetEmoji}</span>
       </h1>
-      <p class="mt-0.5 flex items-center gap-1.5 text-sm text-ink-500">
+      <p
+        class="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm lg:mt-2 lg:text-[14px] text-ink-500"
+      >
         {#if data.activeOrders > 0}
-          <span class="relative flex h-2 w-2 shrink-0">
+          <span class="relative flex h-2 w-2 shrink-0" aria-hidden="true">
             <span
-              class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60"
+              class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-50"
             ></span>
             <span class="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
           </span>
+          <span
+            class="inline-flex items-center gap-1 rounded-full bg-primary/5 px-2 py-0.5 text-xs font-bold text-primary"
+            >Live</span
+          >
+        {:else}
+          <span
+            class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-600"
+            >Ready</span
+          >
         {/if}
         <span class="truncate">{subtitle}</span>
       </p>
     </div>
-    <span
-      class="hidden shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-600 to-accent-600 px-3 py-1.5 text-xs font-bold text-white shadow-[0_6px_16px_-8px_rgba(79,70,229,0.7)] sm:inline-flex"
+    <a
+      href="/akun"
+      aria-label="Status member"
+      class="group flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-600 to-accent-600 px-3 py-1.5 text-xs font-bold text-white shadow-[0_6px_16px_-8px_rgba(79,70,229,0.7)] transition-all active:scale-95 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_-8px_rgba(79,70,229,0.6)] motion-safe:animate-[pop_480ms_cubic-bezier(0.16,1,0.3,1)] lg:px-4 lg:py-2 lg:gap-2 lg:text-[13px]"
     >
-      <Icon name="star" size={13} stroke={2.25} />
+      <Icon
+        name="sparkles"
+        size={13}
+        stroke={2.25}
+        class="transition-transform group-hover:rotate-12"
+      />
       {data.user?.level ?? "Member"}
-    </span>
+    </a>
   </header>
 
   <!-- Banner promo (admin-managed, fallback dummy) -->
@@ -133,9 +222,9 @@
     <PromoBanner banners={data.banners} />
   {/if}
 
-  <!-- Hero saldo + quick actions -->
-  <div class="grid gap-4 lg:grid-cols-3">
-    <div class="lg:col-span-2">
+  <!-- Hero saldo + quick actions — desktop compact (hero dominant) -->
+  <div class="grid gap-3 lg:gap-4 lg:grid-cols-12 lg:items-stretch">
+    <div class="lg:col-span-8">
       <SaldoHero
         balance={data.user?.balance ?? 0}
         ctaHref="/saldo/top-up"
@@ -148,14 +237,16 @@
       />
     </div>
 
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
+    <div
+      class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 lg:col-span-4 lg:gap-3 lg:self-stretch content-start"
+    >
       {#each quick as item, i (item.href)}
         <a
           href={item.href}
           onclick={() => haptic(8)}
           in:fly={staggerIn(i, { y: 12, duration: 300, step: 60 })}
-          class="group flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
-            shadow-card transition-all duration-200 active:scale-[0.97] hover:-translate-y-0.5 hover:border-ink-200 {item.glow}"
+          class="card-lift group flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
+            lg:gap-2.5 lg:py-3 lg:px-3.5 {item.glow}"
         >
           <span
             class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br {item.chip}
@@ -164,9 +255,11 @@
             <Icon name={item.icon} size={20} stroke={2} />
           </span>
           <span class="min-w-0">
-            <span class="block text-sm font-bold text-ink-800">{item.label}</span>
+            <span class="block text-sm font-bold text-ink-800 lg:text-[14px]">{item.label}</span>
             <!-- Desktop: deskripsi lengkap -->
-            <span class="hidden truncate text-xs text-ink-400 lg:block">{item.desc}</span>
+            <span class="hidden truncate text-xs text-ink-400 lg:block lg:text-[11.5px]"
+              >{item.desc}</span
+            >
           </span>
         </a>
       {/each}
@@ -185,11 +278,13 @@
           </span>
           Pesan Cepat
         </h2>
-        <span class="text-xs text-ink-400">Tap — link terakhir otomatis terisi</span>
+        <span class="hidden text-xs text-ink-400 lg:inline"
+          >Tap — link terakhir otomatis terisi</span
+        >
       </div>
 
       <div
-        class="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0"
+        class="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 -mx-4 px-4 pb-2 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-4 lg:overflow-visible lg:px-0 lg:scroll-px-0"
       >
         {#each data.quickOrders as q, i (q.serviceId)}
           <a
@@ -198,24 +293,29 @@
               : ''}"
             onclick={() => haptic(10)}
             in:fly={staggerIn(i, { y: 10, duration: 250, step: 50 })}
-            class="group relative flex min-h-[56px] w-[74%] max-w-[320px] min-w-[260px] shrink-0 snap-start items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5 shadow-card
-              transition-all duration-200 active:scale-[0.97] hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-[0_10px_24px_-12px_rgba(79,70,229,0.45)] lg:w-auto lg:min-w-0 lg:max-w-none"
+            class="card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-4
+              lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5"
           >
             <span
-              class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-white transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
+              class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-sm transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
             >
               <Icon name="rocket" size={18} stroke={2} />
             </span>
             <span class="min-w-0 flex-1">
               <span class="block truncate text-sm font-bold leading-tight text-ink-800"
-                >{q.serviceName.split("[")[0]?.trim() || q.serviceName}</span
+                >{serviceDisplayName(q.serviceName)}</span
               >
-              <span class="block truncate text-xs leading-snug text-ink-400">
-                {q.times > 1 ? `${q.times}×` : "Baru"} · tap untuk pesan lagi
+              <span
+                class="mt-0.5 flex items-center gap-1 truncate text-[11px] leading-snug text-ink-400"
+              >
+                <span class="rounded-full bg-ink-100 px-1.5 py-0.5 font-bold text-ink-600"
+                  >{q.times > 1 ? `${q.times}×` : "Baru"}</span
+                >
+                <span>tap untuk pesan lagi</span>
               </span>
             </span>
             <span
-              class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white"
+              class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white"
             >
               <Icon name="chevron_right" size={14} stroke={2.5} />
             </span>
@@ -225,50 +325,121 @@
     </div>
   {/if}
 
-  <!-- INLINE-STAT: ringkasan akun — label-value pairs, vertical dividers on sm+ -->
+  <!-- INLINE-STAT: premium — mobile stacked, desktop inline pills -->
   <div
-    class="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-ink-100 bg-surface px-5 py-4"
+    class="grid grid-cols-1 gap-2.5 sm:grid-cols-3 lg:gap-3 {(data.stats.totalDeposit ?? 0) >=
+    5_000_000
+      ? 'rounded-2xl border border-amber-200/60 bg-gradient-to-br from-white via-amber-50/40 to-white p-3 shadow-[0_8px_24px_-12px_rgba(245,158,11,0.35)]'
+      : 'gap-3'}"
   >
-    <div class="flex items-baseline gap-2">
-      <span class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Pesanan</span>
-      <span class="font-display text-base font-bold tabular-nums text-ink-900"
-        >{data.stats.totalOrders.toLocaleString("id-ID")}</span
+    {#if (data.stats.totalDeposit ?? 0) >= 5_000_000}
+      <div
+        class="col-span-full flex items-center justify-between rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 px-3 py-2 text-white shadow-sm"
       >
-      {#if data.stats.deltaOrders !== undefined && data.stats.deltaOrders !== 0}
-        <span
-          class="rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data.stats
-            .deltaOrders >= 0
-            ? 'bg-success/10 text-success'
-            : 'bg-danger/10 text-danger'}"
-          >{data.stats.deltaOrders >= 0 ? "+" : ""}{data.stats.deltaOrders.toFixed(1)}%</span
+        <span class="flex items-center gap-1.5 text-xs font-bold tracking-wide">
+          <span class="grid h-6 w-6 place-items-center rounded-full bg-white/20 backdrop-blur">
+            <Icon name="star" size={12} stroke={2.5} />
+          </span>
+          VIP — Deposit di atas 5jt
+        </span>
+        <span class="text-[11px] font-semibold opacity-90"
+          >Terima kasih sudah percaya — Socios!</span
         >
-      {/if}
-    </div>
-    <span class="hidden h-5 w-px bg-ink-200 sm:inline-block" aria-hidden="true"></span>
-    <div class="flex items-baseline gap-2">
-      <span class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Deposit</span>
-      <span class="font-display text-base font-bold tabular-nums text-ink-900"
-        >{formatRupiah(data.stats.totalDeposit)}</span
+      </div>
+    {/if}
+    <div
+      class="surface-pop flex items-center justify-between rounded-2xl border border-ink-100 bg-surface px-4 py-3 lg:px-5 lg:py-4 {(data
+        .stats.totalDeposit ?? 0) >= 5_000_000
+        ? 'ring-1 ring-amber-200/50'
+        : ''}"
+    >
+      <span
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-400"
       >
+        <span class="grid h-6 w-6 place-items-center rounded-lg bg-ink-50 text-ink-600">
+          <Icon name="receipt" size={12} stroke={2} />
+        </span>
+        Pesanan
+      </span>
+      <span
+        class="flex items-center gap-1.5 font-display text-sm font-bold tabular-nums text-ink-900 lg:text-base"
+      >
+        {data.stats.totalOrders.toLocaleString("id-ID")}
+        {#if data.stats.deltaOrders !== undefined && data.stats.deltaOrders !== 0}
+          <span
+            class="rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data.stats
+              .deltaOrders >= 0
+              ? 'bg-success/10 text-success'
+              : 'bg-danger/10 text-danger'}"
+            >{data.stats.deltaOrders >= 0 ? "+" : ""}{data.stats.deltaOrders.toFixed(1)}%</span
+          >
+        {/if}
+      </span>
     </div>
-    <span class="hidden h-5 w-px bg-ink-200 sm:inline-block" aria-hidden="true"></span>
-    <div class="flex items-baseline gap-2">
-      <span class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Belanja</span>
-      <span class="font-display text-base font-bold tabular-nums text-ink-900"
+    <div
+      class="surface-pop relative flex items-center justify-between rounded-2xl border bg-surface px-4 py-3 lg:px-5 lg:py-4 {(data
+        .stats.totalDeposit ?? 0) >= 5_000_000
+        ? 'border-amber-200 bg-gradient-to-br from-white to-amber-50/50'
+        : 'border-ink-100'}"
+    >
+      <span
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide {(data.stats
+          .totalDeposit ?? 0) >= 5_000_000
+          ? 'text-amber-600'
+          : 'text-ink-400'}"
+      >
+        <span
+          class="grid h-6 w-6 place-items-center rounded-lg {(data.stats.totalDeposit ?? 0) >=
+          5_000_000
+            ? 'bg-amber-100 text-amber-600'
+            : 'bg-ink-50 text-ink-600'}"
+        >
+          <Icon name="wallet" size={12} stroke={2} />
+        </span>
+        Deposit
+      </span>
+      <span
+        class="flex items-center gap-1.5 font-display text-sm font-bold tabular-nums lg:text-base {(data
+          .stats.totalDeposit ?? 0) >= 5_000_000
+          ? 'text-amber-700'
+          : 'text-ink-900'}"
+      >
+        {#if (data.stats.totalDeposit ?? 0) >= 5_000_000}
+          <span
+            class="grid h-5 w-5 place-items-center rounded-full bg-gradient-to-br from-amber-300 to-yellow-500 text-white shadow-sm"
+            aria-label="VIP"><Icon name="star" size={10} stroke={2.5} /></span
+          >
+        {/if}
+        {formatRupiah(data.stats.totalDeposit)}
+      </span>
+    </div>
+    <div
+      class="surface-pop flex items-center justify-between rounded-2xl border border-ink-100 bg-surface px-4 py-3 lg:px-5 lg:py-4"
+    >
+      <span
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-400"
+      >
+        <span class="grid h-6 w-6 place-items-center rounded-lg bg-ink-50 text-ink-600">
+          <Icon name="banknote" size={12} stroke={2} />
+        </span>
+        Belanja
+      </span>
+      <span class="font-display text-sm font-bold tabular-nums text-ink-900 lg:text-base"
         >{formatRupiah(data.stats.totalSpent)}</span
       >
     </div>
   </div>
 
-  <!-- Desktop: 2 kolom — chart + pesanan terbaru. Mobile: bertumpuk (grid-cols-1 eksplisit
-       supaya track minmax(0,1fr) — tanpa ini nama layanan panjang mengembang implicit column → horizontal overflow) -->
-  <div class="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-6">
+  <!-- Desktop: chart + pesanan — balanced 7/5 but compact gaps -->
+  <div class="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-4">
     <!-- Grafik aktivitas 7 hari -->
-    <div class="lg:col-span-3">
-      <div class="rounded-card border border-ink-100 bg-surface p-4 shadow-card lg:p-5">
-        <div class="mb-3 flex items-center justify-between">
+    <div class="lg:col-span-7">
+      <div class="card-lift rounded-card border border-ink-100 bg-surface p-4 lg:p-6">
+        <div class="mb-3 flex items-center justify-between lg:mb-4">
           <div>
-            <h2 class="flex items-center gap-1.5 font-display text-base font-bold tracking-tight">
+            <h2
+              class="flex items-center gap-1.5 font-display text-base font-bold tracking-tight lg:text-[17px]"
+            >
               <span
                 class="grid h-6 w-6 place-items-center rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 text-white"
               >
@@ -276,7 +447,7 @@
               </span>
               Aktivitas 7 Hari
             </h2>
-            <p class="hidden text-xs text-ink-400 lg:block">
+            <p class="hidden text-xs text-ink-400 lg:block lg:text-[13px]">
               Ringkasan pesanan dan deposit kamu seminggu terakhir
             </p>
           </div>
@@ -295,7 +466,7 @@
               { label: "Deposit", data: data.chart.deposits },
             ]}
             labels={data.chart.labels}
-            height={190}
+            height={220}
           />
         {:else if data.stats.totalOrders > 0}
           <div
@@ -308,11 +479,11 @@
               <Icon name="clock" size={22} stroke={2} class="hidden sm:inline-block" />
             </div>
             <p class="text-sm font-bold text-ink-700 [text-wrap:balance]">
-              Hiatus — minggu ini sepi
+              Minggu ini belum ada aktivitas
             </p>
             <p class="text-xs text-ink-400 [text-wrap:balance]">
-              Kamu punya {data.stats.totalOrders.toLocaleString("id-ID")} pesanan, tapi 7 hari terakhir
-              kosong. Pesan Cepat di atas pakai link terakhirmu.
+              Total {data.stats.totalOrders.toLocaleString("id-ID")} pesanan kamu aman — mari lanjut:
+              Pesan Cepat di atas pakai link terakhirmu.
             </p>
             <a
               href={data.quickOrders?.[0]
@@ -356,9 +527,11 @@
     </div>
 
     <!-- Pesanan terbaru -->
-    <div class="lg:col-span-2">
+    <div class="lg:col-span-5 lg:sticky lg:top-20 self-start">
       <div class="mb-3 flex items-center justify-between">
-        <h2 class="font-display text-base font-bold tracking-tight">Pesanan Terbaru</h2>
+        <h2 class="font-display text-base font-bold tracking-tight lg:text-[17px]">
+          Pesanan Terbaru
+        </h2>
         <a
           href="/pesanan"
           class="flex items-center gap-0.5 text-xs font-bold text-primary hover:text-primary-800"
@@ -370,7 +543,7 @@
 
       {#if data.recent.length === 0}
         <div
-          class="relative overflow-hidden rounded-card border border-dashed border-ink-200 bg-surface p-8 text-center"
+          class="relative overflow-hidden rounded-card border border-dashed border-ink-200 bg-surface p-8 text-center lg:p-10"
         >
           <div
             class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
@@ -380,41 +553,69 @@
           >
             <Icon name="sparkles" size={26} stroke={2} />
           </div>
-          <p class="relative text-sm font-bold text-ink-800">Mulai perjalananmu 🚀</p>
+          <p class="relative text-sm font-bold text-ink-800">Mulai perjalananmu</p>
           <p class="relative mt-1 text-xs text-ink-500">
-            <span class="lg:hidden">Buat pesanan pertamamu sekarang.</span>
-            <span class="hidden lg:inline">Pilih layanan favoritmu dan mulai pesan.</span>
+            <span class="lg:hidden">Pesanan pertama, proses otomatis 30-60 detik.</span>
+            <span class="hidden lg:inline"
+              >Pilih layanan favoritmu, sistem kami proses otomatis.</span
+            >
           </p>
           <a
             href="/pesan"
-            onclick={() => haptic(10)}
-            class="relative mt-4 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 px-5 py-2.5 text-sm font-bold text-white
-              shadow-[0_8px_20px_-6px_rgba(79,70,229,0.6)] transition-all active:scale-95 hover:opacity-95"
+            onclick={() => haptic(14)}
+            class="ctoa-premium relative mt-4 inline-flex items-center gap-2 overflow-hidden rounded-full
+              bg-gradient-to-br from-primary-500 via-primary to-primary-700 px-5 py-2.5
+              text-sm font-bold text-white
+              shadow-[0_10px_24px_-8px_rgba(79,70,229,0.55),0_3px_10px_-4px_rgba(79,70,229,0.3)]
+              transition-all duration-200 active:scale-[0.97]
+              focus-ring-on-accent"
           >
-            <Icon name="plus" size={16} stroke={2.5} />
-            <span class="lg:hidden">Pesan Sekarang</span>
-            <span class="hidden lg:inline">Buat Pesanan Pertama</span>
+            <span class="ctoa-shimmer pointer-events-none absolute inset-0" aria-hidden="true"
+            ></span>
+            <Icon name="rocket" size={16} stroke={2.4} class="ctoa-icon relative" />
+            <span class="lg:hidden relative">Pesan Sekarang</span>
+            <span class="hidden lg:inline relative">Buat Pesanan Pertama</span>
           </a>
         </div>
       {:else}
         <ul
-          class="overflow-hidden rounded-card border border-ink-100 bg-surface shadow-card divide-y divide-ink-100"
+          class="overflow-hidden rounded-card border border-ink-100 bg-surface shadow-card divide-y divide-ink-100 lg:rounded-2xl"
         >
           {#each data.recent as o, i (o.id)}
+            {@const p = (() => {
+              const n = (o.serviceName || "").toLowerCase();
+              if (n.includes("instagram") || n.includes("ig ") || n.includes(" ig "))
+                return { icon: "instagram", grad: "from-pink-500 to-fuchsia-600" };
+              if (n.includes("tiktok") || n.includes("tik tok"))
+                return { icon: "music", grad: "from-slate-800 to-slate-950" };
+              if (n.includes("youtube") || n.includes("yt "))
+                return { icon: "youtube", grad: "from-red-500 to-red-600" };
+              if (n.includes("facebook") || n.includes(" fb"))
+                return { icon: "facebook", grad: "from-blue-500 to-blue-700" };
+              if (n.includes("twitter") || n.includes("bluesky") || n.includes(" x "))
+                return { icon: "twitter", grad: "from-sky-400 to-sky-600" };
+              if (n.includes("telegram"))
+                return { icon: "telegram", grad: "from-sky-500 to-blue-600" };
+              if (n.includes("whatsapp"))
+                return { icon: "whatsapp", grad: "from-emerald-500 to-green-600" };
+              return { icon: "receipt", grad: "from-primary-500/15 to-accent-500/15" };
+            })()}
             <li in:fly={{ y: 10, duration: 250, delay: 50 * i }}>
               <a
                 href="/pesanan"
-                title={o.serviceName}
-                class="group flex min-w-0 items-center gap-2.5 px-2.5 py-2.5 transition-colors hover:bg-ink-50 active:bg-ink-100 sm:gap-3 sm:px-4 sm:py-3.5"
+                title={serviceDisplayName(o.serviceName)}
+                class="group flex min-w-0 items-center gap-2.5 px-2.5 py-2.5 transition-colors hover:bg-ink-50 active:bg-ink-100 sm:gap-3 sm:px-4 sm:py-3.5 lg:gap-3 lg:px-4 lg:py-3.5"
               >
                 <div
-                  class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500/15 to-accent-500/15 text-primary transition-transform duration-200 group-hover:scale-110 sm:h-10 sm:w-10"
+                  class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br {p.grad} text-white transition-transform duration-200 group-hover:scale-110 sm:h-10 sm:w-10"
                 >
-                  <Icon name="receipt" size={18} />
+                  <Icon name={p.icon} size={18} />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-semibold">{o.serviceName}</div>
-                  <div class="truncate text-xs text-ink-500">
+                  <div class="truncate text-sm font-semibold lg:text-[14px]">
+                    {serviceDisplayName(o.serviceName)}
+                  </div>
+                  <div class="truncate text-xs text-ink-500 lg:text-[12.5px]">
                     {o.quantity.toLocaleString("id-ID")} qty · {formatRupiah(o.price)}
                   </div>
                 </div>
@@ -429,41 +630,6 @@
       {/if}
     </div>
   </div>
-
-  <!-- Attention: Error/Partial → CTA Refill -->
-  {#if data.attention?.length}
-    {@const a = data.attention[0]}
-    <a
-      href="/pesanan?f=gagal"
-      onclick={() => haptic(10)}
-      class="flex items-center justify-between gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm"
-    >
-      <span class="flex items-center gap-2 font-semibold text-warning">
-        <Icon name="alert" size={16} />{a.count} order perlu perhatian
-        <span class="font-normal text-ink-600">· {a.sample}</span>
-      </span>
-      <span class="shrink-0 rounded-full bg-warning px-3 py-1 text-xs font-bold text-white"
-        >Cek</span
-      >
-    </a>
-  {/if}
-
-  <!-- Nudge top-up kalau saldo tipis vs tiket termurah Pesan Cepat -->
-  {#if data.nudge}
-    {@const n = data.nudge}
-    <a
-      href="/saldo/top-up"
-      onclick={() => haptic(10)}
-      class="flex items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3"
-    >
-      <span class="text-sm font-semibold text-primary-700"
-        >Saldo {formatRupiah(n.balance)} — {n.reason}</span
-      >
-      <span class="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white"
-        >Top up</span
-      >
-    </a>
-  {/if}
 
   <!-- Trust line -->
   <div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 py-2 text-xs text-ink-400">
@@ -496,6 +662,90 @@
     }
     75% {
       transform: rotate(14deg);
+    }
+  }
+
+  /* ───── Dashboard CTA premium (shimmer + hover lift + rocket tilt) ───── */
+  .ctoa-premium {
+    isolation: isolate;
+    will-change: transform, box-shadow;
+  }
+  .ctoa-premium:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 16px 32px -10px rgba(79, 70, 229, 0.6),
+      0 4px 14px -4px rgba(79, 70, 229, 0.4);
+  }
+  .ctoa-premium:hover .ctoa-icon {
+    transform: rotate(-12deg) scale(1.12);
+  }
+  .ctoa-icon {
+    transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /* Diagonal shine sweep */
+  .ctoa-shimmer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -120%;
+    height: 100%;
+    width: 55%;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0) 30%,
+      rgba(255, 255, 255, 0.55) 50%,
+      rgba(255, 255, 255, 0) 70%,
+      transparent 100%
+    );
+    transform: skewX(-22deg);
+    animation: ctoa-shimmer 3.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes ctoa-shimmer {
+    0% {
+      left: -120%;
+    }
+    60%,
+    100% {
+      left: 130%;
+    }
+  }
+  /* Inset glass highlight (top edge) */
+  .ctoa-premium::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 45%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+  }
+  @keyframes ambientDrift {
+    0%,
+    100% {
+      transform: translateY(0) scale(1);
+      opacity: 0.85;
+    }
+    50% {
+      transform: translateY(-6px) scale(1.02);
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ctoa-premium,
+    .ctoa-icon,
+    .ctoa-shimmer::before {
+      animation: none !important;
+      transition-duration: 120ms !important;
+    }
+    .ctoa-shimmer::before {
+      display: none;
+    }
+    [style*="ambientDrift"] {
+      animation: none !important;
     }
   }
 </style>

@@ -1,9 +1,10 @@
 <script lang="ts">
   import { fly } from "svelte/transition";
-  import { Input, Button, EmptyState, toast, staggerIn, hoverLift } from "@socio/ui";
+  import { Input, Button, toast, staggerIn, hoverLift, Icon } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { applyAction, enhance } from "$app/forms";
   import { goto } from "$app/navigation";
+  import { formatDateShort } from "$lib/format";
   import type { ActionData, PageData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -22,12 +23,12 @@
     goto("/tiket", { noScroll: true });
   }
   function timeAgo(d: Date | string) {
-    return new Date(d).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
+    const date = new Date(d);
+    const time = new Intl.DateTimeFormat("id-ID", {
       hour: "2-digit",
       minute: "2-digit",
-    });
+    }).format(date);
+    return `${formatDateShort(date)}, ${time}`;
   }
 </script>
 
@@ -39,32 +40,48 @@
   />
 </svelte:head>
 
-<section class="space-y-4">
+<section class="space-y-4 lg:space-y-5">
   {#if data.activeId}
     <!-- Detail -->
-    <button onclick={back} class="flex items-center gap-1 text-sm font-semibold text-ink-500">
-      <span>‹</span> Kembali
+    <button
+      onclick={back}
+      class="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-3 py-1.5 text-sm font-semibold text-ink-600 transition hover:bg-ink-50 hover:text-ink-800"
+    >
+      <span aria-hidden="true">‹</span> Kembali ke daftar
     </button>
-    <h1 class="font-display text-lg font-bold">
-      {data.messages[0]?.type === "user" ? data.messages[0].message.slice(0, 40) : "Tiket"}
-    </h1>
+    <div class="rounded-2xl border border-ink-100 bg-surface p-4 shadow-sm lg:p-5">
+      <h1 class="font-display text-base font-bold lg:text-lg">
+        {data.messages[0]?.type === "user"
+          ? data.messages[0].message.slice(0, 48)
+          : "Tiket #" + data.activeId}
+      </h1>
+      <p class="mt-1 text-xs text-ink-500">
+        {data.messages.length} pesan · balasan admin &lt; 5 menit
+      </p>
+    </div>
 
-    <div class="space-y-2">
+    <div class="space-y-3">
       {#each data.messages as m (m.id)}
         <div
-          class="rounded-2xl border border-ink-100 bg-surface p-3 {m.type === 'admin'
-            ? 'border-accent-ink/30 bg-accent-ink/5'
-            : ''}"
+          class="rounded-2xl border p-4 {m.type === 'admin'
+            ? 'border-amber-200 bg-amber-50 shadow-[0_4px_16px_-10px_rgba(245,158,11,0.25)]'
+            : 'surface-pop border-ink-100 bg-surface'}"
         >
-          <div class="mb-1 flex items-center justify-between">
+          <div class="mb-1.5 flex items-center justify-between">
             <span
-              class="text-xs font-semibold {m.type === 'admin'
-                ? 'text-accent-ink'
-                : 'text-ink-500'}">{m.type === "admin" ? "Admin" : "Anda"}</span
+              class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold {m.type ===
+              'admin'
+                ? 'bg-amber-500 text-white'
+                : 'bg-ink-900 text-white'}"
             >
+              <span
+                class="h-1.5 w-1.5 rounded-full {m.type === 'admin' ? 'bg-white' : 'bg-white/70'}"
+              ></span>
+              {m.type === "admin" ? "Tim Socio.id" : "Anda"}
+            </span>
             <span class="text-xs text-ink-400">{timeAgo(m.created_at)}</span>
           </div>
-          <p class="text-sm">{m.message}</p>
+          <p class="whitespace-pre-wrap text-sm leading-relaxed text-ink-800">{m.message}</p>
         </div>
       {/each}
     </div>
@@ -73,60 +90,121 @@
       <form
         method="POST"
         action="?/reply"
-        class="space-y-2 rounded-2xl border border-ink-100 bg-surface p-3"
+        class="surface-pop space-y-3 rounded-2xl border border-ink-100 bg-surface p-4"
+        use:enhance={() => {
+          sendingReply = true;
+          return async ({ result }) => {
+            sendingReply = false;
+            if (result.type === "failure") toast((result.data as any)?.error ?? "Gagal", "error");
+            else {
+              reply = "";
+              toast("Balasan terkirim", "success");
+              await applyAction(result);
+            }
+          };
+        }}
       >
         <input type="hidden" name="ticketId" value={data.activeId} />
         <textarea
           name="message"
           bind:value={reply}
-          rows="2"
-          placeholder="Balas…"
-          class="w-full rounded-xl border border-ink-200 bg-surface px-3 py-2 text-sm outline-none focus:border-accent-ink"
+          rows="3"
+          placeholder="Tulis balasan…"
+          class="w-full rounded-xl border border-ink-200 bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+          required
         ></textarea>
         <div class="flex gap-2">
-          <Button
-            type="submit"
-            size="sm"
-            disabled={sendingReply}
-            onclick={() => (sendingReply = true)}>Kirim</Button
-          >
+          <Button type="submit" size="sm" disabled={sendingReply}>
+            {sendingReply ? "Mengirim…" : "Kirim balasan"}
+          </Button>
           <Button
             type="submit"
             formaction="?/close"
             size="sm"
             variant="ghost"
-            onclick={() => (sendingReply = true)}>Tutup Tiket</Button
+            disabled={sendingReply}
           >
+            Tutup Tiket
+          </Button>
         </div>
       </form>
     {:else}
-      <div class="rounded-xl bg-ink-100 px-3 py-2 text-center text-sm font-medium text-ink-500">
-        Tiket ditutup
+      <div
+        class="rounded-xl border border-ink-200 bg-ink-50 px-4 py-3 text-center text-sm font-medium text-ink-500"
+      >
+        Tiket sudah ditutup — buat tiket baru jika masih butuh bantuan.
       </div>
     {/if}
   {:else}
-    <!-- List -->
-    <h1 class="reveal font-display text-lg font-bold" style="--d:0ms">Tiket Bantuan</h1>
+    <!-- Header -->
+    <div class="space-y-1">
+      <h1
+        class="reveal font-display text-xl font-extrabold tracking-tight lg:text-[1.7rem]"
+        style="--d:0ms"
+      >
+        Tiket Bantuan
+      </h1>
+      <p class="reveal text-sm text-ink-500 lg:text-[14px]" style="--d:40ms">
+        Butuh bantuan order, saldo, atau akun? Balasan rata-rata &lt; 5 menit di jam kerja.
+      </p>
+    </div>
+
+    <!-- Stats hint -->
+    {#if data.tickets.length > 0}
+      <div class="reveal flex items-center gap-2 text-xs" style="--d:80ms">
+        <span
+          class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 font-bold text-primary"
+        >
+          {data.tickets.length} tiket
+        </span>
+        <span class="text-ink-400">· tap kartu untuk buka percakapan</span>
+      </div>
+    {/if}
 
     {#if data.tickets.length === 0}
-      <EmptyState title="Belum ada tiket" description="Buat tiket jika ada kendala." />
+      <div
+        class="reveal rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center lg:p-10"
+        style="--d:80ms"
+      >
+        <div
+          class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"
+        >
+          <Icon name="message" size={24} />
+        </div>
+        <p class="text-sm font-bold">Belum ada tiket</p>
+        <p class="mt-1 text-xs leading-relaxed text-ink-500">
+          Buat tiket di bawah — tim kami siap bantu.
+        </p>
+      </div>
     {:else}
-      <ul class="space-y-2">
+      <ul class="grid gap-3 lg:grid-cols-2">
         {#each data.tickets as t, i (t.ticket_id)}
           <li in:fly={staggerIn(i, { y: 8, duration: 220, step: 40 })}>
             <button
               onclick={() => openTicket(t.ticket_id)}
-              class="w-full rounded-2xl border border-ink-100 bg-surface p-4 text-left {hoverLift}"
+              class="group flex w-full items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[0_10px_28px_-10px_rgba(15,23,42,0.14)] lg:p-5 {hoverLift}"
             >
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-semibold">{t.subject}</span>
-                <span class="rounded-full bg-ink-100 px-2 py-0.5 text-xs font-medium text-ink-600"
-                  >{t.status}</span
+              <span
+                class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-primary-600 text-white shadow-sm"
+              >
+                {t.subject.slice(0, 1).toUpperCase()}
+              </span>
+              <span class="min-w-0 flex-1">
+                <span
+                  class="block truncate text-sm font-bold group-hover:text-primary transition-colors"
+                  >{t.subject}</span
                 >
-              </div>
-              <p class="mt-1 text-xs text-ink-500">
-                {t.msgs} pesan · {new Date(t.last).toLocaleDateString("id-ID")}
-              </p>
+                <span class="mt-0.5 block truncate text-xs text-ink-500"
+                  >{t.msgs} pesan · {formatDateShort(t.last)}</span
+                >
+              </span>
+              <span
+                class="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold {t.status === 'Closed'
+                  ? 'bg-ink-100 text-ink-500'
+                  : t.status === 'Answered'
+                    ? 'bg-success/10 text-success'
+                    : 'bg-amber-100 text-amber-700'}">{t.status}</span
+              >
             </button>
           </li>
         {/each}
@@ -134,15 +212,16 @@
     {/if}
 
     {#if form?.error}
-      <div class="rounded-xl bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
+      <div class="rounded-xl bg-danger/10 px-3 py-2.5 text-sm font-medium text-danger">
         {form.error}
       </div>
     {/if}
 
+    <!-- Buat Tiket Baru — card premium -->
     <form
       method="POST"
       action="?/create"
-      class="reveal space-y-3 rounded-2xl border border-ink-100 bg-surface p-4"
+      class="reveal surface-pop space-y-4 rounded-2xl border border-ink-100 bg-surface p-4 lg:p-5"
       style="--d:120ms"
       use:enhance={() => {
         sending = true;
@@ -152,25 +231,35 @@
           else {
             subject = "";
             message = "";
-            toast("Tiket dikirim", "success");
+            toast("Tiket terkirim — tim kami akan balas segera", "success");
             await applyAction(result);
           }
         };
       }}
     >
-      <h2 class="text-sm font-semibold">Buat Tiket Baru</h2>
-      <Input name="subject" bind:value={subject} placeholder="Subjek" required />
+      <div>
+        <h2 class="font-display text-sm font-extrabold">Buat Tiket Baru</h2>
+        <p class="mt-0.5 text-xs text-ink-500">
+          Jelaskan kendala sejelas mungkin biar cepat dibantu.
+        </p>
+      </div>
+      <Input
+        name="subject"
+        bind:value={subject}
+        placeholder="Subjek — mis. Pesanan #123 belum masuk"
+        required
+      />
       <textarea
         name="message"
         bind:value={message}
-        placeholder="Pesan…"
-        rows="3"
-        class="w-full rounded-xl border border-ink-200 bg-surface px-3 py-2 text-sm outline-none focus:border-accent-ink"
+        placeholder="Ceritakan detailnya…"
+        rows="4"
+        class="w-full rounded-xl border border-ink-200 bg-surface px-3 py-2.5 text-sm outline-none transition placeholder:text-ink-400 focus:border-primary focus:ring-2 focus:ring-primary/10"
         required
       ></textarea>
-      <Button type="submit" disabled={sending} class="w-full"
-        >{sending ? "Mengirim…" : "Kirim Tiket"}</Button
-      >
+      <Button type="submit" disabled={sending} full>
+        {#if sending}Mengirim…{:else}Kirim Tiket{/if}
+      </Button>
     </form>
   {/if}
 </section>

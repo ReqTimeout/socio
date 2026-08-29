@@ -109,6 +109,7 @@ Saat lanjut kerja (model baru / sesi baru), **wajib lakukan ini dulu sebelum kod
 - Komponen UI: `packages/ui/src/*` — shareable.
 - Business logic: `packages/core/src/*` — shareable, no SvelteKit dependency.
 - DB schema: `packages/db/src/schema/*` — satu file per tabel grup.
+- Grid/flex child dengan konten `truncate` wajib `min-w-0` — tanpa itu track melebihi viewport mobile (overflow horizontal).
 
 ### Database
 - **Drizzle ORM only** — dilarang raw SQL kecuali untuk performance critical (kasih komentar alasan).

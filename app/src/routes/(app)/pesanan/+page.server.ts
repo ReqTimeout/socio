@@ -14,8 +14,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   else if (filter === "proses")
     conditions.push(sql`${orders.status} IN ('Processing','In progress')`);
   else if (filter === "selesai") conditions.push(eq(orders.status, "Success"));
-  else if (filter === "gagal")
-    conditions.push(sql`${orders.status} IN ('Error','Canceled','Partial')`);
+  else if (filter === "gagal") conditions.push(sql`${orders.status} IN ('Error','Canceled')`);
+  else if (filter === "partial") conditions.push(eq(orders.status, "Partial"));
 
   const rows = await db
     .select({
@@ -46,9 +46,36 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     : [];
   const refillMap = new Map(svcRows.map((s) => [s.id, s.isRefill]));
 
+  // Counts per tab — tanpa query tambahan berat: hitung dari 30 rows terbaru sudah representatif
+  // Untuk total yang akurat, hitung via group-by sekali (ringan, index userId+status)
+  const allCounts = await db
+    .select({ status: orders.status, c: sql<number>`count(*)` })
+    .from(orders)
+    .where(eq(orders.userId, userId))
+    .groupBy(orders.status);
+  const countMap: Record<string, number> = {};
+  let totalCount = 0;
+  for (const r of allCounts) {
+    const k = String(r.status).toLowerCase();
+    countMap[k] = (countMap[k] ?? 0) + Number(r.c);
+    totalCount += Number(r.c);
+  }
+  // Normalisasi kategori tab — Partial BUKAN gagal: sebagian order sukses,
+  // sisanya direfund. Ini mencegah user Reseller berat melihat "809 gagal"
+  // padahal banyak di antaranya sukses parsial.
+  const tabCounts = {
+    all: totalCount,
+    pending: countMap["pending"] ?? 0,
+    proses: (countMap["processing"] ?? 0) + (countMap["in progress"] ?? 0),
+    selesai: countMap["success"] ?? 0,
+    gagal: (countMap["error"] ?? 0) + (countMap["canceled"] ?? 0),
+    partial: countMap["partial"] ?? 0,
+  };
+
   return {
     orders: rows.map((r) => ({ ...r, isRefill: refillMap.get(Number(r.serviceId)) ?? 0 })),
     filter,
+    counts: tabCounts,
   };
 };
 
@@ -122,21 +149,19 @@ export const actions: Actions = {
       }
     }
 
-    // Update status + refund saldo
-    await db
+    // Update status + refund saldo (CAS: hanya 1 cancel yang lolos → idempotent)
+    const res: any = await db
       .update(orders)
       .set({ status: "Canceled", updatedAt: new Date() })
-      .where(eq(orders.id, orderId));
+      .where(and(eq(orders.id, orderId), eq(orders.status, "Pending")));
+    const claimed = Array.isArray(res) ? res[0]?.affectedRows : res?.affectedRows;
+    if (Number(claimed ?? 1) === 0)
+      return fail(400, { error: "Order sedang diproses, tidak bisa dibatalkan" });
 
-    const [u] = await db
-      .select({ balance: users.balance })
-      .from(users)
-      .where(eq(users.id, Number(locals.user!.id)))
-      .limit(1);
-    const newBal = Number(u?.balance ?? 0) + Number(order.price);
+    // Refund saldo atomik (fix P0-1: bukan read-then-write)
     await db
       .update(users)
-      .set({ balance: newBal })
+      .set({ balance: sql`${users.balance} + ${Number(order.price)}` })
       .where(eq(users.id, Number(locals.user!.id)));
 
     await db.insert(balanceLogs).values({
@@ -184,15 +209,13 @@ export const actions: Actions = {
       refunded += Number(o.price);
     }
 
-    const [u] = await db
-      .select({ balance: users.balance })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    await db
-      .update(users)
-      .set({ balance: Number(u?.balance ?? 0) + refunded })
-      .where(eq(users.id, userId));
+    // Refund saldo atomik (fix P0-1: bukan read-then-write)
+    if (refunded > 0) {
+      await db
+        .update(users)
+        .set({ balance: sql`${users.balance} + ${refunded}` })
+        .where(eq(users.id, userId));
+    }
     await db.insert(balanceLogs).values({
       userId,
       type: "ref",

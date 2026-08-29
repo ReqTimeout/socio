@@ -1,7 +1,7 @@
 <script lang="ts">
   import { StatusBadge, Sheet, Button, Icon, toast } from "@socio/ui";
   import { haptic } from "@socio/ui";
-  import { formatRupiah } from "$lib/format";
+  import { formatRupiah, serviceDisplayName, formatDateShort } from "$lib/format";
   import { goto } from "$app/navigation";
   import { applyAction, enhance } from "$app/forms";
   import { page } from "$app/stores";
@@ -14,6 +14,7 @@
     { f: "proses", label: "Proses" },
     { f: "selesai", label: "Selesai" },
     { f: "gagal", label: "Gagal" },
+    { f: "partial", label: "Partial" },
   ];
 
   let selected = $state<number | null>(null);
@@ -27,6 +28,9 @@
     orders = data.orders;
   });
 
+  const counts = $derived(
+    (data as any).counts ?? { all: orders.length, pending: 0, proses: 0, selesai: 0, gagal: 0 },
+  );
   const checkedIds = $derived([...checked]);
   const massRefundable = $derived(
     orders.filter((o) => checked.has(o.id) && o.status === "Pending"),
@@ -77,7 +81,7 @@
     if (diff < 60) return "baru";
     if (diff < 3600) return `${Math.floor(diff / 60)}m lalu`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}j lalu`;
-    return date.toLocaleDateString("id-ID");
+    return formatDateShort(date);
   }
 
   const detail = $derived(orders.find((o) => o.id === selected) ?? null);
@@ -121,11 +125,50 @@
     </a>
   </div>
 
-  <!-- Filter chips — min-h 44 for thumb comfort -->
+  <!-- Mini summary — cepat scan tanpa scroll -->
+  {#if counts.all > 0}
+    <div class="grid grid-cols-4 gap-2 lg:gap-3">
+      <div
+        class="rounded-xl border border-ink-100 bg-surface px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
+      >
+        <div class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Total</div>
+        <div class="font-display text-sm font-extrabold tabular-nums lg:text-base">
+          {counts.all}
+        </div>
+      </div>
+      <div
+        class="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
+      >
+        <div class="text-[10px] font-bold uppercase tracking-wide text-amber-600">Pending</div>
+        <div class="font-display text-sm font-extrabold tabular-nums text-amber-700 lg:text-base">
+          {counts.pending}
+        </div>
+      </div>
+      <div
+        class="rounded-xl border border-blue-200 bg-blue-50 px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
+      >
+        <div class="text-[10px] font-bold uppercase tracking-wide text-blue-600">Proses</div>
+        <div class="font-display text-sm font-extrabold tabular-nums text-blue-700 lg:text-base">
+          {counts.proses}
+        </div>
+      </div>
+      <div
+        class="rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
+      >
+        <div class="text-[10px] font-bold uppercase tracking-wide text-emerald-600">Selesai</div>
+        <div class="font-display text-sm font-extrabold tabular-nums text-emerald-700 lg:text-base">
+          {counts.selesai}
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Filter chips -->
   <div
-    class="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:px-0"
+    class="sticky top-14 z-20 -mx-4 flex items-center gap-2 overflow-x-auto border-b border-ink-100 bg-surface/95 px-4 py-2 backdrop-blur shadow-[0_4px_12px_-8px_rgba(15,23,42,0.08)] [scrollbar-width:none] sm:static sm:border-0 sm:bg-transparent sm:p-0 lg:mx-0 lg:px-0 lg:gap-3 lg:py-1 sm:shadow-none"
   >
     {#each tabs as t}
+      {@const c = (counts as any)[t.f] ?? 0}
       <button
         onclick={() => select(t.f)}
         class="min-h-[44px] shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all duration-200 active:scale-95
@@ -134,26 +177,50 @@
           : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
       >
         {t.label}
+        {#if c > 0}
+          <span
+            class="ml-1.5 inline-flex min-w-[18px] justify-center rounded-full px-1 py-0.5 text-[10px] font-extrabold tabular-nums {data.filter ===
+            t.f
+              ? 'bg-white/20 text-white'
+              : 'bg-white text-ink-600'}">{c}</span
+          >
+        {/if}
       </button>
     {/each}
     <button
       onclick={toggleSelectMode}
+      aria-label={selectMode
+        ? "Keluar mode pilih banyak"
+        : "Pilih beberapa pesanan untuk refund massal"}
+      title={selectMode ? "Keluar mode pilih" : "Pilih beberapa pesanan"}
       class="ml-auto min-h-[44px] shrink-0 rounded-full px-3 py-2 text-xs font-bold transition-all active:scale-95
         {selectMode ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
     >
-      {selectMode ? "Batal" : "Pilih"}
+      <Icon name="check" size={14} class="sm:hidden" />
+      <span class="hidden sm:inline">{selectMode ? "Batal" : "Pilih Banyak"}</span>
+      <span class="sm:hidden">{selectMode ? "Batal" : "Pilih"}</span>
     </button>
   </div>
 
   {#if orders.length === 0}
-    <div class="rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center">
+    <div
+      class="rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center lg:p-10 lg:rounded-3xl"
+    >
       <div
         class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-ink-100 text-ink-400"
       >
         <Icon name="receipt" size={28} />
       </div>
-      <p class="text-sm font-bold">Belum ada pesanan</p>
-      <p class="mt-1 text-xs text-ink-500">Pesanan kamu akan muncul di sini.</p>
+      <p class="text-sm font-bold">
+        {data.filter === "all"
+          ? "Belum ada pesanan"
+          : `Tidak ada pesanan ${tabs.find((t) => t.f === data.filter)?.label ?? ""}`}
+      </p>
+      <p class="mt-1 text-xs text-ink-500">
+        {data.filter === "all"
+          ? "Pesanan kamu akan muncul di sini."
+          : "Coba ganti filter atau buat pesanan baru."}
+      </p>
       <a
         href="/pesan"
         class="mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white transition-all active:scale-95 hover:bg-primary-800"
@@ -163,57 +230,95 @@
       </a>
     </div>
   {:else}
-    <!-- grid-cols-1 eksplisit: tanpa ini implicit column mengembang ke max-content
-         (service name nowrap) → horizontal overflow di mobile -->
-    <ul class="grid grid-cols-1 gap-2.5 min-w-0 lg:grid-cols-2 xl:grid-cols-3">
+    <!-- Card grid — playful, premium, mudah scan tanpa scroll horizontal -->
+    <ul class="grid grid-cols-1 gap-3 sm:gap-3.5 lg:grid-cols-2">
       {#each orders as o, i (o.id)}
         <li
-          class="rounded-2xl border bg-surface p-4 transition-all duration-200
-            {checked.has(o.id) ? 'border-primary ring-1 ring-primary' : 'border-ink-100'}
-            motion-safe:animate-[slide-up_400ms_cubic-bezier(0.25,1,0.5,1)_backwards]"
-          style="animation-delay: {i * 40}ms"
+          class="group relative flex flex-col overflow-hidden rounded-2xl border bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-12px_rgba(15,23,42,0.14)] sm:p-5
+            {checked.has(o.id)
+            ? 'border-primary ring-1 ring-primary bg-primary/[0.03]'
+            : 'border-ink-100'}"
+          style="animation: slide-up 400ms cubic-bezier(0.25,1,0.5,1) backwards; animation-delay: {i *
+            40}ms"
         >
-          <div class="flex items-center gap-3">
+          <!-- Top row: layanan + status -->
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-extrabold leading-tight sm:text-[15px]">
+                {serviceDisplayName(o.serviceName)}
+              </p>
+              <p class="mt-1 flex items-center gap-1 truncate text-xs text-ink-500">
+                <Icon name="link" size={12} class="shrink-0 text-ink-300" />
+                <span class="truncate" title={o.data}>{o.data}</span>
+              </p>
+            </div>
+            <span class="shrink-0"><StatusBadge status={o.status} /></span>
+          </div>
+
+          {#if o.status === "Partial"}
+            <!-- Partial = sebagian sukses, sisanya otomatis direfund proporsional (cron refund.ts) -->
+            <p
+              class="mt-2 flex items-center gap-1.5 rounded-lg bg-status-partial/10 px-2.5 py-1.5 text-[11px] font-semibold text-status-partial"
+            >
+              <Icon name="info" size={12} class="shrink-0" />
+              Sebagian selesai — sisa {Number(o.remains ?? 0).toLocaleString("id-ID")} otomatis direfund
+              ke saldo.
+            </p>
+          {/if}
+
+          <!-- Meta pills -->
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2.5 py-1 text-xs font-bold tabular-nums text-ink-700"
+            >
+              {o.quantity.toLocaleString("id-ID")} qty
+            </span>
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-extrabold tabular-nums text-primary"
+            >
+              {formatRupiah(o.price)}
+            </span>
+            <span class="ml-auto flex items-center gap-1 text-xs text-ink-400">
+              <Icon name="clock" size={12} />
+              {timeAgo(o.createdAt)}
+            </span>
+            <span class="hidden text-xs font-medium text-ink-300 lg:inline">#{o.id}</span>
+          </div>
+
+          <!-- Actions -->
+          <div class="mt-3 flex items-center gap-2 border-t border-ink-100 pt-3">
             {#if selectMode}
               <button
                 type="button"
                 onclick={() => toggleCheck(o.id)}
-                aria-label="Pilih order"
-                class="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition active:scale-90
+                class="inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition active:scale-95
                   {checked.has(o.id)
                   ? 'border-primary bg-primary text-white'
-                  : 'border-ink-300 text-transparent'}"
+                  : 'border-ink-200 text-ink-600 hover:border-ink-300'}"
               >
-                <Icon name="check" size={14} stroke={3} />
-              </button>
-            {/if}
-            <button
-              onclick={() => (selectMode ? toggleCheck(o.id) : openDetail(o.id))}
-              class="block min-w-0 flex-1 text-left"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0 flex-1">
-                  <p class="truncate text-sm font-bold">{o.serviceName}</p>
-                  <p class="mt-0.5 truncate text-xs text-ink-500">{o.data}</p>
-                </div>
-                <StatusBadge status={o.status} />
-              </div>
-              <div class="mt-2.5 flex items-center justify-between text-xs">
-                <span class="font-semibold tabular-nums text-ink-600">
-                  {o.quantity.toLocaleString("id-ID")} qty · {formatRupiah(o.price)}
+                <span
+                  class="grid h-4 w-4 place-items-center rounded-full {checked.has(o.id)
+                    ? 'bg-white text-primary'
+                    : 'bg-ink-100'}"
+                >
+                  <Icon name="check" size={10} stroke={3} />
                 </span>
-                <span class="text-ink-400">{timeAgo(o.createdAt)}</span>
-              </div>
-            </button>
-            {#if !selectMode}
+                {checked.has(o.id) ? "Terpilih" : "Pilih"}
+              </button>
+            {:else}
               <button
-                type="button"
-                onclick={() => repeatOrder(o)}
-                aria-label="Pesan ulang {o.serviceName}"
-                title="Pesan ulang"
-                class="grid h-11 w-11 shrink-0 place-items-center rounded-full text-primary transition active:scale-90 hover:bg-primary/10"
+                onclick={() => openDetail(o.id)}
+                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-ink-800 active:scale-95"
               >
-                <Icon name="refresh" size={17} />
+                <Icon name="eye" size={14} />
+                Detail
+              </button>
+              <button
+                onclick={() => repeatOrder(o)}
+                class="inline-flex items-center justify-center gap-1.5 rounded-full border border-ink-200 bg-surface px-4 py-2 text-xs font-bold text-ink-700 transition hover:bg-ink-50 active:scale-95"
+              >
+                <Icon name="refresh" size={14} stroke={2} />
+                Pesan lagi
               </button>
             {/if}
           </div>
@@ -244,6 +349,7 @@
     <input type="hidden" name="ids" value={checkedIds.join(",")} />
     <div
       class="fixed inset-x-0 bottom-0 z-40 border-t border-ink-100 bg-surface/95 p-3 backdrop-blur
+        shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.18)]
         pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:pl-64"
     >
       <div class="mx-auto flex max-w-lg items-center gap-3">
@@ -264,64 +370,61 @@
 <Sheet bind:open={sheetOpen} title="Detail Pesanan">
   {#if detail}
     <div class="space-y-4">
-      <!-- Header -->
-      <div class="rounded-2xl bg-gradient-to-br from-ink-50 to-ink-100 p-4">
-        <p class="text-sm font-bold">{detail.serviceName}</p>
-        <div class="mt-2 flex items-center gap-2">
+      <div class="rounded-2xl bg-gradient-to-br from-ink-900 to-ink-800 p-4 text-white">
+        <p class="text-sm font-bold leading-snug">{serviceDisplayName(detail.serviceName)}</p>
+        <div class="mt-2 flex flex-wrap items-center gap-2">
           <StatusBadge status={detail.status} />
-          <span class="text-xs text-ink-500">#{detail.id}</span>
+          <span class="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold"
+            >#{detail.id}</span
+          >
+          <span class="text-xs text-white/60"
+            >{timeAgo(detail.createdAt)} · {detail.quantity.toLocaleString("id-ID")} qty</span
+          >
         </div>
       </div>
-
-      <!-- Link -->
       <div class="rounded-2xl border border-ink-200 p-4">
         <div class="mb-1.5 flex items-center justify-between">
           <span class="text-xs font-semibold text-ink-600">Link / Username</span>
           <button
             type="button"
             onclick={() => copyLink(detail.data)}
-            class="flex items-center gap-1 text-xs font-bold text-primary transition active:scale-90"
+            class="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary transition active:scale-90 hover:bg-primary/15"
           >
             <Icon name="copy" size={12} />
             Salin
           </button>
         </div>
-        <p class="break-all text-sm text-ink-800">{detail.data}</p>
+        <p class="break-all text-sm leading-relaxed text-ink-800">{detail.data}</p>
       </div>
-
-      <!-- Info grid -->
       <div class="grid grid-cols-2 gap-3">
         <div class="rounded-xl bg-ink-50 p-3">
-          <div class="text-[10px] font-semibold text-ink-500">Jumlah</div>
+          <div class="text-[10px] font-semibold uppercase tracking-wide text-ink-500">Jumlah</div>
           <div class="mt-0.5 font-display text-base font-bold tabular-nums">
             {detail.quantity.toLocaleString("id-ID")}
           </div>
         </div>
         <div class="rounded-xl bg-ink-50 p-3">
-          <div class="text-[10px] font-semibold text-ink-500">Sisa</div>
+          <div class="text-[10px] font-semibold uppercase tracking-wide text-ink-500">Sisa</div>
           <div class="mt-0.5 font-display text-base font-bold tabular-nums">
             {detail.remains?.toLocaleString("id-ID") ?? "0"}
           </div>
         </div>
         <div class="rounded-xl bg-ink-50 p-3">
-          <div class="text-[10px] font-semibold text-ink-500">Harga</div>
+          <div class="text-[10px] font-semibold uppercase tracking-wide text-ink-500">Harga</div>
           <div class="mt-0.5 font-display text-base font-bold tabular-nums text-primary">
             {formatRupiah(detail.price)}
           </div>
         </div>
         <div class="rounded-xl bg-ink-50 p-3">
-          <div class="text-[10px] font-semibold text-ink-500">Waktu</div>
+          <div class="text-[10px] font-semibold uppercase tracking-wide text-ink-500">Waktu</div>
           <div class="mt-0.5 text-xs font-semibold">{timeAgo(detail.createdAt)}</div>
         </div>
       </div>
-
-      <!-- Actions -->
       <div class="space-y-2 pt-2">
         <Button full onclick={() => repeatOrder(detail)}>
           <Icon name="refresh" size={16} />
           Pesan Ulang
         </Button>
-
         {#if detail.isRefill && detail.status === "Success"}
           <form
             method="POST"
@@ -345,7 +448,6 @@
             </Button>
           </form>
         {/if}
-
         {#if detail.status === "Pending"}
           <form
             method="POST"

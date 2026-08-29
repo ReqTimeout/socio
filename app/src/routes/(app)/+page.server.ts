@@ -113,14 +113,18 @@ export const load: PageServerLoad = async ({ locals }) => {
         )
         .groupBy(sql`date(${deposits.createdAt})`),
 
-      // Pesanan yang masih berjalan (untuk copy dinamis di greeting)
+      // Pesanan yang benar-benar sedang berjalan (untuk copy dinamis di greeting).
+      // 'partial' TIDAK termasuk — itu status final (sebagian selesai + sisanya
+      // direfund), bukan sedang diproses. Data legacy 2023 ber-status partial
+      // pernah bikin greeting menampilkan "604 pesanan berjalan" untuk user
+      // yang tidak punya order aktif.
       db
         .select({ count: sql<number>`count(*)` })
         .from(orders)
         .where(
           and(
             eq(orders.userId, userId),
-            sql`lower(${orders.status}) in ('pending','proses','processing','in progress','partial','refilling')`,
+            sql`lower(${orders.status}) in ('pending','proses','processing','in progress','refilling')`,
           ),
         ),
     ]);
@@ -284,56 +288,12 @@ export const load: PageServerLoad = async ({ locals }) => {
     banners = DUMMY_BANNERS;
   }
 
-  // Attention: orders Error/Partial/Canceled terbaru
-  const attentionRows = await db
-    .select({ id: orders.id, serviceName: orders.serviceName, status: orders.status })
-    .from(orders)
-    .where(
-      and(
-        eq(orders.userId, userId),
-        sql`lower(${orders.status}) in ('error','canceled','partial')`,
-      ),
-    )
-    .orderBy(desc(orders.createdAt))
-    .limit(3);
-  const attention =
-    attentionRows.length > 0
-      ? [{ count: attentionRows.length, sample: attentionRows[0].serviceName.split("[")[0].trim() }]
-      : [];
-
-  // Nudge: saldo tipis vs harga termurah quickOrders (atau 10k)
-  let nudge: { balance: number; reason: string } | null = null;
-  const bal = Number((locals.user as any)?.balance ?? 0);
-  const cheap = quickOrders.length
-    ? Math.min(
-        ...(await db
-          .select({ price: services.price })
-          .from(services)
-          .where(
-            inArray(
-              services.id,
-              quickOrders.map((q) => q.serviceId),
-            ),
-          )
-          .then((r) => r.map((x) => Number(x.price)))),
-      )
-    : 0;
-  const threshold = cheap ? cheap : 10000;
-  if (bal < threshold && bal < 50000) {
-    nudge = {
-      balance: bal,
-      reason: `minimal ${threshold.toLocaleString("id-ID")}/1k — isi dulu yuk`,
-    };
-  }
-
   return {
     recent,
     banners,
     categories: catRows,
     activeOrders: Number(statActive[0]?.count ?? 0),
     quickOrders,
-    attention,
-    nudge,
 
     stats: {
       totalOrders: Number(statOrders[0]?.count ?? 0),
