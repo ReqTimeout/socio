@@ -18,6 +18,22 @@ const STATUS_LABEL: Record<string, string> = {
   Error: "Gagal",
 };
 
+export type NotificationType = "order" | "deposit" | "ticket" | "news" | "promo";
+
+/** Insert notifikasi in-app generik (deposit/affiliate/sistem). Best-effort. */
+export async function createNotification(
+  userId: number,
+  title: string,
+  message: string,
+  type: NotificationType = "news",
+): Promise<void> {
+  try {
+    await db.insert(notifications).values({ userId, type, title, message, actionUrl: null });
+  } catch (e) {
+    console.error("[notify] insert failed:", e);
+  }
+}
+
 /** Insert an in-app notification + fire Web Push to subscribed devices. */
 export async function notifyOrderUpdate(
   userId: number,

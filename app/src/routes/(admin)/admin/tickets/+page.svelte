@@ -5,7 +5,10 @@
   import type { ActionData, PageData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
-  let q = $state(data.q);
+  let q = $state("");
+  $effect(() => {
+    q = data.q;
+  });
 
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
   function onSearch() {
@@ -17,9 +20,6 @@
       goto(`/admin/tickets?${u.toString()}`, { keepFocus: true, noScroll: true });
     }, 350);
   }
-  $effect(() => {
-    q = data.q;
-  });
   let reply = $state("");
 
   const STATUSES = ["", "Pending", "Answered", "Reply by user", "Closed"];
@@ -343,7 +343,7 @@
       {#if data.tickets.length === 0}
         <div class="pt-4">
           <EmptyState
-            icon="🎫"
+            art="tickets"
             title="Belum ada tiket"
             description={hasFilter
               ? "Coba ubah filter atau kata kunci."

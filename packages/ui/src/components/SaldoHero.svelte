@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { haptic } from "../haptic.js";
-  import { tweenNumber } from "../lib/motion.js";
+  import NumberFlow from "./NumberFlow.svelte";
   import Icon from "./Icon.svelte";
   import Sparkline from "./Sparkline.svelte";
 
@@ -24,50 +23,17 @@
     insight?: { spend7: number; deposit7: number } | null;
   } = $props();
 
-  let el: HTMLElement;
-  const balanceTween = tweenNumber(0, { duration: 900 });
-  $effect(() => {
-    balanceTween.set(balance);
-  });
-
-  onMount(() => {
-    // Tilt on pointer move (desktop)
-    function onMove(e: PointerEvent) {
-      const r = el.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width - 0.5;
-      const y = (e.clientY - r.top) / r.height - 0.5;
-      el.style.setProperty("--rx", `${y * -6}deg`);
-      el.style.setProperty("--ry", `${x * 6}deg`);
-    }
-    function onLeave() {
-      el.style.setProperty("--rx", "0deg");
-      el.style.setProperty("--ry", "0deg");
-    }
-    el?.addEventListener("pointermove", onMove);
-    el?.addEventListener("pointerleave", onLeave);
-    return () => {
-      el?.removeEventListener("pointermove", onMove);
-      el?.removeEventListener("pointerleave", onLeave);
-    };
-  });
-
   const fmt = (n: number) => "Rp" + n.toLocaleString("id-ID");
 </script>
 
 <section
-  bind:this={el}
-  class="saldo-hero group relative overflow-hidden rounded-card shadow-[0_18px_48px_-12px_rgba(79,70,229,0.55)]
-    bg-gradient-to-br from-primary-600 via-primary to-accent-600 text-white p-6 safe-top
-    motion-safe:[transform:perspective(800px)_rotateX(var(--rx,0))_rotateY(var(--ry,0))]
-    transition-transform duration-200 ease-out"
+  class="saldo-hero group relative overflow-hidden rounded-2xl bg-emerald-gradient text-white p-5 lg:p-6 safe-top"
 >
-  <!-- decorative glow -->
-  <div class="absolute -top-12 -right-12 h-44 w-44 rounded-full bg-accent-400/40 blur-3xl"></div>
-  <div class="absolute -bottom-16 -left-8 h-44 w-44 rounded-full bg-primary-400/40 blur-3xl"></div>
-  <!-- shimmer sweep -->
-  <div class="shimmer pointer-events-none absolute inset-0" aria-hidden="true"></div>
-  <!-- dot pattern -->
-  <svg class="absolute inset-0 h-full w-full opacity-[0.08]" aria-hidden="true">
+  <!-- static emerald — no animation (requested) -->
+  <div class="saldo-grad pointer-events-none absolute inset-0" aria-hidden="true"></div>
+  <div class="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-white/12 blur-2xl"></div>
+  <div class="absolute -bottom-12 -left-8 h-36 w-36 rounded-full bg-emerald-300/18 blur-3xl"></div>
+  <svg class="absolute inset-0 h-full w-full opacity-[0.06]" aria-hidden="true">
     <defs>
       <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
         <circle cx="2" cy="2" r="1.2" fill="white" />
@@ -85,8 +51,8 @@
 
   <div class="relative">
     <div class="flex items-center justify-between">
-      <p class="flex items-center gap-1.5 text-sm font-medium text-white/75">
-        <span class="grid h-6 w-6 place-items-center rounded-lg bg-white/15 backdrop-blur-sm">
+      <p class="flex items-center gap-1.5 text-sm font-medium text-white/80">
+        <span class="grid h-6 w-6 place-items-center rounded-lg bg-white/18 backdrop-blur-sm ring-1 ring-white/20">
           <Icon name="wallet" size={14} stroke={2} />
         </span>
         {label}
@@ -96,8 +62,8 @@
       </a>
     </div>
 
-    <p class="font-display font-extrabold text-[2.6rem] leading-tight tabular-nums tracking-tight mt-2">
-      {fmt($balanceTween)}
+    <p class="font-display font-extrabold text-[2rem] lg:text-[2.45rem] leading-tight tabular-nums tracking-tight mt-2 drop-shadow-[0_1px_0_rgba(0,0,0,0.12)]">
+      <NumberFlow value={balance} format={fmt} duration={0.9} />
     </p>
     {#if insight && (insight.deposit7 > 0 || insight.spend7 > 0)}
       <p class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur">
@@ -110,8 +76,8 @@
       <a
         href={ctaHref}
         onclick={() => haptic(10)}
-        class="inline-flex items-center gap-1.5 rounded-full bg-white text-primary-700 font-bold px-5 py-2.5 text-sm
-          transition-all duration-150 active:scale-95 hover:bg-white/90 focus-ring-on-accent
+        class="inline-flex items-center gap-1.5 rounded-full bg-white text-emerald-700 font-bold px-5 py-2.5 text-sm
+          transition-all duration-150 active:scale-95 hover:bg-white/95 focus-ring-on-accent
           shadow-[0_6px_18px_-4px_rgba(0,0,0,0.25)]"
       >
         <Icon name="plus" size={16} stroke={2.5} />
@@ -120,8 +86,8 @@
       <a
         href={historyHref}
         onclick={() => haptic(8)}
-        class="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-sm text-white font-semibold px-4 py-2.5 text-sm
-          transition-all duration-150 active:scale-95 hover:bg-white/25"
+        class="inline-flex items-center gap-1.5 rounded-full bg-white/16 backdrop-blur-sm text-white font-semibold px-4 py-2.5 text-sm
+          ring-1 ring-white/15 transition-all duration-150 active:scale-95 hover:bg-white/25"
       >
         <Icon name="clock" size={15} stroke={2} />
         Riwayat
@@ -131,30 +97,31 @@
 </section>
 
 <style>
+  /* Emerald "money" — static premium, no drift (requested) */
+  .saldo-hero {
+    box-shadow:
+      0 18px 48px -14px rgba(16, 122, 78, 0.42),
+      0 6px 16px -4px rgba(16, 122, 78, 0.18);
+  }
+  .saldo-grad {
+    background: linear-gradient(110deg, #0f7a4e 0%, #16a34a 35%, #10b981 55%, #059669 75%, #047857 100%);
+  }
+  @keyframes emeraldDrift {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+  }
+
   .shimmer {
-    background: linear-gradient(
-      105deg,
-      transparent 40%,
-      rgba(255, 255, 255, 0.14) 50%,
-      transparent 60%
-    );
-    background-size: 250% 100%;
-    background-position: 150% 0;
-    animation: sweep 5.5s ease-in-out infinite;
+    display: none;
   }
   @keyframes sweep {
-    0%,
-    20% {
-      background-position: 150% 0;
-    }
-    60%,
-    100% {
-      background-position: -150% 0;
-    }
+    0%   { background-position: 140% 0; }
+    55%  { background-position: -140% 0; }
+    100% { background-position: -140% 0; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .shimmer {
-      animation: none;
-    }
+    /* keep alive but softer when user prefers reduced motion */
+    .saldo-grad { animation-duration: 14s; opacity: 0.9; }
+    .shimmer { animation-duration: 7s; opacity: 0.7; }
   }
 </style>

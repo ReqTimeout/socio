@@ -8,7 +8,10 @@
   type UserRow = PageData["users"][number];
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
-  let q = $state(data.q);
+  let q = $state("");
+  $effect(() => {
+    q = data.q;
+  });
 
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
   function onSearch() {
@@ -22,9 +25,6 @@
       goto(`/admin/users?${u.toString()}`, { keepFocus: true, noScroll: true });
     }, 350);
   }
-  $effect(() => {
-    q = data.q;
-  });
   let manage = $state<UserRow | null>(null);
   let manageLevel = $state("");
   let amount = $state(0);
@@ -435,7 +435,7 @@
 
   {#if data.users.length === 0}
     <EmptyState
-      icon="👥"
+      art="users"
       title="Belum ada user"
       description={hasFilter
         ? "Coba ubah filter atau kata kunci."

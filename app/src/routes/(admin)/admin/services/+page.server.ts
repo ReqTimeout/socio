@@ -130,7 +130,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 export const actions: Actions = {
   addService: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("service-add", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("service-add", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const categoryId = Number(form.get("categoryId"));
     const providerId = Number(form.get("providerId"));
@@ -199,7 +200,8 @@ export const actions: Actions = {
 
   editService: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("service-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("service-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID layanan tidak valid." });
@@ -250,7 +252,8 @@ export const actions: Actions = {
 
   deleteService: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("service-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    const _rate = await assertAdminRate("service-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });
@@ -273,7 +276,8 @@ export const actions: Actions = {
 
   bulkDelete: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("service-bulk", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const _rate = await assertAdminRate("service-bulk", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const ids = form
       .getAll("id")
@@ -305,7 +309,13 @@ export const actions: Actions = {
    */
   bulkCategoryPrice: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("service-bulk-price", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const _rate = await assertAdminRate(
+      "service-bulk-price",
+      (locals as any).ip ?? "0.0.0.0",
+      5,
+      60,
+    );
+    if (_rate) return _rate;
     const form = await request.formData();
     const categoryId = Number(form.get("categoryId"));
     const mode = String(form.get("mode") ?? "adjust");
@@ -408,7 +418,8 @@ export const actions: Actions = {
 
   toggleStatus: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("service-toggle", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("service-toggle", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });
@@ -433,7 +444,8 @@ export const actions: Actions = {
 
   addCategory: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("category-add", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("category-add", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const name = String(form.get("name") ?? "").trim();
     if (!name) return fail(400, { error: "Nama kategori wajib." });
@@ -451,7 +463,8 @@ export const actions: Actions = {
 
   editCategory: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("category-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("category-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     const name = String(form.get("name") ?? "").trim();
@@ -470,7 +483,8 @@ export const actions: Actions = {
 
   deleteCategory: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("category-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    const _rate = await assertAdminRate("category-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });

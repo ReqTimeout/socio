@@ -63,10 +63,12 @@
 /* ---- View Transition (SvelteKit onNavigate slide) ---- */
 @layer utilities {
   .vt-slide-forward {
-    animation: vt-slide-in 280ms var(--ease-out-soft, cubic-bezier(0.16, 1, 0.3, 1));
+    animation: vt-slide-in 280ms
+      var(--ease-out-soft, cubic-bezier(0.16, 1, 0.3, 1));
   }
   .vt-slide-back {
-    animation: vt-slide-out 220ms var(--ease-out-soft, cubic-bezier(0.16, 1, 0.3, 1));
+    animation: vt-slide-out 220ms
+      var(--ease-out-soft, cubic-bezier(0.16, 1, 0.3, 1));
   }
 }
 @keyframes vt-slide-in {
@@ -106,9 +108,9 @@
   .reveal {
     opacity: 0;
     transform: translateY(8px);
-    animation: reveal-in 520ms var(--ease-out-soft, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+    animation: reveal-in 520ms
+      var(--ease-out-soft, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
     animation-delay: var(--d, 0ms);
-    will-change: opacity, transform;
   }
   @keyframes reveal-in {
     to {
@@ -122,6 +124,47 @@
       opacity: 1;
       transform: none;
     }
+  }
+}
+
+/* ---- Playful app surface — layered shadow + hover lift + tactile press ---- */
+/* Satu-satunya utility kartu interaktif (jangan gabung dengan shadow-card /
+   hover:shadow-card-hover / hover:-translate-y-* — sudah ter-handle di sini). */
+@layer utilities {
+  .card-lift {
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.05),
+      0 6px 18px -6px rgb(15 23 42 / 0.08),
+      0 2px 8px -2px rgb(15 23 42 / 0.04);
+    transition:
+      transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 220ms ease,
+      border-color 180ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 4px 10px -4px rgb(15 23 42 / 0.06),
+      0 14px 32px -8px rgb(15 23 42 / 0.12),
+      0 20px 44px -12px rgb(99 102 241 / 0.16);
+    border-color: rgb(165 180 252 / 0.5);
+  }
+  .card-lift:active {
+    transform: translateY(-1px) scale(0.985);
+    transition-duration: 80ms;
+  }
+  /* Versi statis utk permukaan non-interaktif (header kartu, panel info) */
+  .surface-pop {
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.05),
+      0 6px 18px -6px rgb(15 23 42 / 0.08);
+  }
+  /* Soft playful blobs for page ambient (add once per page section) */
+  .app-ambient {
+    position: absolute;
+    pointer-events: none;
+    filter: blur(28px);
+    opacity: 0.42;
   }
 }
 

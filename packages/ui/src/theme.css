@@ -20,9 +20,14 @@
     html {
       scroll-behavior: auto;
     }
-    *,
-    *::before,
-    *::after {
+    /* Keep essential feedback animations but exclude premium cues (FAB + saldo money) */
+    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *),
+    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(
+        .saldo-hero *
+      )::before,
+    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(
+        .saldo-hero *
+      )::after {
       animation-duration: 0.001ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.001ms !important;

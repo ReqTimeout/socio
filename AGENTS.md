@@ -4,6 +4,7 @@
 
 ## 0. Aturan mutlak
 
+0. **AUTO SKILL ROUTER (WAJIB, sangat expert, jangan load semua)** — di awal sesi `skill auto-router` (generic) atau `skill socio-router` khusus socio.id dulu, cek `git status` + file yang dikerjakan, lalu load **MAX 2-3 skill** sesuai tabel router. Contoh: `app/*` -> `svelte`+`ui-ux-pro-max`, `landing/*` -> `astro`+`seo`, `db/*` -> `squirrel`+`sql-sentinel`, `cloudflare` -> `cloudflare`+`wrangler`. DILARANG load semua 121+ skill.
 1. **SELALU baca `REBUILD_PLAN.md` dulu** sebelum eksekusi apapun. Itu source of truth.
 2. **SELALU baca `docs/ADMIN_GAP.md`** sebelum kerja modul admin — daftar gap wajib fix.
 3. **DILARANG ngoding route apapun sebelum M1.5 (Design Pass) selesai** — tanpa design contract fix (palette/typography/spacing/motion), agent akan keluar UI generic. Load skill `looks-expensive` + `theming-components` di M1.5.

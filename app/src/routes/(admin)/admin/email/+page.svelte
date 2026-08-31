@@ -204,7 +204,7 @@
 
   {#if data.campaigns.length === 0}
     <EmptyState
-      icon="📧"
+      art="email"
       title={data.status
         ? `Tidak ada campaign "${statusLabel(data.status)}"`
         : "Belum ada campaign"}

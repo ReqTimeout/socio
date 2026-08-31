@@ -1,17 +1,27 @@
 <script lang="ts">
-  import { fly } from "svelte/transition";
-  import { ServiceCard, EmptyState, Icon, Select, staggerIn } from "@socio/ui";
+  import { ServiceCard, Icon, Select, revealDelay, EmptyServicesArt } from "@socio/ui";
   import { haptic } from "@socio/ui";
+  import { copy } from "@socio/core/copy";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
 
   let { data } = $props();
 
-  let q = $state(data.params.q ?? "");
+  let q = $state("");
+  $effect(() => {
+    q = data.params.q ?? "";
+  });
   let pending = $state(false);
-  let favState = $state<Record<number, boolean>>(
-    Object.fromEntries(data.services.filter((s) => s.fav).map((s) => [s.id, true])),
-  );
+  let favState = $state<Record<number, boolean>>({});
+  $effect(() => {
+    // prefill favorit dari server hanya saat belum terisi (initial load) — hindari reset saat toggle lokal
+    if (Object.keys(favState).length === 0) {
+      const serverFavs = Object.fromEntries(
+        data.services.filter((s) => s.fav).map((s) => [s.id, true]),
+      );
+      if (Object.keys(serverFavs).length > 0) favState = serverFavs;
+    }
+  });
 
   function buildParams(extra: Record<string, string> = {}) {
     const p = new URLSearchParams($page.url.searchParams);
@@ -173,14 +183,15 @@
 
   <!-- List -->
   {#if data.services.length === 0}
-    <EmptyState
-      title="Layanan tidak ditemukan"
-      description="Coba kata kunci lain atau ganti kategori."
-    />
+    <div class="flex flex-col items-center justify-center py-14 text-center">
+      <EmptyServicesArt size={132} class="text-ink-300" />
+      <h2 class="mt-4 font-display text-lg font-bold text-ink-900">{copy.empty.services.title}</h2>
+      <p class="mt-1 max-w-xs text-sm text-ink-500">{copy.empty.services.desc}</p>
+    </div>
   {:else}
     <ul class="grid grid-cols-1 gap-2.5 min-w-0 sm:grid-cols-2 lg:gap-3.5 xl:grid-cols-3">
       {#each data.services as s, i (s.id)}
-        <li in:fly={staggerIn(i, { y: 8, duration: 220, step: 30 })} class="relative group">
+        <li class="reveal relative group" style={revealDelay(i, 0, 30)}>
           <ServiceCard
             name={s.serviceName}
             category={s.type && s.type !== "Default" ? s.type : (s.categoryName ?? "")}
@@ -195,18 +206,21 @@
             type="button"
             onclick={() => toggleFav(s.id)}
             aria-label={favState[s.id] ? "Hapus dari favorit" : "Tambah ke favorit"}
+            aria-pressed={!!favState[s.id]}
             class="group absolute right-1.5 top-1.5 grid h-11 w-11 place-items-center rounded-full
               transition active:scale-90"
           >
             <span
               class="grid h-8 w-8 place-items-center rounded-full bg-surface/80 backdrop-blur transition group-hover:bg-surface"
             >
-              <Icon
-                name="star"
-                size={18}
-                stroke={2.5}
-                class={favState[s.id] ? "fill-amber-400 text-amber-400" : "text-ink-400"}
-              />
+              <span class="star-pop {favState[s.id] ? 'star-on' : ''}">
+                <Icon
+                  name="star"
+                  size={18}
+                  stroke={2.5}
+                  class={favState[s.id] ? "fill-amber-400 text-amber-400" : "text-ink-500"}
+                />
+              </span>
             </span>
           </button>
         </li>
@@ -223,3 +237,30 @@
     {/if}
   {/if}
 </section>
+
+<style>
+  /* Star burst 1× tiap toggle favorit (spring-feel, motion-safe) */
+  .star-pop {
+    display: grid;
+    place-items: center;
+  }
+  .star-on {
+    animation: star-burst 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+  }
+  @keyframes star-burst {
+    0% {
+      transform: scale(0.6) rotate(-14deg);
+    }
+    55% {
+      transform: scale(1.22) rotate(6deg);
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .star-on {
+      animation: none !important;
+    }
+  }
+</style>

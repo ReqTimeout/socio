@@ -1,5 +1,9 @@
 import { config } from "dotenv";
-config({ path: new URL("../.env", import.meta.url).pathname });
+import { existsSync } from "node:fs";
+// Dev: .env di root app (relatif source). Build: cwd saat menjalankan node
+// (import.meta.url menunjuk build/server/ — ../.env tidak ada di sana).
+const devEnv = new URL("../.env", import.meta.url).pathname;
+config({ path: existsSync(devEnv) ? devEnv : ".env" });
 import { auth } from "$lib/server/auth";
 import { db } from "@socio/db";
 import { users, sessions } from "@socio/db/schema";
@@ -124,7 +128,8 @@ async function maintenanceHook({ event, resolve }: Parameters<Handle>[0]) {
     path.startsWith("/icon") ||
     path.startsWith("/_app") ||
     path.startsWith("/api/auth");
-  const isAdmin = path.startsWith("/admin") || path.startsWith("/login");
+  const isAdmin =
+    path.startsWith("/admin") || path.startsWith("/login") || path.startsWith("/dev-admin-login");
   if (isStatic || isAdmin) return resolve(event);
 
   try {
@@ -172,6 +177,11 @@ async function securityHeadersHook({ event, resolve }: Parameters<Handle>[0]) {
       "form-action 'self'",
     ].join("; "),
   );
+  // Ensure UTF-8 charset so emoji/flags render correctly on all browsers (fixes mojibake like ðŸ‡®ðŸ‡© → 🇮🇩)
+  const ct = response.headers.get("content-type");
+  if (ct && ct.includes("text/html") && !ct.includes("charset")) {
+    response.headers.set("content-type", "text/html; charset=utf-8");
+  }
   return response;
 }
 

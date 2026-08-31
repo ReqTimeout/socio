@@ -1,2 +1,65 @@
 @import "tailwindcss";
 @import "@socio/ui/theme.css";
+
+/* Sembunyikan horizontal overflow dari animasi blur/pulse di mobile */
+html, body {
+  overflow-x: clip;
+}
+
+/* Smooth scroll behavior mobile-first */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Focus-visible default ring (a11y) */
+  :focus-visible {
+    outline: 2px solid var(--color-primary-600, #4f46e5);
+    outline-offset: 2px;
+  }
+}
+
+/* Hero gradient animation */
+@keyframes animate-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* Soft pulse for live badge */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+.live-dot { animation: live-pulse 1.6s ease-in-out infinite; }
+
+/* Shimmer for CTA button */
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(200%); }
+}
+
+/* Reveal on scroll */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -8,7 +8,7 @@
   type Status = "Pending" | "Success" | "Canceled";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
-  let q = $state(data.q);
+  let q = $state("");
 
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
   function onSearch() {
@@ -262,7 +262,7 @@
 
   {#if data.deposits.length === 0}
     <EmptyState
-      icon="💰"
+      art="deposits"
       title="Belum ada deposit"
       description={data.q || data.status
         ? "Coba ubah filter atau kata kunci."

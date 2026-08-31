@@ -20,7 +20,7 @@
   const scenario = [
     'Milih layanan Instagram Followers…',
     'Nempel link & quantity…',
-    'Cek stok provider SMMturk…',
+    'Cek stok & harga grosir…',
     'Order masuk antrean, diproses otomatis 🚀',
   ];
 

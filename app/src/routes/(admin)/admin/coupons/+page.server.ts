@@ -50,7 +50,8 @@ function parseDate(v: string): Date | null {
 export const actions: Actions = {
   save: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("coupon-save", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    const _rate = await assertAdminRate("coupon-save", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id") ?? 0);
     const code = String(form.get("code") ?? "")
@@ -117,7 +118,8 @@ export const actions: Actions = {
 
   toggle: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("coupon-toggle", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    const _rate = await assertAdminRate("coupon-toggle", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });
@@ -142,7 +144,8 @@ export const actions: Actions = {
 
   delete: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("coupon-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    const _rate = await assertAdminRate("coupon-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });

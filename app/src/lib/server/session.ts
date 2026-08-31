@@ -12,11 +12,19 @@ import type { Cookies } from "@sveltejs/kit";
  * this back to better-auth's cookie unless the getSession issue is resolved,
  * or logins will break again.
  *
- * `secure` defaults to false to match historical behaviour (works behind
- * Cloudflare HTTPS termination). Set SOCIO_SECURE_COOKIES=1 in production to
- * mark the cookie Secure (recommended once HTTPS is confirmed end-to-end).
+ * Secure flag rule (U-11):
+ * - `secure: true` ketika SOCIO_SECURE_COOKIES=1 ATAU SOCIO_APP_URL pakai https.
+ * - Auto-detect agar production tidak salah set 0 (cookie bocor via HTTP downgrade).
+ * Set SOCIO_SECURE_COOKIES=0 untuk override (mis. local dev lewat proxy tanpa TLS).
  */
 export const SESSION_COOKIE = "socio_session";
+
+function shouldUseSecureCookie(): boolean {
+  if (process.env.SOCIO_SECURE_COOKIES === "1") return true;
+  if (process.env.SOCIO_SECURE_COOKIES === "0") return false;
+  const url = process.env.SOCIO_APP_URL ?? "";
+  return /^https:\/\//i.test(url);
+}
 
 export function setSocioSessionCookie(
   cookies: Cookies,
@@ -27,7 +35,7 @@ export function setSocioSessionCookie(
   cookies.set(SESSION_COOKIE, `${sessionId}.${token}`, {
     path: "/",
     httpOnly: true,
-    secure: process.env.SOCIO_SECURE_COOKIES === "1",
+    secure: shouldUseSecureCookie(),
     sameSite: "lax",
     expires: expiresAt,
   });

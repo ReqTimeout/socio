@@ -49,19 +49,30 @@ export const actions: Actions = {
     if (!ticketId || !message) return fail(400, { error: "Pesan wajib diisi." });
 
     const userId = Number(locals.user!.id);
+    // P0-9: balas hanya boleh ke tiket milik sendiri.
+    const owned = await db.execute(sql`
+      SELECT 1 FROM message WHERE ticket_id = ${ticketId} AND user_id = ${userId} LIMIT 1
+    `);
+    if (!(owned as any)[0]?.length) return fail(403, { error: "Tiket tidak ditemukan." });
     await db.execute(sql`
       INSERT INTO message (user_id, type, subject, message, status, created_at, ticket_id, is_read)
       VALUES (${userId}, 'user', '', ${message}, 'Reply by user', NOW(), ${ticketId}, 0)
     `);
-    await db.execute(sql`UPDATE message SET status = 'Pending' WHERE ticket_id = ${ticketId}`);
+    await db.execute(
+      sql`UPDATE message SET status = 'Pending' WHERE ticket_id = ${ticketId} AND user_id = ${userId}`,
+    );
     return { success: true };
   },
 
-  close: async ({ request, locals: _locals }) => {
+  close: async ({ request, locals }) => {
     const form = await request.formData();
     const ticketId = Number(form.get("ticketId"));
     if (!ticketId) return fail(400, { error: "Tiket tidak valid." });
-    await db.execute(sql`UPDATE message SET status = 'Closed' WHERE ticket_id = ${ticketId}`);
+    const userId = Number(locals.user!.id);
+    // P0-9: scope by user_id — siapa pun tidak bisa tutup tiket orang lain.
+    await db.execute(
+      sql`UPDATE message SET status = 'Closed' WHERE ticket_id = ${ticketId} AND user_id = ${userId}`,
+    );
     return { success: true };
   },
 };

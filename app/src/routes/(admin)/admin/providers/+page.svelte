@@ -247,7 +247,7 @@
 
     {#if data.providers.length === 0}
       <EmptyState
-        icon="⚡"
+        art="providers"
         title="Belum ada provider"
         description="Tambah provider SMM untuk mulai menerima order."
       />

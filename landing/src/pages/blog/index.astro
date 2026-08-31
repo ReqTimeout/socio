@@ -1,0 +1,41 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.svelte';
+---
+
+<Layout>
+  <Navbar client:load />
+
+  <section class="pt-32 pb-24 md:pt-40 md:pb-32 bg-white">
+    <div class="container mx-auto max-w-2xl px-5 text-center">
+      <span class="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
+        Blog
+      </span>
+      <h1 class="mt-4 font-display text-3xl sm:text-4xl font-extrabold text-ink-900">
+        Artikel &amp; Tips SMM
+      </h1>
+      <p class="mt-3 text-ink-500 text-sm md:text-base">
+        Konten sedang disiapkan — panduan naik followers aman, strategi jualan untuk reseller,
+        dan update layanan Socio.id akan terbit di sini.
+      </p>
+      <div class="mt-8 flex flex-col gap-3 sm:flex-row justify-center">
+        <a
+          href="https://app.socio.id/daftar"
+          class="inline-flex items-center justify-center rounded-full bg-primary px-7 py-4 font-bold text-white shadow-lg hover:-translate-y-0.5 transition"
+        >
+          Daftar Gratis →
+        </a>
+        <a
+          href="/"
+          class="inline-flex items-center justify-center rounded-full border-2 border-ink-200 bg-white px-7 py-4 font-bold text-ink-900 hover:bg-ink-50 transition"
+        >
+          ← Kembali ke Beranda
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="bg-ink-900 py-8 text-center text-xs text-white/40 border-t border-white/10">
+    &copy; 2026 Socio.id · Panel SMM Termurah &amp; Terpercaya di Indonesia.
+  </footer>
+</Layout>

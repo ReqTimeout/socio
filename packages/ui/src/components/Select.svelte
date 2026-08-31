@@ -93,14 +93,14 @@
     {#if selected?.icon}
       <Icon name={selected.icon} size={size === "sm" ? 15 : 17} stroke={2} class="shrink-0 text-ink-500" />
     {/if}
-    <span class="min-w-0 flex-1 truncate {selected ? '' : 'text-ink-400'}">
+    <span class="min-w-0 flex-1 truncate {selected ? '' : 'text-ink-500'}">
       {selected ? selected.label : placeholder}
     </span>
     <Icon
       name="chevron_right"
       size={size === "sm" ? 15 : 17}
       stroke={2.5}
-      class="shrink-0 text-ink-400 transition-transform duration-200 {open ? 'rotate-90' : ''}"
+      class="shrink-0 text-ink-500 transition-transform duration-200 {open ? 'rotate-90' : ''}"
     />
   </button>
 
@@ -113,19 +113,19 @@
       {#if showSearch}
         <div class="border-b border-ink-100 p-2">
           <div class="flex items-center gap-2 rounded-lg bg-ink-50 px-2.5">
-            <Icon name="search" size={15} stroke={2} class="shrink-0 text-ink-400" />
+            <Icon name="search" size={15} stroke={2} class="shrink-0 text-ink-500" />
             <input
               bind:this={searchEl}
               bind:value={query}
               placeholder={searchPlaceholder}
-              class="h-9 w-full bg-transparent text-sm outline-none placeholder:text-ink-400"
+              class="h-9 w-full bg-transparent text-sm outline-none placeholder:text-ink-500"
             />
           </div>
         </div>
       {/if}
       <ul class="max-h-64 overflow-y-auto py-1 [scrollbar-width:thin]">
         {#if filtered.length === 0}
-          <li class="px-3 py-4 text-center text-xs text-ink-400">Tidak ada hasil</li>
+          <li class="px-3 py-4 text-center text-xs text-ink-500">Tidak ada hasil</li>
         {:else}
           {#each filtered as o (o.value)}
             {@const active = String(o.value) === String(value)}
@@ -139,11 +139,11 @@
                   {active ? 'bg-primary/8 font-semibold text-primary' : 'text-ink-700 hover:bg-ink-50'}"
               >
                 {#if o.icon}
-                  <Icon name={o.icon} size={16} stroke={2} class="shrink-0 {active ? 'text-primary' : 'text-ink-400'}" />
+                  <Icon name={o.icon} size={16} stroke={2} class="shrink-0 {active ? 'text-primary' : 'text-ink-500'}" />
                 {/if}
                 <span class="min-w-0 flex-1 truncate">{o.label}</span>
                 {#if o.hint}
-                  <span class="shrink-0 text-xs tabular-nums {active ? 'text-primary/70' : 'text-ink-400'}">{o.hint}</span>
+                  <span class="shrink-0 text-xs tabular-nums {active ? 'text-primary/70' : 'text-ink-500'}">{o.hint}</span>
                 {/if}
                 {#if active}
                   <Icon name="check" size={15} stroke={2.5} class="shrink-0 text-primary" />

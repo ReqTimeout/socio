@@ -11,7 +11,7 @@
   }: { value?: string; label?: string; error?: string; hint?: string; id?: string } & HTMLInputAttributes = $props();
 
   const base =
-    "w-full rounded-2xl border bg-white px-4 py-3 text-sm text-ink-800 placeholder:text-ink-400 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary";
+    "w-full rounded-2xl border bg-white px-4 py-3 text-sm text-ink-800 placeholder:text-ink-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary";
   const border = $derived(error ? "border-danger" : "border-ink-200");
 </script>
 
@@ -28,5 +28,5 @@
 {#if error}
   <p class="mt-1.5 text-xs font-medium text-danger">{error}</p>
 {:else if hint}
-  <p class="mt-1.5 text-xs text-ink-400">{hint}</p>
+  <p class="mt-1.5 text-xs text-ink-500">{hint}</p>
 {/if}

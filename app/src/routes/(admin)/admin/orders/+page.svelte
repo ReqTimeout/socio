@@ -8,7 +8,7 @@
   type OrderRow = PageData["orders"][number];
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
-  let q = $state(data.q);
+  let q = $state("");
 
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
   function onSearch() {
@@ -353,7 +353,11 @@
   {/if}
 
   {#if data.orders.length === 0}
-    <EmptyState title="Belum ada order" />
+    <EmptyState
+      art="orders"
+      title="Belum ada order"
+      description="Order baru dari user akan muncul di sini secara real-time."
+    />
   {:else}
     <!-- Desktop table — clean ledger + service icon avatar -->
     <div class="hidden overflow-x-auto rounded-2xl border border-ink-100 bg-surface lg:block">

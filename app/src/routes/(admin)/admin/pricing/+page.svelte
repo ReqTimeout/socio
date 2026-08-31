@@ -44,22 +44,34 @@
     },
   };
 
-  // Working state — initial* harus $state supaya isDirty reaktif setelah Simpan
-  let initialMarkup: Record<Level, number> = $state({
+  // Snapshot server — $derived supaya isDirty reaktif setelah Simpan (invalidate → data.rules baru)
+  const initialMarkup: Record<Level, number> = $derived({
     Member: Number(data.rules.find((r) => r.level === "Member")?.markupPercent ?? 200),
     Agen: Number(data.rules.find((r) => r.level === "Agen")?.markupPercent ?? 150),
     Reseller: Number(data.rules.find((r) => r.level === "Reseller")?.markupPercent ?? 180),
     Admin: Number(data.rules.find((r) => r.level === "Admin")?.markupPercent ?? 0),
   });
-  let initialActive: Record<Level, boolean> = $state({
+  const initialActive: Record<Level, boolean> = $derived({
     Member: Number(data.rules.find((r) => r.level === "Member")?.isActive ?? 1) === 1,
     Agen: Number(data.rules.find((r) => r.level === "Agen")?.isActive ?? 1) === 1,
     Reseller: Number(data.rules.find((r) => r.level === "Reseller")?.isActive ?? 1) === 1,
     Admin: Number(data.rules.find((r) => r.level === "Admin")?.isActive ?? 1) === 1,
   });
 
-  let markup: Record<Level, number> = $state({ ...initialMarkup });
-  let active: Record<Level, boolean> = $state({ ...initialActive });
+  // Working state — prefill dari snapshot saat init & setelah Simpan; edit user tidak tertimpa invalidate
+  let markup: Record<Level, number> = $state({ Member: 0, Agen: 0, Reseller: 0, Admin: 0 });
+  let active: Record<Level, boolean> = $state({
+    Member: true,
+    Agen: true,
+    Reseller: true,
+    Admin: true,
+  });
+  $effect(() => {
+    if (!isDirty) {
+      markup = { ...initialMarkup };
+      active = { ...initialActive };
+    }
+  });
 
   // Sample base = MEDIAN harga Member dari data riil (bukan hardcode)
   const sampleBase = $derived(data.stats.medianBase > 0 ? data.stats.medianBase : 2000);
@@ -262,10 +274,6 @@
         if (result.type === "failure") toast(extractActionMsg(r.data) ?? "Gagal", "error");
         else {
           toast(extractActionMsg(r.data) ?? "Tersimpan", "success");
-          for (const lv of LEVEL_ORDER) {
-            initialMarkup[lv] = markup[lv];
-            initialActive[lv] = active[lv];
-          }
           // sync server stats + pricing_rules cache supaya preview median ikut update
           await update({ reset: false });
         }

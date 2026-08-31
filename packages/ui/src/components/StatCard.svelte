@@ -80,7 +80,7 @@
 
   <div class="relative flex items-start justify-between gap-3">
     <div class="min-w-0">
-      <p class="text-[11px] font-bold uppercase tracking-wider text-ink-400">{label}</p>
+      <p class="text-[11px] font-bold uppercase tracking-wider text-ink-500">{label}</p>
       <p class="mt-1 truncate font-display text-xl font-extrabold tracking-tight text-ink-900 lg:text-2xl">
         {value}
       </p>
@@ -104,9 +104,9 @@
           <Icon name={up ? "arrow_up" : "arrow_down"} size={11} stroke={2.75} />
           {Math.abs(delta).toLocaleString("id-ID", { maximumFractionDigits: 1 })}%
         </span>
-        <span class="ml-1 text-[10px] text-ink-400">7h</span>
+        <span class="ml-1 text-[10px] text-ink-500">7h</span>
       {:else if hint}
-        <span class="text-[11px] text-ink-400">{hint}</span>
+        <span class="text-[11px] text-ink-500">{hint}</span>
       {/if}
     </div>
     {#if spark && spark.length}

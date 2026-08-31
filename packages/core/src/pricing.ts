@@ -8,44 +8,59 @@ export interface PricingRule {
   isActive: boolean;
 }
 
+/** Default rule = 0% markup (harga tersimpan tidak berubah — aman untuk data legacy). */
+export const ZERO_RULE = (level: UserLevel): PricingRule => ({
+  level,
+  markupPercent: 0,
+  flatPer1k: 0,
+  minProfitPer1k: 0,
+  isActive: true,
+});
+
 /**
- * Markup rules per member level. `price` in services table is the base
- * (modal) price per 1000 IDR (setelah konversi USD→IDR dari harga API).
+ * Markup rules per member level — port 1:1 dari `app.socio.id/lib/pricing.php`.
  *
- * Konvensi markup:
- *  - Member mendapat markup tertinggi (margin paling tebal, harga retail).
- *  - Reseller/Agen markup lebih tipis (harga grosir).
- *  - Admin tidak markup (harga modal, untuk internal/test).
+ * Konvensi data (legacy dump, 6044 layanan):
+ *  - `services.price`          = base harga per 1000 untuk **Member**
+ *  - `services.price_reseller` = base harga per 1000 untuk **Reseller**
+ *  - `services.price_api`      = base harga per 1000 untuk **Agen** (+ modal provider)
  *
- * Harga jual per 1000 = modal × (1 + markup%/100) + flatPer1k.
+ * Harga jual per 1000 untuk satu level:
+ *    effective = base(level) × (1 + markup%/100) + flatPer1k,
+ *    dibatasi minimal = price_api + minProfitPer1k (floor anti-jual-rugi).
  *
- * Default per konfirmasi user (13 Aug 2026):
- *  - Member: +200% → harga jual = 3× modal
- *  - Reseller: +180% → 2.8× modal
- *  - Agen: +150% → 2.5× modal
- *  - Admin: 0% → harga modal
+ * Default markup = 0% (identitas) → harga tersimpan TIDAK berubah.
+ * Admin mengatur markup % per level via /admin/pricing (sumber kebenaran = DB).
  */
-const DEFAULT_RULES: Record<UserLevel, PricingRule> = {
-  Member: { level: "Member", markupPercent: 200, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
-  Reseller: { level: "Reseller", markupPercent: 180, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
-  Agen: { level: "Agen", markupPercent: 150, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
-  Admin: { level: "Admin", markupPercent: 0, flatPer1k: 0, minProfitPer1k: 0, isActive: true },
-};
+export function baseForLevel(
+  svc: { price: number; priceApi: number; priceReseller: number },
+  level: UserLevel,
+): number {
+  if (level === "Reseller") return Number(svc.priceReseller ?? 0);
+  if (level === "Agen") return Number(svc.priceApi ?? 0);
+  return Number(svc.price ?? 0);
+}
 
 /**
  * Compute the user-facing price for an order.
- * `basePricePer1k` is the Member base price stored in `services.price`.
- * Higher tiers (Agen/Reseller) get a discount via the pricing rule.
+ * `basePricePer1k` = harga dasar per 1000 sesuai level (lihat `baseForLevel`).
+ * `modalPer1k` (opsional) = harga provider per 1000, untuk floor `modal + minProfit`.
  */
 export function computePrice(
   basePricePer1k: number,
   quantity: number,
   level: UserLevel = "Member",
   rule?: PricingRule,
+  modalPer1k?: number,
 ): number {
-  const r = rule ?? DEFAULT_RULES[level];
-  const per1k = basePricePer1k * (1 + r.markupPercent / 100) + r.flatPer1k;
-  const total = (quantity / 1000) * Math.max(per1k, r.minProfitPer1k);
+  const r = rule ?? ZERO_RULE(level);
+  let per1k = Number(basePricePer1k) * (1 + Number(r.markupPercent) / 100) + Number(r.flatPer1k);
+  if (r.isActive && modalPer1k !== undefined && Number(r.minProfitPer1k) > 0) {
+    per1k = Math.max(per1k, Number(modalPer1k) + Number(r.minProfitPer1k));
+  } else if (!r.isActive) {
+    per1k = Number(basePricePer1k);
+  }
+  const total = (quantity / 1000) * per1k;
   return Math.round(total);
 }
 

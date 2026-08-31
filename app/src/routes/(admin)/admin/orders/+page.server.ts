@@ -106,7 +106,8 @@ export const actions: Actions = {
   // ubah status order manual (hanya dari status non-final) + notif user + audit
   updateStatus: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("order-status", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("order-status", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     const status = String(form.get("status") ?? "");
@@ -141,7 +142,8 @@ export const actions: Actions = {
   // edit detail provider (provider_order_id, start_count, remains) + audit
   editProvider: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("order-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("order-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     const providerOrderId = String(form.get("providerOrderId") ?? "").trim();
@@ -182,7 +184,8 @@ export const actions: Actions = {
    */
   refund: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("order-refund", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate("order-refund", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     const rawAmount = Number(form.get("amount") ?? 0);

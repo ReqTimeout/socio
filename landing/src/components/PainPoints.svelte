@@ -17,7 +17,7 @@
   $: animatedManual.set(manualPrice);
   $: animatedSocio.set(socioPrice);
 
-  const regLink = 'https://app.socio.id/register';
+  const regLink = 'https://app.socio.id/daftar';
   const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(num);
 
   let step1 = 0;
@@ -160,11 +160,14 @@
     </div>
 
     <div class="text-center max-w-3xl mx-auto mb-12">
-      <h2 class="font-display font-bold text-2xl md:text-4xl text-ink-900 mb-4">
-        3 Masalah Ini Bikin <br /><span class="text-danger">Saldo Boncos</span> Diam-Diam
+      <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-amber-700 mb-3">
+        Kenapa Pindah?
+      </span>
+      <h2 class="font-display font-black text-2xl md:text-4xl text-ink-900 mb-3 leading-tight">
+        Panel Lain Bikin Boncos.<br /><span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Socio.id Bikin Cuan.</span>
       </h2>
-      <p class="text-ink-500 text-sm md:text-base">
-        Sering ngalamin di bawah ini? Hati-hati, budget marketing kamu tergerus pelan-pelan.
+      <p class="text-ink-500 text-sm md:text-base max-w-xl mx-auto">
+        50.000+ reseller sudah bandingkan — ini 3 alasan mereka stay di Socio.id.
       </p>
     </div>
 

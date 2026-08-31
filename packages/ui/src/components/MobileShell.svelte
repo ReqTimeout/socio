@@ -25,7 +25,7 @@
       <a
         href={item.href}
         class="flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-bold transition-colors
-          {item.active ? 'text-primary' : 'text-ink-400 hover:text-ink-600'}"
+          {item.active ? 'text-primary' : 'text-ink-500 hover:text-ink-600'}"
       >
         <span class="text-xl leading-none">{item.icon}</span>
         {item.label}

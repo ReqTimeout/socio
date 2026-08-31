@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Cloudflare Pages: SEO prioritas
+Sitemap: https://socio.id/sitemap.xml
+Sitemap: https://socio.id/sitemap-index.xml

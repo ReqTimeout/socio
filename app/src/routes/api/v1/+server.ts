@@ -2,7 +2,10 @@ import { json } from "@sveltejs/kit";
 import { db } from "@socio/db";
 import { users, services, categories, orders, provider, balanceLogs } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { smmturkAdd, smmturkRefill } from "@socio/core/smmturk";
+import { smmturkAddFor, smmturkRefill } from "@socio/core/smmturk";
+import { baseForLevel, computePrice, type UserLevel } from "@socio/core/pricing";
+import { getPricingRules } from "$lib/server/pricing";
+import { decryptSecret } from "$lib/server/crypto";
 import { rateLimit } from "$lib/server/rate-limit";
 import type { RequestHandler } from "./$types";
 
@@ -19,11 +22,13 @@ function fail(message: string): Response {
   return json({ status: false, message } satisfies ApiResponse);
 }
 
-/** Authenticate by api_key, return user or null. */
+/** Authenticate by api_key, return user or null. Blokir user Blacklist/non-aktif (B-14). */
 async function authByKey(apiKey: string) {
   if (!apiKey) return null;
   const [u] = await db.select().from(users).where(eq(users.apiKey, apiKey)).limit(1);
-  return u ?? null;
+  if (!u) return null;
+  if (u.level === "Blacklist" || u.status !== "1") return null;
+  return u;
 }
 
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
@@ -101,6 +106,25 @@ async function handleServices(apiKey: string): Promise<Response> {
   return ok("Access Allowed", rows);
 }
 
+/** Deduct saldo atomik: 0 row terdampak = saldo kurang (fix P0-1). */
+async function deductBalanceAtomic(userId: number, amount: number): Promise<number> {
+  const res: any = await db
+    .update(users)
+    .set({ balance: sql`${users.balance} - ${amount}` })
+    .where(sql`${users.id} = ${userId} AND ${users.balance} >= ${amount}`);
+  const rows = Array.isArray(res) ? res : [res];
+  const n = rows[0]?.affectedRows;
+  return typeof n === "number" ? n : 1;
+}
+
+/** Refund balans atomik kalau order gagal setelah deduct. */
+async function refundBalanceAtomic(userId: number, amount: number): Promise<void> {
+  await db
+    .update(users)
+    .set({ balance: sql`${users.balance} + ${amount}` })
+    .where(eq(users.id, userId));
+}
+
 async function handleOrder(apiKey: string, form: Record<string, string>): Promise<Response> {
   const user = await authByKey(apiKey);
   if (!user) return fail("Wrong API Key");
@@ -126,33 +150,68 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
   if (qty < svc.min) return fail(`min order: ${svc.min}`);
   if (qty > svc.max) return fail(`max order: ${svc.max}`);
 
-  // pricing per level
-  const level = (user.level ?? "Member") as any;
-  const pricePer1k =
-    level === "Reseller" ? svc.priceReseller : level === "Agen" ? svc.priceApi : svc.price;
-  const totalPrice = Math.round((pricePer1k / 1000) * qty);
+  // pricing per level — rules DB (parity dengan web checkout, fix P0-2)
+  const level = (
+    ["Member", "Agen", "Reseller", "Admin"].includes(user.level ?? "") ? user.level : "Member"
+  ) as UserLevel;
+  const rules = await getPricingRules();
+  const basePer1k = baseForLevel(
+    {
+      price: Number(svc.price),
+      priceApi: Number(svc.priceApi),
+      priceReseller: Number(svc.priceReseller),
+    },
+    level,
+  );
+  const totalPrice = computePrice(basePer1k, qty, level, rules[level], Number(svc.priceApi));
+  if (!Number.isFinite(totalPrice) || totalPrice <= 0) return fail("Invalid service price");
 
-  if (Number(user.balance) < totalPrice) return fail("Not Enough Balance");
+  // Deduct saldo atomik SEBELUM kontak provider (fix P0-1)
+  const affected = await deductBalanceAtomic(user.id, totalPrice);
+  if (affected === 0) return fail("Not Enough Balance");
 
   const [p] = await db.select().from(provider).where(eq(provider.id, svc.providerId)).limit(1);
-  if (!p) return fail("Service not available (no provider)");
+  if (!p || p.name === "MANUAL") {
+    await refundBalanceAtomic(user.id, totalPrice);
+    return fail("Service not available (no provider)");
+  }
 
-  // place order to SMMturk
+  // place order ke provider: key + URL milik provider itu, comments dikirim (fix P0-8)
   let providerOrderId = "0";
   if (svc.providerId !== 1) {
-    // not manual
+    const key = decryptSecret(p.apiKey);
+    if (!key) {
+      await refundBalanceAtomic(user.id, totalPrice);
+      return fail("Provider not configured");
+    }
     try {
-      const result = await smmturkAdd(String(svc.providerServiceId), link, comments ? 0 : qty);
-      if (result.error) return fail(`Provider error: ${result.error}`);
+      const result =
+        svc.type === "Custom Comments"
+          ? await smmturkAddFor(p.apiUrlOrder, key, {
+              service: String(svc.providerServiceId),
+              link,
+              comments,
+            })
+          : svc.type === "Package"
+            ? await smmturkAddFor(p.apiUrlOrder, key, {
+                service: String(svc.providerServiceId),
+                link,
+              })
+            : await smmturkAddFor(p.apiUrlOrder, key, {
+                service: String(svc.providerServiceId),
+                link,
+                quantity: qty,
+              });
+      if (result.error) {
+        await refundBalanceAtomic(user.id, totalPrice);
+        return fail(`Provider error: ${result.error}`);
+      }
       providerOrderId = result.order ?? "0";
     } catch (e: any) {
+      await refundBalanceAtomic(user.id, totalPrice);
       return fail(`Provider error: ${e?.message ?? e}`);
     }
   }
-
-  // deduct balance
-  const newBalance = Number(user.balance) - totalPrice;
-  await db.update(users).set({ balance: newBalance }).where(eq(users.id, user.id));
 
   // create order
   const now = new Date();
@@ -196,18 +255,18 @@ async function handleStatus(apiKey: string, form: Record<string, string>): Promi
   const user = await authByKey(apiKey);
   if (!user) return fail("Wrong API Key");
 
-  const orderId = Number(form["id"]);
+  const orderId = String(form["id"] ?? "").trim();
   if (!orderId) return fail("Missing order id");
 
   const [order] = await db
     .select()
     .from(orders)
-    .where(and(eq(orders.id, orderId), eq(orders.userId, user.id)))
+    .where(and(eq(orders.oid, orderId), eq(orders.userId, user.id)))
     .limit(1);
   if (!order) return fail("Order ID not Found");
 
   return ok("Access Allowed", {
-    id: order.id,
+    id: order.oid,
     status: order.status,
     start_count: order.startCount,
     remains: order.remains,
@@ -219,13 +278,13 @@ async function handleRefill(apiKey: string, form: Record<string, string>): Promi
   const user = await authByKey(apiKey);
   if (!user) return fail("Wrong API Key");
 
-  const orderId = Number(form["id"]);
+  const orderId = String(form["id"] ?? "").trim();
   if (!orderId) return fail("Missing order id");
 
   const [order] = await db
     .select()
     .from(orders)
-    .where(and(eq(orders.id, orderId), eq(orders.userId, user.id)))
+    .where(and(eq(orders.oid, orderId), eq(orders.userId, user.id)))
     .limit(1);
   if (!order) return fail("Order ID not Found");
 
@@ -242,7 +301,7 @@ async function handleRefill(apiKey: string, form: Record<string, string>): Promi
       INSERT INTO refill (order_id, user_id, status, created_at)
       VALUES (${order.id}, ${user.id}, 'Pending', NOW())
     `);
-    return ok("Refill requested", { id: order.id });
+    return ok("Refill requested", { id: order.oid });
   } catch (e: any) {
     return fail(`Refill error: ${e?.message ?? e}`);
   }

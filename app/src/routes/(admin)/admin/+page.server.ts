@@ -248,7 +248,8 @@ export const load: PageServerLoad = async ({ locals }) => {
   const feed = feedRaw
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, 30)
-    .map((f) => ({
+    .map((f, i) => ({
+      id: `${f.kind}-${f.title}-${f.at.getTime()}-${i}`,
       kind: f.kind,
       title: f.title,
       meta: f.meta,

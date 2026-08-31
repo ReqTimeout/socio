@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { EmptyState, Icon } from "@socio/ui";
+  import { EmptyState, Icon, revealDelay } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { formatRupiah } from "$lib/format";
   import { goto } from "$app/navigation";
@@ -152,7 +152,7 @@
       >
         {formatRupiah(summary.keluar)}
       </div>
-      <div class="relative text-[11px] text-ink-400">total keluar</div>
+      <div class="relative text-[11px] text-ink-500">total keluar</div>
     </div>
   </div>
 
@@ -194,10 +194,13 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-ink-100">
-            {#each filtered as l (l.id)}
+            {#each filtered as l, i (l.id)}
               {@const m = metaOf(l.type, l.note)}
               {@const isOut = isOutLog(l)}
-              <tr class="group transition-colors hover:bg-ink-50/70">
+              <tr
+                class="group transition-colors hover:bg-ink-50/70 reveal"
+                style={revealDelay(i, 60, 18)}
+              >
                 <td class="px-4 py-3 whitespace-nowrap text-xs text-ink-500">
                   {formatDate(l.createdAt)}
                 </td>
@@ -235,7 +238,7 @@
         </table>
       </div>
       <div
-        class="flex items-center justify-center gap-1 border-t border-ink-100 bg-ink-50/50 px-3 py-1.5 text-[10px] text-ink-400 lg:hidden"
+        class="flex items-center justify-center gap-1 border-t border-ink-100 bg-ink-50/50 px-3 py-1.5 text-[10px] text-ink-500 lg:hidden"
       >
         <Icon name="arrow_right" size={12} /> Geser untuk lihat kolom lengkap
       </div>

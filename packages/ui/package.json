@@ -21,9 +21,11 @@
     "format": "prettier --write ."
   },
   "peerDependencies": {
-    "svelte": "^5.0.0"
+    "svelte": "^5.0.0",
+    "motion": "^13.0.0"
   },
   "devDependencies": {
+    "motion": "^13.1.1",
     "prettier": "^3.3.3",
     "svelte": "^5.49.1"
   }

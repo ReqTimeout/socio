@@ -20,7 +20,10 @@
         })
       : "—";
 
-  let q = $state(data.q ?? "");
+  let q = $state("");
+  $effect(() => {
+    q = data.q ?? "";
+  });
   let modal = $state<"add" | number | null>(null);
   let fKategori = $state("");
   let fContent = $state("");
@@ -177,7 +180,7 @@
 
   {#if data.items.length === 0}
     <EmptyState
-      icon="📰"
+      art="news"
       title={data.q ? "Tidak ada hasil" : "Belum ada berita"}
       description={data.q
         ? `Tidak ada berita untuk "${data.q}"`

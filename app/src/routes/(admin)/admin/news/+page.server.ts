@@ -51,7 +51,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 export const actions: Actions = {
   save: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("news-save", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    const _rate = await assertAdminRate("news-save", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id") ?? 0);
     const kategori = String(form.get("kategori") ?? "").trim();
@@ -110,7 +111,8 @@ export const actions: Actions = {
 
   delete: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("news-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    const _rate = await assertAdminRate("news-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID wajib." });

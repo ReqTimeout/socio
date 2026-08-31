@@ -20,6 +20,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       serviceName: services.serviceName,
       type: services.type,
       price: services.price,
+      priceApi: services.priceApi,
+      priceReseller: services.priceReseller,
       min: services.min,
       max: services.max,
       isRefill: services.isRefill,

@@ -125,7 +125,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 export const actions: Actions = {
   save: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("email-save", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("email-save", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id") ?? 0);
     const title = String(form.get("title") ?? "").trim();
@@ -202,7 +203,8 @@ export const actions: Actions = {
 
   send: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("email-send", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const _rate = await assertAdminRate("email-send", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });
@@ -296,7 +298,8 @@ export const actions: Actions = {
 
   cancel: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("email-cancel", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate("email-cancel", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });
@@ -322,7 +325,8 @@ export const actions: Actions = {
 
   delete: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("email-delete", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate("email-delete", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });

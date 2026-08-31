@@ -6,7 +6,7 @@
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
-  let q = $state(data.q);
+  let q = $state("");
 
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
   function onSearch() {
@@ -130,7 +130,7 @@
 
     {#if data.queue.length === 0}
       <EmptyState
-        icon="📭"
+        art="affiliate"
         title="Tidak ada penarikan menunggu"
         description="Pengajuan withdraw dari user akan masuk antrean di sini (disetujui = saldo dikredit)."
       />
@@ -173,7 +173,7 @@
 
     {#if data.topReferrers.length === 0}
       <EmptyState
-        icon="🎁"
+        art="affiliate"
         title="Belum ada komisi affiliate"
         description="Komisi akan muncul di sini begitu ada downline yang menghasilkan komisi."
       />
@@ -235,7 +235,7 @@
     {#if data.rows.length === 0}
       <div class="pt-4">
         <EmptyState
-          icon="🔎"
+          art="search-none"
           title="Tidak ada data"
           description="Coba ubah filter atau kata kunci pencarian."
         />

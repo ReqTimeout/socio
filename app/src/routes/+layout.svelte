@@ -1,6 +1,7 @@
 <script lang="ts">
   import "../app.css";
   import { onNavigate } from "$app/navigation";
+  import { Toast } from "@socio/ui";
 
   let { children } = $props();
 
@@ -21,6 +22,7 @@
 </script>
 
 {@render children()}
+<Toast />
 
 <style>
   /* Transisi halaman: fade cepat + slide halus (transform/opacity only) */

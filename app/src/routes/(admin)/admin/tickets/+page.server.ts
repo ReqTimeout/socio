@@ -138,7 +138,13 @@ export const actions: Actions = {
   /** A-13: explicit POST action to mark admin view; replaces side-effect in load. */
   markRead: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("ticket-mark-read", (locals as any).ip ?? "0.0.0.0", 60, 60);
+    const _rate = await assertAdminRate(
+      "ticket-mark-read",
+      (locals as any).ip ?? "0.0.0.0",
+      60,
+      60,
+    );
+    if (_rate) return _rate;
     const form = await request.formData();
     const ticketId = Number(form.get("ticketId"));
     if (!Number.isFinite(ticketId) || ticketId <= 0)
@@ -151,7 +157,8 @@ export const actions: Actions = {
 
   reply: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("ticket-reply", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("ticket-reply", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const ticketId = Number(form.get("ticketId"));
     const msg = String(form.get("message") ?? "").trim();
@@ -188,7 +195,8 @@ export const actions: Actions = {
 
   close: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("ticket-close", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("ticket-close", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const ticketId = Number(form.get("ticketId"));
     if (!Number.isFinite(ticketId) || ticketId <= 0) return fail(400, { error: "ID tidak valid." });
@@ -206,7 +214,8 @@ export const actions: Actions = {
 
   reopen: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("ticket-reopen", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("ticket-reopen", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const ticketId = Number(form.get("ticketId"));
     if (!Number.isFinite(ticketId) || ticketId <= 0) return fail(400, { error: "ID tidak valid." });

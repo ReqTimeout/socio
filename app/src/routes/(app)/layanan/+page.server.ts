@@ -2,6 +2,7 @@ import { db } from "@socio/db";
 import { services, categories, favorites } from "@socio/db/schema";
 import { eq, like, desc, asc, sql, and, inArray } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
+import { baseForLevel, type UserLevel } from "@socio/core/pricing";
 import type { PageServerLoad, Actions } from "./$types";
 
 const PAGE_SIZE = 20;
@@ -12,6 +13,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const sort = url.searchParams.get("sort") ?? "termurah";
   const fav = url.searchParams.get("fav") === "1";
   const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
+  const level = ((locals.user?.level as UserLevel) ?? "Member") as UserLevel;
 
   // User's favorited service ids
   const favRows = locals.user
@@ -43,6 +45,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       serviceName: services.serviceName,
       type: services.type,
       price: services.price,
+      priceApi: services.priceApi,
+      priceReseller: services.priceReseller,
       min: services.min,
       max: services.max,
       isRefill: services.isRefill,
@@ -57,6 +61,21 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE);
 
+  const withLevelPrice = rows.map((s) => ({
+    ...s,
+    fav: favIds.includes(s.id),
+    levelPrice: Math.round(
+      baseForLevel(
+        {
+          price: Number(s.price),
+          priceApi: Number((s as any).priceApi ?? 0),
+          priceReseller: Number((s as any).priceReseller ?? 0),
+        },
+        level,
+      ),
+    ),
+  }));
+
   const [{ total }] = await db
     .select({ total: sql<number>`count(*)` })
     .from(services)
@@ -68,13 +87,14 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     .orderBy(asc(categories.name));
 
   return {
-    services: rows.map((s) => ({ ...s, fav: favIds.includes(s.id) })),
+    services: withLevelPrice,
     categories: cats,
     total: Number(total),
     page,
     hasMore: page * PAGE_SIZE < Number(total),
     favCount: favIds.length,
     params: { q, cat, sort, fav },
+    level,
   };
 };
 

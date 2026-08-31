@@ -286,7 +286,7 @@
         {#if shown.length === 0}
           <p class="px-2 py-8 text-center text-sm text-ink-400">Belum ada aktivitas.</p>
         {:else}
-          {#each shown as f, i (f.kind + f.title + f.at)}
+          {#each shown as f, i (f.id)}
             <a
               href={f.href}
               class="reveal group flex items-start gap-3 rounded-xl px-2.5 py-2.5 transition-colors duration-200 hover:bg-ink-50"

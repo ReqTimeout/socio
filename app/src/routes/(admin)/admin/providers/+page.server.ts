@@ -65,7 +65,13 @@ export const actions: Actions = {
    */
   addSmmturk: async ({ locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("provider-add-smmturk", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const _rate = await assertAdminRate(
+      "provider-add-smmturk",
+      (locals as any).ip ?? "0.0.0.0",
+      5,
+      60,
+    );
+    if (_rate) return _rate;
     if (!env.SOCIO_SMMTURK_KEY)
       return fail(500, { error: "SOCIO_SMMTURK_KEY belum diset di env." });
     const [existing] = await db
@@ -92,7 +98,8 @@ export const actions: Actions = {
 
   add: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("provider-add", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate("provider-add", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const name = String(form.get("name") ?? "").trim();
     const apiUrlOrder = String(form.get("apiUrlOrder") ?? "").trim();
@@ -117,7 +124,8 @@ export const actions: Actions = {
 
   edit: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("provider-edit", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate("provider-edit", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     const name = String(form.get("name") ?? "").trim();
@@ -148,7 +156,8 @@ export const actions: Actions = {
 
   delete: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("provider-delete", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate("provider-delete", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });
@@ -180,7 +189,13 @@ export const actions: Actions = {
    */
   encryptAll: async ({ locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("provider-encrypt-all", (locals as any).ip ?? "0.0.0.0", 3, 60);
+    const _rate = await assertAdminRate(
+      "provider-encrypt-all",
+      (locals as any).ip ?? "0.0.0.0",
+      3,
+      60,
+    );
+    if (_rate) return _rate;
     try {
       const rows = await db
         .select({ id: provider.id, name: provider.name, apiKey: provider.apiKey })
@@ -210,7 +225,8 @@ export const actions: Actions = {
   /** Sync katalog provider sekarang (manual trigger dari UI). */
   sync: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("provider-sync", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const _rate = await assertAdminRate("provider-sync", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });
@@ -232,7 +248,8 @@ export const actions: Actions = {
   /** Test koneksi provider — fetch balance via API key + URL-nya */
   testConnection: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("provider-test", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const _rate = await assertAdminRate("provider-test", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!id) return fail(400, { error: "ID wajib." });

@@ -112,7 +112,13 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
   maintenance: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("settings-maintenance", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate(
+      "settings-maintenance",
+      (locals as any).ip ?? "0.0.0.0",
+      10,
+      60,
+    );
+    if (_rate) return _rate;
     const form = await request.formData();
     const on = form.get("on") === "1";
     await setSetting("maintenance_mode", on ? "1" : "0");
@@ -129,7 +135,13 @@ export const actions: Actions = {
 
   togglePublicApi: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("settings-public-api", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate(
+      "settings-public-api",
+      (locals as any).ip ?? "0.0.0.0",
+      10,
+      60,
+    );
+    if (_rate) return _rate;
     const form = await request.formData();
     const on = form.get("on") === "1";
     await setSetting("public_api_enabled", on ? "1" : "0");
@@ -144,7 +156,13 @@ export const actions: Actions = {
 
   toggleSignupVerify: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("settings-signup-verify", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate(
+      "settings-signup-verify",
+      (locals as any).ip ?? "0.0.0.0",
+      10,
+      60,
+    );
+    if (_rate) return _rate;
     const form = await request.formData();
     const on = form.get("on") === "1";
     await setSetting("signup_verify_required", on ? "1" : "0");
@@ -159,7 +177,13 @@ export const actions: Actions = {
 
   updatePricing: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("settings-pricing", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate(
+      "settings-pricing",
+      (locals as any).ip ?? "0.0.0.0",
+      10,
+      60,
+    );
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     const markup = Number(form.get("markupPercent"));
@@ -187,7 +211,8 @@ export const actions: Actions = {
   /** Seed default pricing rules (hanya kalau tabel kosong). */
   seed: async ({ locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("settings-seed", (locals as any).ip ?? "0.0.0.0", 3, 60);
+    const _rate = await assertAdminRate("settings-seed", (locals as any).ip ?? "0.0.0.0", 3, 60);
+    if (_rate) return _rate;
     const [count] = await db.select({ c: sql<number>`count(*)` }).from(pricingRules);
     if (Number(count?.c ?? 0) > 0)
       return fail(409, { error: "Pricing rule sudah ada. Pakai 'Terapkan default'." });
@@ -212,7 +237,13 @@ export const actions: Actions = {
   /** Terapkan default (Member+200/Agen+150/Reseller+180/Admin 0) ke semua level. */
   applyDefaults: async ({ locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("settings-apply-defaults", (locals as any).ip ?? "0.0.0.0", 3, 60);
+    const _rate = await assertAdminRate(
+      "settings-apply-defaults",
+      (locals as any).ip ?? "0.0.0.0",
+      3,
+      60,
+    );
+    if (_rate) return _rate;
     for (const r of DEFAULT_PRICING_RULES) {
       const [row] = await db
         .select({ id: pricingRules.id })
@@ -242,7 +273,13 @@ export const actions: Actions = {
   /** Salin markup Member ke semua level lain (rollback cepat). */
   bulkApply: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("settings-bulk-apply", (locals as any).ip ?? "0.0.0.0", 3, 60);
+    const _rate = await assertAdminRate(
+      "settings-bulk-apply",
+      (locals as any).ip ?? "0.0.0.0",
+      3,
+      60,
+    );
+    if (_rate) return _rate;
     const form = await request.formData();
     const markup = Number(form.get("markup"));
     if (Number.isNaN(markup) || markup < 0 || markup > 1000)
@@ -266,7 +303,13 @@ export const actions: Actions = {
 
   assignRole: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("settings-assign-role", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const _rate = await assertAdminRate(
+      "settings-assign-role",
+      (locals as any).ip ?? "0.0.0.0",
+      5,
+      60,
+    );
+    if (_rate) return _rate;
     const form = await request.formData();
     const userId = Number(form.get("userId"));
     const role = String(form.get("role") ?? "admin");

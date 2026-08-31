@@ -92,7 +92,8 @@ const ADJUST_HARD_CAP = 1_000_000; // Rp 1.000.000 per aksi
 export const actions: Actions = {
   adjust: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("user-adjust", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate("user-adjust", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     const amount = Number(form.get("amount"));
@@ -155,7 +156,8 @@ export const actions: Actions = {
 
   suspend: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("user-suspend", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate("user-suspend", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID wajib." });
@@ -180,7 +182,8 @@ export const actions: Actions = {
 
   setLevel: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("user-setlevel", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate("user-setlevel", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     const level = String(form.get("level") ?? "");

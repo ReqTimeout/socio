@@ -3,7 +3,10 @@
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
-  let q = $state(data.q);
+  let q = $state("");
+  $effect(() => {
+    q = data.q;
+  });
 
   const fmtDate = (d: Date | string) =>
     new Date(d as string).toLocaleString("id-ID", {
@@ -268,7 +271,7 @@
   {#if data.logs.length === 0}
     <div class="rounded-2xl border border-ink-100 bg-surface">
       <EmptyState
-        icon="�"
+        art="audit"
         title="Belum ada log"
         description={data.q || data.action
           ? "Coba ubah filter atau kata kunci."

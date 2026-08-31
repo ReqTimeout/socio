@@ -8,7 +8,7 @@
   type SvcRow = PageData["services"][number];
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
-  let q = $state(data.q);
+  let q = $state("");
 
   // Sync search box dengan URL saat navigasi balik
   $effect(() => {
@@ -426,7 +426,7 @@
 
   {#if data.services.length === 0}
     <EmptyState
-      icon="🧩"
+      art="services"
       title="Belum ada layanan"
       description={hasFilter ? "Coba ubah filter atau kata kunci." : "Tambah layanan untuk mulai."}
     />

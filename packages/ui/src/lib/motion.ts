@@ -18,7 +18,10 @@ export interface StaggerInOpts {
  * Build `in:fly` (or `in:fade`/`in:scale`) params for a staggered list.
  *   {#each items as item, i (item.id)}<div in:fly={staggerIn(i)}>...
  */
-export function staggerIn(i: number, opts: StaggerInOpts = {}): {
+export function staggerIn(
+  i: number,
+  opts: StaggerInOpts = {},
+): {
   y: number;
   x: number;
   duration: number;
@@ -58,8 +61,8 @@ export function tweenNumber(initial = 0, opts: TweenNumberOpts = {}) {
 }
 
 /**
- * Consistent utility-surface hover lift (transform + shadow only, 150ms).
- * Uses --ease-out-quad token. No rotate, no glow blow-up.
+ * Consistent utility-surface hover lift (transform + shadow only, 180ms).
+ * Alias untuk `.card-lift` (primitives.css): layered shadow, hover -3px,
+ * tactile press. Jangan tambah shadow/hover utility lain di elemen yang sama.
  */
-export const hoverLift =
-  "transition-all duration-150 ease-out-quad hover:-translate-y-0.5 hover:shadow-card active:translate-y-0";
+export const hoverLift = "card-lift";

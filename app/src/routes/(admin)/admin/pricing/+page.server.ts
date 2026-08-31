@@ -119,7 +119,8 @@ type Level = (typeof LEVELS)[number];
 export const actions: Actions = {
   save: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("pricing-save", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    const _rate = await assertAdminRate("pricing-save", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
 
     const updates: {
@@ -177,7 +178,8 @@ export const actions: Actions = {
    */
   applyToCatalog: async ({ locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("pricing-apply", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const _rate = await assertAdminRate("pricing-apply", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    if (_rate) return _rate;
 
     // Idempotency: tolak kalau admin sudah apply dalam 30 detik terakhir.
     const [recent] = await db

@@ -54,7 +54,8 @@ function parseDate(v: string | null): Date | null {
 export const actions: Actions = {
   save: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("banner-save", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("banner-save", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id") ?? 0);
     const title = String(form.get("title") ?? "").trim();
@@ -118,7 +119,8 @@ export const actions: Actions = {
 
   toggle: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("banner-toggle", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("banner-toggle", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID wajib." });
@@ -149,7 +151,8 @@ export const actions: Actions = {
 
   delete: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("banner-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    const _rate = await assertAdminRate("banner-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID wajib." });

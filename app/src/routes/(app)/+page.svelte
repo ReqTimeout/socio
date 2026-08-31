@@ -1,7 +1,15 @@
 <script lang="ts">
-  import { SaldoHero, StatusBadge, Chart, Icon, PromoBanner, staggerIn } from "@socio/ui";
+  import {
+    SaldoHero,
+    StatusBadge,
+    Chart,
+    Icon,
+    PromoBanner,
+    revealDelay,
+    EmptyOrdersArt,
+  } from "@socio/ui";
   import { haptic } from "@socio/ui";
-  import { fly } from "svelte/transition";
+  import { copy } from "@socio/core/copy";
   import { onMount } from "svelte";
   import { formatRupiah, serviceDisplayName } from "$lib/format";
 
@@ -14,22 +22,22 @@
   type TimePhase = "dawn" | "day" | "dusk" | "night";
   const phaseMeta: Record<TimePhase, { greeting: string; emoji: string; ambient: string }> = {
     dawn: {
-      greeting: "Selamat pagi",
+      greeting: copy.greeting.dawn,
       emoji: "🌅",
       ambient: "from-amber-200/40 via-orange-100/20 to-transparent",
     },
     day: {
-      greeting: "Selamat siang",
+      greeting: copy.greeting.day,
       emoji: "☀️",
       ambient: "from-sky-200/30 via-cyan-100/20 to-transparent",
     },
     dusk: {
-      greeting: "Selamat sore",
+      greeting: copy.greeting.dusk,
       emoji: "🌇",
       ambient: "from-violet-200/40 via-amber-100/25 to-transparent",
     },
     night: {
-      greeting: "Selamat malam",
+      greeting: copy.greeting.night,
       emoji: "🌙",
       ambient: "from-indigo-200/30 via-violet-100/15 to-transparent",
     },
@@ -83,8 +91,8 @@
   // Copy profesional, tenang — satu template konsisten (bergantian tiap menit
   // bikin teks "berubah sendiri" yang membingungkan saat dibaca ulang).
   const subtitle = $derived.by(() => {
-    if (data.activeOrders <= 0) return "Siap bantu naikin performa sosmed — cepat & aman.";
-    return `${data.activeOrders} pesanan berjalan — kami proses otomatis hingga selesai.`;
+    if (data.activeOrders <= 0) return copy.dashboard.subtitleIdle;
+    return copy.dashboard.subtitleActive(data.activeOrders);
   });
 
   // Quick actions — copy hangat + glow brand saat hover (layered dgn card-lift)
@@ -169,8 +177,7 @@
 
   <!-- Greeting — time-aware (WIB) + dismiss excess motion -->
   <header
-    in:fly={{ y: -8, duration: 280 }}
-    class="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
+    class="reveal flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
   >
     <div class="min-w-0">
       <h1
@@ -195,7 +202,7 @@
           >
         {:else}
           <span
-            class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-600"
+            class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700"
             >Ready</span
           >
         {/if}
@@ -204,7 +211,6 @@
     </div>
     <a
       href="/akun"
-      aria-label="Status member"
       class="group flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-600 to-accent-600 px-3 py-1.5 text-xs font-bold text-white shadow-[0_6px_16px_-8px_rgba(79,70,229,0.7)] transition-all active:scale-95 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_-8px_rgba(79,70,229,0.6)] motion-safe:animate-[pop_480ms_cubic-bezier(0.16,1,0.3,1)] lg:px-4 lg:py-2 lg:gap-2 lg:text-[13px]"
     >
       <Icon
@@ -244,7 +250,7 @@
         <a
           href={item.href}
           onclick={() => haptic(8)}
-          in:fly={staggerIn(i, { y: 12, duration: 300, step: 60 })}
+          style={revealDelay(i, 0, 60)}
           class="card-lift group flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
             lg:gap-2.5 lg:py-3 lg:px-3.5 {item.glow}"
         >
@@ -257,7 +263,7 @@
           <span class="min-w-0">
             <span class="block text-sm font-bold text-ink-800 lg:text-[14px]">{item.label}</span>
             <!-- Desktop: deskripsi lengkap -->
-            <span class="hidden truncate text-xs text-ink-400 lg:block lg:text-[11.5px]"
+            <span class="hidden truncate text-xs text-ink-500 lg:block lg:text-[11.5px]"
               >{item.desc}</span
             >
           </span>
@@ -268,7 +274,7 @@
 
   <!-- Pesan Cepat — repeat flow: layanan yang paling sering di-order, 1 tap langsung ke form -->
   {#if data.quickOrders?.length}
-    <div in:fly={{ y: 10, duration: 300, delay: 80 }}>
+    <div class="reveal" style={revealDelay(0, 80)}>
       <div class="mb-2.5 flex items-center justify-between">
         <h2 class="flex items-center gap-1.5 font-display text-base font-bold tracking-tight">
           <span
@@ -278,7 +284,7 @@
           </span>
           Pesan Cepat
         </h2>
-        <span class="hidden text-xs text-ink-400 lg:inline"
+        <span class="hidden text-xs text-ink-500 lg:inline"
           >Tap — link terakhir otomatis terisi</span
         >
       </div>
@@ -292,7 +298,7 @@
               ? `&link=${encodeURIComponent(q.lastLink)}`
               : ''}"
             onclick={() => haptic(10)}
-            in:fly={staggerIn(i, { y: 10, duration: 250, step: 50 })}
+            style={revealDelay(i, 0, 50)}
             class="card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-4
               lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5"
           >
@@ -306,7 +312,7 @@
                 >{serviceDisplayName(q.serviceName)}</span
               >
               <span
-                class="mt-0.5 flex items-center gap-1 truncate text-[11px] leading-snug text-ink-400"
+                class="mt-0.5 flex items-center gap-1 truncate text-[11px] leading-snug text-ink-500"
               >
                 <span class="rounded-full bg-ink-100 px-1.5 py-0.5 font-bold text-ink-600"
                   >{q.times > 1 ? `${q.times}×` : "Baru"}</span
@@ -354,7 +360,7 @@
         : ''}"
     >
       <span
-        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-400"
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-500"
       >
         <span class="grid h-6 w-6 place-items-center rounded-lg bg-ink-50 text-ink-600">
           <Icon name="receipt" size={12} stroke={2} />
@@ -386,7 +392,7 @@
         class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide {(data.stats
           .totalDeposit ?? 0) >= 5_000_000
           ? 'text-amber-600'
-          : 'text-ink-400'}"
+          : 'text-ink-500'}"
       >
         <span
           class="grid h-6 w-6 place-items-center rounded-lg {(data.stats.totalDeposit ?? 0) >=
@@ -405,9 +411,10 @@
           : 'text-ink-900'}"
       >
         {#if (data.stats.totalDeposit ?? 0) >= 5_000_000}
+          <!-- star dekoratif — konteks "VIP" dijelaskan value deposit + judul kartu -->
           <span
             class="grid h-5 w-5 place-items-center rounded-full bg-gradient-to-br from-amber-300 to-yellow-500 text-white shadow-sm"
-            aria-label="VIP"><Icon name="star" size={10} stroke={2.5} /></span
+            ><Icon name="star" size={10} stroke={2.5} /></span
           >
         {/if}
         {formatRupiah(data.stats.totalDeposit)}
@@ -417,7 +424,7 @@
       class="surface-pop flex items-center justify-between rounded-2xl border border-ink-100 bg-surface px-4 py-3 lg:px-5 lg:py-4"
     >
       <span
-        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-400"
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-500"
       >
         <span class="grid h-6 w-6 place-items-center rounded-lg bg-ink-50 text-ink-600">
           <Icon name="banknote" size={12} stroke={2} />
@@ -447,7 +454,7 @@
               </span>
               Aktivitas 7 Hari
             </h2>
-            <p class="hidden text-xs text-ink-400 lg:block lg:text-[13px]">
+            <p class="hidden text-xs text-ink-500 lg:block lg:text-[13px]">
               Ringkasan pesanan dan deposit kamu seminggu terakhir
             </p>
           </div>
@@ -481,7 +488,7 @@
             <p class="text-sm font-bold text-ink-700 [text-wrap:balance]">
               Minggu ini belum ada aktivitas
             </p>
-            <p class="text-xs text-ink-400 [text-wrap:balance]">
+            <p class="text-xs text-ink-500 [text-wrap:balance]">
               Total {data.stats.totalOrders.toLocaleString("id-ID")} pesanan kamu aman — mari lanjut:
               Pesan Cepat di atas pakai link terakhirmu.
             </p>
@@ -509,7 +516,7 @@
             <p class="text-sm font-bold text-ink-700 [text-wrap:balance]">
               Belum ada aktivitas minggu ini
             </p>
-            <p class="text-xs text-ink-400 [text-wrap:balance]">
+            <p class="text-xs text-ink-500 [text-wrap:balance]">
               Grafik langsung hidup setelah pesanan pertamamu.
             </p>
             <a
@@ -548,14 +555,10 @@
           <div
             class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
           ></div>
-          <div
-            class="relative mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-sm"
-          >
-            <Icon name="sparkles" size={26} stroke={2} />
-          </div>
-          <p class="relative text-sm font-bold text-ink-800">Mulai perjalananmu</p>
+          <EmptyOrdersArt size={112} class="relative mx-auto mb-3 text-ink-300" />
+          <p class="relative text-sm font-bold text-ink-800">Pesanan pertama menunggu</p>
           <p class="relative mt-1 text-xs text-ink-500">
-            <span class="lg:hidden">Pesanan pertama, proses otomatis 30-60 detik.</span>
+            <span class="lg:hidden">Mulai dari 500 rupiah — proses otomatis 30-60 detik.</span>
             <span class="hidden lg:inline"
               >Pilih layanan favoritmu, sistem kami proses otomatis.</span
             >
@@ -573,7 +576,7 @@
             <span class="ctoa-shimmer pointer-events-none absolute inset-0" aria-hidden="true"
             ></span>
             <Icon name="rocket" size={16} stroke={2.4} class="ctoa-icon relative" />
-            <span class="lg:hidden relative">Pesan Sekarang</span>
+            <span class="lg:hidden relative">{copy.order.cta}</span>
             <span class="hidden lg:inline relative">Buat Pesanan Pertama</span>
           </a>
         </div>
@@ -600,7 +603,7 @@
                 return { icon: "whatsapp", grad: "from-emerald-500 to-green-600" };
               return { icon: "receipt", grad: "from-primary-500/15 to-accent-500/15" };
             })()}
-            <li in:fly={{ y: 10, duration: 250, delay: 50 * i }}>
+            <li class="reveal" style={revealDelay(i, 0, 50)}>
               <a
                 href="/pesanan"
                 title={serviceDisplayName(o.serviceName)}
@@ -621,7 +624,7 @@
                 </div>
                 <div class="flex flex-col items-end gap-1">
                   <StatusBadge status={o.status} />
-                  <span class="text-[10px] text-ink-400">{timeAgo(o.createdAt)}</span>
+                  <span class="text-[10px] text-ink-500">{timeAgo(o.createdAt)}</span>
                 </div>
               </a>
             </li>
@@ -632,14 +635,14 @@
   </div>
 
   <!-- Trust line -->
-  <div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 py-2 text-xs text-ink-400">
+  <div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 py-2 text-xs text-ink-500">
     <span class="inline-flex items-center gap-1">
       <Icon name="shield" size={14} class="text-success" />
       Layanan aktif
     </span>
     <span class="text-ink-300">•</span>
     <span class="inline-flex items-center gap-1">
-      <Icon name="zap" size={14} class="text-accent-500" /> Proses otomatis
+      <Icon name="zap" size={14} class="text-accent-700" /> Proses otomatis
     </span>
     <span class="text-ink-300">•</span>
     <span class="inline-flex items-center gap-1">

@@ -62,15 +62,15 @@
       </div>
 
       <h2 class="font-display font-black text-4xl md:text-6xl leading-tight drop-shadow-2xl">
-        Follower Kompetitor Naik,<br />
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent-400 to-primary-400">Punyamu Diam Aja?</span>
+        Siap Scale Akun Kamu<br />
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent-400 to-primary-400">Hari Ini Juga?</span>
       </h2>
 
       <p
         class="text-ink-300 text-lg md:text-xl leading-relaxed font-light max-w-2xl mx-auto border-l-4 border-ink-700 pl-6 text-left md:text-center md:border-none md:pl-0"
       >
-        Jangan biarkan akun kamu kalah dari pesaing. Dengan Socio.id, naikkan follower & engagement
-        <strong class="text-white border-b border-accent-500">dalam hitungan menit</strong> — mulai dari Rp10.000.
+        Gabung <strong class="text-white">50.000+ reseller</strong> yang sudah pakai Socio.id untuk
+        Instagram, TikTok, YouTube & 872 kategori lain — mulai <strong class="text-white border-b border-accent-500">Rp20.000 + bonus 10%</strong>.
       </p>
 
       <div class="pt-10 flex flex-col md:flex-row items-center justify-center gap-6">

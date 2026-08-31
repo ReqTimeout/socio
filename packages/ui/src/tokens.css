@@ -34,7 +34,7 @@
   --color-primary-dark: var(--color-primary-800);
   --color-accent: var(--color-accent-500);
   --color-accent-dark: var(--color-accent-700);
-  --color-accent-ink: var(--color-accent-600);
+  --color-accent-ink: var(--color-accent-700);
 
   /* Card surface (G-U20: previously undefined) */
   --color-surface: #ffffff;
@@ -51,26 +51,28 @@
   --color-ink-800: #1e293b;
   --color-ink-900: #0f172a;
 
-  /* Success / warning / danger (status badges, order states) */
-  --color-success: #16a34a;
+  /* Success / warning / danger (status badges, order states)
+   * -700-grade agar teks AA 4.5:1 di atas bg /10 di putih. */
+  --color-success: #047857;
   --color-success-soft: #dcfce7;
-  --color-warning: #d97706;
+  --color-warning: #b45309;
   --color-warning-soft: #fef3c7;
-  --color-danger: #dc2626;
+  --color-danger: #b91c1c;
   --color-danger-soft: #fee2e2;
 
-  /* Order status semantic colors (SMM panel) */
-  --color-status-pending: #d97706;
-  --color-status-progress: #2563eb;
-  --color-status-complete: #16a34a;
-  --color-status-canceled: #dc2626;
-  --color-status-partial: #7c3aed;
+  /* Order status semantic colors (SMM panel)
+   * Nilai -700-grade supaya teks badge AA 4.5:1 di atas bg /10 di putih. */
+  --color-status-pending: #92400e;
+  --color-status-progress: #1d4ed8;
+  --color-status-complete: #047857;
+  --color-status-canceled: #b91c1c;
+  --color-status-partial: #6d28d9;
 
   /* ---- Typography ---- */
   /* "* Variable" = nama family dari @fontsource-variable (self-host di app) */
   --font-sans:
-    "Plus Jakarta Sans Variable", "Plus Jakarta Sans", ui-sans-serif,
-    system-ui, sans-serif;
+    "Plus Jakarta Sans Variable", "Plus Jakarta Sans", ui-sans-serif, system-ui,
+    sans-serif;
   --font-display:
     "Sora Variable", "Sora", "Plus Jakarta Sans Variable", ui-sans-serif,
     system-ui, sans-serif;
@@ -86,15 +88,28 @@
 
   /* ---- Shadow ---- */
   --shadow-card:
-    0 1px 2px rgb(15 23 42 / 0.04), 0 8px 30px rgb(15 23 42 / 0.06);
+    0 1px 2px rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.07),
+    0 2px 10px rgb(15 23 42 / 0.04);
   --shadow-card-hover:
-    0 4px 12px rgb(15 23 42 / 0.06), 0 20px 40px rgb(15 23 42 / 0.1);
+    0 8px 20px rgb(15 23 42 / 0.08), 0 18px 36px rgb(99 102 241 / 0.12),
+    0 2px 10px rgb(15 23 42 / 0.05);
 
   /* ---- Motion (respect reduced-motion in components) ---- */
   /* Entrance, large reveal — paired with .reveal (animation-delay: var(--d)) */
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
   /* Tweened numerics (saldo counter, KPI) + small UI hover */
   --ease-out-quad: cubic-bezier(0, 0, 0.2, 1);
+
+  /* Motion duration scale (UIUXADMIN §4) — micro:press/hover, macro:drawer/dialog, page:view-transition */
+  --dur-micro: 140ms;
+  --dur-macro: 260ms;
+  --dur-page: 380ms;
+  --dur-stagger: 45ms;
+
+  /* Admin density (UIUXADMIN §2) — table rows + compact table text */
+  --spacing-row: 44px;
+  --spacing-row-tight: 36px;
+  --text-table: 13px;
 }
 
 /* G-U20: dark mode — remap ink + surface scale under .dark so every
@@ -114,4 +129,18 @@
   --color-danger-soft: #3b1414;
   --color-success-soft: #0f2a17;
   --color-warning-soft: #2e210a;
+
+  /* Semantic: versi terang agar kontras di surface gelap. */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-accent-ink: var(--color-accent-400);
+
+  /* Status: di dark mode perlu lebih TERANG agar teks badge kontras di
+     surface gelap (light-mode pakai -700 yang terlalu gelap di sini). */
+  --color-status-pending: #fbbf24;
+  --color-status-progress: #60a5fa;
+  --color-status-complete: #34d399;
+  --color-status-canceled: #f87171;
+  --color-status-partial: #a78bfa;
 }

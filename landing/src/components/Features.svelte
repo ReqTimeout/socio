@@ -49,17 +49,19 @@
             </div>
           </div>
           <div
-            class="bg-ink-50 rounded-xl p-5 mb-6 font-mono text-xs leading-relaxed border border-ink-100 text-primary-900 shadow-inner"
+            class="bg-ink-50 rounded-xl p-5 mb-6 border border-ink-100 shadow-inner"
           >
-            <p class="mb-2 flex items-center">
-              <span class="text-ink-400 mr-2">$</span> sync --provider smmturk
-            </p>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-[10px] font-bold uppercase tracking-widest text-ink-400">Katalog Socio.id</span>
+              <span class="bg-success-soft text-success text-[10px] px-2 py-0.5 rounded-full font-bold">Live</span>
+            </div>
             <div class="w-full bg-ink-200 rounded-full h-1.5 mb-2 overflow-hidden relative">
               <div class="loading-bar bg-primary h-1.5 rounded-full absolute top-0 left-0"></div>
             </div>
-            <p class="flex items-center">
-              <span class="text-ink-400 mr-2">></span> Status:
-              <span class="text-success font-bold ml-1 bg-success-soft px-1 rounded">8.185 layanan siap</span>
+            <p class="flex items-center text-xs text-ink-600">
+              <span class="w-2 h-2 rounded-full bg-success mr-2 animate-pulse"></span>
+              <span class="text-success font-bold bg-success-soft px-1.5 py-0.5 rounded text-xs">8.185 layanan siap</span>
+              <span class="ml-2 text-ink-400">· update tiap jam</span>
             </p>
           </div>
           <div class="flex gap-3 items-start">

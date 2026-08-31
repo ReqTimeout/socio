@@ -111,7 +111,7 @@
         <li class="space-y-1.5 p-4">
           {#each columns.filter((c) => !c.hideOnMobile) as col}
             <div class="flex items-start justify-between gap-3 text-sm">
-              <span class="shrink-0 text-xs font-semibold uppercase tracking-wide text-ink-400"
+              <span class="shrink-0 text-xs font-semibold uppercase tracking-wide text-ink-500"
                 >{col.label}</span
               >
               <span class="min-w-0 text-right font-medium text-ink-800">
@@ -131,7 +131,7 @@
   <!-- Pagination -->
   {#if totalPages > 1 && onpage}
     <div class="flex items-center justify-between border-t border-ink-100 px-4 py-3">
-      <p class="text-xs text-ink-400">
+      <p class="text-xs text-ink-500">
         {from}–{to} dari {total.toLocaleString("id-ID")}
       </p>
       <div class="flex items-center gap-1">

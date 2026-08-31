@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { provider, providerServices } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { smmturkBalanceFor, smmturkServicesFor, withConcurrency } from "@socio/core/smmturk";
-import { decryptSecret } from "$lib/server/crypto";
+import { decryptSecret, encryptSecret } from "$lib/server/crypto";
 
 const USD_TO_IDR = Number(process.env.SOCIO_USD_TO_IDR ?? "15000");
 
@@ -153,6 +153,34 @@ export async function runProviderSync(providerId = 1): Promise<void> {
 let syncing = false;
 
 /**
+ * Pastikan row provider SMMturk ada (key dari env, ter-encrypt). Idempotent.
+ * Audit P0-3: tanpa row ini sync tidak punya bahan & order guard gagal.
+ */
+export async function seedSmmturkProvider(): Promise<number | null> {
+  const envKey = process.env.SOCIO_SMMTURK_KEY;
+  if (!envKey) return null;
+  const [existing] = await db
+    .select({ id: provider.id })
+    .from(provider)
+    .where(eq(provider.name, "SMMturk"))
+    .limit(1);
+  if (existing) return existing.id;
+
+  const apiKey = encryptSecret(envKey);
+  const [inserted] = await db
+    .insert(provider)
+    .values({
+      name: "SMMturk",
+      apiUrlOrder: "https://smmturk.org/api/v2",
+      apiUrlStatus: "https://smmturk.org/api/v2",
+      apiKey,
+    })
+    .$returningId();
+  console.log(`[cron] provider SMMturk di-seed (id=${inserted.id})`);
+  return inserted.id;
+}
+
+/**
  * Sync semua provider aktif yang punya api_key (bukan MANUAL).
  * Dijalankan tiap jam oleh cron. Per-provider di-handle runProviderSync.
  */
@@ -163,6 +191,9 @@ export async function runAllProviderSync(): Promise<void> {
   }
   syncing = true;
   try {
+    await seedSmmturkProvider().catch((e) =>
+      console.error("[cron] seed smmturk provider failed:", e),
+    );
     const rows = await db
       .select({ id: provider.id, name: provider.name, apiKey: provider.apiKey })
       .from(provider)

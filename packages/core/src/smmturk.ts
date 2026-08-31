@@ -95,6 +95,47 @@ export async function smmturkAdd(
   return { error: JSON.stringify(json) };
 }
 
+/**
+ * Add order ke provider tertentu (pakai URL + key-nya sendiri).
+ * Params mendukung Custom Comments (`comments`) & Package (tanpa quantity).
+ */
+export async function smmturkAddFor(
+  endpoint: string,
+  key: string,
+  params: { service: string; link: string; quantity?: number; comments?: string },
+): Promise<SmmturkOrderResult> {
+  const form: Record<string, string> = { action: "add", service: params.service, link: params.link };
+  if (params.comments) form.comments = params.comments;
+  else if (params.quantity !== undefined) form.quantity = String(params.quantity);
+  try {
+    const json = await postForm(form, endpoint, key);
+    if (json.order) return { order: String(json.order) };
+    return { error: JSON.stringify(json) };
+  } catch (e: any) {
+    return { error: e?.message ?? String(e) };
+  }
+}
+
+/** Status order untuk provider tertentu (endpoint + key milik provider tsb). */
+export async function smmturkStatusFor(
+  endpoint: string,
+  key: string,
+  orders: string[],
+): Promise<SmmturkStatusResult> {
+  const json = await postForm({ action: "status", orders: orders.join(",") }, endpoint, key);
+  return json as SmmturkStatusResult;
+}
+
+/** Status refill (action=refill_status, param refill id). */
+export async function smmturkRefillStatusFor(
+  endpoint: string,
+  key: string,
+  refillId: string,
+): Promise<{ status?: string; raw?: string }> {
+  const json = await postForm({ action: "refill_status", refill: refillId }, endpoint, key);
+  return { status: typeof json?.status === "string" ? json.status : undefined, raw: JSON.stringify(json) };
+}
+
 export async function smmturkStatus(
   orders: string[],
 ): Promise<SmmturkStatusResult> {

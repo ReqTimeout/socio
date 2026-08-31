@@ -28,7 +28,9 @@
 
   onMount(() => {
     if (!many) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     if (reduce) return;
     const t = setInterval(() => {
       if (!paused) next();
@@ -88,7 +90,9 @@
           ></div>
         {/if}
 
-        <div class="relative flex h-full flex-col justify-center gap-1 p-5 lg:p-7">
+        <div
+          class="relative flex h-full flex-col justify-center gap-1.5 p-5 lg:p-7 pb-10 lg:pb-7"
+        >
           {#if b.badge}
             <span
               class="inline-flex w-fit items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white backdrop-blur"
@@ -97,13 +101,16 @@
               {b.badge}
             </span>
           {/if}
-          <h3
+          <!-- h2: heading-order — banner muncul tepat setelah h1 halaman -->
+          <h2
             class="max-w-[80%] font-display text-lg font-extrabold leading-tight tracking-tight text-white drop-shadow-sm lg:text-2xl"
           >
             {b.title}
-          </h3>
+          </h2>
           {#if b.subtitle}
-            <p class="max-w-[85%] text-xs text-white/85 lg:text-sm">{b.subtitle}</p>
+            <p class="max-w-[85%] text-xs text-white/85 lg:text-sm">
+              {b.subtitle}
+            </p>
           {/if}
           {#if b.cta}
             <span
@@ -117,11 +124,13 @@
       </a>
     {/each}
 
-    <!-- Spacer untuk tinggi (banner absolute) — lebih pendek di mobile -->
-    <div class="h-[140px] sm:h-[160px] lg:h-[180px]" aria-hidden="true"></div>
+    <!-- Spacer untuk tinggi (banner absolute) — proporsional premium -->
+    <div class="h-[200px] sm:h-[220px] lg:h-[260px]" aria-hidden="true"></div>
 
     {#if many}
-      <div class="absolute bottom-3 left-5 z-10 flex items-center gap-1.5 lg:left-7">
+      <div
+        class="absolute bottom-3 left-5 z-10 flex items-center gap-1.5 lg:left-7"
+      >
         {#each banners as _, i (i)}
           <button
             type="button"

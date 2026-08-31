@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     "./pricing": "./src/pricing.ts",
-    "./smmturk": "./src/smmturk.ts"
+    "./smmturk": "./src/smmturk.ts",
+    "./copy": "./src/copy.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

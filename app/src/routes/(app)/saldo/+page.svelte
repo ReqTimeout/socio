@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { Icon } from "@socio/ui";
+  import { Icon, revealDelay, EmptyBalanceArt, NumberFlow } from "@socio/ui";
   import { haptic } from "@socio/ui";
+  import { copy } from "@socio/core/copy";
   import { formatRupiah, formatDateShort } from "$lib/format";
   import type { PageData } from "./$types";
 
@@ -43,6 +44,7 @@
 </svelte:head>
 
 <section class="space-y-4 lg:space-y-5">
+  <h1 class="sr-only">Saldo</h1>
   <!-- Balance card — playful premium with glow shadow -->
   <div
     class="relative overflow-hidden rounded-2xl lg:rounded-3xl bg-gradient-to-br from-ink-900 via-ink-900 to-ink-800 p-5 lg:p-8 text-white lg:grid lg:grid-cols-[1.35fr_auto] lg:items-center lg:gap-8 shadow-[0_16px_40px_-16px_rgba(15,23,42,0.35),0_8px_16px_-8px_rgba(79,70,229,0.20)] hover:shadow-[0_20px_48px_-16px_rgba(15,23,42,0.40),0_10px_20px_-8px_rgba(79,70,229,0.25)] transition-all duration-300 hover:-translate-y-0.5"
@@ -53,9 +55,13 @@
     <div class="min-w-0">
       <div class="text-xs font-medium text-ink-300 lg:text-[13px]">Saldo Socio</div>
       <div
-        class="mt-1 font-display text-3xl lg:text-[2.85rem] lg:leading-none font-extrabold tabular-nums truncate"
+        class="mt-1 font-display text-3xl lg:text-[2.85rem] lg:leading-none font-extrabold truncate"
       >
-        {formatRupiah(Number(data.balance))}
+        <NumberFlow
+          value={Number(data.balance)}
+          format={formatRupiah}
+          class="text-white [font-variant-numeric:tabular-nums]"
+        />
       </div>
     </div>
     <div class="mt-4 lg:mt-0 flex gap-2 lg:flex-col lg:w-44">
@@ -95,17 +101,27 @@
       <p class="mb-2 text-xs text-ink-500">Preview 5 transaksi · warna menandai masuk/keluar</p>
       {#if data.logs.length === 0}
         <div
-          class="rounded-2xl border border-dashed border-ink-200 bg-surface p-6 text-center text-sm text-ink-500"
+          class="rounded-2xl border border-dashed border-ink-200 bg-surface p-6 text-center lg:p-7"
         >
-          Belum ada mutasi saldo.
+          <EmptyBalanceArt size={96} class="mx-auto mb-2 text-ink-300" />
+          <p class="text-sm font-bold text-ink-800">{copy.empty.balance.title}</p>
+          <p class="mt-1 text-xs text-ink-500">{copy.empty.balance.desc}</p>
+          <a
+            href="/saldo/top-up"
+            class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-bold text-white transition active:scale-95 hover:bg-primary-800"
+          >
+            <Icon name="plus" size={14} stroke={2.5} />
+            {copy.empty.balance.cta}
+          </a>
         </div>
       {:else}
         <ul class="space-y-2">
-          {#each data.logs as l (l.id)}
+          {#each data.logs as l, i (l.id)}
             {@const meta = logLabel[l.type] ?? { label: l.type, icon: "info", tone: "ink" }}
             {@const out = isOutLog(l)}
             <li
-              class="card-lift flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3"
+              class="card-lift flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3 reveal"
+              style={revealDelay(i, 0, 35)}
             >
               <div
                 class="grid h-9 w-9 shrink-0 place-items-center rounded-lg
@@ -119,7 +135,7 @@
               </div>
               <div class="min-w-0 flex-1">
                 <div class="truncate text-sm font-bold">{l.note}</div>
-                <div class="text-xs text-ink-400">{timeAgo(l.createdAt)}</div>
+                <div class="text-xs text-ink-500">{timeAgo(l.createdAt)}</div>
               </div>
               <span
                 class="font-display text-sm font-extrabold tabular-nums {out
@@ -144,15 +160,18 @@
       </div>
       {#if data.topups.length === 0}
         <div
-          class="rounded-2xl border border-dashed border-ink-200 bg-surface p-6 text-center text-sm text-ink-500"
+          class="rounded-2xl border border-dashed border-ink-200 bg-surface p-6 text-center lg:p-7"
         >
-          Belum ada riwayat top up.
+          <EmptyBalanceArt size={96} class="mx-auto mb-2 text-ink-300" />
+          <p class="text-sm font-bold text-ink-800">{copy.empty.balance.title}</p>
+          <p class="mt-1 text-xs text-ink-500">{copy.empty.balance.desc}</p>
         </div>
       {:else}
         <ul class="space-y-2">
-          {#each data.topups as t (t.id)}
+          {#each data.topups as t, i (t.id)}
             <li
-              class="card-lift flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3"
+              class="card-lift flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3 reveal"
+              style={revealDelay(i, 60, 35)}
             >
               <div
                 class="grid h-9 w-9 shrink-0 place-items-center rounded-lg
@@ -173,11 +192,11 @@
               </div>
               <span
                 class="rounded-full px-2 py-0.5 text-[10px] font-bold
-              {t.status === 'Success'
+                {t.status === 'Success'
                   ? 'bg-success/10 text-success'
                   : t.status === 'Canceled'
                     ? 'bg-danger/10 text-danger'
-                    : 'bg-amber-100 text-amber-700'}">{t.status}</span
+                    : 'pending-pulse bg-amber-100 text-amber-700'}">{t.status}</span
               >
             </li>
           {/each}
@@ -186,3 +205,24 @@
     </div>
   </div>
 </section>
+
+<style>
+  /* Deposit pending — pulse halus 1x scale (opacity only, bukan glow loop) */
+  .pending-pulse {
+    animation: pending-soft 2.4s ease-in-out infinite;
+  }
+  @keyframes pending-soft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.65;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pending-pulse {
+      animation: none;
+    }
+  }
+</style>

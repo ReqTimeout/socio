@@ -78,7 +78,7 @@
         <button
           onclick={close}
           aria-label="Tutup"
-          class="h-9 w-9 -mr-2 grid place-items-center rounded-full text-ink-400 hover:bg-ink-100 focus-ring"
+          class="h-9 w-9 -mr-2 grid place-items-center rounded-full text-ink-500 hover:bg-ink-100 focus-ring"
         >
           ✕
         </button>

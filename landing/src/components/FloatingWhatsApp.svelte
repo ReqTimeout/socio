@@ -57,6 +57,8 @@
     pointer-events: none;
     transform: translateY(20px) scale(0.9);
     transition: opacity 350ms ease, transform 350ms ease;
+    /* Klip pulse ring scale yang bisa overflow ke luar viewport di mobile */
+    overflow: hidden;
   }
 
   .wa-float.visible {
@@ -186,12 +188,12 @@
 
   @keyframes wa-ping {
     0% {
-      transform: scale(1);
+      transform: translate(0, 0) scale(1);
       opacity: 0.6;
     }
     80%,
     100% {
-      transform: scale(1.9);
+      transform: translate(0, 0) scale(1.6);
       opacity: 0;
     }
   }

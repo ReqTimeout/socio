@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { fly } from "svelte/transition";
-  import { Input, Button, toast, staggerIn, hoverLift, Icon } from "@socio/ui";
+  import { Input, Button, toast, revealDelay, hoverLift, EmptyTicketsArt } from "@socio/ui";
   import { haptic } from "@socio/ui";
+  import { copy } from "@socio/core/copy";
   import { applyAction, enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { formatDateShort } from "$lib/format";
@@ -55,17 +55,18 @@
           ? data.messages[0].message.slice(0, 48)
           : "Tiket #" + data.activeId}
       </h1>
-      <p class="mt-1 text-xs text-ink-500">
-        {data.messages.length} pesan · balasan admin &lt; 5 menit
+      <p class="mt-1 flex items-center gap-1.5 text-xs text-ink-500">
+        {data.messages.length} pesan · {copy.ticket.replyEstimate}
       </p>
     </div>
 
     <div class="space-y-3">
-      {#each data.messages as m (m.id)}
+      {#each data.messages as m, i (m.id)}
         <div
-          class="rounded-2xl border p-4 {m.type === 'admin'
+          class="rounded-2xl border p-4 reveal {m.type === 'admin'
             ? 'border-amber-200 bg-amber-50 shadow-[0_4px_16px_-10px_rgba(245,158,11,0.25)]'
             : 'surface-pop border-ink-100 bg-surface'}"
+          style={revealDelay(i, 0, 45)}
         >
           <div class="mb-1.5 flex items-center justify-between">
             <span
@@ -79,7 +80,7 @@
               ></span>
               {m.type === "admin" ? "Tim Socio.id" : "Anda"}
             </span>
-            <span class="text-xs text-ink-400">{timeAgo(m.created_at)}</span>
+            <span class="text-xs text-ink-500">{timeAgo(m.created_at)}</span>
           </div>
           <p class="whitespace-pre-wrap text-sm leading-relaxed text-ink-800">{m.message}</p>
         </div>
@@ -145,7 +146,7 @@
         Tiket Bantuan
       </h1>
       <p class="reveal text-sm text-ink-500 lg:text-[14px]" style="--d:40ms">
-        Butuh bantuan order, saldo, atau akun? Balasan rata-rata &lt; 5 menit di jam kerja.
+        Butuh bantuan order, saldo, atau akun? {copy.ticket.replyEstimate}
       </p>
     </div>
 
@@ -157,29 +158,26 @@
         >
           {data.tickets.length} tiket
         </span>
-        <span class="text-ink-400">· tap kartu untuk buka percakapan</span>
+        <span class="text-ink-500">· tap kartu untuk buka percakapan</span>
       </div>
     {/if}
 
     {#if data.tickets.length === 0}
       <div
-        class="reveal rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center lg:p-10"
+        class="reveal relative overflow-hidden rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center lg:p-10"
         style="--d:80ms"
       >
         <div
-          class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"
-        >
-          <Icon name="message" size={24} />
-        </div>
-        <p class="text-sm font-bold">Belum ada tiket</p>
-        <p class="mt-1 text-xs leading-relaxed text-ink-500">
-          Buat tiket di bawah — tim kami siap bantu.
-        </p>
+          class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
+        ></div>
+        <EmptyTicketsArt size={112} class="relative mx-auto mb-3 text-ink-300" />
+        <p class="relative text-sm font-bold text-ink-800">{copy.empty.tickets.title}</p>
+        <p class="relative mt-1 text-xs leading-relaxed text-ink-500">{copy.empty.tickets.desc}</p>
       </div>
     {:else}
       <ul class="grid gap-3 lg:grid-cols-2">
         {#each data.tickets as t, i (t.ticket_id)}
-          <li in:fly={staggerIn(i, { y: 8, duration: 220, step: 40 })}>
+          <li class="reveal" style={revealDelay(i, 0, 40)}>
             <button
               onclick={() => openTicket(t.ticket_id)}
               class="group flex w-full items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[0_10px_28px_-10px_rgba(15,23,42,0.14)] lg:p-5 {hoverLift}"
@@ -254,11 +252,11 @@
         bind:value={message}
         placeholder="Ceritakan detailnya…"
         rows="4"
-        class="w-full rounded-xl border border-ink-200 bg-surface px-3 py-2.5 text-sm outline-none transition placeholder:text-ink-400 focus:border-primary focus:ring-2 focus:ring-primary/10"
+        class="w-full rounded-xl border border-ink-200 bg-surface px-3 py-2.5 text-sm outline-none transition placeholder:text-ink-500 focus:border-primary focus:ring-2 focus:ring-primary/10"
         required
       ></textarea>
       <Button type="submit" disabled={sending} full>
-        {#if sending}Mengirim…{:else}Kirim Tiket{/if}
+        {#if sending}Mengirim…{:else}{copy.ticket.cta}{/if}
       </Button>
     </form>
   {/if}

@@ -3,34 +3,35 @@
 
   const regBase = 'https://app.socio.id/register';
 
+  // Model deposit: minimal Rp20.000 + bonus 10% setiap top up (bukan paket langganan)
   const packages = [
     {
       id: 'starter',
-      name: 'Starter',
-      topup: 50000,
-      bonus: 0,
-      desc: 'Buat coba-coba & kebutuhan pribadi. Langsung cair.',
-      features: ['Saldo Rp50.000', 'Akses 8.185 layanan', 'Status real-time', 'Support chat'],
+      name: 'Pemula',
+      topup: 20000,
+      bonus: 2000,
+      desc: 'Minimal deposit — cocok buat coba pertama kali.',
+      features: ['Saldo Rp22.000 (bonus 10%)', 'Akses 8.185 layanan', 'Status real-time', 'Support chat'],
       isPopular: false,
       colorClass: 'border-ink-100 hover:border-ink-300 hover:shadow-xl',
     },
     {
       id: 'pro',
-      name: 'Pro',
-      topup: 200000,
+      name: 'Reseller',
+      topup: 100000,
       bonus: 10000,
-      desc: 'Paling laris buat reseller & UMKM yang serius napak.',
-      features: ['Saldo Rp200.000', 'Bonus Rp10.000 🔥', 'Harga grosir per 1k', 'Prioritas antrean', 'Refill otomatis'],
+      desc: 'Paling laris — bonus langsung kepotong harga grosir.',
+      features: ['Saldo Rp110.000 (bonus 10%)', 'Bonus Rp10.000 🔥', 'Harga grosir per 1k', 'Prioritas antrean', 'Refill otomatis'],
       isPopular: true,
       colorClass: 'border-primary shadow-2xl shadow-primary-500/20 ring-1 ring-primary transform scale-105 z-10',
     },
     {
       id: 'master',
-      name: 'Master',
+      name: 'Agen',
       topup: 500000,
       bonus: 50000,
-      desc: 'Buat agen & reseller besar yang butuh volume tinggi.',
-      features: ['Saldo Rp500.000', 'Bonus Rp50.000 🔥', 'Harga agen termurah', 'API akses', 'Account manager'],
+      desc: 'Volume tinggi — saldo besar, bonus maksimal.',
+      features: ['Saldo Rp550.000 (bonus 10%)', 'Bonus Rp50.000 🔥', 'Harga agen termurah', 'API akses', 'Account manager'],
       isPopular: false,
       colorClass: 'border-accent-200 hover:border-accent-400 bg-accent-50/10',
     },
@@ -47,11 +48,12 @@
 
   <div class="max-w-7xl mx-auto px-4 relative z-10">
     <div class="text-center max-w-3xl mx-auto mb-16">
-      <h2 class="font-display font-black text-3xl md:text-5xl text-ink-900 mb-6">
-        Top Up Saldo,<br />
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-600">Semakin Besar Semakin Hemat</span>
+      <span class="inline-flex items-center gap-2 rounded-full bg-success-soft border border-success/20 px-3 py-1 text-xs font-bold text-success mb-4">💰 Bonus 10% Setiap Top Up</span>
+      <h2 class="font-display font-black text-3xl md:text-5xl text-ink-900 mb-4">
+        Deposit Mulai <span class="text-primary">Rp20.000</span><br />
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-600">Gratis Bonus 10%</span>
       </h2>
-      <p class="text-ink-500 text-lg">Tidak ada langganan bulanan. Isi saldo sekali, pakai sampai habis. Bonus makin gede di paket besar.</p>
+      <p class="text-ink-500 text-lg">Bukan paket langganan — top up berapa pun langsung dapat <strong class="text-ink-800">bonus 10%</strong>. Saldo kepakai sampai habis untuk semua layanan.</p>
     </div>
 
     <div class="grid md:grid-cols-3 gap-8 items-start">
@@ -70,18 +72,17 @@
             <p class="text-xs text-ink-500 leading-relaxed min-h-[40px] px-2 font-medium">{pkg.desc}</p>
           </div>
 
-          <div class="text-center mb-8 pb-8 border-b border-dashed border-ink-200 relative h-28 flex items-center justify-center">
+          <div class="text-center mb-8 pb-8 border-b border-dashed border-ink-200 relative h-32 flex items-center justify-center">
             <div class="absolute w-full">
               <div class="flex items-start justify-center text-ink-900 font-bold">
                 <span class="text-lg mt-2 mr-1 text-ink-400">Rp</span>
-                <span class="text-5xl tracking-tight">{formatIDR(pkg.topup)}</span>
+                <span class="text-5xl tracking-tight">{formatIDR(pkg.topup + pkg.bonus)}</span>
               </div>
-              <div class="text-xs text-ink-400 mt-2 font-bold uppercase tracking-wider">saldo</div>
-              {#if pkg.bonus > 0}
-                <div class="mt-2">
-                  <span class="text-[10px] text-success font-bold bg-success-soft px-3 py-1 rounded-full">+ Bonus Rp {formatIDR(pkg.bonus)}</span>
-                </div>
-              {/if}
+              <div class="text-xs text-ink-400 mt-1 font-bold uppercase tracking-wider">saldo masuk</div>
+              <div class="text-[11px] text-ink-400 mt-0.5">Top up Rp{formatIDR(pkg.topup)} + bonus 10%</div>
+              <div class="mt-2">
+                <span class="text-[10px] text-success font-bold bg-success-soft px-3 py-1 rounded-full">+ Bonus Rp {formatIDR(pkg.bonus)}</span>
+              </div>
             </div>
           </div>
 

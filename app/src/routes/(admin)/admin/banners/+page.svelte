@@ -189,7 +189,7 @@
 
   {#if data.banners.length === 0}
     <EmptyState
-      icon="🖼"
+      art="banners"
       title="Belum ada banner"
       description="Tambahkan banner promo untuk tampil di dashboard user."
     />

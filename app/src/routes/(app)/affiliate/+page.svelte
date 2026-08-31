@@ -1,6 +1,15 @@
 <script lang="ts">
-  import { Button, toast, hoverLift, Icon } from "@socio/ui";
+  import {
+    Button,
+    toast,
+    hoverLift,
+    Icon,
+    NumberFlow,
+    EmptyAffiliateArt,
+    revealDelay,
+  } from "@socio/ui";
   import { haptic } from "@socio/ui";
+  import { copy } from "@socio/core/copy";
   import { formatRupiah } from "$lib/format";
   import { applyAction, enhance } from "$app/forms";
   import type { PageData } from "./$types";
@@ -8,6 +17,10 @@
   let { data }: { data: PageData } = $props();
   let busy = $state(false);
   let confirmOpen = $state(false);
+
+  // Referral copy: ikon morph copy → check (spring scale), reset setelah 1.6s
+  let linkCopied = $state(false);
+  let copyTimer: ReturnType<typeof setTimeout> | undefined;
 
   async function submitWithdraw(input: any) {
     busy = true;
@@ -35,9 +48,17 @@
         url: data.refLink,
       });
     } else {
-      navigator.clipboard?.writeText(data.refLink);
-      toast("Link referral disalin", "success");
+      await navigator.clipboard?.writeText(data.refLink);
+      toast(copy.affiliate.copied, "success");
     }
+  }
+
+  function copyRefLink() {
+    haptic(8);
+    navigator.clipboard?.writeText(data.refLink);
+    linkCopied = true;
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => (linkCopied = false), 1600);
   }
 </script>
 
@@ -57,19 +78,19 @@
     Affiliate
   </h1>
 
-  <div class="grid gap-4 min-w-0 lg:grid-cols-2 lg:items-start">
+  <div class="grid min-w-0 gap-4 lg:grid-cols-2 lg:items-start">
     <div
-      class="reveal rounded-2xl bg-ink-900 p-4 lg:p-5 text-white shadow-[0_16px_40px_-16px_rgba(15,23,42,0.35)] hover:shadow-[0_20px_48px_-16px_rgba(15,23,42,0.42)] hover:-translate-y-1 transition-all duration-300"
+      class="reveal min-w-0 rounded-2xl bg-ink-900 p-4 lg:p-5 text-white shadow-[0_16px_40px_-16px_rgba(15,23,42,0.35)] hover:shadow-[0_20px_48px_-16px_rgba(15,23,42,0.42)] hover:-translate-y-1 transition-all duration-300"
       style="--d:80ms"
     >
       <div class="text-xs text-ink-300">Komisi Pending</div>
-      <div class="font-display text-2xl lg:text-3xl font-extrabold tabular-nums">
-        {formatRupiah(data.commission)}
+      <div class="font-display text-2xl lg:text-3xl font-extrabold">
+        <NumberFlow value={Number(data.commission)} format={formatRupiah} />
       </div>
       <div class="mt-1 flex items-center justify-between text-xs">
-        <span class="text-ink-400">{data.downline} downline · kode {data.code}</span>
+        <span class="text-ink-300">{data.downline} downline · kode {data.code}</span>
         {#if data.withdrawn > 0}
-          <span class="text-ink-400">Sudah ditarik: {formatRupiah(data.withdrawn)}</span>
+          <span class="text-ink-300">Sudah ditarik: {formatRupiah(data.withdrawn)}</span>
         {/if}
       </div>
       <div class="mt-3">
@@ -89,7 +110,7 @@
       </div>
     </div>
 
-    <div class="space-y-4">
+    <div class="min-w-0 space-y-4">
       <div
         class="reveal {hoverLift} rounded-2xl border border-ink-100 bg-surface p-4 lg:p-5"
         style="--d:160ms"
@@ -98,26 +119,64 @@
         <div class="flex gap-2">
           <input
             readonly
+            aria-label="Link referral"
             value={data.refLink}
-            class="h-10 flex-1 rounded-xl border border-ink-200 bg-ink-50 px-3 text-sm"
+            class="h-10 min-w-0 flex-1 rounded-xl border border-ink-200 bg-ink-50 px-3 text-sm"
           />
-          <Button onclick={share} size="sm">Bagikan</Button>
+          <Button onclick={copyRefLink} size="sm" class="shrink-0">
+            <span class="grid h-4 w-4 place-items-center">
+              {#key linkCopied}
+                {#if linkCopied}
+                  <span class="text-success reveal" style={revealDelay(0)}>
+                    <Icon name="check" size={14} stroke={3} />
+                  </span>
+                {:else}
+                  <Icon name="copy" size={14} />
+                {/if}
+              {/key}
+            </span>
+            <span class="ml-1">{linkCopied ? "Tersalin!" : copy.affiliate.cta}</span>
+          </Button>
+          <Button onclick={share} size="sm" class="shrink-0">Bagikan</Button>
         </div>
       </div>
 
       <div
-        class="card-lift flex flex-col items-center rounded-2xl border border-ink-100 bg-surface p-4 lg:p-5"
+        class="card-lift flex min-w-0 flex-col items-center rounded-2xl border border-ink-100 bg-surface p-4 lg:p-5"
       >
         <span class="mb-2 text-xs font-semibold text-ink-500">Scan untuk daftar</span>
-        <img src={data.qr} alt="QR referral" class="h-40 w-40 lg:h-44 lg:w-44 rounded-xl" />
+        {#key data.qr}
+          <img
+            src={data.qr}
+            alt="QR referral"
+            class="h-40 w-40 lg:h-44 lg:w-44 rounded-xl reveal"
+            style={revealDelay(0)}
+          />
+        {/key}
       </div>
     </div>
   </div>
 
+  <!-- Downline empty state — art + copy empati + CTA -->
+  {#if data.downline === 0}
+    <div
+      class="reveal relative overflow-hidden rounded-2xl border border-dashed border-ink-200 bg-surface p-6 text-center lg:p-8"
+      style="--d:240ms"
+    >
+      <div
+        class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
+      ></div>
+      <EmptyAffiliateArt size={104} class="relative mx-auto mb-2 text-ink-300" />
+      <p class="relative text-sm font-bold text-ink-800">{copy.empty.affiliate.title}</p>
+      <p class="relative mt-1 text-xs leading-relaxed text-ink-500">{copy.empty.affiliate.desc}</p>
+      <Button onclick={share} size="sm" class="relative mt-3">{copy.affiliate.cta}</Button>
+    </div>
+  {/if}
+
   <!-- Trust notice — saldo, bukan cash -->
   <div
     class="reveal flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm leading-snug text-amber-900"
-    style="--d:220ms"
+    style="--d:280ms"
   >
     <span
       class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-amber-600 ring-1 ring-amber-200"
@@ -131,15 +190,10 @@
         Komisi kamu masuk sebagai <span class="font-bold">saldo akun</span> — bisa langsung dipakai untuk
         order semua layanan SMM & nggak hangus. Untuk sekarang belum bisa diuangkan ke rekening.
       </p>
-      <a
-        href="/affiliate"
-        class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 underline-offset-2 hover:underline"
-        >Kenapa cuma saldo? <span aria-hidden="true">→</span></a
-      >
     </div>
   </div>
 
-  <p class="text-center text-xs text-ink-400">
+  <p class="text-center text-xs text-ink-500">
     Ajak teman daftar lewat link kamu & dapat komisi dari setiap pembelian mereka.
   </p>
 </section>
@@ -164,7 +218,7 @@
         kalau admin approve, langsung jadi
         <span class="font-semibold text-ink-900">saldo akun</span>
         kamu. Bisa buat order, nggak hangus.
-        <span class="text-ink-400">Belum bisa diuangkan ke rekening, ya.</span>
+        <span class="text-ink-500">Belum bisa diuangkan ke rekening, ya.</span>
       </p>
       <div class="flex gap-2">
         <Button

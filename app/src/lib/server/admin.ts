@@ -1,7 +1,8 @@
 import { db } from "@socio/db";
 import { auditLog, adminSettings } from "@socio/db/schema";
 import { eq } from "drizzle-orm";
-import { fail } from "@sveltejs/kit";
+import { fail, error } from "@sveltejs/kit";
+import type { ActionFailure } from "@sveltejs/kit";
 import { rateLimit } from "./rate-limit";
 
 export type LocalUser = {
@@ -11,12 +12,13 @@ export type LocalUser = {
   email?: string;
 };
 
-/** A-01 / A-02: helper untuk defense-in-depth di setiap admin action. */
+/** A-01 / A-02: guard admin. Assertion narrowing + throw error() (LEGAL di action —
+ *  jangan pakai throw fail(), Kit me-reject-nya sebagai 500). */
 export function assertAdmin(locals: {
   user?: LocalUser | null;
 }): asserts locals is { user: LocalUser & { level: string } } {
   if (!locals.user || locals.user.level !== "Admin") {
-    throw fail(403, { error: "Akses ditolak — hanya Admin." });
+    error(403, "Akses ditolak — hanya Admin.");
   }
 }
 
@@ -26,11 +28,12 @@ export async function assertAdminRate(
   ip: string,
   limit = 30,
   windowSec = 60,
-): Promise<void> {
+): Promise<ActionFailure<{ error: string }> | null> {
   const ok = await rateLimit(`admin:${key}:${ip}`, { limit, windowSec });
   if (!ok) {
-    throw fail(429, { error: "Terlalu banyak aksi. Coba lagi dalam 1 menit." });
+    return fail(429, { error: "Terlalu banyak aksi. Coba lagi dalam 1 menit." });
   }
+  return null;
 }
 
 export async function logAudit(params: {

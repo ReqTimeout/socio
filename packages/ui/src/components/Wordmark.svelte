@@ -19,35 +19,15 @@
   const ring: Record<string, number> = { sm: 13, md: 17, lg: 22 };
 </script>
 
-<span class="inline-flex items-center gap-2">
+<span class="inline-flex items-center gap-1.5">
   {#if mark}
-    <span
-      class="grid shrink-0 place-items-center bg-gradient-to-br from-primary-500 via-primary-600 to-accent-500 text-white shadow-[0_6px_16px_-6px_rgba(79,70,229,0.7)] {box[
-        size
-      ]}"
-      aria-hidden="true"
-    >
-      <svg
-        width={ring[size]}
-        height={ring[size]}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.25"
-        stroke-linecap="round"
-      >
-        <circle cx="9" cy="12" r="5.2" />
-        <circle cx="15" cy="12" r="5.2" opacity="0.85" />
-      </svg>
-    </span>
+    <span class="hidden" aria-hidden="true"></span>
   {/if}
+  <!-- Must match auth style: socio (primary) + .id (accent — AA contrast on white) -->
   <span
-    class="font-display font-extrabold leading-none tracking-tight text-ink-900 {text[
-      size
-    ]}"
+    class="font-display font-extrabold leading-none tracking-tight {text[size]}"
   >
-    socio<span
-      class="bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent"
+    <span class="text-primary">socio</span><span class="text-accent-700"
       >.id</span
     >
   </span>

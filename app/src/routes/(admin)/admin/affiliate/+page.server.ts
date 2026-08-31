@@ -148,7 +148,13 @@ export const actions: Actions = {
    */
   approve: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("affiliate-approve", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate(
+      "affiliate-approve",
+      (locals as any).ip ?? "0.0.0.0",
+      10,
+      60,
+    );
+    if (_rate) return _rate;
     const form = await request.formData();
     const userId = Number(form.get("userId"));
     if (!Number.isFinite(userId) || userId <= 0) return fail(400, { error: "ID user wajib." });
@@ -235,7 +241,13 @@ export const actions: Actions = {
   /** Reject withdrawal: Requested → Pending (komisi balik, saldo tidak disentuh). */
   reject: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("affiliate-reject", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    const _rate = await assertAdminRate(
+      "affiliate-reject",
+      (locals as any).ip ?? "0.0.0.0",
+      10,
+      60,
+    );
+    if (_rate) return _rate;
     const form = await request.formData();
     const userId = Number(form.get("userId"));
     if (!Number.isFinite(userId) || userId <= 0) return fail(400, { error: "ID user wajib." });

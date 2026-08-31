@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { StatusBadge, Sheet, Button, Icon, toast } from "@socio/ui";
+  import { StatusBadge, Sheet, Button, Icon, toast, revealDelay, EmptyOrdersArt } from "@socio/ui";
   import { haptic } from "@socio/ui";
+  import { copy } from "@socio/core/copy";
   import { formatRupiah, serviceDisplayName, formatDateShort } from "$lib/format";
   import { goto } from "$app/navigation";
   import { applyAction, enhance } from "$app/forms";
@@ -23,7 +24,11 @@
   let selectMode = $state(false);
   let checked = $state<Set<number>>(new Set());
 
+  // Init langsung dari server payload — SSR merender list penuh (hindari CLS:
+  // empty-state flash saat hydration mendorong footer turun).
   let orders = $state(data.orders);
+  // Order yang barusan berubah via SSE — dapat highlight sweep (1x, bukan loop)
+  let sweptIds = $state<Set<number>>(new Set());
   $effect(() => {
     orders = data.orders;
   });
@@ -54,10 +59,15 @@
     const es = new EventSource("/api/sse");
     es.addEventListener("order_update", (e) => {
       const { id, status, remains } = JSON.parse((e as MessageEvent).data);
+      // StatusBadge flip: status baru render + highlight sweep sekali lalu fade
       orders = orders.map((o) =>
         o.id === id ? { ...o, status, remains: remains ?? o.remains } : o,
       );
+      sweptIds = new Set(sweptIds).add(id);
       if (selected === id) haptic(12);
+      setTimeout(() => {
+        sweptIds = new Set([...sweptIds].filter((x) => x !== id));
+      }, 1600);
     });
   }
 
@@ -108,10 +118,13 @@
 </svelte:head>
 
 <section class="space-y-3 lg:space-y-5">
+  <!-- h1 sr-only — mobile tidak punya heading visible; a11y tetap punya konteks halaman -->
+  <h1 class="sr-only">Riwayat Pesanan</h1>
+
   <!-- Intro header (desktop) -->
   <div class="hidden items-end justify-between lg:flex">
     <div>
-      <h1 class="font-display text-2xl font-extrabold tracking-tight">Riwayat Pesanan</h1>
+      <p class="font-display text-2xl font-extrabold tracking-tight">Riwayat Pesanan</p>
       <p class="mt-1 text-sm text-ink-500">
         Pantau status tiap order secara real-time — refill & pembatalan sat-set di sini.
       </p>
@@ -131,7 +144,7 @@
       <div
         class="rounded-xl border border-ink-100 bg-surface px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
       >
-        <div class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Total</div>
+        <div class="text-[10px] font-bold uppercase tracking-wide text-ink-500">Total</div>
         <div class="font-display text-sm font-extrabold tabular-nums lg:text-base">
           {counts.all}
         </div>
@@ -139,7 +152,7 @@
       <div
         class="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
       >
-        <div class="text-[10px] font-bold uppercase tracking-wide text-amber-600">Pending</div>
+        <div class="text-[10px] font-bold uppercase tracking-wide text-amber-700">Pending</div>
         <div class="font-display text-sm font-extrabold tabular-nums text-amber-700 lg:text-base">
           {counts.pending}
         </div>
@@ -147,7 +160,7 @@
       <div
         class="rounded-xl border border-blue-200 bg-blue-50 px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
       >
-        <div class="text-[10px] font-bold uppercase tracking-wide text-blue-600">Proses</div>
+        <div class="text-[10px] font-bold uppercase tracking-wide text-blue-700">Proses</div>
         <div class="font-display text-sm font-extrabold tabular-nums text-blue-700 lg:text-base">
           {counts.proses}
         </div>
@@ -155,7 +168,7 @@
       <div
         class="rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
       >
-        <div class="text-[10px] font-bold uppercase tracking-wide text-emerald-600">Selesai</div>
+        <div class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Selesai</div>
         <div class="font-display text-sm font-extrabold tabular-nums text-emerald-700 lg:text-base">
           {counts.selesai}
         </div>
@@ -181,8 +194,8 @@
           <span
             class="ml-1.5 inline-flex min-w-[18px] justify-center rounded-full px-1 py-0.5 text-[10px] font-extrabold tabular-nums {data.filter ===
             t.f
-              ? 'bg-white/20 text-white'
-              : 'bg-white text-ink-600'}">{c}</span
+              ? 'bg-ink-900/25 text-white'
+              : 'bg-white text-ink-700'}">{c}</span
           >
         {/if}
       </button>
@@ -204,42 +217,48 @@
 
   {#if orders.length === 0}
     <div
-      class="rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center lg:p-10 lg:rounded-3xl"
+      class="relative overflow-hidden rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center lg:p-10 lg:rounded-3xl"
     >
       <div
-        class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-ink-100 text-ink-400"
-      >
-        <Icon name="receipt" size={28} />
-      </div>
-      <p class="text-sm font-bold">
-        {data.filter === "all"
-          ? "Belum ada pesanan"
-          : `Tidak ada pesanan ${tabs.find((t) => t.f === data.filter)?.label ?? ""}`}
-      </p>
-      <p class="mt-1 text-xs text-ink-500">
-        {data.filter === "all"
-          ? "Pesanan kamu akan muncul di sini."
-          : "Coba ganti filter atau buat pesanan baru."}
-      </p>
+        class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
+      ></div>
+      {#if data.filter === "all"}
+        <EmptyOrdersArt size={112} class="relative mx-auto mb-3 text-ink-300" />
+        <p class="relative text-sm font-bold text-ink-800">{copy.empty.orders.title}</p>
+        <p class="relative mt-1 text-xs leading-relaxed text-ink-500">
+          {copy.empty.orders.desc}
+        </p>
+      {:else}
+        <div
+          class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-ink-100 text-ink-500"
+        >
+          <Icon name="receipt" size={28} />
+        </div>
+        <p class="text-sm font-bold">
+          {`Tidak ada pesanan ${tabs.find((t) => t.f === data.filter)?.label ?? ""}`}
+        </p>
+        <p class="mt-1 text-xs text-ink-500">Coba ganti filter atau buat pesanan baru.</p>
+      {/if}
       <a
         href="/pesan"
-        class="mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white transition-all active:scale-95 hover:bg-primary-800"
+        class="relative mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white transition-all active:scale-95 hover:bg-primary-800"
       >
         <Icon name="plus" size={16} stroke={2.5} />
-        Buat Pesanan
+        {copy.empty.orders.cta}
       </a>
     </div>
   {:else}
     <!-- Card grid — playful, premium, mudah scan tanpa scroll horizontal -->
     <ul class="grid grid-cols-1 gap-3 sm:gap-3.5 lg:grid-cols-2">
       {#each orders as o, i (o.id)}
+        {@const swept = sweptIds.has(o.id)}
         <li
           class="group relative flex flex-col overflow-hidden rounded-2xl border bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-12px_rgba(15,23,42,0.14)] sm:p-5
             {checked.has(o.id)
             ? 'border-primary ring-1 ring-primary bg-primary/[0.03]'
-            : 'border-ink-100'}"
-          style="animation: slide-up 400ms cubic-bezier(0.25,1,0.5,1) backwards; animation-delay: {i *
-            40}ms"
+            : 'border-ink-100'}
+            {swept ? 'sweep-highlight' : ''} reveal"
+          style={revealDelay(i, 0, 35)}
         >
           <!-- Top row: layanan + status -->
           <div class="flex items-start justify-between gap-3">
@@ -252,7 +271,11 @@
                 <span class="truncate" title={o.data}>{o.data}</span>
               </p>
             </div>
-            <span class="shrink-0"><StatusBadge status={o.status} /></span>
+            <span class="shrink-0 badge-flip">
+              {#key o.status}
+                <StatusBadge status={o.status} />
+              {/key}
+            </span>
           </div>
 
           {#if o.status === "Partial"}
@@ -278,7 +301,7 @@
             >
               {formatRupiah(o.price)}
             </span>
-            <span class="ml-auto flex items-center gap-1 text-xs text-ink-400">
+            <span class="ml-auto flex items-center gap-1 text-xs text-ink-500">
               <Icon name="clock" size={12} />
               {timeAgo(o.createdAt)}
             </span>
@@ -477,14 +500,46 @@
 </Sheet>
 
 <style>
-  @keyframes slide-up {
+  /* SSE highlight sweep — overlay ::before opacity 1x (bukan loop).
+     Strict transform/opacity; tidak konflik dgn bg-surface/tint checked. */
+  .sweep-highlight::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgb(79 70 229 / 0.08);
+    pointer-events: none;
+    animation: sweep-out 1600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .sweep-highlight :global(.badge-flip) {
+    animation: badge-flip 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes sweep-out {
     from {
-      opacity: 0;
-      transform: translateY(8px);
+      opacity: 1;
     }
     to {
+      opacity: 0;
+    }
+  }
+  @keyframes badge-flip {
+    0% {
+      transform: scale(0.6);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.08);
       opacity: 1;
-      transform: translateY(0);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sweep-highlight::before,
+    .sweep-highlight :global(.badge-flip) {
+      animation: none;
+      opacity: 0;
     }
   }
 </style>

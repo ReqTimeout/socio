@@ -119,7 +119,7 @@
 
   {#if data.coupons.length === 0}
     <EmptyState
-      icon="🎟️"
+      art="coupons"
       title="Belum ada kupon"
       description="Buat kode diskon untuk promo — bisa dipakai user di halaman Pesan."
     >

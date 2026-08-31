@@ -96,7 +96,8 @@ export const actions: Actions = {
   confirm: async ({ request, locals }) => {
     // A-02/A-03 defense-in-depth
     assertAdmin(locals);
-    await assertAdminRate("deposit-confirm", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("deposit-confirm", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });
@@ -188,7 +189,8 @@ export const actions: Actions = {
   },
   reject: async ({ request, locals }) => {
     assertAdmin(locals);
-    await assertAdminRate("deposit-reject", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    const _rate = await assertAdminRate("deposit-reject", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
     const form = await request.formData();
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });

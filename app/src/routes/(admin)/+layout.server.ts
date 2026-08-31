@@ -3,6 +3,7 @@ import { ensureAdminSchema } from "@socio/db/ensure";
 import { db } from "@socio/db";
 import { notifications } from "@socio/db/schema";
 import { eq, sql, and } from "drizzle-orm";
+import { getSetting } from "$lib/server/admin";
 import type { LayoutServerLoad } from "./$types";
 
 export const load: LayoutServerLoad = async ({ locals, request }) => {
@@ -32,5 +33,6 @@ export const load: LayoutServerLoad = async ({ locals, request }) => {
     },
     ip,
     unreadCount: Number(unreadAdmin ?? 0),
+    maintenance: (await getSetting("maintenance_mode")) === "1",
   };
 };

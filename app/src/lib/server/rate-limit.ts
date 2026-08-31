@@ -41,10 +41,19 @@ export async function rateLimit(key: string, opts: RateLimitOpts): Promise<boole
     );
     const expiresAt = new Date(windowStart.getTime() + opts.windowSec * 1000);
 
+    // Window fixed: kalau window_start sudah lewat periode sekarang, reset count ke 1
+    // (tanpa ini, count tidak pernah reset → key terblokir selamanya setelah limit tercapai).
+    const fmt = (d: Date) => d.toISOString().slice(0, 19).replace("T", " ");
     await db
       .insert(rateLimits)
       .values({ key, count: 1, windowStart, expiresAt })
-      .onDuplicateKeyUpdate({ set: { count: sql`${rateLimits.count} + 1` } });
+      .onDuplicateKeyUpdate({
+        set: {
+          count: sql`IF(${rateLimits.windowStart} = ${fmt(windowStart)}, ${rateLimits.count} + 1, 1)`,
+          windowStart: sql`${fmt(windowStart)}`,
+          expiresAt: sql`${fmt(expiresAt)}`,
+        },
+      });
 
     const row = await db.query.rateLimits.findFirst({
       where: (t, { eq }) => eq(t.key, key),

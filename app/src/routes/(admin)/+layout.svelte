@@ -2,37 +2,80 @@
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { haptic, Icon, NotifBell } from "@socio/ui";
+  import CommandPalette from "$lib/components/CommandPalette.svelte";
 
   let { data, children } = $props();
 
   /** Nav utama yang tampil di floating dock mobile + sidebar desktop */
   const primaryNav = [
     { href: "/admin", label: "Home", icon: "home" },
-    { href: "/admin/users", label: "Users", icon: "user" },
-    { href: "/admin/orders", label: "Orders", icon: "receipt" },
-    { href: "/admin/deposits", label: "Saldo", icon: "wallet" },
-    { href: "/admin/services", label: "Layanan", icon: "grid" },
+    {
+      href: "/admin/users",
+      keywords: ["user", "pengguna", "member"],
+      label: "Users",
+      icon: "user",
+    },
+    {
+      href: "/admin/orders",
+      keywords: ["order", "pesanan", "transaksi"],
+      label: "Orders",
+      icon: "receipt",
+    },
+    {
+      href: "/admin/deposits",
+      keywords: ["deposit", "topup", "top up", "saldo"],
+      label: "Deposit",
+      icon: "wallet",
+    },
+    {
+      href: "/admin/services",
+      keywords: ["layanan", "jasa", "katalog"],
+      label: "Layanan",
+      icon: "grid",
+    },
     { href: "/admin/pricing", label: "Harga", icon: "tag" },
   ];
   /** Nav tambahan — diakses dari bottom sheet "Lainnya" (mobile) atau sidebar (desktop) */
   const moreNav = [
-    { href: "/admin/coupons", label: "Kupon", icon: "percent" },
-    { href: "/admin/tickets", label: "Tickets", icon: "ticket" },
+    {
+      href: "/admin/coupons",
+      keywords: ["kupon", "promo", "voucher"],
+      label: "Kupon",
+      icon: "percent",
+    },
+    {
+      href: "/admin/tickets",
+      keywords: ["tiket", "komplain", "support"],
+      label: "Tickets",
+      icon: "ticket",
+    },
     { href: "/admin/providers", label: "Provider", icon: "zap" },
     { href: "/admin/reporting", label: "Reporting", icon: "chart" },
     { href: "/admin/affiliate", label: "Affiliate", icon: "gift" },
-    { href: "/admin/banners", label: "Banners", icon: "image" },
+    { href: "/admin/banners", label: "Banner", icon: "image" },
     { href: "/admin/news", label: "Berita", icon: "megaphone" },
     { href: "/admin/email", label: "Email", icon: "mail" },
     { href: "/admin/audit", label: "Audit Log", icon: "shield" },
-    { href: "/admin/settings", label: "Settings", icon: "settings" },
+    {
+      href: "/admin/settings",
+      keywords: ["pengaturan", "setelan", "konfigurasi"],
+      label: "Settings",
+      icon: "settings",
+    },
+  ];
+  const allPages = [
+    ...primaryNav.map((n) => ({ ...n, group: "Operasional" })),
+    ...moreNav.map((n) => ({ ...n, group: "Konten & Sistem" })),
   ];
 
   let sheetOpen = $state(false);
+  let paletteOpen = $state(false);
   let dark = $state(false);
   $effect(() => {
     if (typeof document === "undefined") return;
     dark = document.documentElement.classList.contains("dark");
+    if (data.maintenance) document.documentElement.dataset.maintenance = "1";
+    else delete document.documentElement.dataset.maintenance;
   });
   function toggleDark() {
     dark = !dark;
@@ -50,6 +93,17 @@
   }
   const inMoreActive = $derived(moreNav.some((n) => isActive(n.href)));
 
+  async function toggleMaintenanceOff() {
+    const fd = new FormData();
+    fd.set("on", "0");
+    const res = await fetch("/admin/settings?/maintenance", { method: "POST", body: fd });
+    const j = (await res.json().catch(() => null)) as any;
+    const { toast } = await import("@socio/ui");
+    toast(j?.data?.success ?? j?.data?.error ?? "Selesai.", "success");
+    goto($page.url.pathname, { keepFocus: true, noScroll: true });
+    window.location.reload();
+  }
+
   let helpOpen = $state(false);
 
   function isTypingTarget(el: EventTarget | null): boolean {
@@ -64,7 +118,17 @@
 
   // A11y + keyboard shortcuts (P3.4): Esc tutup sheet, s/= focus search, j/k pagination, ? help
   function onKeydown(e: KeyboardEvent) {
+    // ⌘K/Ctrl+K berlaku di konteks apa pun (termasuk saat mengetik di input)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      paletteOpen = !paletteOpen;
+      return;
+    }
     if (e.key === "Escape") {
+      if (paletteOpen) {
+        paletteOpen = false;
+        return;
+      }
       if (helpOpen) {
         helpOpen = false;
         return;
@@ -172,6 +236,23 @@
 <svelte:window onkeydown={onKeydown} />
 
 <div class="min-h-dvh bg-ink-50 lg:flex">
+  <!-- Maintenance warning banner — pain point: admin lupa matikan (UIUXADMIN §8.16) -->
+  {#if data.maintenance}
+    <div
+      class="sticky top-0 z-[60] flex items-center justify-center gap-2 bg-danger px-4 py-2 text-center text-xs font-bold text-white"
+      role="alert"
+    >
+      <Icon name="alert" size={14} />
+      <span>Maintenance AKTIF — user diblokir dari app.</span>
+      <button
+        type="button"
+        onclick={toggleMaintenanceOff}
+        class="rounded-full bg-white/15 px-2.5 py-0.5 transition-colors hover:bg-white/25"
+        >Matikan sekarang</button
+      >
+    </div>
+  {/if}
+
   <!-- Desktop sidebar — same width as user sidebar (w-64) for system consistency -->
   <aside
     class="hidden w-64 shrink-0 border-r border-ink-100 bg-surface p-4 lg:block"
@@ -198,35 +279,98 @@
         <NotifBell count={data.unreadCount ?? 0} href="/notif" />
       </div>
     </div>
+    <!-- Command palette trigger -->
+    <button
+      type="button"
+      onclick={() => (paletteOpen = true)}
+      class="mb-4 flex w-full items-center gap-2 rounded-xl border border-ink-200 bg-ink-50/60 px-3 py-2 text-sm text-ink-400 transition-colors hover:border-ink-300 hover:bg-ink-50"
+    >
+      <Icon name="search" size={15} />
+      <span class="flex-1 text-left">Cari halaman / aksi…</span>
+      <kbd
+        class="rounded border border-ink-200 bg-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink-400"
+        >⌘K</kbd
+      >
+    </button>
     <nav class="space-y-1">
+      <div class="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-widest text-ink-300">
+        Operasional
+      </div>
       {#each primaryNav as n (n.href)}
         <a
           href={n.href}
           aria-current={isActive(n.href) ? "page" : undefined}
-          class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
-            {isActive(n.href) ? 'bg-ink-900 text-white' : 'text-ink-600 hover:bg-ink-100'}"
+          class="nav-item group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
+            {isActive(n.href)
+            ? 'bg-ink-100/70 text-ink-900'
+            : 'text-ink-600 hover:bg-ink-50 hover:text-ink-800'}"
         >
-          <Icon name={n.icon} size={18} />{n.label === "Home" ? "Dashboard" : n.label}
+          <span
+            class="nav-indicator absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-accent-ink transition-all duration-150
+              {isActive(n.href)
+              ? 'opacity-100 scale-y-100'
+              : 'opacity-0 scale-y-0 group-hover:opacity-40 group-hover:scale-y-100'}"
+            aria-hidden="true"
+          ></span>
+          <span
+            class="transition-transform duration-150 {isActive(n.href)
+              ? 'translate-x-0.5'
+              : 'group-hover:translate-x-0.5'}"
+            ><Icon name={n.icon} size={18} stroke={isActive(n.href) ? 2.4 : 1.9} /></span
+          >{n.label}
         </a>
       {/each}
-      <div class="my-3 border-t border-ink-100"></div>
+      <div
+        class="mt-3 border-t border-ink-100 px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-widest text-ink-300"
+      >
+        Konten &amp; Sistem
+      </div>
       {#each moreNav as n (n.href)}
         <a
           href={n.href}
           aria-current={isActive(n.href) ? "page" : undefined}
-          class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
-            {isActive(n.href) ? 'bg-ink-900 text-white' : 'text-ink-600 hover:bg-ink-100'}"
+          class="nav-item group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
+            {isActive(n.href)
+            ? 'bg-ink-100/70 text-ink-900'
+            : 'text-ink-600 hover:bg-ink-50 hover:text-ink-800'}"
         >
-          <Icon name={n.icon} size={18} />{n.label}
+          <span
+            class="nav-indicator absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-accent-ink transition-all duration-150
+              {isActive(n.href)
+              ? 'opacity-100 scale-y-100'
+              : 'opacity-0 scale-y-0 group-hover:opacity-40 group-hover:scale-y-100'}"
+            aria-hidden="true"
+          ></span>
+          <span
+            class="transition-transform duration-150 {isActive(n.href)
+              ? 'translate-x-0.5'
+              : 'group-hover:translate-x-0.5'}"
+            ><Icon name={n.icon} size={18} stroke={isActive(n.href) ? 2.4 : 1.9} /></span
+          >{n.label}
         </a>
       {/each}
     </nav>
     <a
       href="/"
-      class="mt-6 flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-ink-400 hover:bg-ink-100"
+      class="mt-6 flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-ink-400 transition-colors hover:bg-ink-100"
     >
       <Icon name="chevron_left" size={16} />Kembali ke App
     </a>
+    <!-- Admin identity chip -->
+    <div
+      class="mt-2 flex items-center gap-2.5 rounded-xl border border-ink-100 bg-ink-50/60 px-3 py-2.5"
+    >
+      <span
+        class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink-900 text-xs font-bold text-white"
+        >{(data.admin.username ?? "A").slice(0, 1).toUpperCase()}</span
+      >
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-bold text-ink-800">@{data.admin.username}</span>
+        <span class="block text-[11px] font-semibold uppercase tracking-wide text-ink-400"
+          >{data.admin.level}</span
+        >
+      </span>
+    </div>
   </aside>
 
   <!-- Mobile topbar (compact — bottom dock is primary nav) -->
@@ -236,6 +380,14 @@
   >
     <span class="font-display font-bold">Admin</span>
     <div class="flex items-center gap-2">
+      <button
+        type="button"
+        onclick={() => (paletteOpen = true)}
+        class="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100"
+        aria-label="Cari halaman atau aksi"
+      >
+        <Icon name="search" size={17} />
+      </button>
       <NotifBell count={data.unreadCount ?? 0} href="/notif" />
       <a href="/akun" class="text-sm font-medium text-ink-500">@{data.admin.username}</a>
     </div>
@@ -430,6 +582,8 @@
       </div>
     </div>
   {/if}
+  <!-- Command palette (⌘K / Ctrl+K / tombol search) -->
+  <CommandPalette open={paletteOpen} onclose={() => (paletteOpen = false)} pages={allPages} />
 </div>
 
 <style>
