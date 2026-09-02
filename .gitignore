@@ -39,6 +39,8 @@ socio.id/
 # Test
 coverage/
 accountcf.md
+mailserver_secrets.md
+scripts/mail-server/setup.sh
 
 # build artifacts
 *.tsbuildinfo
