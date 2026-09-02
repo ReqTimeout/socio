@@ -1,0 +1,8 @@
+smtpd_tls_chain_files =
+smtpd_tls_cert_file = /etc/dms/tls/fullchain.pem
+smtpd_tls_key_file = /etc/dms/tls/privkey.pem
+smtpd_use_tls = yes
+smtpd_tls_security_level = may
+smtpd_tls_auth_only = no
+smtpd_tls_received_header = yes
+smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache

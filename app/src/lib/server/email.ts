@@ -1,6 +1,10 @@
 import { dev } from "$app/environment";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
+const SMTP_HOST = process.env.SMTP_HOST ?? "";
+const SMTP_PORT = Number(process.env.SMTP_PORT ?? 587);
+const SMTP_USER = process.env.SMTP_USER ?? "";
+const SMTP_PASS = process.env.SMTP_PASS ?? "";
 const FROM = process.env.SOCIO_MAIL_FROM ?? "noreply@socio.id";
 const FROM_NAME = process.env.SOCIO_MAIL_FROM_NAME ?? "Socio ID";
 
@@ -12,36 +16,86 @@ interface SendArgs {
 }
 
 /**
- * Send transactional email via Resend. Env-gated: if no API key is configured,
- * the email is logged to the server console (dev / pre-email-setup). This keeps
- * auth flows functional before the M6 email work is finalized.
+ * Send transactional email.
+ *
+ * Provider priority:
+ *   1. SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS (self-hosted, default)
+ *   2. RESEND_API_KEY (legacy fallback for staging without mailserver)
+ *
+ * If no provider is configured, the email is logged to the server console
+ * (dev / pre-email-setup). This keeps auth flows functional before the
+ * email work is finalized.
  */
 export async function sendEmail({ to, subject, html, text }: SendArgs): Promise<boolean> {
-  if (!RESEND_API_KEY) {
+  const useSmtp = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
+
+  if (!useSmtp && !RESEND_API_KEY) {
     if (dev) {
       console.info(`[email:dev] to=${to} subject="${subject}"\n${text ?? html}`);
     }
     return false;
   }
+
   try {
-    const { Resend } = await import("resend");
-    const resend = new Resend(RESEND_API_KEY);
-    const { error } = await resend.emails.send({
-      from: `${FROM_NAME} <${FROM}>`,
-      to,
-      subject,
-      html,
-      text,
-    });
-    if (error) {
-      console.error("[email] send failed", error);
-      return false;
+    if (useSmtp) {
+      return await sendViaSmtp({ to, subject, html, text });
     }
-    return true;
+    return await sendViaResend({ to, subject, html, text });
   } catch (e) {
     console.error("[email] exception", e);
     return false;
   }
+}
+
+async function sendViaSmtp(args: SendArgs): Promise<boolean> {
+  const { default: nodemailer } = await import("nodemailer");
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    requireTLS: SMTP_PORT === 587,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    tls: {
+      // Mailserver saat ini self-signed (interim). Production harus pakai CF Origin CA cert.
+      rejectUnauthorized: process.env.SMTP_REJECT_UNAUTH === "true",
+      minVersion: "TLSv1.2",
+    },
+    connectionTimeout: 10_000,
+    greetingTimeout: 5_000,
+  });
+  try {
+    const info = await transporter.sendMail({
+      from: `${FROM_NAME} <${FROM}>`,
+      to: args.to,
+      subject: args.subject,
+      html: args.html,
+      text: args.text,
+    });
+    if (dev) console.info(`[email:smtp] queued id=${info.messageId}`);
+    return true;
+  } catch (e) {
+    console.error("[email:smtp] send failed", e);
+    return false;
+  } finally {
+    transporter.close();
+  }
+}
+
+async function sendViaResend(args: SendArgs): Promise<boolean> {
+  const { Resend } = await import("resend");
+  const resend = new Resend(RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: `${FROM_NAME} <${FROM}>`,
+    to: args.to,
+    subject: args.subject,
+    html: args.html,
+    text: args.text,
+  });
+  if (error) {
+    console.error("[email:resend] send failed", error);
+    return false;
+  }
+  return true;
 }
 
 function wrapEmail(opts: {
