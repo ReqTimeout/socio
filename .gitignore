@@ -47,6 +47,27 @@ docs/screenshots/
 # Scratch/temp design artifacts
 .tmp_*
 .qoder/
+.kilo/
+.screenshots/
 api-keys*.csv
 prod-LAYOUT-BARU.png
 db-check.mjs
+
+# Screenshot audit (root only — UI review artefak, bukan aset desain final)
+# Pattern: kategori-prefix-variasi.{png,jpeg}
+# Prefix dipakai di sesi UI/UX audit: audit-, auth-, banner-, desktop-,
+# fab-, greeting-, logout-, mobile-, saldo-, stat-, text-fix-, verify-
+/audit-*.png
+/audit-*.jpeg
+/auth-*.png
+/banner-*.png
+/desktop-*.png
+/desktop-*.jpeg
+/fab-*.png
+/greeting-fix.png
+/logout-*.png
+/mobile-*.jpeg
+/saldo-*.png
+/stat-*.png
+/text-fix-*.png
+/verify-*.png
