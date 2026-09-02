@@ -1,0 +1,60 @@
+---
+// D4: TestiLedger — 3 testi sebagai ledger rows + inisial avatar (bukan card grid).
+// Plan §3b #9: Social proof = ledger, initials avatar, paper-2.
+const testi = [
+  {
+    initials: 'RA',
+    name: 'Rizky A.',
+    role: 'Reseller SMM · 2 tahun',
+    text: 'Harga pabriknya bikin margin aman. Order client tinggal tempel link, sisanya bot yang urus.',
+    metric: '1.2 jt order',
+  },
+  {
+    initials: 'SP',
+    name: 'Sari P.',
+    role: 'Owner thrift shop',
+    text: 'Views TikTok jalan 2 menit setelah bayar. Dulu nunggu admin sampe besok, sekarang gak pernah.',
+    metric: '62 rb views /bulan',
+  },
+  {
+    initials: 'BD',
+    name: 'Bang D.',
+    role: 'Jasa follower UMKM',
+    text: 'Followers turun dikit, keesokan harinya keisi lagi sendiri. Garansi refillnya beneran jalan.',
+    metric: '98% retention',
+  },
+];
+---
+
+<section class="bg-[var(--paper-2)] py-16 md:py-24" aria-labelledby="testi-title">
+  <div class="mx-auto max-w-6xl px-5 md:px-8">
+    <div class="reveal mx-auto max-w-2xl text-center">
+      <h2 id="testi-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Yang sudah jualan pakai ini.
+      </h2>
+      <p class="mt-3 text-[length:var(--text-body)] leading-relaxed text-ink-2">
+        50.000+ reseller dan UMKM order tiap hari lewat socio.id.
+      </p>
+    </div>
+
+    <!-- Ledger rows: hairline, bukan card -->
+    <div class="mx-auto mt-10 max-w-3xl divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] md:mt-14">
+      {testi.map((t, i) => (
+        <div class="reveal flex items-start gap-4 py-6" style={`--d: ${i * 80}ms`}>
+          <!-- Inisial avatar -->
+          <span class="num grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)] text-[14px] font-extrabold text-[var(--accent-ink)]" aria-hidden="true">
+            {t.initials}
+          </span>
+          <div class="min-w-0 flex-1">
+            <blockquote class="text-[15px] font-medium leading-relaxed text-ink md:text-[16px]">
+              “{t.text}”
+            </blockquote>
+            <p class="mt-2 text-[12px] text-ink-3">
+              <span class="font-bold text-ink-2">{t.name}</span> · {t.role} · <span class="num font-semibold text-ink-2">{t.metric}</span>
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

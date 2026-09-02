@@ -1,0 +1,59 @@
+---
+// D5: FaqReseller — accordion ledger 6 item (details/summary native, pattern FAQ home).
+// Isi: biaya, saldo, aktivasi, API, harga, top-up. Paper bg.
+const items = [
+  {
+    q: 'Daftar reseller Rp50.000 itu dapat apa saja?',
+    a: 'Sekali bayar Rp50.000: akun reseller aktif, saldo Rp20.000 langsung masuk dan bisa dipakai order, plus harga khusus reseller yang lebih murah dari harga member — berlaku di semua 8.270 layanan, selamanya. Tanpa iuran bulanan.',
+  },
+  {
+    q: 'Kapan akun reseller saya aktif?',
+    a: 'Setelah kamu transfer dan admin memverifikasi manual (nominal unik 3 digit dikirim ke email supaya cepat cocok). Di jam kerja biasanya menit-menit saja. Kamu dapat email selamat datang begitu saldo masuk.',
+  },
+  {
+    q: 'Saldo Rp20.000 bisa ditarik tunai?',
+    a: 'Bukan. Saldo awal itu modal promo untuk langsung coba order — bukan dana penarikan. Top-up selanjutnya bebas dipakai pesan layanan kapan saja.',
+  },
+  {
+    q: 'Bisa pakai API untuk bot atau panel sendiri?',
+    a: 'Bisa. Setiap akun dapat API key di menu Akun: endpoint services, add, status, refill, profile. Rate-limit 60 request/menit per IP. Dokumentasi lengkap di halaman API.',
+  },
+  {
+    q: 'Harga reseller berlaku di semua layanan?',
+    a: 'Ya — semua layanan di katalog reseller dihargai lebih murah dari harga member. Potongannya diatur admin per layanan dan berlaku permanen selama akun aktif. Harga live bisa dicek di panel setelah daftar.',
+  },
+  {
+    q: 'Kalau order client saya turun atau gagal?',
+    a: 'Layanan berlabel refill digaransi otomatis — follower/likes turun akan diisi ulang sesuai periode garansi layanannya. Order gagal dana balik penuh ke saldo. Kamu tinggal atur janji ke client.',
+  },
+];
+---
+
+<section class="bg-[var(--paper)] py-16 md:py-24" aria-labelledby="faq-r-title">
+  <div class="mx-auto max-w-6xl px-5 md:px-8">
+    <div class="reveal mx-auto max-w-2xl text-center">
+      <h2 id="faq-r-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Yang sering ditanya calon reseller.
+      </h2>
+    </div>
+
+    <!-- Accordion ledger: hairline rows, no card -->
+    <div class="reveal mx-auto mt-10 max-w-3xl divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] md:mt-12" style="--d: 60ms">
+      {items.map((f, i) => (
+        <details class="faq-r" style={`--d: ${i * 60}ms`}>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-left text-[15px] font-bold text-ink">
+            {f.q}
+            <svg class="faq-chev h-4 w-4 shrink-0 text-ink-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-9"/></svg>
+          </summary>
+          <p class="pb-5 pr-8 text-[14px] leading-relaxed text-ink-2">{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq-r summary::-webkit-details-marker { display: none; }
+  .faq-r[open] .faq-chev { transform: rotate(180deg); }
+  .faq-chev { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
+</style>

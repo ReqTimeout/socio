@@ -1,0 +1,112 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.svelte';
+import Footer from '../components/Footer.astro';
+import FloatingTabDock from '../components/FloatingTabDock.svelte';
+
+// 404.astro — typographic + search layanan + 3 link populer (plan §4.5).
+// Cloudflare Pages serve file ini untuk unknown route dengan status 404.
+// Dock CTA override "Kembali ke Beranda" lewat Layout prop dockCta.
+const daftar = 'https://app.socio.id/daftar?mode=reseller';
+const popularLinks = [
+  { href: '/beli-followers-instagram', label: 'Beli followers Instagram', sub: 'Mulai Rp7.395/1k · refill' },
+  { href: '/layanan', label: 'Layanan SMM lengkap', sub: '8.270 layanan · 882 kategori' },
+  { href: '/reseller', label: 'Program reseller', sub: 'Modal Rp50rb · saldo Rp20rb' },
+];
+
+const notFoundSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'Halaman tidak ditemukan · Socio.id',
+  url: 'https://socio.id/404',
+  description: 'Halaman ini tidak ada. Cari layanan di katalog Socio.id atau kembali ke beranda.',
+  inLanguage: 'id-ID',
+  isPartOf: { '@type': 'WebSite', name: 'Socio.id', url: 'https://socio.id' },
+};
+---
+
+<Layout
+  title="Halaman tidak ditemukan · Socio.id"
+  description="Halaman ini nggak ada. Cari layanan di katalog 8.270 layanan, atau kembali ke beranda Socio.id."
+  dockCta="Kembali ke Beranda|/"
+>
+  <Navbar client:load />
+  <FloatingTabDock client:load />
+
+  <main class="bg-[var(--paper)]">
+    <div class="mx-auto flex min-h-[calc(100vh-200px)] max-w-2xl flex-col justify-center px-5 pb-24 pt-32 md:px-8 md:pt-40">
+      <!-- Typographic 404: angka besar sebagai hero, bukan emoji -->
+      <p class="reveal font-display text-[clamp(96px,18vw,176px)] font-bold leading-[0.85] tracking-[-0.04em] text-[var(--accent-ink)]">404</p>
+      <h1 class="reveal mt-2 font-display text-[clamp(28px,5vw,40px)] font-bold leading-[1.1] tracking-tight text-ink" style="--d: 60ms">
+        Halaman ini nggak ada.
+      </h1>
+      <p class="reveal mt-4 max-w-md text-[16px] leading-relaxed text-ink-2" style="--d: 120ms">
+        Tautan-nya udah pindah, salah ketik, atau memang belum ada.
+        Coba cari di katalog — biasanya orang ngerti dari nama layanan.
+      </p>
+
+      <!-- Search layanan (submit → /layanan?q=... → TopLayananTable prefill) -->
+      <form
+        class="reveal mt-8 flex gap-2"
+        method="GET"
+        action="/layanan"
+        role="search"
+        aria-label="Cari layanan di katalog Socio.id"
+        style="--d: 180ms"
+      >
+        <label for="search-404" class="sr-only">Cari layanan</label>
+        <input
+          id="search-404"
+          type="search"
+          name="q"
+          placeholder="Cari layanan, misal: followers instagram"
+          autocomplete="off"
+          class="min-h-[52px] min-w-0 flex-1 rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-5 text-[15px] text-ink placeholder:text-ink-3 focus:border-[var(--accent-ink)] focus:outline-none"
+        />
+        <button
+          type="submit"
+          class="inline-flex min-h-[52px] shrink-0 items-center rounded-full bg-[var(--accent-ink)] px-6 text-[14px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]"
+        >
+          Cari di katalog
+        </button>
+      </form>
+
+      <!-- 3 link populer -->
+      <div class="reveal mt-12" style="--d: 260ms">
+        <p class="text-[12px] font-bold uppercase tracking-widest text-ink-3">Yang biasanya diliat</p>
+        <ul class="mt-4 divide-y divide-[var(--hairline)] border-y border-[var(--hairline)]">
+          {popularLinks.map((l) => (
+            <li>
+              <a
+                href={l.href}
+                class="group flex items-center justify-between gap-4 py-4 transition-colors hover:bg-[var(--paper-2)]"
+              >
+                <div class="min-w-0">
+                  <p class="text-[15px] font-bold text-ink group-hover:text-[var(--accent-ink)]">{l.label}</p>
+                  <p class="mt-0.5 text-[12px] font-medium text-ink-3">{l.sub}</p>
+                </div>
+                <svg class="h-4 w-4 shrink-0 text-ink-3 group-hover:text-[var(--accent-ink)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6"/>
+                </svg>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <!-- CTA fallback -->
+      <div class="reveal mt-10" style="--d: 320ms">
+        <a
+          href={daftar}
+          class="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-[var(--paper-2)] px-6 text-[14px] font-bold text-ink transition-colors hover:border-[var(--accent-ink)] hover:text-[var(--accent-ink)]"
+        >
+          Atau daftar reseller dulu — Rp50rb →
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(notFoundSchema)} />
+</Layout>

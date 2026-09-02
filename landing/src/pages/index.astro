@@ -1,176 +1,150 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.svelte';
-import SmmHeroVisual from '../components/SmmHeroVisual.svelte';
-import TrustBadges from '../components/TrustBadges.svelte';
+import FloatingTabDock from '../components/FloatingTabDock.svelte';
+import Footer from '../components/Footer.astro';
+import HeroMockup from '../components/HeroMockup.svelte';
 import SmmProviderProof from '../components/SmmProviderProof.svelte';
-import PainPoints from '../components/PainPoints.svelte';
-import Features from '../components/Features.svelte';
+import ProblemLedger from '../components/ProblemLedger.astro';
+import OrderSimulator from '../components/OrderSimulator.svelte';
+import OrderBoard from '../components/OrderBoard.astro';
+import KapabilitasBento from '../components/KapabilitasBento.astro';
+import PricingTable from '../components/PricingTable.astro';
+import TestiLedger from '../components/TestiLedger.astro';
 import HowItWorks from '../components/HowItWorks.svelte';
-import SocialProof from '../components/SocialProof.svelte';
-import PricingInteractive from '../components/PricingInteractive.svelte';
 import Faq from '../components/Faq.svelte';
 import StickyCTA from '../components/StickyCTA.svelte';
 import FinalCTA from '../components/FinalCTA.svelte';
 import FloatingWhatsApp from '../components/FloatingWhatsApp.svelte';
 
-const regBase = 'https://app.socio.id/register';
+const regBase = 'https://app.socio.id/daftar?mode=reseller';
 ---
 
 <Layout>
   <Navbar client:load />
+  <FloatingTabDock client:idle />
 
   <StickyCTA client:idle />
-  <FloatingWhatsApp client:load />
+  <FloatingWhatsApp client:idle />
 
-  <header
-    class="relative pt-32 pb-20 md:pt-44 md:pb-28 overflow-hidden bg-gradient-to-br from-primary-50 via-white to-accent-50 animate-gradient bg-[length:400%_400%]"
-  >
-    <div class="container mx-auto px-5 md:px-6 grid lg:grid-cols-2 gap-12 items-center relative z-10">
-      <div class="space-y-6 md:space-y-8 text-center lg:text-left">
-        <div
-          class="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm border border-primary-200 text-primary-700 font-bold rounded-full text-xs tracking-wider uppercase mb-2 shadow-sm"
-        >
-          <span class="relative flex h-2 w-2">
-            <span class="absolute inline-flex h-full w-full rounded-full bg-accent live-dot"></span>
-            <span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span>
-          </span>
-          #1 Panel SMM Termurah Indonesia
-        </div>
-
-        <h1
-          class="font-display font-extrabold text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-ink-900 leading-[1.1] tracking-tight"
-        >
-          SMM Panel Indonesia
-          <span class="block text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent"
-            >Termurah & Tercepat.</span
-          >
-        </h1>
-
-        <p
-          class="text-base md:text-lg lg:text-xl text-ink-600 leading-relaxed max-w-xl mx-auto lg:mx-0 font-light"
-        >
-          <strong class="text-ink-800">Socio.id</strong> — panel SMM lengkap #1 Indonesia.
-          <strong class="text-ink-800">8.185+ layanan</strong> untuk semua platform & kebutuhan —
-          harga grosir mulai <strong class="text-ink-800">Rp18/1K</strong>, diproses otomatis, ada garansi.
-          Dipercaya <strong class="text-ink-800">50.000+ reseller</strong> & UMKM.
+  <header class="relative overflow-hidden bg-[var(--paper)] pt-28 pb-16 md:pt-40 md:pb-24">
+    <!-- Eyebrow hero — load-sequence (bukan scroll) -->
+    <div class="mx-auto grid max-w-6xl items-center gap-12 px-5 md:px-8 lg:grid-cols-12">
+      <!-- Copy 5/12 mobile-first -->
+      <div class="min-w-0 text-center lg:col-span-5 lg:text-left">
+        <p class="hero-seq-0 inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-white/60 px-3.5 py-1.5 text-[11px] font-bold tracking-widest text-ink-2 uppercase">
+          <span class="live-dot" aria-hidden="true"></span>
+          8.270 layanan aktif · semua platform
         </p>
 
-        <!-- USPs — bahasa pro, mencakup semua layanan -->
-        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl mx-auto lg:mx-0">
-          <li class="flex items-center gap-2 text-sm text-ink-700">
-            <svg class="h-5 w-5 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7" /></svg>
-            <span><strong>Termurah</strong> — top up mulai <strong>Rp10 ribu</strong></span>
-          </li>
-          <li class="flex items-center gap-2 text-sm text-ink-700">
-            <svg class="h-5 w-5 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7" /></svg>
-            <span><strong>Proses otomatis</strong> — status live 24/7</span>
-          </li>
-          <li class="flex items-center gap-2 text-sm text-ink-700">
-            <svg class="h-5 w-5 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7" /></svg>
-            <span><strong>Gagal? Saldo balik</strong> — refill otomatis</span>
-          </li>
-          <li class="flex items-center gap-2 text-sm text-ink-700">
-            <svg class="h-5 w-5 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7" /></svg>
-            <span>API reseller + <strong>harga grosir</strong></span>
-          </li>
-        </ul>
+        <h1 class="hero-seq-1 font-display mt-5 text-[length:var(--text-hero)] leading-[1.05] font-bold tracking-tight text-ink">
+          Daftar reseller Rp50 ribu,<br />
+          <span class="text-[var(--accent-ink)]">saldo Rp20 ribu langsung jalan.</span>
+        </h1>
 
-        <!-- CTAs: Daftar / Reseller / Masuk — jelas di mobile & desktop -->
-        <div class="flex flex-col gap-3 pt-3 max-w-xl mx-auto lg:mx-0">
-          <div class="flex flex-col sm:flex-row gap-3">
-            <a
-              href={regBase}
-              class="group relative flex-1 inline-flex items-center justify-center gap-2 bg-primary text-white px-7 py-4 min-h-[48px] rounded-full font-bold shadow-xl shadow-primary-900/20 hover:shadow-primary-900/40 hover:-translate-y-0.5 transition-all overflow-hidden"
-            >
-              <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-              <span class="relative flex items-center gap-2">Daftar Gratis <span class="hidden sm:inline">— Member</span> →</span>
-            </a>
-            <a
-              href="https://app.socio.id/daftar?mode=reseller"
-              class="flex-1 inline-flex items-center justify-center gap-2 bg-white text-ink-900 px-7 py-4 min-h-[48px] rounded-full font-bold border-2 border-amber-300 shadow-md hover:bg-amber-50 hover:border-amber-400 transition"
-            >
-              👑 Daftar Reseller
-            </a>
-          </div>
-          <div class="flex items-center justify-center lg:justify-start gap-2 text-sm">
-            <span class="text-ink-500">Sudah punya akun?</span>
-            <a href="https://app.socio.id/login" class="font-bold text-primary hover:text-primary-700 inline-flex items-center gap-1">Masuk →</a>
-            <span class="text-ink-200">·</span>
-            <a href="#cara-kerja" class="font-semibold text-ink-600 hover:text-ink-900">Cara kerja</a>
-          </div>
-        </div>
+        <p class="hero-seq-2 mx-auto mt-5 max-w-lg text-[length:var(--text-lead)] leading-relaxed text-ink-2 lg:mx-0">
+          Biaya daftar sudah termasuk saldo awal — langsung bisa order di 8.270 layanan Instagram,
+          TikTok, YouTube, Telegram &amp; SEO. Plus harga reseller: lebih murah dari harga member
+          di semua layanan. Proses otomatis 24 jam, garansi refill.
+        </p>
 
-        <!-- Semua layanan & platform — icon grid biar jelas bukan cuma followers -->
-        <div class="pt-3 space-y-2 max-w-xl mx-auto lg:mx-0">
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] sm:text-xs font-bold text-ink-400 uppercase tracking-wider">Platform:</span>
-            <span class="h-px flex-1 bg-ink-100"></span>
+        <!-- USP ledger (bukan card) — promo offer di atas -->
+        <dl class="hero-seq-3 mx-auto mt-7 max-w-md divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] lg:mx-0">
+          <div class="flex items-baseline justify-between gap-4 py-2.5">
+            <dt class="text-[13px] font-semibold text-ink-2">Daftar reseller</dt>
+            <dd class="num text-[15px] font-bold text-ink">Rp50.000 sekali</dd>
           </div>
-          <div class="flex flex-wrap items-center gap-1.5">
-            <!-- Platform pills dengan brand color -->
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 px-3 py-1 text-[11px] font-bold text-white">📸 Instagram</span>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-[11px] font-bold text-white">🎵 TikTok</span>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1 text-[11px] font-bold text-white">▶ YouTube</span>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1 text-[11px] font-bold text-white">f Facebook</span>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-sky-500 px-3 py-1 text-[11px] font-bold text-white">𝕏 Twitter</span>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-ink-900 px-3 py-1 text-[11px] font-bold text-white">🧵 Threads</span>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-sky-400 px-3 py-1 text-[11px] font-bold text-white">✈️ Telegram</span>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-indigo-500 px-3 py-1 text-[11px] font-bold text-white">🎮 Discord</span>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-bold text-white">🎧 Spotify</span>
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white px-3 py-1 text-[11px] font-bold text-ink-600">+ 872 kategori lain</span>
+          <div class="flex items-baseline justify-between gap-4 py-2.5">
+            <dt class="text-[13px] font-semibold text-ink-2">Saldo langsung masuk</dt>
+            <dd class="num text-[15px] font-bold text-[var(--accent-ink)]">Rp20.000</dd>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] sm:text-xs font-bold text-ink-400 uppercase tracking-wider">Layanan:</span>
-            <span class="h-px flex-1 bg-ink-100"></span>
+          <div class="flex items-baseline justify-between gap-4 py-2.5">
+            <dt class="text-[13px] font-semibold text-ink-2">Harga layanan</dt>
+            <dd class="text-[15px] font-bold text-ink">Khusus reseller, lebih murah</dd>
           </div>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="rounded-full bg-ink-50 border border-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600">Followers</span>
-            <span class="rounded-full bg-ink-50 border border-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600">Likes</span>
-            <span class="rounded-full bg-ink-50 border border-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600">Views</span>
-            <span class="rounded-full bg-ink-50 border border-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600">Comments</span>
-            <span class="rounded-full bg-ink-50 border border-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600">Shares</span>
-            <span class="rounded-full bg-ink-50 border border-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600">Subscribers</span>
-            <span class="rounded-full bg-ink-50 border border-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600">Members</span>
-            <span class="rounded-full bg-ink-50 border border-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600">Plays</span>
-            <span class="rounded-full bg-ink-50 border border-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600">SEO</span>
-            <span class="rounded-full bg-ink-50 border border-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600">Web Traffic</span>
+          <div class="flex items-baseline justify-between gap-4 py-2.5">
+            <dt class="text-[13px] font-semibold text-ink-2">Katalog</dt>
+            <dd class="num text-[15px] font-bold text-ink">8.270 layanan · 882 kategori</dd>
           </div>
+          <div class="flex items-baseline justify-between gap-4 py-2.5">
+            <dt class="text-[13px] font-semibold text-ink-2">Proses</dt>
+            <dd class="text-[15px] font-bold text-ink">Otomatis 24 jam</dd>
+          </div>
+        </dl>
+
+        <!-- CTA -->
+        <div class="hero-seq-4 mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
+          <a
+            href={regBase}
+            class="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[var(--accent-ink)] px-8 text-[15px] font-bold text-white shadow-[0_8px_24px_-8px_var(--accent-ink)] transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]"
+          >
+            Daftar Reseller Rp50rb →
+          </a>
+          <a
+            href="/layanan"
+            class="inline-flex min-h-[52px] items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-white px-7 text-[15px] font-bold text-ink transition-colors hover:bg-[var(--paper-2)]"
+          >
+            Lihat 8.270 layanan
+          </a>
         </div>
+        <p class="hero-seq-5 mt-4 text-[13px] text-ink-3">
+          Termasuk saldo Rp20.000 — langsung bisa order · garansi refill 30 hari
+        </p>
       </div>
 
-      <div class="relative flex justify-center lg:justify-end mt-8 lg:mt-0">
-        <SmmHeroVisual client:visible />
+      <!-- Mockup 7/12 -->
+      <div class="relative mt-4 flex justify-center lg:col-span-7 lg:justify-end lg:mt-0">
+        <!-- client:load (bukan visible): astro-island display:contents + mockup
+             entrance transform bikin island rect 0×0 → IO tak pernah trigger.
+             Hero = above-fold, harus hidup seketika. -->
+        <HeroMockup client:visible />
       </div>
     </div>
   </header>
 
+  <main>
   <SmmProviderProof client:visible />
 
-  <TrustBadges client:visible />
+  <!-- Trust inline-stat prose (bukan 4-col strip — anti-pattern gate) -->
+  <section class="border-y border-[var(--hairline)] bg-[var(--paper-2)] py-8 md:py-10" aria-label="Statistik socio.id">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <p class="reveal text-center text-[15px] leading-relaxed text-ink-2 md:text-[17px]">
+        Sekarang ada <strong class="num text-ink">1.240 order aktif</strong> sedang diproses,
+        <strong class="num text-ink">8.270 layanan</strong> di <strong class="num text-ink">882 kategori</strong>,
+        rata-rata mulai proses <strong class="num text-ink">42 detik</strong> setelah order —
+        dipercaya <strong class="num text-ink">50.000+</strong> reseller &amp; UMKM se-Indonesia.
+      </p>
+    </div>
+  </section>
 
-  <PainPoints client:visible />
+  <ProblemLedger />
 
-  <Features client:visible />
+  <!-- D3: domain centerpiece — simulator interaktif (kartu #1) -->
+  <OrderSimulator client:visible />
+
+  <!-- D3: live order board (kartu #2 — chrome terakhir landing) -->
+  <OrderBoard />
+
+  <!-- D4: bento kapabilitas (kartu ke-2) -->
+  <KapabilitasBento />
 
   <HowItWorks client:visible />
 
-  <SocialProof client:visible />
+  <!-- D4: testi ledger row (bukan card grid) -->
+  <TestiLedger />
 
-  <PricingInteractive client:visible />
+  <!-- D4: pricing prose + real table harga (bukan 3-tier card) -->
+  <PricingTable />
 
   <FinalCTA client:visible />
 
   <section id="faq" class="py-16 md:py-20 bg-white">
     <div class="container mx-auto px-5 md:px-6">
       <div class="mb-10 md:mb-12 text-center">
-        <span class="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
-          FAQ
-        </span>
-        <h2 class="mt-3 font-display text-2xl sm:text-3xl md:text-4xl font-bold text-ink-900">
+        <h2 class="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-ink">
           Pertanyaan yang Sering Ditanyakan
         </h2>
-        <p class="mt-2 text-sm md:text-base text-ink-500 max-w-2xl mx-auto">
+        <p class="mt-2 text-sm md:text-base text-ink-2 max-w-2xl mx-auto">
           Belum menemukan jawabannya? Hubungi tim support kami 24/7 via WhatsApp.
         </p>
       </div>
@@ -178,43 +152,33 @@ const regBase = 'https://app.socio.id/register';
     </div>
   </section>
 
-  <footer class="bg-ink-900 py-10 md:py-12 text-white/70 text-sm border-t border-white/10">
-    <div class="container mx-auto px-5 md:px-6">
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-center sm:text-left">
-        <div class="col-span-2 sm:col-span-1 text-center sm:text-left">
-          <div class="font-display text-2xl font-bold text-white mb-1">Socio.id</div>
-          <p class="text-xs text-white/50">Panel SMM #1 Indonesia</p>
-        </div>
-        <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-white mb-2">Produk</h4>
-          <ul class="space-y-1.5 text-xs">
-            <li><a href="#layanan" class="hover:text-white transition">Layanan</a></li>
-            <li><a href="#harga" class="hover:text-white transition">Harga</a></li>
-            <li><a href="https://app.socio.id/api-docs" class="hover:text-white transition">API</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-white mb-2">Perusahaan</h4>
-          <ul class="space-y-1.5 text-xs">
-            <li><a href="#cara-kerja" class="hover:text-white transition">Cara Kerja</a></li>
-            <li><a href="#faq" class="hover:text-white transition">FAQ</a></li>
-            <li><a href="/blog" class="hover:text-white transition">Blog</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-white mb-2">Bantuan</h4>
-          <ul class="space-y-1.5 text-xs">
-            <li><a href="https://app.socio.id/login" class="hover:text-white transition">Masuk</a></li>
-            <li><a href="https://app.socio.id/daftar" class="hover:text-white transition">Daftar</a></li>
-            <li><a href="https://wa.me/62811919328" class="hover:text-white transition">WhatsApp</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="pt-6 border-t border-white/10 text-center text-xs text-white/40">
-        &copy; 2026 Socio.id · Panel SMM Termurah & Terpercaya di Indonesia.
-      </div>
-    </div>
-  </footer>
+  </main>
+
+  <Footer />
+
+  <!-- S0: WebSite SearchAction + sitelinks potentialAction untuk homepage (spec SEO §5) -->
+  <script type="application/ld+json" is:inline>
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Socio.id",
+      "url": "https://socio.id",
+      "inLanguage": "id-ID",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://socio.id/layanan?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Socio.id",
+        "logo": "https://socio.id/logo.png"
+      }
+    }
+  </script>
 </Layout>
 
 <style>

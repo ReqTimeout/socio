@@ -4,12 +4,8 @@
   let visible = $state(false);
   let el: HTMLElement | undefined = $state(undefined);
 
-  const stats = [
-    { value: '8.185+', label: 'Layanan SMM', icon: '⚡' },
-    { value: '872', label: 'Kategori', icon: '🎯' },
-    { value: '< 5 mnt', label: 'Waktu proses', icon: '🚀' },
-    { value: '24/7', label: 'Auto refill', icon: '♾️' },
-  ];
+  // L2: 4-col stat strip (anti-pattern #5) → real numbers inline narrative.
+  // "42 dtk rata-rata mulai" fabricated → drop. Hanya angka terverifikasi dari katalog.
 
   onMount(() => {
     const observer = new IntersectionObserver(
@@ -28,62 +24,35 @@
 
 <section
   bind:this={el}
-  class="relative overflow-hidden border-y border-ink-100 bg-gradient-to-br from-ink-900 via-ink-900 to-primary-900 py-10 md:py-14"
+  class="relative overflow-hidden border-y border-[var(--hairline)] bg-[oklch(0.19_0.02_235)] py-10 md:py-14"
 >
-  <!-- Ambient orbs -->
-  <div class="pointer-events-none absolute inset-0 opacity-30">
-    <div
-      class="absolute -left-12 top-0 h-32 w-32 rounded-full bg-primary-500/30 blur-3xl"
-    ></div>
-    <div
-      class="absolute -right-12 bottom-0 h-32 w-32 rounded-full bg-accent-500/20 blur-3xl"
-    ></div>
-  </div>
-
   <div class="container relative z-10 mx-auto px-4 md:px-6">
     <!-- Top strip: brand social proof -->
     <div class="mb-6 flex flex-wrap items-center justify-center gap-3 md:mb-8">
       <span
-        class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-sm md:text-xs"
+        class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[oklch(0.97_0.004_220)] backdrop-blur-sm md:text-xs"
       >
         <span class="relative flex h-2 w-2">
-          <span class="absolute inline-flex h-full w-full rounded-full bg-success live-dot"></span>
-          <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
+          <span class="absolute inline-flex h-full w-full rounded-full bg-[var(--color-success)] live-dot"></span>
+          <span class="relative inline-flex h-2 w-2 rounded-full bg-[var(--color-success)]"></span>
         </span>
-        Socio.id — Panel SMM #1 Indonesia · 50.000+ Reseller Aktif
+        Socio.id — Panel SMM termurah &amp; tercepat Indonesia
       </span>
     </div>
 
-    <!-- Stats grid -->
-    <div class="mx-auto grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-      {#each stats as stat, i}
-        <div
-          class="reveal text-center {visible ? 'is-visible' : ''}"
-          style="transition-delay: {i * 80}ms"
-        >
-          <div
-            class="mb-1 text-2xl text-white/60 md:text-3xl"
-            aria-hidden="true"
-          >
-            {stat.icon}
-          </div>
-          <div
-            class="font-display text-2xl font-extrabold tabular-nums text-white md:text-4xl"
-          >
-            {stat.value}
-          </div>
-          <div
-            class="text-[10px] font-bold uppercase tracking-wider text-white/60 md:text-xs"
-          >
-            {stat.label}
-          </div>
-        </div>
-      {/each}
-    </div>
+    <!-- L2 #5: inline narrative stat (anti-pattern 4-col stat strip).
+         Hanya 8.270 (katalog real) + 882 (kategori real). -->
+    <p class="reveal text-center text-[14px] font-semibold text-[oklch(0.97_0.004_220)] md:text-[16px]">
+      <span class="num font-extrabold text-[oklch(0.97_0.004_220)]">8.270</span> layanan SMM aktif
+      <span aria-hidden="true" class="mx-2 opacity-40">·</span>
+      <span class="num font-extrabold text-[oklch(0.97_0.004_220)]">882</span> kategori
+      <span aria-hidden="true" class="mx-2 opacity-40">·</span>
+      <span class="text-[oklch(0.78_0.01_220)]">panel online 24/7</span>
+    </p>
 
     <!-- Bottom strip: payment + refund trust -->
     <div
-      class="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-medium text-white/70 md:mt-8 md:text-xs"
+      class="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-medium text-[oklch(0.78_0.01_220)] md:mt-8 md:text-xs"
     >
       <span class="inline-flex items-center gap-1.5">
         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

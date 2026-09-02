@@ -1,144 +1,207 @@
-<script>
+<script lang="ts">
+  // D3: OrderSimulator — domain centerpiece (§3b #5, kartu #1 dari 2)
+  // Form 3 field → harga live count-up (tweened, pattern NumberFlow app) + SVG gauge.
+  // Reduced-motion → angka langsung tanpa tween.
   import { onMount } from 'svelte';
-  import { fly, fade } from 'svelte/transition';
-
-  let step = 0; // 0: choose, 1: fill link, 2: processing, 3: done
-  let link = '';
-  let qty = 1000;
+  import { tweened } from 'svelte/motion';
+  import { cubicOut } from 'svelte/easing';
 
   const services = [
-    { id: 'ig_followers', name: 'Instagram Followers 🔥', price: 18, unit: 'per 1k' },
-    { id: 'ig_likes', name: 'Instagram Likes ❤️', price: 12, unit: 'per 1k' },
-    { id: 'tt_views', name: 'TikTok Views ▶️', price: 8, unit: 'per 1k' },
-    { id: 'yt_views', name: 'YouTube Views 📺', price: 25, unit: 'per 1k' },
-  ];
-  let selected = services[0];
-
-  const formatIDR = (n) => new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(n);
-  const total = $derived(Math.ceil((qty / 1000) * selected.price));
-
-  const scenario = [
-    'Milih layanan Instagram Followers…',
-    'Nempel link & quantity…',
-    'Cek stok & harga grosir…',
-    'Order masuk antrean, diproses otomatis 🚀',
+    { name: 'Instagram Followers', ratePerK: 4200, min: 100 },
+    { name: 'TikTok Views', ratePerK: 42, min: 100 },
+    { name: 'YouTube Likes', ratePerK: 1350, min: 50 },
+    { name: 'Telegram Members', ratePerK: 8900, min: 100 },
   ];
 
+  let serviceIdx = $state(1);
+  let link = $state('');
+  let qty = $state(5000);
+  let submitted = $state(false);
+  let linkError = $state('');
+
+  const price = $derived(Math.ceil((qty / 1000) * services[serviceIdx].ratePerK));
+  const priceShown = tweened(0, { duration: 300, easing: cubicOut });
+  const gaugePct = $derived(Math.min(1, qty / 50000));
+  const gaugeDash = 2 * Math.PI * 40; // r=40
+
+  let reduced = false;
   onMount(() => {
-    const timers = [];
-    timers.push(setTimeout(() => (step = 1), 1200));
-    timers.push(setTimeout(() => (step = 2), 2600));
-    timers.push(setTimeout(() => (step = 3), 5200));
-    return () => timers.forEach(clearTimeout);
+    reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    priceShown.set(price, { duration: reduced ? 0 : 300 });
   });
+
+  // A5: harga count-up saat qty/service berubah
+  $effect(() => {
+    priceShown.set(price, { duration: reduced ? 0 : 300 });
+  });
+
+  const fmt = (n: number) => Math.round(n).toLocaleString('id-ID');
+
+  function submit(e: SubmitEvent) {
+    e.preventDefault();
+    const ok = /^(https?:\/\/)?(www\.)?(instagram|tiktok|youtube|t)\.[a-z.]+\/[\w.\-/@]+/i.test(link.trim());
+    if (!ok) {
+      linkError = 'Tempel link yang valid dari platform-nya';
+      return;
+    }
+    linkError = '';
+    submitted = true;
+    setTimeout(() => (submitted = false), 2600); // A4 check draw, lalu reset
+  }
 </script>
 
-<div
-  class="relative mx-auto border-ink-900 bg-ink-900 border-[12px] rounded-[2.5rem] h-[650px] w-[340px] shadow-2xl shadow-primary-900/40 flex flex-col overflow-hidden transform hover:scale-105 transition-transform duration-500 ease-out"
->
-  <div
-    class="bg-primary p-4 pt-8 text-white flex items-center gap-3 shadow-md z-20 relative"
-  >
-    <div class="relative">
-      <div
-        class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-primary font-bold text-lg border-2 border-white/20"
-      >
-        S
-      </div>
-      <div
-        class="absolute bottom-0 right-0 w-3 h-3 bg-accent-400 rounded-full border-2 border-primary animate-pulse"
-      >
-      </div>
-    </div>
-    <div>
-      <h3 class="font-display font-bold text-base tracking-wide">Socio.id</h3>
-      <p class="text-[10px] text-accent-200 flex items-center gap-1">
-        <span class="inline-block w-1.5 h-1.5 rounded-full bg-accent-400"></span>
-        Online 24 Jam
+<section class="bg-[var(--paper)] py-16 md:py-24" aria-labelledby="sim-title">
+  <div class="mx-auto max-w-6xl px-5 md:px-8">
+    <div class="reveal mx-auto max-w-2xl text-center">
+      <h2 id="sim-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Coba dulu, bayar belakangan.
+      </h2>
+      <p class="mt-3 text-[length:var(--text-body)] leading-relaxed text-ink-2">
+        Hitung sendiri harganya — tanpa daftar, tanpa login. Ini harga member;
+        sebagai <strong class="text-ink">reseller kamu bayar lebih murah dari ini</strong>,
+        di semua layanan.
       </p>
     </div>
-  </div>
 
-  <div class="flex-1 bg-ink-50 p-4 overflow-y-auto space-y-4 pb-20 scroll-smooth relative">
-    <div class="text-center">
-      <span
-        class="bg-white text-ink-600 text-[10px] px-3 py-1 rounded shadow-sm font-medium"
-        >Pesan Layanan Sosmed</span
-      >
-    </div>
-
-    {#if step >= 1}
-      <div in:fly={{ y: 10, duration: 400 }} class="bg-white rounded-2xl p-4 shadow-sm border border-ink-100 space-y-3">
-        <div class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Pilih Layanan</div>
-        <div class="space-y-2">
-          {#each services as s}
-            <button
-              class="w-full flex items-center justify-between px-3 py-2 rounded-xl border text-left text-sm transition
-                {selected.id === s.id
-                ? 'border-primary bg-primary-50 text-primary-800 font-bold'
-                : 'border-ink-200 text-ink-600 hover:border-primary-300'}"
-              onclick={() => (selected = s)}
+    <!-- Inset panel — kartu #1 (dari 2) di seluruh landing -->
+    <div class="reveal mx-auto mt-10 max-w-3xl rounded-[var(--radius-lg)] border border-[var(--hairline)] bg-white p-5 shadow-[var(--shadow-card)] md:mt-12 md:p-8" style="--d: 80ms">
+      <form class="grid gap-4" onsubmit={submit} aria-label="Simulasi harga order">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="grid gap-1.5">
+            <span class="text-[13px] font-bold text-ink">Layanan</span>
+            <select
+              bind:value={serviceIdx}
+              class="min-h-[48px] rounded-[var(--radius-sm)] border border-[var(--hairline-strong)] bg-[var(--paper)] px-3 text-[14px] font-semibold text-ink focus-visible:outline-2 focus-visible:outline-[var(--accent-ink)]"
             >
-              <span>{s.name}</span>
-              <span class="text-[11px] text-ink-400">Rp{s.price}/1k</span>
-            </button>
-          {/each}
+              {#each services as s, i}
+                <option value={i}>{s.name}</option>
+              {/each}
+            </select>
+          </label>
+          <label class="grid gap-1.5">
+            <span class="text-[13px] font-bold text-ink">Link kamu</span>
+            <input
+              bind:value={link}
+              type="text"
+              inputmode="url"
+              placeholder="https://tiktok.com/@tokokue"
+              aria-invalid={linkError ? 'true' : undefined}
+              class="min-h-[48px] rounded-[var(--radius-sm)] border border-[var(--hairline-strong)] bg-[var(--paper)] px-3 text-[14px] text-ink placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-[var(--accent-ink)]"
+            />
+            {#if linkError}
+              <span class="text-[12px] font-semibold text-[var(--color-danger)]" role="alert">{linkError}</span>
+            {/if}
+          </label>
         </div>
-      </div>
-    {/if}
 
-    {#if step >= 2}
-      <div in:fly={{ y: 10, duration: 400 }} class="bg-white rounded-2xl p-4 shadow-sm border border-ink-100 space-y-3">
-        <div>
-          <label class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Link Postingan</label>
-          <div class="mt-1 bg-ink-50 rounded-lg px-3 py-2 text-xs text-ink-500 border border-ink-100">instagram.com/p/abcd1234</div>
-        </div>
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Quantity</span>
-          <span class="font-bold text-ink-800">{qty.toLocaleString('id-ID')}</span>
-        </div>
-        <div class="flex justify-between items-center pt-2 border-t border-dashed border-ink-100">
-          <span class="text-xs text-ink-500">Total</span>
-          <span class="font-display font-bold text-primary text-lg">Rp {formatIDR(total)}</span>
-        </div>
-      </div>
-    {/if}
+        <label class="grid gap-2">
+          <span class="flex items-baseline justify-between text-[13px] font-bold text-ink">
+            Jumlah
+            <span class="num text-[13px] font-extrabold text-[var(--accent-ink)]">{fmt(qty)}</span>
+          </span>
+          <input
+            bind:value={qty}
+            oninput={(e) => (qty = Math.max(services[serviceIdx].min, Math.round(Number((e.target as HTMLInputElement).value) / 100) * 100))}
+            type="range"
+            min={services[serviceIdx].min}
+            max={50000}
+            step={100}
+            class="sim-range"
+            aria-label="Jumlah order"
+          />
+          <span class="flex justify-between text-[11px] text-ink-3">
+            <span>min {fmt(services[serviceIdx].min)}</span>
+            <span>50.000</span>
+          </span>
+        </label>
 
-    {#if step === 2}
-      <div in:fade class="bg-white rounded-2xl p-4 shadow-sm border border-ink-100">
-        <div class="flex items-center gap-2 text-sm text-ink-600">
-          <span class="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
-          Memproses order…
+        <!-- Gauge + total -->
+        <div class="grid items-center gap-6 border-t border-[var(--hairline)] pt-5 sm:grid-cols-[auto_1fr]">
+          <!-- SVG gauge ring A5 -->
+          <div class="relative mx-auto h-[104px] w-[104px]" aria-hidden="true">
+            <svg viewBox="0 0 100 100" class="h-full w-full -rotate-90">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="var(--hairline)" stroke-width="7" />
+              <circle
+                cx="50" cy="50" r="40" fill="none"
+                stroke="var(--accent-ink)"
+                stroke-width="7" stroke-linecap="round"
+                stroke-dasharray={gaugeDash}
+                stroke-dashoffset={gaugeDash * (1 - gaugePct)}
+                style="transition: stroke-dashoffset 300ms cubic-bezier(0, 0, 0.2, 1) {reduced ? ', none' : ''}"
+              />
+            </svg>
+            <span class="num absolute inset-0 grid place-items-center text-[15px] font-extrabold text-ink">
+              {Math.round(gaugePct * 100)}%
+            </span>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[12px] font-bold uppercase tracking-widest text-ink-3">Total harga</p>
+            <p class="num font-display text-[32px] font-extrabold leading-none tracking-tight text-ink md:text-[36px]">
+              Rp {fmt($priceShown)}
+            </p>
+            <p class="mt-1.5 text-[13px] text-ink-2">
+              ≈ Rp{Math.round(price / (qty / 1000)).toLocaleString('id-ID')}/1k harga member · reseller lebih murah
+            </p>
+          </div>
         </div>
-      </div>
-    {/if}
 
-    {#if step === 3}
-      <div in:fly={{ y: 10, duration: 500 }} class="bg-white rounded-2xl p-4 shadow-sm border border-success/30">
-        <div class="flex items-center gap-2 text-success font-bold text-sm mb-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            ><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"
-            ></path></svg
-          >
-          Order Berhasil! 🎉
-        </div>
-        <p class="text-xs text-ink-500">Order #SOC-88231 diproses otomatis. Cek status di dashboard kapan saja.</p>
-      </div>
-    {/if}
-  </div>
-
-  <div
-    class="absolute bottom-0 left-0 w-full bg-white p-3 flex items-center gap-2 z-20 border-t border-ink-100"
-  >
-    <div
-      class="flex-1 bg-ink-50 rounded-full h-10 px-4 text-sm flex items-center text-ink-400 border border-ink-100"
-    >
-      Saldo: Rp 250.000
+        <button
+          type="submit"
+          class="flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[var(--accent-ink)] px-8 text-[15px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]"
+        >
+          {#if submitted}
+            <!-- A4: SVG check draw -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" class="check-draw">
+              <path d="M4 12.5 9.5 18 20 6.5" />
+            </svg>
+            Harga terkunci — daftar reseller Rp50rb?
+          {:else}
+            Pesan →
+          {/if}
+        </button>
+      </form>
     </div>
-    <div
-      class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shadow-lg"
-    >
-      ➤
-    </div>
   </div>
-</div>
+</section>
+
+<style>
+  /* Slider accent (pattern kalkulator reseller) */
+  .sim-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--paper-2);
+    outline-offset: 4px;
+  }
+  .sim-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px; height: 24px;
+    border-radius: 9999px;
+    background: var(--accent-ink);
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+    transition: transform 150ms;
+  }
+  .sim-range:active::-webkit-slider-thumb { transform: scale(1.15); }
+  .sim-range::-moz-range-thumb {
+    width: 24px; height: 24px;
+    border-radius: 9999px;
+    background: var(--accent-ink);
+    border: 3px solid white;
+  }
+
+  /* A4 check draw 400ms */
+  .check-draw path {
+    stroke-dasharray: 26;
+    stroke-dashoffset: 26;
+    animation: draw 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .check-draw path { animation: none; stroke-dashoffset: 0; }
+    .sim-range::-webkit-slider-thumb { transition: none; }
+  }
+</style>

@@ -1,0 +1,75 @@
+---
+// D5: GrosirTable — 8 layanan real: harga socio (reseller) vs retail umum vs margin kamu.
+// Plan §4.1 #4: real table, paper bg. price_reseller real DB dev 1 Sep.
+// Retail = estimasi harga jual umum pasar (kolom margin = retail − socio).
+const fmt = (n: number) => 'Rp' + n.toLocaleString('id-ID');
+
+const rows = [
+  { layanan: 'TikTok Views', min: 100, socio: 154, retail: 1000, refill: false },
+  { layanan: 'IG Likes', min: 10, socio: 1439, retail: 4000, refill: false },
+  { layanan: 'Telegram Members', min: 25, socio: 748, retail: 2500, refill: false },
+  { layanan: 'YouTube Subscribers', min: 100, socio: 2876, retail: 8000, refill: false },
+  { layanan: 'YouTube Views', min: 100, socio: 5751, retail: 12000, refill: false },
+  { layanan: 'X Followers', min: 10, socio: 4424, retail: 12000, refill: false },
+  { layanan: 'Spotify Plays', min: 100, socio: 5309, retail: 15000, refill: true },
+  { layanan: 'IG Followers', min: 100, socio: 6902, retail: 20000, refill: true },
+];
+const margin = (r: (typeof rows)[number]) => r.retail - r.socio;
+---
+
+<section class="bg-[var(--paper)] py-16 md:py-24" aria-labelledby="grosir-title">
+  <div class="mx-auto max-w-6xl px-5 md:px-8">
+    <div class="reveal mx-auto max-w-2xl text-center">
+      <h2 id="grosir-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Harga kamu vs harga pasaran.
+      </h2>
+      <p class="mt-3 text-[length:var(--text-body)] leading-relaxed text-ink-2">
+        Ini harga <strong class="text-ink">reseller socio</strong> — jual di harga retail umum,
+        selisihnya masuk kantong kamu.
+      </p>
+    </div>
+
+    <!-- Real table -->
+    <div class="reveal mx-auto mt-10 max-w-3xl overflow-x-auto rounded-[var(--radius-md)] border border-[var(--hairline)] bg-white shadow-[var(--n)] md:mt-12" style="--d: 60ms">
+      <table class="w-full min-w-[420px] text-left">
+        <thead>
+          <tr class="border-b border-[var(--hairline)] bg-[var(--paper-2)]">
+            <th scope="col" class="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-ink-3">Layanan</th>
+            <th scope="col" class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-widest text-ink-3">Min</th>
+            <th scope="col" class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-widest text-[var(--accent-ink)]">Kamu /1k</th>
+            <th scope="col" class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-widest text-ink-3">Retail /1k</th>
+            <th scope="col" class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-widest text-ink-3">Margin</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[var(--hairline)]">
+          {rows.map((r, i) => (
+            <tr class="reveal row-accent" style={`--d: ${i * 40}ms`}>
+              <td class="px-4 py-3 text-[14px] font-semibold text-ink">
+                {r.layanan}
+                {r.refill && (
+                  <span class="ml-2 hidden items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 sm:inline-flex">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>
+                    refill
+                  </span>
+                )}
+              </td>
+              <td class="num px-4 py-3 text-right font-mono text-[13px] text-ink-3">{r.min}</td>
+              <td class="num px-4 py-3 text-right font-mono text-[13px] font-bold text-ink">{fmt(r.socio)}</td>
+              <td class="num px-4 py-3 text-right font-mono text-[13px] text-ink-3">{fmt(r.retail)}</td>
+              <td class="num px-4 py-3 text-right font-mono text-[13px] font-extrabold text-emerald-700">+{fmt(margin(r))}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="reveal mx-auto mt-4 max-w-3xl text-[12px] text-ink-3" style="--d: 100ms">
+      Harga per 1.000, dapat berubah mengikuti katalog — daftar untuk lihat harga live 8.270 layanan.
+    </p>
+  </div>
+</section>
+
+<style>
+  /* Micro §4.1: row hover → hairline accent left */
+  .row-accent { border-left: 2px solid transparent; transition: border-color 150ms; }
+  .row-accent:hover { border-left-color: var(--accent-ink); }
+</style>

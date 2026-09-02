@@ -1,0 +1,221 @@
+# Socio.id — Full Content for LLM ingestion
+# Generated: 2026-09-01
+# Articles: 3
+# Sitemap URLs: 17
+#
+# Format: # <slug> → metadata + FAQ + body. Plain markdown, no JSX.
+# Aturan pakai: konsumsi untuk knowledge base, RAG, AI Overview. Hindari fabricate number di luar data yang ada.
+
+
+## Money Pages (commercial — 10 high-intent URLs)
+- https://socio.id/beli-followers-facebook/
+- https://socio.id/beli-followers-instagram/
+- https://socio.id/beli-followers-tiktok/
+- https://socio.id/beli-likes-instagram/
+- https://socio.id/beli-members-telegram/
+- https://socio.id/beli-subscribers-youtube/
+- https://socio.id/beli-views-tiktok/
+- https://socio.id/beli-views-youtube/
+- https://socio.id/layanan/
+- https://socio.id/reseller/
+- https://socio.id/smm-panel-api/
+- https://socio.id/smm-panel-reseller/
+
+
+## Articles (3)
+
+### Modal Jualan Followers: Untung Berapa & Cara Mulai Rp50 Ribu
+URL: https://socio.id/blog/modal-jualan-followers
+Category: Reseller
+Published: 2026-08-28
+Description: Modal jualan followers cuma Rp50.000 — saldo Rp20.000 langsung bisa order. Hitungan untung real per 1.000 dan cara mulai dari HP.
+
+FAQ:
+  1. Berapa modal jualan followers?
+     → Rp50.000 untuk daftar reseller Socio.id — sudah termasuk saldo Rp20.000 yang bisa langsung dipakai order. Tanpa biaya bulanan, tanpa kontrak.
+  2. Untung berapa persen jualan followers?
+     → Tergantung margin yang kamu pasang. Contoh real: harga reseller IG Followers Rp6.902/1k, harga pasar jasa manual Rp50.000-Rp100.000/1k — margin bisa 5-10x dari modal layanan.
+  3. Apakah perlu punya toko atau kantor?
+     → Tidak. Semua proses dari HP: terima order lewat DM/WA, order di panel, kirim bukti. Banyak reseller jalan dari rumah tanpa karyawan.
+  4. Bagaimana cara dapat klien?
+     → Mulai dari orang terdekat, status WhatsApp, grup jualan online, dan konten edukasi. Klien datang dari proof — post hasil order kamu sendiri.
+  5. Apakah harga reseller berlaku di semua layanan?
+     → Ya. Selisihnya sekitar 7% per 1.000 tapi berlaku di 8.270 layanan semua platform, menumpuk besar di volume tinggi.
+
+Body:
+Modal jualan followers dimulai dari Rp50.000 — daftar reseller SMM panel, dapat saldo Rp20.000 untuk order pertama, plus harga layanan turun di semua katalog. Sisa Rp30.000 itu biaya akses harga grosir selamanya, bukan langganan.
+
+Hitungan untung real per 1.000
+
+Kunci bisnis ini: jual di harga pasar, order di harga reseller. Contoh dari katalog real Socio.id:
+
+| Layanan               | Harga reseller/1k | Harga jual wajar/1k | Untung/1k |
+| --------------------- | ----------------- | ------------------- | --------- |
+| TikTok Views          | Rp154             | Rp10.000            | Rp9.846   |
+| IG Likes              | Rp1.106           | Rp15.000            | Rp13.894  |
+| IG Followers (refill) | Rp6.902           | Rp60.000            | Rp53.098  |
+| Telegram Members      | Rp748             | Rp15.000            | Rp14.252  |
+
+Satu klien order 2.000 followers = untung ±Rp100.000 dari satu transaksi. Lima klien tetap sebulan sudah lebih dari gaji paruh waktu.
+
+ Yang bikin bisnis ini awet bukan margin sekali jual, tapi repeat order — klien yang puas balik tiap kali posting konten baru. Satu klien aktif bisa jadi Rp200.000-Rp500.000 omzet per bulan tanpa kamu cari klien baru lagi.
+
+Cara mulai dalam 3 langkah
+
+1. Daftar reseller — Rp50.000 di socio.id/reseller, saldo Rp20.000 masuk otomatis, harga turun di seluruh katalog.
+2. Order untuk akun sendiri dulu — post hasilnya. Ini jadi etalase gratis: "followers ini saya beli sendiri, prosesnya segini lama."
+3. Buka lapak — status WA, story IG, list harga sederhana. Terima order → order di panel → kirim bukti selesai. Selesai dalam 10 menit per order.
+
+Kenapa harga reseller beda tipis tapi tetap untung?
+
+Angka 7% memang keliatan kecil. Tapi ini bukan margin jualan kamu — ini selisih biaya pokok. Untung kamu datang dari selisih harga reseller vs harga pasar jasa (5-10x), bukan dari 7% itu. Makanya:
+
+- Order volume besar → hemat ongkos layanan menumpuk (50 ribu views hemat Rp5.500 per pesanan).
+- Harga reseller berlaku di 8.270 layanan — jualan apa saja tetap dapat harga termurah.
+- Tanpa biaya bulanan, jadi semua omzet bersih setelah modal layanan.
+
+Risiko yang perlu tahu
+
+- Klien bayar, layanan gagal — pilih layanan refill dan garansi; kalau gagal total, saldo kembali. Jangan janji "100% sukses" ke klien, janji "garansi isi ulang".
+- Followers drop — normal dalam industri ini. jelaskan refill ke klien sejak awal, jadi bukan drama pas kejadian.
+- Harga terlalu murah pasaran — jangan ikut perang harga sampai margin hilang. Melayani cepat + komunikasi jelas lebih bernilai daripada termurah Rp500.
+
+Kesimpulan
+
+Jualan followers itu bisnis margin tinggi dengan modal kecil: Rp50.000 sekali, untung per transaksi Rp10.000-Rp50.000+, repeat order tiap bulan. Mulai dari daftar reseller Socio.id — saldo Rp20.000 langsung bisa dipakai order pertama hari ini juga.
+
+
+---
+
+### Cara Menambah Followers Instagram dengan Aman (Panduan 2026)
+URL: https://socio.id/blog/cara-menambah-followers-instagram
+Category: Followers
+Published: 2026-08-26
+Description: Cara menambah followers Instagram paling aman: kombinasi konten organik + panel SMM. Langkah, harga real 2026, dan aturan biar akun aman.
+
+FAQ:
+  1. Apakah beli followers Instagram itu aman?
+     → Aman selama akun kamu tidak private, tidak baru ganti username, dan layanannya gradual (dikirim bertahap, bukan sekaligus). Layanan dengan garansi refill lebih aman lagi.
+  2. Berapa harga 1.000 followers Instagram?
+     → Di Socio.id, 1.000 followers Instagram mulai Rp7.395 untuk member dan Rp6.902 untuk reseller. Harga real-time terbaru ada di katalog layanan.
+  3. Apakah password akun diperlukan saat beli followers?
+     → Tidak. Semua layanan cukup link profil publik. Panel yang minta password adalah penipuan — jangan pernah memberikan password.
+  4. Apakah followers yang dibeli bisa drop?
+     → Sebagian bisa turun seiring pembersihan platform. Untuk itu pilih layanan refill — followers yang turun diisi ulang otomatis selama masa garansi.
+  5. Apakah followers bikin akun kena banned?
+     → Tidak ada sanksi banned untuk menerima followers. Risiko muncul dari pola spam lain, bukan dari followers masuk. Order wajar tetap aman.
+
+Body:
+Followers Instagram bisa dinaikkan dengan dua cara: organik lewat konten, atau dibantu panel SMM yang mengirim followers ke akun kamu lewat link profil. Panduan ini fokus cara kedua — yang paling cepat — dengan langkah aman biar akun tidak kena masalah.
+
+3 langkah menambah followers lewat panel
+
+1. Pastikan akun publik — followers tidak bisa dikirim ke akun private. Buka Settings → Privacy, matikan Private Account dulu sampai pesanan selesai.
+2. Pilih layanan refill — di katalog Socio.id, cari Instagram Followers dengan badge refill. Layanan ini menjamin pengisian ulang kalau jumlah turun.
+3. Order gradual — untuk akun baru, mulai 500-1.000 followers, jangan langsung 10.000. Naik bertahap kelihatan natural.
+
+Harga followers Instagram terbaru (2026)
+
+Harga per 1.000 followers, diambil dari katalog real Socio.id:
+
+| Layanan                      | Harga Member/1k | Harga Reseller/1k |
+| ---------------------------- | --------------- | ----------------- |
+| Instagram Followers (refill) | Rp7.395         | Rp6.902           |
+| Instagram Likes              | Rp1.185         | Rp1.106           |
+| Instagram Video Views        | Rp81            | Rp76              |
+
+ Kalau target kamu engagement, bukan cuma jumlah followers: kombinasi likes + views di tiap konten jauh lebih efektif daripada followers doang. Algoritma Instagram menilai interaksi per konten, bukan angka followers semata.
+
+4 aturan biar akun tetap aman
+
+- Jangan order saat akun baru dibuat — akun di bawah 30 hari lebih rapuh. Tunggu minimal sebulan, isi konten dulu 3-5 post.
+- Jangan ganti username saat ada pesanan aktif — link berubah, pesanan macet, followers nyangkut ke link lama.
+- Rahasikan jeda — kalau baru order followers, tunggu pesanan selesai sebelum order views/likes di jumlah besar ke konten yang sama.
+- Pakai refill — followers yang turun dalam masa garansi diisi ulang otomatis, tanpa perlu klaim manual.
+
+Organik + panel: kombinasi paling optimal
+
+Followers dari panel menaikkan angka, tapi yang bikin akun hidup tetap konten. Pola yang terbukti:
+
+1. Post konsisten 3-4 konten/minggu (Reels performanya paling stabil).
+2. Order views + likes di konten baru dalam 1-2 jam pertama — ini masa emas distribusi algoritma.
+3. Order followers bertahap 1-2 kali sebulan, bukan sekaligus banyak.
+
+Angka followers jadi social proof — pengunjung profil lebih percaya akun 10 ribu followers daripada 300. Tapi retensi dan penjualan datang dari konten yang memang layak dilihat.
+
+Kesimpulan
+
+Menambah followers Instagram itu murah dan cepat — Rp7.395 per 1.000 — asal diikuti aturan aman: akun publik, layanan refill, order bertahap. Lihat katalog lengkap Instagram di Socio.id atau langsung daftar dan order.
+
+
+---
+
+### Apa Itu SMM Panel? Definisi, Cara Kerja & Harganya di Indonesia
+URL: https://socio.id/blog/apa-itu-smm-panel
+Category: Lainnya
+Published: 2026-08-24
+Description: SMM panel adalah website yang menjual layanan sosmed — followers, likes, views — yang diproses otomatis lewat sistem. Baca cara kerja & harganya.
+
+FAQ:
+  1. Apa itu SMM panel dalam satu kalimat?
+     → SMM panel adalah situs yang menjual layanan media sosial seperti followers, likes, dan views yang diproses secara otomatis setelah pembayaran masuk.
+  2. Apakah SMM panel legal dan aman dipakai?
+     → Legal. Semua transaksi jelas dan pembayaran tercatat. Untuk keamanan akun, pilih layanan gradual refill dan gunakan secara wajar — bukan spam massal.
+  3. Berapa modal minimal untuk mulai pakai SMM panel?
+     → Di Socio.id, daftar reseller Rp50.000 sudah dapat saldo Rp20.000 yang bisa langsung dipakai order. Harga layanan mulai Rp48 per 1.000.
+  4. Apakah followers dari SMM panel bisa drop?
+     → Layanan tertentu memang bisa turun karena pembersihan platform. Karena itu pilih layanan dengan garansi refill — follower yang drop diisi ulang otomatis tanpa biaya.
+  5. Apa bedanya SMM panel dengan jasa followers manual?
+     → Jasa manual dikerjakan orang per orang lewat DM, harganya bisa Rp100 ribu per 1.000 followers. SMM panel terhubung ke sistem provider, harganya bisa di bawah Rp10 ribu per 1.000 dengan proses otomatis.
+
+Body:
+SMM panel adalah situs yang menjual layanan media sosial — followers, likes, views, subscribers — yang diproses otomatis lewat sistem, bukan dikerjakan manual satu per satu. Kamu tempel link, pilih jumlah, bayar, dan pesanan diproses ke provider dalam hitungan menit.
+
+Artikel ini menjelaskan cara kerjanya, kenapa harganya jauh lebih murah dari jasa manual, dan berapa biaya aktual tiap layanan di Indonesia tahun 2026.
+
+Cara kerja SMM panel dalam 3 langkah
+
+Semua SMM panel — termasuk Socio.id — bekerja dengan alur yang sama:
+
+1. Tempel link — URL profil atau konten yang mau dinaikkan (tanpa password, jadi akun kamu tetap aman).
+2. Pilih jumlah — misal 1.000 followers atau 10.000 views. Harga dihitung otomatis per 1.000 unit.
+3. Bayar dari saldo — pesanan langsung masuk antrean provider dan mulai berjalan dalam 1-10 menit.
+
+Tidak ada negosiasi, tidak ada DM bolak-balik. Panel bekerja 24 jam, termasuk tengah malam dan hari libur.
+
+Kenapa SMM panel jauh lebih murah dari jasa manual
+
+Jasa followers manual yang beredar di marketplace biasanya memasang Rp75.000-Rp150.000 untuk 1.000 followers Instagram. SMM panel bisa memberi harga di bawah Rp10.000 untuk kualitas yang sama. Selisihnya ada di dua tempat:
+
+- Otomasi total — tidak ada admin yang memproses pesanan satu per satu, sistem yang mengirim langsung ke provider.
+- Harga grosir provider — panel membeli kapasitas dalam volume besar, lalu meneruskan harga tipis ke pembeli.
+
+Harga aktual layanan SMM di Socio.id (2026)
+
+Berikut harga riil per 1.000 unit, diambil langsung dari katalog 8.270 layanan:
+
+| Layanan               | Harga Member/1k | Harga Reseller/1k |
+| --------------------- | --------------- | ----------------- |
+| TikTok Video Views    | Rp165           | Rp154             |
+| Instagram Video Views | Rp81            | Rp76              |
+| Telegram Members      | Rp801           | Rp748             |
+| Instagram Likes       | Rp1.185         | Rp1.106           |
+| TikTok Likes          | Rp2.442         | Rp2.279           |
+| YouTube Subscribers   | Rp3.081         | Rp2.876           |
+| Instagram Followers   | Rp7.395         | Rp6.902           |
+
+ Poin penting: harga reseller hanya beda tipis per 1.000 — sekitar 7% — tapi ini berlaku di semua 8.270 layanan dan menumpuk besar di volume tinggi. Reseller yang order 50 ribu TikTok Views hemat Rp5.500 per pesanan; kalau ratusan pesanan sebulan, itu ribuan rupiah cuma dari selisih harga.
+
+Daftar reseller Rp50.000 sekali bayar: saldo Rp20.000 langsung bisa dipakai order, harga turun otomatis di semua layanan.
+
+Cara memilih SMM panel yang aman
+
+Sebelum top up di panel mana pun, cek empat hal ini:
+
+- Ada harga terbuka — katalog layanan dan harganya bisa dilihat tanpa login. Panel yang menyembunyikan harga biasanya menandai harga pasar berkali-kali lipat.
+- Ada garansi refill — layanan followers yang bagus menyertakan jaminan isi ulang kalau jumlah turun dalam masa garansi.
+- Bisa top up kecil — mulai Rp10.000. Panel yang memaksa deposit besar 
+
+[... truncated, full article at https://socio.id/blog/apa-itu-smm-panel]
+
+---

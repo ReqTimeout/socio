@@ -1,7 +1,47 @@
+# socio.id — robots.txt
+# Goal: index money pages + blog informational. Exclude API + non-prod.
+# Per spec LANDING_SEO_SYSTEM.md §5 — AI bots allowlist untuk llms.txt consumption.
+
+# ===== Default =====
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /404
 
-# Cloudflare Pages: SEO prioritas
-Sitemap: https://socio.id/sitemap.xml
+# Sitemap discoverability
 Sitemap: https://socio.id/sitemap-index.xml
+
+# ===== AI crawlers (llms.txt consumption — SEO system §5) =====
+# Allowlist: kita GENERATE llms.txt + llms-full.txt untuk AI consumption.
+# Bot yang patuh robots.txt → otomatis consume.
+User-agent: GPTBot
+Allow: /
+# CCBot = Common Crawl (data untuk training LLM lain)
+User-agent: CCBot
+Allow: /
+# anthropic-ai = ClaudeBot
+User-agent: anthropic-ai
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+# Perplexity-Bot = search engine AI
+User-agent: Perplexity-Bot
+Allow: /
+# Google-Extended = training untuk Gemini (separate dari Googlebot indexing)
+User-agent: Google-Extended
+Allow: /
+# Applebot-Extended
+User-agent: Applebot-Extended
+Allow: /
+
+# Bad bots (aggressive scrapers) — block
+User-agent: AhrefsBot
+Disallow: /
+User-agent: SemrushBot
+Disallow: /
+User-agent: MJ12bot
+Disallow: /
+
+# ===== IndexNow verification (spec §5) =====
+# IndexNow key file di-discover via robots.txt crawl → otomatis verify ownership.
+# Key file: https://socio.id/indexnow.txt (akan di-generate oleh seo/indexnow.mjs)

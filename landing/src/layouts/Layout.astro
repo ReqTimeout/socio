@@ -1,9 +1,14 @@
 ---
 import '../styles/global.css';
+// D0: import font aset → Astro kasih hashed URL stabil untuk preload
+import soraWoff2 from '../fonts/sora-latin.woff2';
+import jakartaWoff2 from '../fonts/plus-jakarta-latin.woff2';
 
-const title = 'Socio.id — Panel SMM Termurah & Tercepat di Indonesia';
-const description =
-  'Socio.id adalah panel SMM (Social Media Marketing) terpercaya untuk beli follower, like, view, dan layanan SEO dengan harga termurah, proses kilat, dan garansi. Daftar gratis, top-up mulai Rp10.000.';
+const {
+  title = 'Socio.id — Panel SMM Termurah & Tercepat di Indonesia',
+  description = 'Panel SMM reseller terpercaya: daftar Rp50.000, saldo Rp20.000 langsung jalan + harga reseller lebih murah di 8.270 layanan Instagram, TikTok, YouTube. Proses otomatis 24 jam, garansi refill.',
+  dockCta = '',
+} = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://socio.id').href;
 const ogImage = new URL('/og-image.png', Astro.site ?? 'https://socio.id').href;
 ---
@@ -45,32 +50,115 @@ const ogImage = new URL('/og-image.png', Astro.site ?? 'https://socio.id').href;
         "operatingSystem": "Web-based",
         "offers": {
           "@type": "Offer",
-          "price": "10000",
+          "price": "50000",
           "priceCurrency": "IDR",
-          "priceValidUntil": "2026-12-31"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "ratingCount": "12450"
+          "priceValidUntil": "2027-12-31"
         },
         "inLanguage": "id-ID"
+      }
+    </script>
+
+    <!-- S0: Organization (global, semua halaman) — identitas brand konsisten untuk knowledge graph -->
+    <script type="application/ld+json" is:inline>
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Socio.id",
+        "alternateName": "Socio ID",
+        "url": "https://socio.id",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://socio.id/logo.png",
+          "width": 512,
+          "height": 512
+        },
+        "description": "Panel SMM reseller termurah dan tercepat di Indonesia. 8.270 layanan Instagram, TikTok, YouTube, Telegram, Spotify & SEO.",
+        "sameAs": [
+          "https://socio.id"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "customer support",
+          "telephone": "+62-811-9193-28",
+          "availableLanguage": ["Indonesian", "English"]
+        }
       }
     </script>
 
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="generator" content={Astro.generator} />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- D3: global reveal observer — trigger .reveal di markup statik Astro
+         (islands Svelte punya observer sendiri). threshold 0.15, sekali saja.
+         Fallback scroll-handler: IO callback bisa coalesce saat fast-scroll
+         (browser skip posisi intermediate) → elemen pendek kelewat → stuck. -->
+    <script>
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const pending = new Set<Element>();
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) show(e.target as HTMLElement);
+          }
+        },
+        { threshold: 0.15, rootMargin: '-40px' },
+      );
+
+      function show(el: HTMLElement) {
+        el.style.transitionDelay = el.style.getPropertyValue('--d') || '0ms';
+        el.classList.add('is-visible');
+        pending.delete(el);
+        io.unobserve(el);
+      }
+
+      function collect() {
+        document.querySelectorAll('.reveal:not(.is-visible)').forEach((el) => {
+          pending.add(el);
+          io.observe(el);
+        });
+      }
+
+      function checkScroll() {
+        if (pending.size === 0) return;
+        const limit = innerHeight - 40;
+        for (const el of pending) {
+          if ((el as HTMLElement).getBoundingClientRect().top < limit) show(el as HTMLElement);
+        }
+      }
+
+      if (reduced) {
+        document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
+      } else {
+        collect();
+        // Fallback — scroll event tidak coalesce posisi
+        addEventListener(
+          'scroll',
+          () => requestAnimationFrame(checkScroll),
+          { passive: true },
+        );
+      }
+    </script>
+
+    <!-- D0: font self-host — preload hashed woff2 (LCP: H1 Sora, body PJA).
+         Google Fonts CDN dihapus total (zero third-party request). -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300..800&family=Sora:wght@400..800&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href={soraWoff2}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href={jakartaWoff2}
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
 
     <title>{title}</title>
   </head>
-  <body>
+  <body data-dock-cta={dockCta}>
     <slot />
   </body>
 </html>

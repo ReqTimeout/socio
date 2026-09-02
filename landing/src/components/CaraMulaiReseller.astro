@@ -1,0 +1,47 @@
+---
+// D5: CaraMulaiReseller — timeline numbered 3 langkah (1-2-3 vertical, bukan 01).
+// Plan §4.1 #6 + wireframe mobile "Cara mulai 1→2→3 vertical". Paper bg.
+const steps = [
+  {
+    n: 1,
+    title: 'Daftar & transfer Rp50.000',
+    desc: 'Isi form, kami email detail rekening (nominal unik biar gampang cocok). Admin approve — saldo Rp20.000 langsung masuk.',
+  },
+  {
+    n: 2,
+    title: 'Top-up sesuai modal',
+    desc: 'Saldo awal bisa dipakai langsung. Mau jualan lebih besar? Top-up kapan saja — mulai Rp10rb.',
+  },
+  {
+    n: 3,
+    title: 'Jual dengan harga kamu',
+    desc: 'Tempel link client, order jalan otomatis 24 jam. Refill & garansi diurus socio — kamu fokus cari pembeli.',
+  },
+];
+---
+
+<section class="bg-[var(--paper)] py-16 md:py-24" aria-labelledby="mulai-title">
+  <div class="mx-auto max-w-6xl px-5 md:px-8">
+    <div class="reveal mx-auto max-w-2xl text-center">
+      <h2 id="mulai-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Jualan dalam 3 langkah.
+      </h2>
+    </div>
+
+    <!-- Timeline vertical: hairline rail + node angka (bukan card grid) -->
+    <ol class="reveal relative mx-auto mt-10 max-w-2xl md:mt-14" style="--d: 60ms">
+      <div class="absolute left-[22px] top-3 bottom-3 w-px bg-[var(--hairline)]" aria-hidden="true"></div>
+      {steps.map((s, i) => (
+        <li class="reveal relative grid grid-cols-[44px_1fr] gap-4 py-5" style={`--d: ${i * 100}ms`}>
+          <span class="num relative z-10 grid h-11 w-11 place-items-center rounded-full border border-[var(--hairline-strong)] bg-white font-mono text-[15px] font-extrabold text-[var(--accent-ink)]">
+            {s.n}
+          </span>
+          <div class="min-w-0 pt-1.5">
+            <h3 class="font-display text-[17px] font-bold text-ink">{s.title}</h3>
+            <p class="mt-1.5 text-[14px] leading-relaxed text-ink-2">{s.desc}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>

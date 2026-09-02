@@ -1,41 +1,229 @@
 ---
+import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.svelte';
+import Footer from '../../components/Footer.astro';
+import ArtThumb from '../../components/ArtThumb.astro';
+
+// D7: /blog index — editorial list (bukan card grid), featured di atas,
+// ledger rows + hairline, chip filter client via radio CSS-only (no JS island),
+// newsletter inline + pagination windowed. Spec §3e + §4.3.
+const all = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+
+const PER_PAGE = 6;
+const totalPages = Math.max(1, Math.ceil(all.length / PER_PAGE));
+const featured = all.find((a) => a.data.category === 'Reseller') ?? all[0];
+const rest = all.filter((a) => a.id !== featured?.id);
+
+const fmtDate = (d: Date) =>
+  new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(d);
+
+const categories = ['Semua', 'Followers', 'TikTok', 'Reseller', 'Lainnya'];
+
+// DOI-friendly date untuk schema
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'Blog',
+  name: 'Blog Socio.id',
+  url: 'https://socio.id/blog',
+  description: 'Tips SMM, harga layanan terkini, dan panduan bisnis reseller social media.',
+  inLanguage: 'id-ID',
+  blogPost: all.map((a) => ({
+    '@type': 'BlogPosting',
+    headline: a.data.title,
+    datePublished: a.data.pubDate.toISOString(),
+    url: `https://socio.id/blog/${a.id}`,
+  })),
+};
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://socio.id' },
+    { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://socio.id/blog' },
+  ],
+};
 ---
 
-<Layout>
+<Layout
+  title="Blog Socio.id — Tips SMM, Harga Real & Panduan Reseller"
+  description="Artikel SMM terbaru: cara aman beli followers, harga TikTok/IG/YouTube terkini dari katalog 8.270 layanan, dan panduan bisnis reseller modal Rp50 ribu."
+>
   <Navbar client:load />
 
-  <section class="pt-32 pb-24 md:pt-40 md:pb-32 bg-white">
-    <div class="container mx-auto max-w-2xl px-5 text-center">
-      <span class="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
-        Blog
-      </span>
-      <h1 class="mt-4 font-display text-3xl sm:text-4xl font-extrabold text-ink-900">
-        Artikel &amp; Tips SMM
-      </h1>
-      <p class="mt-3 text-ink-500 text-sm md:text-base">
-        Konten sedang disiapkan — panduan naik followers aman, strategi jualan untuk reseller,
-        dan update layanan Socio.id akan terbit di sini.
-      </p>
-      <div class="mt-8 flex flex-col gap-3 sm:flex-row justify-center">
-        <a
-          href="https://app.socio.id/daftar"
-          class="inline-flex items-center justify-center rounded-full bg-primary px-7 py-4 font-bold text-white shadow-lg hover:-translate-y-0.5 transition"
-        >
-          Daftar Gratis →
-        </a>
-        <a
-          href="/"
-          class="inline-flex items-center justify-center rounded-full border-2 border-ink-200 bg-white px-7 py-4 font-bold text-ink-900 hover:bg-ink-50 transition"
-        >
-          ← Kembali ke Beranda
-        </a>
+  <!-- #1 Hero + chip filter -->
+  <header class="bg-[var(--paper)] pb-8 pt-32 md:pb-10 md:pt-40">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <nav aria-label="Breadcrumb" class="reveal mb-6 text-[12px] font-medium text-ink-3">
+        <a href="/" class="hover:text-ink underline-offset-2 hover:underline">Beranda</a>
+        <span aria-hidden="true"> / </span>
+        <span aria-current="page" class="text-ink-2">Blog</span>
+      </nav>
+      <div class="reveal">
+        <h1 class="font-display text-[length:var(--text-hero)] font-bold leading-[1.05] tracking-tight text-ink">
+          Tips SMM &amp; reseller.
+        </h1>
+        <p class="mt-4 max-w-xl text-[length:var(--text-body)] leading-relaxed text-ink-2 md:text-[17px]">
+          Harga real dari katalog, panduan aman, dan hitung-hitung bisnis — ditulis dari
+          data, bukan tebakan.
+        </p>
       </div>
-    </div>
-  </section>
 
-  <footer class="bg-ink-900 py-8 text-center text-xs text-white/40 border-t border-white/10">
-    &copy; 2026 Socio.id · Panel SMM Termurah &amp; Terpercaya di Indonesia.
-  </footer>
+      <!-- Chip filter: CSS-only radio hack — a11y native, 0 JS -->
+      <fieldset class="reveal mt-8" style="--d: 60ms">
+        <legend class="sr-only">Filter kategori artikel</legend>
+        <div class="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {categories.map((c, i) => (
+            <label class="shrink-0">
+              <input
+                type="radio"
+                name="cat"
+                value={c}
+                checked={i === 0}
+                class="peer sr-only"
+              />
+              <span
+                class="inline-flex min-h-[40px] cursor-pointer items-center rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-4 text-[13px] font-semibold text-ink-2 transition-colors
+                  peer-checked:border-[var(--accent-ink)] peer-checked:bg-[var(--accent-ink)] peer-checked:text-white
+                  hover:border-[var(--accent-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-focus-ring)]"
+              >
+                {c}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    </div>
+  </header>
+
+  <!-- #2 Featured + #3 ledger rows -->
+  <main class="bg-[var(--paper)] pb-16 md:pb-24">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      {featured && (
+        <a
+          href={`/blog/${featured.id}`}
+          class="reveal group mt-2 block"
+          data-cat={featured.data.category}
+        >
+          <article class="grid gap-5 rounded-2xl border border-[var(--hairline)] bg-[var(--paper)] p-5 transition-shadow hover:shadow-[var(--n)] md:grid-cols-[2fr_3fr] md:gap-8 md:p-8">
+            <div class="min-w-0">
+              <ArtThumb seed={featured.id} size="lg" class="aspect-[16/9] w-full" />
+            </div>
+            <div class="min-w-0 self-center">
+              <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-semibold text-ink-3">
+                <span class="rounded-full bg-[var(--accent-tint)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--accent-ink)]">Unggulan</span>
+                <span>{featured.data.category}</span>
+                <span aria-hidden="true">·</span>
+                <time datetime={featured.data.pubDate.toISOString()}>{fmtDate(featured.data.pubDate)}</time>
+              </p>
+              <h2 class="mt-3 font-display text-2xl font-bold leading-tight tracking-tight text-ink md:text-3xl group-hover:underline group-hover:decoration-2 group-hover:underline-offset-4">
+                {featured.data.title}
+              </h2>
+              <p class="mt-3 text-[15px] leading-relaxed text-ink-2 line-clamp-3">
+                {featured.data.description}
+              </p>
+            </div>
+          </article>
+        </a>
+      )}
+
+      <!-- Ledger rows: hairline antar row, thumb 96px kiri -->
+      <div class="mt-8 divide-y divide-[var(--hairline)] border-t border-[var(--hairline)] md:mt-12">
+        {rest.map((a, i) => (
+          <a
+            href={`/blog/${a.id}`}
+            class="reveal group block py-5 md:py-6"
+            data-cat={a.data.category}
+            style={`--d: ${(i % 3) * 60}ms`}
+          >
+            <article class="flex items-start gap-4 md:gap-6">
+              <div class="w-24 shrink-0 md:w-28">
+                <ArtThumb seed={a.id} class="aspect-[16/10] w-full" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <h3 class="font-display text-[16px] font-bold leading-snug text-ink group-hover:underline group-hover:decoration-2 group-hover:underline-offset-4 md:text-[18px]">
+                  {a.data.title}
+                </h3>
+                <p class="mt-1 hidden text-[14px] leading-relaxed text-ink-2 line-clamp-2 sm:block">
+                  {a.data.description}
+                </p>
+                <p class="mt-2 flex items-center gap-2 text-[12px] font-medium text-ink-3">
+                  <span class="rounded-full bg-[var(--paper-2)] px-2 py-0.5 font-semibold">{a.data.category}</span>
+                  <time datetime={a.data.pubDate.toISOString()}>{fmtDate(a.data.pubDate)}</time>
+                </p>
+              </div>
+            </article>
+          </a>
+        ))}
+      </div>
+
+      <!-- #4 Newsletter inline (stub simpan lokal dulu — Resend via app API nanti) -->
+      <section class="reveal mt-12 rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)] p-6 md:mt-16 md:p-8" aria-labelledby="nl-title">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div class="min-w-0">
+            <h2 id="nl-title" class="font-display text-lg font-bold text-ink">Dapat update artikel?</h2>
+            <p class="mt-1 text-[14px] text-ink-2">Satu email tiap ada artikel baru. No spam.</p>
+          </div>
+          <form
+            class="flex w-full max-w-md gap-2"
+            method="POST"
+            action="https://app.socio.id/newsletter"
+          >
+            <label for="nl-email" class="sr-only">Email</label>
+            <input
+              id="nl-email"
+              type="email"
+              name="email"
+              required
+              placeholder="email@kamu.com"
+              class="min-h-[48px] min-w-0 flex-1 rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-5 text-[14px] text-ink placeholder:text-ink-3 focus:border-[var(--accent-ink)] focus:outline-none"
+            />
+            <button
+              type="submit"
+              class="inline-flex min-h-[48px] shrink-0 items-center rounded-full bg-[var(--accent-ink)] px-6 text-[14px] font-bold text-white transition-transform duration-150 hover:scale-[1.03] active:scale-[0.97]"
+            >
+              Langganan
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- #5 Pagination windowed (statis — halaman index penuh saat artikel < PER_PAGE) -->
+      {totalPages > 1 && (
+        <nav class="mt-10 flex items-center justify-center gap-1" aria-label="Navigasi halaman blog">
+          {Array.from({ length: totalPages }, (_, i) => (
+            <a
+              href={i === 0 ? '/blog' : `/blog/page/${i + 1}`}
+              aria-current={i === 0 ? 'page' : undefined}
+              class="grid h-10 min-w-10 place-items-center rounded-full px-3 text-[14px] font-semibold text-ink-2 transition-colors hover:bg-[var(--paper-2)]
+                aria-[current=page]:bg-[var(--accent-ink)] aria-[current=page]:text-white"
+            >
+              {i + 1}
+            </a>
+          ))}
+        </nav>
+      )}
+    </div>
+  </main>
+
+  <Footer />
+
+  <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+
+  <!-- Chip filter: show/hide rows via data-cat. Vanilla, no island. -->
+  <script>
+    const inputs = document.querySelectorAll<HTMLInputElement>('input[name="cat"]');
+    const rows = document.querySelectorAll<HTMLElement>('[data-cat]');
+    inputs.forEach((input) => {
+      input.addEventListener('change', () => {
+        const v = input.value;
+        rows.forEach((r) => {
+          r.style.display = v === 'Semua' || r.dataset.cat === v ? '' : 'none';
+        });
+      });
+    });
+  </script>
 </Layout>

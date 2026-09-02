@@ -1,9 +1,45 @@
+/* Self-host variable fonts (D0 — gantikan Google Fonts CDN: privasi + kecepatan).
+ * Subset latin (Bahasa Indonesia = ASCII + latin ext jarang), pattern app app.css.
+ * File di src/fonts/ (hashed URL stabil per build Astro/Vite). */
+@font-face {
+  font-family: "Plus Jakarta Sans Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url("../fonts/plus-jakarta-latin.woff2") format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+    U+FFFD;
+}
+@font-face {
+  font-family: "Sora Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url("../fonts/sora-latin.woff2") format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+    U+FFFD;
+}
+
 @import "tailwindcss";
 @import "@socio/ui/theme.css";
+@import "./tokens.css";
 
 /* Sembunyikan horizontal overflow dari animasi blur/pulse di mobile */
-html, body {
+html,
+body {
   overflow-x: clip;
+}
+
+/* Landing body: paper bg + ink text dari kontrak D0 */
+@layer base {
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+  }
 }
 
 /* Smooth scroll behavior mobile-first */
@@ -16,42 +52,112 @@ html, body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  /* Focus-visible default ring (a11y) */
+  /* Focus-visible ring accent kontrak (bukan primary indigo lama) */
   :focus-visible {
-    outline: 2px solid var(--color-primary-600, #4f46e5);
+    outline: 2px solid var(--accent-ink);
     outline-offset: 2px;
   }
 }
 
+/* Craft kontrak §2: heading balance, prose pretty, angka tabular */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+.tabular-nums,
+.num {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
 /* Hero gradient animation */
 @keyframes animate-gradient {
-  0%, 100% { background-position: 0% 50%; }
-  50%      { background-position: 100% 50%; }
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 /* Soft pulse for live badge */
 @keyframes live-pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
-.live-dot { animation: live-pulse 1.6s ease-in-out infinite; }
+.live-dot {
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
 
 /* Shimmer for CTA button */
 @keyframes shimmer {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(200%); }
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(200%);
+  }
 }
 
 /* Reveal on scroll */
 .reveal {
   opacity: 0;
   transform: translateY(24px);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .reveal.is-visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* D2: hero load-sequence — entrance sekali saat load (bukan scroll), tiap baris +120ms */
+.hero-seq-0,
+.hero-seq-1,
+.hero-seq-2,
+.hero-seq-3,
+.hero-seq-4,
+.hero-seq-5 {
+  opacity: 0;
+  animation: hero-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.hero-seq-0 {
+  animation-delay: 0ms;
+}
+.hero-seq-1 {
+  animation-delay: 120ms;
+}
+.hero-seq-2 {
+  animation-delay: 240ms;
+}
+.hero-seq-3 {
+  animation-delay: 360ms;
+}
+.hero-seq-4 {
+  animation-delay: 480ms;
+}
+.hero-seq-5 {
+  animation-delay: 600ms;
+}
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Reduced motion */
@@ -61,5 +167,17 @@ html, body {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+  .hero-seq-0,
+  .hero-seq-1,
+  .hero-seq-2,
+  .hero-seq-3,
+  .hero-seq-4,
+  .hero-seq-5 {
+    opacity: 1;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
   }
 }

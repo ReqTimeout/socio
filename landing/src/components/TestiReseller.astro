@@ -1,0 +1,46 @@
+---
+// D5: TestiReseller — 2 testi ledger row + inisial (pattern TestiLedger D4), paper-2 bg.
+const testi = [
+  {
+    initials: 'RA',
+    name: 'Rizky A.',
+    role: 'Reseller SMM · 2 tahun',
+    text: 'Modal Rp50rb langsung balik arung. Harga reseller bikin margin aman — order client tinggal tempel link.',
+    metric: '1.2 jt order',
+  },
+  {
+    initials: 'HN',
+    name: 'Hendra N.',
+    role: 'Admin bot Telegram',
+    text: 'API-nya stabil, bot saya jalan sendiri gak perlu diemong. Klien nanya status tinggal satu call.',
+    metric: '60 rb req/bulan',
+  },
+];
+---
+
+<section class="bg-[var(--paper-2)] py-16 md:py-24" aria-labelledby="testi-r-title">
+  <div class="mx-auto max-w-6xl px-5 md:px-8">
+    <div class="reveal mx-auto max-w-2xl text-center">
+      <h2 id="testi-r-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Mereka sudah jualan duluan.
+      </h2>
+    </div>
+    <div class="mx-auto mt-10 max-w-3xl divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] md:mt-14">
+      {testi.map((t, i) => (
+        <div class="reveal flex items-start gap-4 py-6" style={`--d: ${i * 80}ms`}>
+          <span class="num grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)] text-[14px] font-extrabold text-[var(--accent-ink)]" aria-hidden="true">
+            {t.initials}
+          </span>
+          <div class="min-w-0 flex-1">
+            <blockquote class="text-[15px] font-medium leading-relaxed text-ink md:text-[16px]">
+              “{t.text}”
+            </blockquote>
+            <p class="mt-2 text-[12px] text-ink-3">
+              <span class="font-bold text-ink-2">{t.name}</span> · {t.role} · <span class="num font-semibold text-ink-2">{t.metric}</span>
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

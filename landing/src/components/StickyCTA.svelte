@@ -1,43 +1,38 @@
 <script>
-  import { fade, fly } from 'svelte/transition';
-  import { onMount } from 'svelte';
+  import { fly } from 'svelte/transition';
 
-  let showSticky = false;
-  const regLink = 'https://app.socio.id/register';
+  let showSticky = $state(false);
+  const regLink = 'https://app.socio.id/daftar?mode=reseller';
 
-  onMount(() => {
-    const handleScroll = () => {
+  $effect(() => {
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const onScroll = () => {
       showSticky = window.scrollY > 300;
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    onScroll();
+    addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      removeEventListener('scroll', onScroll);
+    };
   });
 </script>
 
 {#if showSticky}
-  <div transition:fly={{ y: 100, duration: 500 }} class="fixed bottom-4 left-0 w-full z-50 px-4 flex justify-center">
-    <div
-      class="bg-primary/95 backdrop-blur-md text-white p-3 md:p-4 rounded-full shadow-2xl flex items-center gap-4 md:gap-8 border border-white/10 max-w-2xl w-full justify-between"
+  <div
+    transition:fly={{ y: 100, duration: 380 }}
+    class="md:hidden fixed inset-x-3 z-40 px-1 pb-[calc(5.25rem+env(safe-area-inset-bottom))]"
+  >
+    <a
+      href={regLink}
+      class="flex min-h-[52px] w-full items-center justify-between gap-3 rounded-full border border-white/10 bg-[oklch(0.19_0.02_235_/_0.96)] px-4 py-2.5 text-white shadow-[0_10px_36px_-14px_rgba(6,182,212,0.45),0_4px_14px_rgba(15,23,42,0.28)] backdrop-blur-md transition-transform duration-150 hover:scale-[1.01] active:scale-[0.98]"
     >
-      <div class="hidden md:block pl-4">
-        <p class="text-sm font-light text-ink-200">Belum punya akun?</p>
-        <p class="font-bold text-white text-sm">Daftar gratis, top-up mulai Rp10.000.</p>
+      <div class="min-w-0 leading-tight">
+        <p class="text-[13px] font-bold text-white">Daftar reseller · Rp50.000</p>
+        <p class="text-[10px] font-medium tracking-wide text-white/65">Saldo Rp20rb + harga reseller</p>
       </div>
-
-      <div class="flex items-center gap-3 w-full md:w-auto">
-        <div class="md:hidden flex-1 pl-2">
-          <p class="text-xs text-accent-200 font-bold">Gratis Daftar!</p>
-          <p class="text-[10px] text-ink-300">Tanpa kartu kredit</p>
-        </div>
-
-        <a
-          href={regLink}
-          class="bg-accent-500 text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-[0_0_15px_rgba(6,182,212,0.6)] hover:scale-105 transition-transform flex items-center gap-2 whitespace-nowrap animate-pulse"
-        >
-          Daftar
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-        </a>
-      </div>
-    </div>
+      <span class="grid h-9 shrink-0 place-items-center rounded-full bg-[var(--accent-ink)] px-4 text-[12px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+        Daftar
+      </span>
+    </a>
   </div>
 {/if}

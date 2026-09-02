@@ -1,0 +1,76 @@
+---
+// D4: PricingTable — inline pricing prose + real table harga (bukan 3-tier card).
+// Harga REAL dari DB dev 1 Sep (services.price = per-1k Member, price_reseller = per-1k Reseller).
+// Retail normal = estimasi harga jual umum di pasar (untuk perbandingan margin).
+const fmt = (n: number) => 'Rp' + n.toLocaleString('id-ID');
+
+const rows = [
+  { layanan: 'TikTok Views', min: 100, kamu: 165, retail: 1000, refill: false },
+  { layanan: 'IG Likes', min: 10, kamu: 1542, retail: 4000, refill: false },
+  { layanan: 'Telegram Members', min: 25, kamu: 801, retail: 2500, refill: false },
+  { layanan: 'YouTube Subscribers', min: 100, kamu: 3081, retail: 8000, refill: true },
+  { layanan: 'YouTube Views', min: 100, kamu: 6162, retail: 12000, refill: false },
+  { layanan: 'X Followers', min: 10, kamu: 4740, retail: 12000, refill: false },
+  { layanan: 'Spotify Plays', min: 100, kamu: 5688, retail: 15000, refill: false },
+  { layanan: 'IG Followers', min: 100, kamu: 7395, retail: 20000, refill: true },
+];
+---
+
+<section class="bg-[var(--paper)] py-16 md:py-24" aria-labelledby="harga-title">
+  <div class="mx-auto max-w-6xl px-5 md:px-8">
+    <div class="reveal mx-auto max-w-2xl text-center">
+      <h2 id="harga-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Daftar Rp50 ribu. Harga grosir selamanya.
+      </h2>
+      <p class="mt-3 text-[length:var(--text-body)] leading-relaxed text-ink-2">
+        Sekali daftar reseller <strong class="text-ink">Rp50.000</strong>, saldo awal
+        <strong class="text-ink">Rp20.000</strong> langsung masuk — dan semua layanan di bawah ini
+        kamu dapat <strong class="text-ink">lebih murah dari harga member</strong>. Potongan berlaku
+        permanen di 8.270 layanan.
+      </p>
+    </div>
+
+    <!-- Real table -->
+    <div class="reveal mx-auto mt-10 max-w-3xl overflow-hidden rounded-[var(--radius-md)] border border-[var(--hairline)] bg-white shadow-[var(--shadow-card)] md:mt-12" style="--d: 60ms">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="border-b border-[var(--hairline)] bg-[var(--paper-2)]">
+            <th scope="col" class="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-ink-3">Layanan</th>
+            <th scope="col" class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-widest text-ink-3">Min</th>
+            <th scope="col" class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-widest text-[var(--accent-ink)]">Harga member /1k</th>
+            <th scope="col" class="hidden px-4 py-3 text-right text-[11px] font-bold uppercase tracking-widest text-ink-3 sm:table-cell">Retail umum /1k</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[var(--hairline)]">
+          {rows.map((r, i) => (
+            <tr class="reveal" style={`--d: ${i * 40}ms`}>
+              <td class="px-4 py-3 text-[14px] font-semibold text-ink">
+                {r.layanan}
+                {r.refill && (
+                  <span class="ml-2 hidden items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 sm:inline-flex">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>
+                    refill
+                  </span>
+                )}
+              </td>
+              <td class="num px-4 py-3 text-right font-mono text-[13px] text-ink-3">{r.min}</td>
+              <td class="num px-4 py-3 text-right font-mono text-[13px] font-bold text-ink">{fmt(r.kamu)}</td>
+              <td class="num hidden px-4 py-3 text-right font-mono text-[13px] text-ink-3 line-through sm:table-cell">{fmt(r.retail)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div class="border-t border-[var(--hairline)] bg-[var(--paper-2)] px-4 py-3">
+        <p class="text-[12px] leading-relaxed text-ink-3">
+          Snapshot 8 dari <strong class="num text-ink-2">8.270 layanan</strong> — harga live &amp; stok tersinkron tiap jam di panel.
+        </p>
+      </div>
+    </div>
+
+    <!-- Inline margin stat — prose, bukan 4-col strip -->
+    <p class="reveal mx-auto mt-6 max-w-2xl text-center text-[14px] leading-relaxed text-ink-2" style="--d: 100ms">
+      Daftar reseller Rp50.000 &rarr; saldo Rp20.000 + <strong class="text-ink">potongan harga di semua layanan</strong> —
+      berlaku selamanya, bukan sekali pakai. <a href="/reseller" class="font-semibold text-[var(--accent-ink)] underline decoration-[var(--accent)]/40 underline-offset-2 hover:decoration-[var(--accent-ink)]">Lihat program reseller →</a>
+    </p>
+  </div>
+</section>

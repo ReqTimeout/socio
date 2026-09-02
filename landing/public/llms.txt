@@ -1,0 +1,28 @@
+# Socio.id
+
+> Panel SMM reseller termurah dan tercepat di Indonesia. 8.270 layanan Instagram, TikTok, YouTube, Telegram, Spotify & SEO. Daftar reseller Rp50.000 include saldo Rp20.000 + harga reseller lebih murah di semua layanan.
+
+## Money pages (10 — commercial intent)
+- [/beli-followers-facebook/](https://socio.id/beli-followers-facebook/)
+- [/beli-followers-instagram/](https://socio.id/beli-followers-instagram/)
+- [/beli-followers-tiktok/](https://socio.id/beli-followers-tiktok/)
+- [/beli-likes-instagram/](https://socio.id/beli-likes-instagram/)
+- [/beli-members-telegram/](https://socio.id/beli-members-telegram/)
+- [/beli-subscribers-youtube/](https://socio.id/beli-subscribers-youtube/)
+- [/beli-views-tiktok/](https://socio.id/beli-views-tiktok/)
+- [/beli-views-youtube/](https://socio.id/beli-views-youtube/)
+- [/layanan/](https://socio.id/layanan/)
+- [/reseller/](https://socio.id/reseller/)
+- [/smm-panel-api/](https://socio.id/smm-panel-api/)
+- [/smm-panel-reseller/](https://socio.id/smm-panel-reseller/)
+
+## Blog (3 articles — informational)
+- [Modal Jualan Followers: Untung Berapa & Cara Mulai Rp50 Ribu](https://socio.id/blog/modal-jualan-followers): Modal jualan followers cuma Rp50.000 — saldo Rp20.000 langsung bisa order. Hitungan untung real per 1.000 dan cara mulai dari HP.
+- [Cara Menambah Followers Instagram dengan Aman (Panduan 2026)](https://socio.id/blog/cara-menambah-followers-instagram): Cara menambah followers Instagram paling aman: kombinasi konten organik + panel SMM. Langkah, harga real 2026, dan aturan biar akun aman.
+- [Apa Itu SMM Panel? Definisi, Cara Kerja & Harganya di Indonesia](https://socio.id/blog/apa-itu-smm-panel): SMM panel adalah website yang menjual layanan sosmed — followers, likes, views — yang diproses otomatis lewat sistem. Baca cara kerja & harganya.
+
+## Optional
+- [Sitemap](https://socio.id/sitemap-index.xml)
+- [Daftar reseller →](https://app.socio.id/daftar?mode=reseller)
+
+Full content (titles + FAQ + body) → [llms-full.txt](https://socio.id/llms-full.txt)

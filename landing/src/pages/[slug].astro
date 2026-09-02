@@ -1,0 +1,15 @@
+---
+// D8: Route generator 10 money pages — data dari beli-pages.ts,
+// template tunggal BeliPage.astro. Harga selalu dari prices.json.
+// Route statis (index/layanan/reseller/blog) menang atas dynamic ini.
+import BeliPage from '../layouts/BeliPage.astro';
+import { beliPages } from '../data/beli-pages';
+
+export function getStaticPaths() {
+  return beliPages.map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props;
+---
+
+<BeliPage page={page} />

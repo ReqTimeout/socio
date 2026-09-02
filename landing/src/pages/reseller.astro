@@ -1,228 +1,113 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.svelte';
+import FloatingTabDock from '../components/FloatingTabDock.svelte';
+import Footer from '../components/Footer.astro';
 import FloatingWhatsApp from '../components/FloatingWhatsApp.svelte';
+import ProgramLedger from '../components/ProgramLedger.astro';
+import ProfitCalculator from '../components/ProfitCalculator.svelte';
+import GrosirTable from '../components/GrosirTable.astro';
+import ApiTeaser from '../components/ApiTeaser.astro';
+import CaraMulaiReseller from '../components/CaraMulaiReseller.astro';
+import TestiReseller from '../components/TestiReseller.astro';
+import FaqReseller from '../components/FaqReseller.astro';
 
 const daftarReseller = 'https://app.socio.id/daftar?mode=reseller';
-const daftarMember = 'https://app.socio.id/daftar';
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://socio.id' },
+    { '@type': 'ListItem', position: 2, name: 'Program Reseller', item: 'https://socio.id/reseller' },
+  ],
+};
 ---
 
-<Layout>
+<Layout
+  title="Jadi Reseller SMM — Modal Rp50rb, Saldo Rp20rb Langsung Jalan | Socio.id"
+  description="Program reseller socio.id: bayar Rp50.000 sekali, saldo Rp20.000 langsung masuk + harga grosir lebih murah dari member di 8.270 layanan. API untuk bot, garansi refill, proses otomatis 24 jam."
+>
   <Navbar client:load />
+  <FloatingTabDock client:load />
   <FloatingWhatsApp client:load />
 
-  <!-- HERO -->
-  <header class="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-gradient-to-br from-primary-50 via-white to-amber-50 animate-gradient bg-[length:400%_400%]">
-    <div class="container mx-auto px-5 md:px-6 grid lg:grid-cols-2 gap-12 items-center relative z-10">
-      <div class="space-y-6 md:space-y-8 text-center lg:text-left">
-        <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm border border-amber-200 text-amber-700 font-bold rounded-full text-xs tracking-wider uppercase mb-2 shadow-sm">
-          <span class="relative flex h-2 w-2">
-            <span class="absolute inline-flex h-full w-full rounded-full bg-accent live-dot"></span>
-            <span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span>
-          </span>
-          Program Reseller Socio.id
-        </div>
-
-        <h1 class="font-display font-extrabold text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-ink-900 leading-[1.1] tracking-tight">
-          Jadi <span class="block text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-primary">Reseller SMM</span>
-          dengan Harga Grosir.
+  <!-- #1 HERO: copy-hero no split (§4.1) -->
+  <header class="bg-[var(--paper)] pb-16 pt-32 md:pb-24 md:pt-40">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <nav aria-label="Breadcrumb" class="reveal mb-6 text-[12px] font-medium text-ink-3">
+        <a href="/" class="hover:text-ink underline-offset-2 hover:underline">Beranda</a>
+        <span aria-hidden="true"> / </span>
+        <span aria-current="page" class="text-ink-2">Program Reseller</span>
+      </nav>
+      <div class="reveal max-w-3xl">
+        <p class="text-[12px] font-bold uppercase tracking-widest text-[var(--accent-ink)]">Program Reseller</p>
+        <h1 class="mt-3 font-display text-[length:var(--text-hero)] font-bold leading-[1.05] tracking-tight text-ink">
+          Jualan followers. Modal Rp50 ribu.
         </h1>
-
-        <p class="text-base md:text-lg lg:text-xl text-ink-600 leading-relaxed max-w-xl mx-auto lg:mx-0 font-light">
-          Bangun bisnis jualan follower, like, & views tanpa capek cari supplier.
-          <strong class="text-ink-800">Satu panel, harga grosir, saldo langsung jalan.</strong>
-          Cocok untuk agency, admin shop, & kamu yang mau cuan dari SMM.
+        <p class="mt-5 max-w-xl text-[length:var(--text-body)] leading-relaxed text-ink-2 md:text-[17px]">
+          Daftar reseller <strong class="text-ink">Rp50.000 sekali bayar</strong> — saldo
+          <strong class="text-ink">Rp20.000 langsung masuk</strong> bisa buat order, plus
+          <strong class="text-ink">harga reseller lebih murah dari member</strong> di semua layanan.
+          Kamu pasang margin, socio urus stok, proses &amp; refill.
         </p>
-
-        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl mx-auto lg:mx-0">
-          <li class="flex items-center gap-2 text-sm text-ink-700">
-            <svg class="h-5 w-5 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7" /></svg>
-            <span>Harga <strong>grosir khusus reseller</strong></span>
-          </li>
-          <li class="flex items-center gap-2 text-sm text-ink-700">
-            <svg class="h-5 w-5 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7" /></svg>
-            <span>Saldo awal <strong>Rp20.000 langsung aktif</strong></span>
-          </li>
-          <li class="flex items-center gap-2 text-sm text-ink-700">
-            <svg class="h-5 w-5 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7" /></svg>
-            <span>API reseller siap bot &amp; whitelabel</span>
-          </li>
-          <li class="flex items-center gap-2 text-sm text-ink-700">
-            <svg class="h-5 w-5 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7" /></svg>
-            <span>Garansi refill &amp; proses 24/7</span>
-          </li>
-        </ul>
-
-        <div class="flex flex-col gap-3 pt-3 max-w-xl mx-auto lg:mx-0">
-          <a href={daftarReseller} class="group relative flex-1 inline-flex items-center justify-center gap-2 bg-amber-500 text-white px-7 py-4 min-h-[48px] rounded-full font-bold shadow-xl shadow-amber-900/20 hover:shadow-amber-900/40 hover:-translate-y-0.5 transition-all overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-            <span class="relative flex items-center gap-2">👑 Daftar Reseller — Rp50.000 →</span>
+        <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a href={daftarReseller} class="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[var(--accent-ink)] px-8 text-[15px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]">
+            Daftar Reseller Rp50rb →
           </a>
-          <a href={daftarMember} class="flex-1 inline-flex items-center justify-center gap-2 bg-white text-ink-900 px-7 py-4 min-h-[48px] rounded-full font-bold border-2 border-ink-200 shadow-md hover:bg-ink-50 transition">
-            Atau daftar sebagai Member gratis
+          <a href="#kalkulator" class="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-white px-8 text-[15px] font-bold text-ink transition-colors hover:border-[var(--accent-ink)] hover:text-[var(--accent-ink)]">
+            Coba kalkulator profit ↓
           </a>
         </div>
-
-        <p class="text-xs text-ink-400 max-w-xl mx-auto lg:mx-0">
-          Biaya aktivasi satu kali <strong class="text-ink-600">Rp50.000</strong> (sudah termasuk saldo Rp20.000).
-          Aktivasi manual oleh admin setelah transfer diterima.
+        <p class="mt-4 text-[12px] text-ink-3">
+          Sekali bayar, aktif selamanya. Tanpa iuran bulanan.
         </p>
-      </div>
-
-      <!-- Visual: kartu "saldo aktif" -->
-      <div class="relative flex justify-center lg:justify-end mt-8 lg:mt-0">
-        <div class="relative w-full max-w-sm rounded-3xl bg-ink-900 text-white p-8 shadow-2xl rotate-1">
-          <div class="text-xs uppercase tracking-widest text-accent-300 font-bold">Akun Reseller Aktif</div>
-          <div class="mt-4 text-5xl font-black">Rp20.000</div>
-          <div class="text-sm text-ink-400 mt-1">saldo langsung bisa dipakai pesan</div>
-          <div class="mt-6 space-y-3 text-sm">
-            <div class="flex justify-between border-b border-white/10 pb-2"><span class="text-ink-400">Harga grosir</span><span class="font-bold text-success">✓ Aktif</span></div>
-            <div class="flex justify-between border-b border-white/10 pb-2"><span class="text-ink-400">API key</span><span class="font-bold text-success">✓ Aktif</span></div>
-            <div class="flex justify-between"><span class="text-ink-400">Level</span><span class="font-bold">Reseller</span></div>
-          </div>
-          <div class="mt-6 rounded-xl bg-gradient-to-r from-amber-500 to-primary px-4 py-3 text-center text-sm font-bold">
-            Modal Rp50rb → Langsung jualan
-          </div>
-        </div>
       </div>
     </div>
   </header>
 
-  <!-- ATURAN / CARA KERJA -->
-  <section class="py-16 md:py-20 bg-white">
-    <div class="container mx-auto px-5 md:px-6 max-w-4xl">
-      <div class="mb-10 text-center">
-        <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-600">Aturan Reseller</span>
-        <h2 class="mt-3 font-display text-2xl sm:text-3xl md:text-4xl font-bold text-ink-900">Cara Daftar &amp; Aktivasi</h2>
-        <p class="mt-2 text-sm md:text-base text-ink-500 max-w-2xl mx-auto">Transparan &amp; mudah. Ikuti 4 langkah berikut — tidak ada biaya tersembunyi.</p>
-      </div>
+  <!-- #2 Program ledger -->
+  <ProgramLedger />
 
-      <ol class="grid gap-4 md:grid-cols-2">
-        <li class="rounded-2xl border border-ink-100 p-6 shadow-sm">
-          <div class="flex items-center gap-3">
-            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white font-bold">1</span>
-            <h3 class="font-bold text-ink-900">Daftar &amp; pilih "Jadi Reseller"</h3>
-          </div>
-          <p class="mt-3 text-sm text-ink-600">Isi nama, email, username, password, &amp; WhatsApp di form pendaftaran reseller.</p>
-        </li>
-        <li class="rounded-2xl border border-ink-100 p-6 shadow-sm">
-          <div class="flex items-center gap-3">
-            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white font-bold">2</span>
-            <h3 class="font-bold text-ink-900">Transfer biaya aktifasi Rp50.000</h3>
-          </div>
-          <p class="mt-3 text-sm text-ink-600">Kami kirim <strong>detail rekening BCA</strong> ke email kamu (nominal unik 3 digit agar mudah cocok). Maksimal 12 jam.</p>
-        </li>
-        <li class="rounded-2xl border border-ink-100 p-6 shadow-sm">
-          <div class="flex items-center gap-3">
-            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white font-bold">3</span>
-            <h3 class="font-bold text-ink-900">Admin verifikasi manual</h3>
-          </div>
-          <p class="mt-3 text-sm text-ink-600">Setelah transfer masuk, admin kami cek &amp; <strong>approve manual</strong>. Tidak otomatis — jadi pastikan transfer sesuai nominal.</p>
-        </li>
-        <li class="rounded-2xl border border-ink-100 p-6 shadow-sm">
-          <div class="flex items-center gap-3">
-            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-white font-bold">4</span>
-            <h3 class="font-bold text-ink-900">Akun aktif + saldo Rp20.000</h3>
-          </div>
-          <p class="mt-3 text-sm text-ink-600">Kamu dapat email selamat datang &amp; saldo <strong>Rp20.000 sudah masuk</strong> — langsung bisa pesan &amp; jualan.</p>
-        </li>
-      </ol>
+  <!-- #3 Kalkulator profit (interaktif) -->
+  <div id="kalkulator">
+    <ProfitCalculator client:visible />
+  </div>
 
-      <!-- Callout penting -->
-      <div class="mt-8 rounded-2xl bg-amber-50 border border-amber-200 p-6 text-sm text-amber-900">
-        <strong>📌 Penting:</strong> Saldo awal khusus reseller adalah <strong>Rp20.000</strong> (sudah termasuk dalam biaya Rp50.000).
-        Biaya Rp50.000 adalah <strong>biaya aktivasi satu kali</strong>, bukan deposit saldo penuh. Untuk nambah saldo, kamu bisa top-up kapan saja (dapat bonus 10%).
+  <!-- #4 Harga grosir vs retail -->
+  <GrosirTable />
+
+  <!-- #5 API docs teaser -->
+  <ApiTeaser />
+
+  <!-- #6 Cara mulai timeline -->
+  <CaraMulaiReseller />
+
+  <!-- #7 Testi reseller -->
+  <TestiReseller />
+
+  <!-- #8 FAQ reseller -->
+  <FaqReseller />
+
+  <!-- #9 CTA final dark -->
+  <section class="relative overflow-hidden bg-ink-900 py-20 text-white isolate md:py-28" aria-labelledby="cta-r-title">
+    <div class="mx-auto max-w-3xl px-5 space-y-6 text-center md:px-8">
+      <h2 id="cta-r-title" class="font-display text-3xl font-bold leading-tight tracking-tight md:text-5xl">
+        Besok client kamu udah order.
+      </h2>
+      <p class="mx-auto max-w-xl text-[16px] leading-relaxed text-ink-300">
+        Daftar malam ini, besok saldo Rp20.000 sudah bisa jalan. Harga reseller langsung
+        aktif di 8.270 layanan.
+      </p>
+      <div class="pt-2">
+        <a href={daftarReseller} class="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-full bg-[var(--accent-ink)] px-10 text-[16px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]">
+          Daftar Reseller — Rp50rb
+        </a>
       </div>
+      <p class="text-[11px] text-ink-400">Dengan mendaftar kamu menyetujui Syarat &amp; Ketentuan Socio.id.</p>
     </div>
   </section>
 
-  <!-- KEUNTUNGAN -->
-  <section class="py-16 md:py-20 bg-ink-50">
-    <div class="container mx-auto px-5 md:px-6">
-      <div class="mb-10 text-center">
-        <span class="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">Kenapa jadi reseller</span>
-        <h2 class="mt-3 font-display text-2xl sm:text-3xl md:text-4xl font-bold text-ink-900">Untung apa kamu?</h2>
-      </div>
-      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="rounded-2xl bg-white p-6 shadow-sm border border-ink-100">
-          <div class="text-3xl">💸</div>
-          <h3 class="mt-3 font-bold text-ink-900">Margin lebar</h3>
-          <p class="mt-2 text-sm text-ink-600">Beli di harga grosir, jual ke client dengan markup sendiri. Selisihnya untung kamu 100%.</p>
-        </div>
-        <div class="rounded-2xl bg-white p-6 shadow-sm border border-ink-100">
-          <div class="text-3xl">🤖</div>
-          <h3 class="mt-3 font-bold text-ink-900">API siap pakai</h3>
-          <p class="mt-2 text-sm text-ink-600">Integrasikan ke bot, toko online, atau whitelabel panel sendiri. Dokumentasi lengkap.</p>
-        </div>
-        <div class="rounded-2xl bg-white p-6 shadow-sm border border-ink-100">
-          <div class="text-3xl">🚀</div>
-          <h3 class="mt-3 font-bold text-ink-900">8.185+ layanan</h3>
-          <p class="mt-2 text-sm text-ink-600">IG, TikTok, YouTube, hingga 872 kategori. Satu akun buat semua kebutuhan client.</p>
-        </div>
-        <div class="rounded-2xl bg-white p-6 shadow-sm border border-ink-100">
-          <div class="text-3xl">🔄</div>
-          <h3 class="mt-3 font-bold text-ink-900">Garansi refill</h3>
-          <p class="mt-2 text-sm text-ink-600">Order gagal? Saldo balik &amp; refill otomatis. Client kamu aman, reputasi terjaga.</p>
-        </div>
-        <div class="rounded-2xl bg-white p-6 shadow-sm border border-ink-100">
-          <div class="text-3xl">📈</div>
-          <h3 class="mt-3 font-bold text-ink-900">Komisi affiliate 2%</h3>
-          <p class="mt-2 text-sm text-ink-600">Ajak teman jadi reseller, dapat komisi 2% dari deposit mereka (masuk antrian approval).</p>
-        </div>
-        <div class="rounded-2xl bg-white p-6 shadow-sm border border-ink-100">
-          <div class="text-3xl">🛟</div>
-          <h3 class="mt-3 font-bold text-ink-900">Support 24/7</h3>
-          <p class="mt-2 text-sm text-ink-600">Tim admin siap bantu via tiket &amp; WhatsApp kapan saja orderan jalan.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+  <Footer />
 
-  <!-- FAQ RESELLER -->
-  <section class="py-16 md:py-20 bg-white">
-    <div class="container mx-auto px-5 md:px-6 max-w-3xl">
-      <div class="mb-10 text-center">
-        <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-600">FAQ</span>
-        <h2 class="mt-3 font-display text-2xl sm:text-3xl md:text-4xl font-bold text-ink-900">Pertanyaan Reseller</h2>
-      </div>
-      <div class="space-y-3">
-        <details class="group rounded-xl border border-ink-100 p-5" open>
-          <summary class="flex cursor-pointer items-center justify-between font-semibold text-ink-900">Berapa biaya jadi reseller?<span class="text-primary transition group-open:rotate-45">+</span></summary>
-          <p class="mt-3 text-sm text-ink-600">Biaya aktivasi satu kali <strong>Rp50.000</strong>. Sudah termasuk saldo awal Rp20.000 yang langsung bisa dipakai. Tidak ada iuran bulanan.</p>
-        </details>
-        <details class="group rounded-xl border border-ink-100 p-5">
-          <summary class="flex cursor-pointer items-center justify-between font-semibold text-ink-900">Kapan akun saya aktif?<span class="text-primary transition group-open:rotate-45">+</span></summary>
-          <p class="mt-3 text-sm text-ink-600">Setelah kamu transfer &amp; admin memverifikasi secara manual (biasanya cepat di jam kerja). Pastikan transfer <strong>sesuai nominal unik</strong> yang diemail.</p>
-        </details>
-        <details class="group rounded-xl border border-ink-100 p-5">
-          <summary class="flex cursor-pointer items-center justify-between font-semibold text-ink-900">Apakah saldo Rp20.000 bisa ditarik?<span class="text-primary transition group-open:rotate-45">+</span></summary>
-          <p class="mt-3 text-sm text-ink-600">Saldo awal adalah modal promo untuk pesan layanan, bukan tunai yang bisa ditarik. Untuk menambah saldo bisa top-up kapan saja.</p>
-        </details>
-        <details class="group rounded-xl border border-ink-100 p-5">
-          <summary class="flex cursor-pointer items-center justify-between font-semibold text-ink-900">Bisa pakai API untuk bot?<span class="text-primary transition group-open:rotate-45">+</span></summary>
-          <p class="mt-3 text-sm text-ink-600">Bisa. Setiap akun dapat API key (lihat di menu Akun). Endpoint: services, order, status, refill, profile. Rate-limit 60 req/menit per IP.</p>
-        </details>
-      </div>
-    </div>
-  </section>
-
-  <!-- FINAL CTA -->
-  <section class="relative py-24 overflow-hidden bg-ink-900 text-white isolate">
-    <div class="container mx-auto px-6 text-center relative z-10 max-w-3xl space-y-6">
-      <h2 class="font-display font-black text-3xl md:text-5xl leading-tight">Mulai Jadi Reseller Hari Ini</h2>
-      <p class="text-ink-300 text-lg font-light">Modal Rp50.000, saldo Rp20.000 langsung jalan. Tanpa ribet, tanpa cari supplier.</p>
-      <a href={daftarReseller} class="inline-flex items-center justify-center gap-2 bg-amber-500 text-white px-10 py-5 rounded-full font-bold text-xl shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:scale-105 transition-all">
-        👑 Daftar Reseller Sekarang
-      </a>
-      <p class="text-xs text-ink-400">Dengan mendaftar kamu menyetujui Syarat &amp; Ketentuan Socio.id.</p>
-    </div>
-  </section>
-
-  <footer class="bg-ink-900 py-8 text-center text-xs text-white/40 border-t border-white/10">
-    &copy; 2026 Socio.id · Panel SMM Termurah &amp; Terpercaya di Indonesia.
-  </footer>
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 </Layout>
-
-<style>
-  .perspective-1000 { perspective: 1000px; }
-</style>

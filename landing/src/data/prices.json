@@ -1,0 +1,153 @@
+{
+  "syncedAt": "2026-09-01T07:54:26.352Z",
+  "totalServices": 8270,
+  "totalCategories": 882,
+  "platforms": {
+    "Facebook": {
+      "services": 759,
+      "categories": 91
+    },
+    "Instagram": {
+      "services": 1662,
+      "categories": 264
+    },
+    "Lainnya": {
+      "services": 1551,
+      "categories": 126
+    },
+    "Spotify": {
+      "services": 273,
+      "categories": 27
+    },
+    "Telegram": {
+      "services": 1078,
+      "categories": 80
+    },
+    "TikTok": {
+      "services": 1527,
+      "categories": 180
+    },
+    "X/Twitter": {
+      "services": 544,
+      "categories": 66
+    },
+    "YouTube": {
+      "services": 876,
+      "categories": 104
+    }
+  },
+  "top": [
+    {
+      "platform": "X/Twitter",
+      "name": "Twitter Tweet Views",
+      "price": 48,
+      "priceReseller": 45,
+      "min": 100,
+      "refill": false
+    },
+    {
+      "platform": "Telegram",
+      "name": "Telegram Post Views",
+      "price": 51,
+      "priceReseller": 48,
+      "min": 100,
+      "refill": false
+    },
+    {
+      "platform": "Instagram",
+      "name": "Instagram Video Views",
+      "price": 81,
+      "priceReseller": 76,
+      "min": 100,
+      "refill": false
+    },
+    {
+      "platform": "TikTok",
+      "name": "TikTok Video Views",
+      "price": 165,
+      "priceReseller": 154,
+      "min": 100,
+      "refill": false
+    },
+    {
+      "platform": "Telegram",
+      "name": "Telegram Members",
+      "price": 801,
+      "priceReseller": 748,
+      "min": 25,
+      "refill": false
+    },
+    {
+      "platform": "Instagram",
+      "name": "Instagram Likes (paling murah)",
+      "price": 1185,
+      "priceReseller": 1106,
+      "min": 10,
+      "refill": false
+    },
+    {
+      "platform": "TikTok",
+      "name": "TikTok Likes",
+      "price": 2442,
+      "priceReseller": 2279,
+      "min": 5,
+      "refill": false
+    },
+    {
+      "platform": "YouTube",
+      "name": "Youtube Subscriber",
+      "price": 3081,
+      "priceReseller": 2876,
+      "min": 100,
+      "refill": false
+    },
+    {
+      "platform": "X/Twitter",
+      "name": "Twitter/X Followers",
+      "price": 4740,
+      "priceReseller": 4424,
+      "min": 10,
+      "refill": false
+    },
+    {
+      "platform": "Spotify",
+      "name": "Spotify Asia Plays",
+      "price": 5688,
+      "priceReseller": 5309,
+      "min": 500,
+      "refill": false
+    },
+    {
+      "platform": "YouTube",
+      "name": "YouTube Views",
+      "price": 6162,
+      "priceReseller": 5751,
+      "min": 100,
+      "refill": false
+    },
+    {
+      "platform": "Facebook",
+      "name": "Facebook Followers",
+      "price": 6162,
+      "priceReseller": 5751,
+      "min": 10,
+      "refill": false
+    },
+    {
+      "platform": "Instagram",
+      "name": "Instagram Followers",
+      "price": 7395,
+      "priceReseller": 6902,
+      "min": 50,
+      "refill": false
+    },
+    {
+      "platform": "Spotify",
+      "name": "Spotify Followers",
+      "price": 13650,
+      "priceReseller": 12740,
+      "min": 100,
+      "refill": false
+    }
+  ]
+}

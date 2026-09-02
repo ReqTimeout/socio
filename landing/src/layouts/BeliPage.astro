@@ -1,0 +1,305 @@
+---
+// D8: BeliPage — template tunggal untuk 10 money pages /beli-* + /smm-panel-*.
+// Spec LANDING_DESIGN_PLAN §4.4: 7 section + schema Product/Offer + BreadcrumbList.
+// Harga SELALU dari prices.json — tidak ada angka hardcode di template.
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.svelte';
+import FloatingTabDock from '../components/FloatingTabDock.svelte';
+import FloatingWhatsApp from '../components/FloatingWhatsApp.svelte';
+import Footer from '../components/Footer.astro';
+import prices from '../data/prices.json';
+import { beliBySlug } from '../data/beli-pages';
+import type { BeliPageData } from '../data/beli-pages';
+
+interface Props {
+  page: BeliPageData;
+}
+
+const { page } = Astro.props;
+const DAFTAR = 'https://app.socio.id/daftar?mode=reseller';
+
+// Ambil layanan utama + 4-7 layanan sekunder platform sama/terkait dari top
+const all = prices.top as Array<{
+  platform: string;
+  name: string;
+  price: number;
+  priceReseller: number;
+  min: number;
+  refill: boolean;
+}>;
+const main = all.find((s) => s.name.includes(page.serviceMatch)) ?? all[0];
+const related = all
+  .filter((s) => s.name !== main.name)
+  .sort((a, b) => {
+    const pa = a.platform === page.platform ? 0 : 1;
+    const pb = b.platform === page.platform ? 0 : 1;
+    return pa - pb || a.price - b.price;
+  })
+  .slice(0, 6);
+const rows = [main, ...related].slice(0, 7);
+
+const fmt = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
+const startRow =
+  rows.filter((r) => r.platform === page.platform).sort((a, b) => a.price - b.price)[0] ?? main;
+const startPrice = startRow.price;
+
+// 3 paket contoh dari harga real (bisa dihitung)
+const paket = [
+  { qty: 1000, svc: main },
+  { qty: 5000, svc: main },
+  { qty: 10000, svc: main },
+];
+
+// Cross-sell data
+const crossSell = page.crossSell
+  .map((slug) => beliBySlug.get(slug))
+  .filter((p) => p !== undefined) as BeliPageData[];
+
+const url = `https://socio.id/${page.slug}`;
+const productSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: page.keyword,
+  description: page.description,
+  brand: { '@type': 'Brand', name: 'Socio.id' },
+  offers: {
+    '@type': 'AggregateOffer',
+    priceCurrency: 'IDR',
+    lowPrice: String(main.price),
+    highPrice: String(rows[rows.length - 1].price),
+    offerCount: String(rows.length),
+    url,
+    availability: 'https://schema.org/InStock',
+    seller: { '@type': 'Organization', name: 'Socio.id' },
+  },
+};
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: page.faq.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Layanan', item: 'https://socio.id/layanan' },
+    { '@type': 'ListItem', position: 2, name: page.keyword, item: url },
+  ],
+};
+---
+
+<Layout title={page.title} description={page.description}>
+  <Navbar client:load />
+  <FloatingTabDock client:load />
+  <FloatingWhatsApp client:load />
+
+  <!-- #1 Hero: H1 keyword + harga mulai + CTA -->
+  <header class="bg-[var(--paper)] pb-12 pt-32 md:pb-16 md:pt-40">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <nav aria-label="Breadcrumb" class="reveal text-[12px] font-medium text-ink-3">
+        <a href="/" class="hover:text-ink underline-offset-2 hover:underline">Beranda</a>
+        <span aria-hidden="true"> / </span>
+        <a href="/layanan" class="hover:text-ink underline-offset-2 hover:underline">Layanan</a>
+        <span aria-hidden="true"> / </span>
+        <span aria-current="page" class="text-ink-2">{page.keyword.split('—')[0].trim()}</span>
+      </nav>
+      <div class="mt-6 grid gap-8 md:grid-cols-[3fr_2fr] md:items-end">
+        <div class="reveal min-w-0">
+          <h1 class="font-display text-[length:var(--text-hero)] font-bold leading-[1.05] tracking-tight text-ink">
+            {page.keyword}
+          </h1>
+          <p class="mt-5 max-w-xl text-[length:var(--text-body)] leading-relaxed text-ink-2 md:text-[17px]">
+            {page.heroSub}
+          </p>
+          <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+            <a
+              href={DAFTAR}
+              class="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[var(--accent-ink)] px-8 text-[15px] font-bold text-white transition-transform duration-150 hover:scale-[1.03] active:scale-[0.97]"
+            >
+              Daftar &amp; Order Sekarang
+            </a>
+            <a
+              href="/layanan"
+              class="inline-flex min-h-[52px] items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-8 text-[15px] font-bold text-ink transition-colors hover:border-[var(--accent-ink)]"
+            >
+              Lihat Katalog Lengkap
+            </a>
+          </div>
+        </div>
+        <!-- Inline-stat harga mulai -->
+        <div class="reveal rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)] p-6 md:justify-self-end" style="--d: 80ms">
+          <p class="text-[11px] font-bold uppercase tracking-widest text-ink-3">Harga member mulai</p>
+          <p class="num mt-1 font-display text-3xl font-bold text-ink">{fmt(startPrice)}<span class="text-base font-semibold text-ink-2">/1k</span></p>
+          <p class="mt-2 text-[13px] leading-relaxed text-ink-2">
+            Reseller <strong class="text-ink">{fmt(startRow.priceReseller)}</strong>/1k — daftar Rp50.000, saldo Rp20.000 langsung jalan.
+          </p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- #2 Tabel harga real -->
+  <section class="bg-[var(--paper)] pb-16 md:pb-24" aria-labelledby="harga-title">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <div class="reveal flex flex-wrap items-end justify-between gap-3">
+        <h2 id="harga-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+          Harga real, langsung dari katalog
+        </h2>
+        <p class="text-[12px] font-medium text-ink-3">Update live dari panel — tanpa markup tersembunyi</p>
+      </div>
+      <div class="reveal mt-6 overflow-x-auto rounded-2xl border border-[var(--hairline)]" style="--d: 60ms">
+        <table class="w-full min-w-[560px] border-collapse text-left">
+          <thead>
+            <tr class="bg-[var(--paper-2)] text-[12px] font-bold uppercase tracking-wide text-ink-2">
+              <th scope="col" class="px-4 py-3.5 md:px-6">Layanan</th>
+              <th scope="col" class="px-4 py-3.5 md:px-6">Platform</th>
+              <th scope="col" class="px-4 py-3.5 text-right md:px-6">Member/1k</th>
+              <th scope="col" class="px-4 py-3.5 text-right md:px-6">Reseller/1k</th>
+              <th scope="col" class="px-4 py-3.5 text-right md:px-6">Min. order</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[var(--hairline)]">
+            {rows.map((r) => (
+              <tr class="transition-colors hover:bg-[var(--paper-2)]">
+                <td class="min-w-0 px-4 py-3.5 text-[14px] font-semibold text-ink md:px-6">{r.name}</td>
+                <td class="whitespace-nowrap px-4 py-3.5 text-[13px] font-semibold text-ink-2 md:px-6">{r.platform}</td>
+                <td class="num whitespace-nowrap px-4 py-3.5 text-right text-[14px] font-bold text-ink md:px-6">{fmt(r.price)}</td>
+                <td class="num whitespace-nowrap px-4 py-3.5 text-right text-[14px] font-bold text-[var(--accent-ink)] md:px-6">{fmt(r.priceReseller)}</td>
+                <td class="num whitespace-nowrap px-4 py-3.5 text-right text-[13px] text-ink-2 md:px-6">{r.min.toLocaleString('id-ID')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <!-- paket hitung cepat dari harga real -->
+      <div class="mt-6 grid gap-3 sm:grid-cols-3">
+        {paket.map((p) => (
+          <div class="reveal rounded-xl border border-[var(--hairline)] bg-[var(--paper)] p-4">
+            <p class="num text-[13px] font-bold text-ink-2">{p.qty.toLocaleString('id-ID')} unit</p>
+            <p class="num mt-1 font-display text-xl font-bold text-ink">
+              {fmt(Math.round((p.svc.price * p.qty) / 1000))}
+            </p>
+            <p class="text-[11px] text-ink-3">member · {p.svc.name}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- #3 Kenapa socio — 3 reason ledger -->
+  <section class="bg-[var(--paper-2)] py-16 md:py-24" aria-labelledby="why-title">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <h2 id="why-title" class="reveal font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Kenapa lewat Socio.id
+      </h2>
+      <div class="mt-8 divide-y divide-[var(--hairline)] border-t border-[var(--hairline)] md:max-w-3xl">
+        {page.reasons.map((r, i) => (
+          <div class="reveal flex items-start gap-4 py-5" style={`--d: ${i * 60}ms`}>
+            <span class="num mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)] text-[12px] font-bold text-[var(--accent-ink)]" aria-hidden="true">
+              {i + 1}
+            </span>
+            <p class="min-w-0 text-[15px] leading-relaxed text-ink-2">{r}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- #4 Cara order 3 langkah timeline -->
+  <section class="bg-[var(--paper)] py-16 md:py-24" aria-labelledby="cara-title">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <h2 id="cara-title" class="reveal font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Cara order, 3 langkah
+      </h2>
+      <ol class="mt-10 grid gap-8 md:grid-cols-3 md:gap-6">
+        {[
+          ['Daftar & isi saldo', 'Daftar gratis di app.socio.id, top up mulai Rp10.000 via QRIS, bank, atau e-wallet.'],
+          ['Pilih layanan & tempel link', `Cari layanan ${page.platform} di katalog, tempel link post/profil/konten — tanpa password.`],
+          ['Order jalan otomatis', 'Pesanan masuk antrean provider dan mulai berjalan 1-10 menit. Status bisa dilacak live di dashboard.'],
+        ].map(([t, d], i) => (
+          <li class="reveal relative" style={`--d: ${i * 80}ms`}>
+            <p class="num font-display text-5xl font-bold text-[var(--accent-ink)] opacity-20" aria-hidden="true">0{i + 1}</p>
+            <h3 class="mt-2 font-display text-lg font-bold text-ink">{t}</h3>
+            <p class="mt-2 text-[14px] leading-relaxed text-ink-2">{d}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <!-- #5 FAQ 5 item -->
+  <section class="bg-[var(--paper-2)] py-16 md:py-24" aria-labelledby="faq-title">
+    <div class="mx-auto max-w-3xl px-5 md:px-8">
+      <h2 id="faq-title" class="reveal font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Pertanyaan yang sering ditanya
+      </h2>
+      <div class="reveal mt-8 divide-y divide-[var(--hairline)] border-y border-[var(--hairline)]">
+        {page.faq.map((f) => (
+          <details class="group">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left text-[15px] font-bold text-ink marker:hidden">
+              {f.q}
+              <svg class="h-4 w-4 shrink-0 text-ink-3 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <p class="pb-4 text-[14px] leading-relaxed text-ink-2">{f.a}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- #6 Cross-sell chips -->
+  <section class="bg-[var(--paper)] py-14 md:py-20" aria-labelledby="cross-title">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <h2 id="cross-title" class="reveal text-[11px] font-bold uppercase tracking-widest text-ink-3">
+        Layanan lain yang sering dibeli bareng
+      </h2>
+      <div class="reveal mt-4 flex flex-wrap gap-2" style="--d: 60ms">
+        {crossSell.map((cs) => (
+          <a
+            href={`/${cs.slug}`}
+            class="inline-flex min-h-[44px] items-center rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-5 text-[13px] font-semibold text-ink transition-colors hover:border-[var(--accent-ink)] hover:bg-[var(--accent-tint)]"
+          >
+            {cs.keyword.split('—')[0].split(' Murah')[0].trim()}
+          </a>
+        ))}
+        <a
+          href="/layanan"
+          class="inline-flex min-h-[44px] items-center rounded-full border border-dashed border-[var(--hairline-strong)] px-5 text-[13px] font-semibold text-ink-2 transition-colors hover:border-[var(--accent-ink)]"
+        >
+          Semua 8.270 layanan
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- #7 CTA final dark full-bleed -->
+  <section class="bg-ink-900 py-20 text-white isolate md:py-24" aria-labelledby="cta-beli-title">
+    <div class="mx-auto max-w-3xl px-5 space-y-6 text-center md:px-8">
+      <h2 id="cta-beli-title" class="font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">
+        {page.keyword.split('—')[0].split(' Murah')[0].trim()} — hari ini juga.
+      </h2>
+      <p class="mx-auto max-w-xl text-[16px] leading-relaxed text-ink-300">
+        Daftar reseller <strong class="text-white">Rp50.000</strong> sekali bayar — saldo
+        <strong class="text-white">Rp20.000</strong> langsung bisa order, harga reseller lebih murah di semua layanan.
+      </p>
+      <div class="flex flex-col justify-center gap-3 pt-2 sm:flex-row">
+        <a href={DAFTAR} class="inline-flex min-h-[56px] items-center justify-center rounded-full bg-[var(--accent-ink)] px-10 text-[16px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]">
+          Daftar Rp50rb — Saldo Rp20rb
+        </a>
+        <a href="/reseller" class="inline-flex min-h-[56px] items-center justify-center rounded-full border border-white/20 px-8 text-[16px] font-bold text-white transition-colors hover:border-white/50">
+          Pelajari Reseller
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+
+  <script type="application/ld+json" set:html={JSON.stringify(productSchema)} />
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+</Layout>

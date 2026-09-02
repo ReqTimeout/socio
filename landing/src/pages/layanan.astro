@@ -1,0 +1,90 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.svelte';
+import FloatingTabDock from '../components/FloatingTabDock.svelte';
+import StickyCTA from '../components/StickyCTA.svelte';
+import Footer from '../components/Footer.astro';
+import PlatformDirectory from '../components/PlatformDirectory.astro';
+import TopLayananTable from '../components/TopLayananTable.svelte';
+import KategoriExplainer from '../components/KategoriExplainer.astro';
+import prices from '../data/prices.json';
+
+// D6: /layanan — katalog directory (SEO hub). Data dari prices.json, bukan hardcode.
+const total = prices.totalServices.toLocaleString('id-ID');
+const cats = prices.totalCategories.toLocaleString('id-ID');
+const daftar = 'https://app.socio.id/daftar?mode=reseller';
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://socio.id' },
+    { '@type': 'ListItem', position: 2, name: 'Layanan', item: 'https://socio.id/layanan' },
+  ],
+};
+---
+
+<Layout
+  title="Layanan SMM Lengkap — {total} Layanan Semua Platform | Socio.id"
+  description="Katalog {total} layanan SMM semua platform: Instagram, TikTok, YouTube, Telegram, Spotify & {cats} kategori lainnya. Harga mulai Rp48/1k — daftar reseller Rp50.000 dapat saldo Rp20.000 + harga lebih murah."
+>
+  <Navbar client:load />
+  <FloatingTabDock client:load />
+  <StickyCTA client:idle />
+
+  <!-- #1 HERO typographic + search (§4.2) -->
+  <header class="bg-[var(--paper)] pb-10 pt-32 md:pb-14 md:pt-40">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <nav aria-label="Breadcrumb" class="reveal mb-6 text-[12px] font-medium text-ink-3">
+        <a href="/" class="hover:text-ink underline-offset-2 hover:underline">Beranda</a>
+        <span aria-hidden="true"> / </span>
+        <span aria-current="page" class="text-ink-2">Layanan</span>
+      </nav>
+      <div class="reveal max-w-3xl">
+        <h1 class="font-display text-[length:var(--text-hero)] font-bold leading-[1.05] tracking-tight text-ink">
+          Semua layanan sosmed, satu panel.
+        </h1>
+        <p class="mt-5 max-w-xl text-[length:var(--text-body)] leading-relaxed text-ink-2 md:text-[17px]">
+          <span class="num font-semibold text-ink">{total}</span> layanan di
+          <span class="num font-semibold text-ink">{cats}</span> kategori — dari Instagram sampai Spotify.
+          Cari, cek harga, langsung order.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <!-- #2 Platform directory -->
+  <section class="bg-[var(--paper)] pb-16 md:pb-24" aria-label="Directory platform">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <PlatformDirectory />
+    </div>
+  </section>
+
+  <!-- #3 Top layanan table (search + sort island) -->
+  <TopLayananTable client:visible />
+
+  <!-- #5 Kategori explainer -->
+  <KategoriExplainer />
+
+  <!-- #6 CTA dark -->
+  <section class="relative overflow-hidden bg-ink-900 py-20 text-white isolate md:py-24" aria-labelledby="cta-l-title">
+    <div class="mx-auto max-w-3xl px-5 space-y-6 text-center md:px-8">
+      <h2 id="cta-l-title" class="font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">
+        Ketemu layanannya? Harganya bisa lebih murah.
+      </h2>
+      <p class="mx-auto max-w-xl text-[16px] leading-relaxed text-ink-300">
+        Daftar reseller <strong class="text-white">Rp50.000</strong> — saldo
+        <strong class="text-white">Rp20.000</strong> langsung jalan, dan semua harga di atas
+        kamu dapat versi lebih murah.
+      </p>
+      <div class="pt-2">
+        <a href={daftar} class="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-full bg-[var(--accent-ink)] px-10 text-[16px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]">
+          Daftar Reseller — Rp50rb
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+</Layout>

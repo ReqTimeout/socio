@@ -1,0 +1,50 @@
+---
+// D6: KategoriExplainer — 3 kategori utama prose + icon (bukan card grid 3-col generik).
+// Plan §4.2 #5, paper-2 bg. Ledger rows horizontal dengan icon.
+const kategori = [
+  {
+    icon: 'M12 21s-7-4.5-9.3-9A5.7 5.7 0 0 1 12 6.4 5.7 5.7 0 0 1 21.3 12C19 16.5 12 21 12 21Z',
+    title: 'Engagement',
+    desc: 'Likes, comments, reactions — sinyal sosial yang bikin konten kamu keliatan hidup dan didorong algoritma.',
+    contoh: 'Instagram Likes · TikTok Likes · Facebook Reactions',
+  },
+  {
+    icon: 'M2 12h4l3-9 4 18 3-9h6',
+    title: 'Viewership',
+    desc: 'Views untuk video, story, dan streaming — bahan bakar reach. Kickstart konten biar keliatan di lebih banyak feed.',
+    contoh: 'TikTok Views · YouTube Views · Instagram Story Views',
+  },
+  {
+    icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm10 10v-2a4 4 0 0 0-3-3.9M13 3.1a4 4 0 0 1 0 7.8',
+    title: 'Growth',
+    desc: 'Followers, subscribers, members — membangun basis audiens yang jadi sosial proof dan aset jangka panjang.',
+    contoh: 'IG Followers · YouTube Subscribers · Telegram Members',
+  },
+];
+---
+
+<section class="bg-[var(--paper)] py-16 md:py-24" aria-labelledby="kategori-title">
+  <div class="mx-auto max-w-6xl px-5 md:px-8">
+    <div class="reveal mx-auto max-w-2xl text-center">
+      <h2 id="kategori-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Tiga jenis layanan, satu tujuan.
+      </h2>
+    </div>
+
+    <!-- Ledger rows: icon + prose, hairline antar row (bukan 3-card grid) -->
+    <div class="mx-auto mt-10 max-w-3xl divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] md:mt-12">
+      {kategori.map((k, i) => (
+        <div class="reveal flex items-start gap-5 py-7" style={`--d: ${i * 90}ms`}>
+          <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)]" aria-hidden="true">
+            <svg class="h-5 w-5 text-[var(--accent-ink)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={k.icon} /></svg>
+          </span>
+          <div class="min-w-0">
+            <h3 class="font-display text-[17px] font-bold text-ink">{k.title}</h3>
+            <p class="mt-1.5 text-[14px] leading-relaxed text-ink-2">{k.desc}</p>
+            <p class="mt-1 text-[12px] font-semibold text-ink-3">{k.contoh}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

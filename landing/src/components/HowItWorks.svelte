@@ -1,58 +1,95 @@
-<script>
-  import { fade, fly, slide } from 'svelte/transition';
+<script lang="ts">
+  import { fade, fly } from 'svelte/transition';
   import { onMount } from 'svelte';
+
+  // L2: HowItWorks — token drift repair (primary→accent-ink family),
+  // real prices dari prices.json, anti-pattern "browser chrome dots" dihapus,
+  // progress width animation → scaleX (GPU-safe), autoplay gated IO + reduced-motion,
+  // slide→fade+fly (height animation removed).
 
   let activeStep = 1;
   let autoPlayInterval;
+  let containerEl: HTMLElement | undefined;
+  let inView = true;
+  let reduced = false;
 
   const steps = [
-    { id: 1, title: '1. Daftar Gratis', desc: 'Buat akun Socio.id dalam 30 detik. Langsung dapat akses dashboard & saldo trial.' },
-    { id: 2, title: '2. Top Up Saldo', desc: 'Isi saldo mulai Rp10.000 via QRIS, Transfer Bank, atau e-wallet. Langsung masuk.' },
-    { id: 3, title: '3. Pilih Layanan', desc: 'Cari layanan dari 8.000+ katalog: follower, like, views, hingga SEO.' },
-    { id: 4, title: '4. Order & Bayar', desc: 'Tempel link, tentukan quantity, klik pesan. Potong saldo otomatis.' },
-    { id: 5, title: '5. Pantau Status', desc: 'Lihat order dari Pending → Proses → Selesai live di dashboard.' },
+    { id: 1, title: 'Daftar Reseller', desc: 'Rp50.000 sekali — saldo Rp20.000 langsung masuk, harga layanan turun otomatis.' },
+    { id: 2, title: 'Top Up Saldo', desc: 'Isi saldo mulai Rp10.000 via QRIS, transfer bank, atau e-wallet. Langsung masuk otomatis.' },
+    { id: 3, title: 'Pilih Layanan', desc: 'Cari dari 8.270 layanan katalog: followers, likes, views, member, hingga SEO.' },
+    { id: 4, title: 'Order & Bayar', desc: 'Tempel link, tentukan quantity, klik pesan. Potong saldo otomatis, status live.' },
+    { id: 5, title: 'Pantau Status', desc: 'Lihat order dari Pending → Proses → Selesai di dashboard, plus notifikasi real-time.' },
   ];
 
   const nextStep = () => {
     activeStep = activeStep < 5 ? activeStep + 1 : 1;
   };
   const startAutoPlay = () => {
+    if (reduced || !inView) return;
     autoPlayInterval = setInterval(nextStep, 6000);
   };
   const stopAutoPlay = () => clearInterval(autoPlayInterval);
 
+  // L2 review-animations: panel transitions. Reduced motion → no fly; otherwise fly y:16 320ms.
+  // Diakses via $derived supaya reactive terhadap `reduced` setelah onMount.
+  const panelTrans = $derived(reduced ? null : fly);
+  const panelIntro = $derived(reduced ? null : { y: 16, duration: 320 });
+
   onMount(() => {
+    reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        inView = e.isIntersecting;
+        if (inView && !autoPlayInterval) startAutoPlay();
+        else if (!inView) stopAutoPlay();
+      },
+      { threshold: 0.25 },
+    );
+    if (containerEl) io.observe(containerEl);
     startAutoPlay();
-    return () => stopAutoPlay();
+    return () => {
+      stopAutoPlay();
+      io.disconnect();
+    };
   });
+
+  // Harga real dari prices.json (Sep 2026 sync)
+  const catalogRow = [
+    { label: 'IG Followers 1k', price: 'Rp7.395' },
+    { label: 'TT Video Views 1k', price: 'Rp165' },
+    { label: 'YT Views 1k', price: 'Rp6.162' },
+  ];
 </script>
 
-<section class="py-24 bg-ink-50 overflow-hidden" id="cara-kerja">
+<section bind:this={containerEl} class="py-24 bg-[var(--paper-2)] overflow-hidden" id="cara-kerja">
   <div class="container mx-auto px-6">
     <div class="text-center mb-16">
-      <h2 class="font-display font-bold text-3xl md:text-5xl text-ink-900 mb-4">Cara Pakai Socio.id</h2>
-      <p class="text-ink-500">Naikkan engagement dalam 5 langkah mudah.</p>
+      <h2 class="font-display font-bold text-3xl md:text-5xl text-ink mb-4">Cara Pakai Socio.id</h2>
+      <p class="text-ink-3">Naikkan engagement dalam 5 langkah mudah.</p>
     </div>
 
     <div
       class="grid lg:grid-cols-2 gap-12 items-center"
       onmouseenter={stopAutoPlay}
       onmouseleave={startAutoPlay}
+      role="group"
+      aria-label="Langkah-langkah order"
     >
       <div class="space-y-3">
         {#each steps as step}
           <button
             class="w-full text-left p-5 rounded-2xl transition-all duration-300 border-l-4 relative overflow-hidden group
               {activeStep === step.id
-              ? 'bg-white shadow-lg border-primary scale-105 z-10'
+              ? 'bg-white shadow-lg border-[var(--accent-ink)] scale-[1.02] z-10'
               : 'bg-transparent border-transparent hover:bg-white/50 opacity-60 hover:opacity-100'}"
             onclick={() => (activeStep = step.id)}
+            aria-pressed={activeStep === step.id}
           >
-            <h3 class="font-bold text-lg {activeStep === step.id ? 'text-primary' : 'text-ink-500'}">{step.title}</h3>
+            <h3 class="font-bold text-lg {activeStep === step.id ? 'text-[var(--accent-ink)]' : 'text-ink-3'}">{step.id}. {step.title}</h3>
             {#if activeStep === step.id}
-              <p transition:slide class="text-sm text-ink-500 mt-2 leading-relaxed">{step.desc}</p>
-              <div class="absolute bottom-0 left-0 h-1 bg-primary/20 w-full mt-4">
-                <div class="h-full bg-primary w-full animate-[progress_6s_linear]"></div>
+              <p transition:fade={{ duration: 180 }} class="text-sm text-ink-2 mt-2 leading-relaxed">{step.desc}</p>
+              <div class="absolute bottom-0 left-0 h-1 bg-[var(--accent-tint)] w-full mt-4 overflow-hidden">
+                <div class="h-full w-full origin-left transform scale-x-0 animate-[progress_6s_linear_forwards]"></div>
               </div>
             {/if}
           </button>
@@ -60,98 +97,175 @@
       </div>
 
       <div
-        class="relative h-[480px] w-full bg-white rounded-[2rem] shadow-2xl border border-ink-100 overflow-hidden flex flex-col"
+        class="relative h-[480px] w-full bg-white rounded-[2rem] shadow-2xl border border-[var(--hairline)] overflow-hidden flex flex-col"
       >
-        <div class="bg-white border-b border-ink-100 p-4 flex justify-between items-center shadow-sm z-20">
+        <div class="bg-white border-b border-[var(--hairline)] p-4 flex justify-between items-center shadow-sm z-20">
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white font-bold text-xs">S</div>
-            <span class="font-bold text-ink-900 text-sm">Socio.id Dashboard</span>
+            <div class="w-8 h-8 rounded bg-[var(--accent-ink)] flex items-center justify-center text-white font-bold text-xs" aria-hidden="true">S</div>
+            <span class="font-bold text-ink text-sm">Socio.id Dashboard</span>
           </div>
-          <div class="hidden md:block bg-ink-100 px-4 py-1.5 rounded-full text-[10px] text-ink-400 font-mono w-1/2 text-center">
+          <div class="hidden md:block bg-[var(--paper-2)] px-4 py-1.5 rounded-full text-[10px] text-ink-3 font-mono w-1/2 text-center">
             app.socio.id/dashboard
-          </div>
-          <div class="flex gap-1.5">
-            <div class="w-2.5 h-2.5 rounded-full bg-danger/70"></div>
-            <div class="w-2.5 h-2.5 rounded-full bg-warning/70"></div>
-            <div class="w-2.5 h-2.5 rounded-full bg-success/70"></div>
           </div>
         </div>
 
-        <div class="flex-1 relative bg-ink-50 p-6 overflow-hidden flex items-center justify-center">
+        <div class="flex-1 relative bg-[var(--paper-2)] p-6 overflow-hidden flex items-center justify-center">
           {#if activeStep === 1}
-            <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm text-center">
-              <div class="bg-white p-8 rounded-2xl shadow-lg border border-ink-100 relative">
-                <div class="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">✨</div>
-                <h4 class="font-bold text-ink-900 mb-1">Daftar Akun</h4>
-                <p class="text-xs text-ink-400 mb-6">Email & password saja</p>
-                <div class="bg-primary text-white rounded-full py-3 font-bold text-sm">Buat Akun Gratis</div>
+            {#if panelTrans}
+              <div in:panelTrans={panelIntro} class="w-full max-w-sm text-center">
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-[var(--hairline)] relative">
+                  <div class="w-16 h-16 bg-[var(--accent-tint)] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="text-[var(--accent-ink)]" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"/></svg>
+                  </div>
+                  <h4 class="font-bold text-ink mb-1">Daftar Reseller</h4>
+                  <p class="text-xs text-ink-3 mb-4">Rp50.000 sekali bayar</p>
+                  <p class="text-[10px] text-ink-3 mb-4">Saldo Rp20.000 langsung jalan</p>
+                  <div class="bg-[var(--accent-ink)] text-white rounded-full py-3 font-bold text-sm">Daftar Reseller — Rp50rb</div>
+                </div>
               </div>
-            </div>
+            {:else}
+              <div class="w-full max-w-sm text-center">
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-[var(--hairline)]">
+                  <div class="w-16 h-16 bg-[var(--accent-tint)] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="text-[var(--accent-ink)]" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"/></svg>
+                  </div>
+                  <h4 class="font-bold text-ink mb-1">Daftar Reseller</h4>
+                  <p class="text-xs text-ink-3 mb-4">Rp50.000 sekali bayar</p>
+                  <p class="text-[10px] text-ink-3 mb-4">Saldo Rp20.000 langsung jalan</p>
+                  <div class="bg-[var(--accent-ink)] text-white rounded-full py-3 font-bold text-sm">Daftar Reseller — Rp50rb</div>
+                </div>
+              </div>
+            {/if}
           {/if}
 
           {#if activeStep === 2}
-            <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-ink-100 overflow-hidden">
-              <div class="p-4 border-b border-ink-100 flex justify-between items-center bg-ink-50">
-                <span class="text-xs font-bold text-ink-900">Top Up Saldo</span>
-                <span class="text-[10px] bg-accent-100 text-accent-700 px-2 py-0.5 rounded">QRIS</span>
+            {#if panelTrans}
+              <div in:panelTrans={panelIntro} class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-[var(--hairline)] overflow-hidden">
+                <div class="p-4 border-b border-[var(--hairline)] flex justify-between items-center bg-[var(--paper-2)]">
+                  <span class="text-xs font-bold text-ink">Top Up Saldo</span>
+                  <span class="text-[10px] bg-[var(--accent-tint)] text-[var(--accent-ink)] px-2 py-0.5 rounded font-bold">QRIS</span>
+                </div>
+                <div class="p-6 text-center">
+                  <div class="w-32 h-32 bg-[oklch(0.19_0.02_235)] mx-auto rounded-xl flex items-center justify-center text-white text-[10px] font-bold mb-4">SCAN QRIS</div>
+                  <div class="bg-[var(--color-success-soft)] text-[var(--color-success)] text-xs font-bold py-2 rounded-lg">Saldo masuk otomatis ✓</div>
+                </div>
               </div>
-              <div class="p-6 text-center">
-                <div class="w-32 h-32 bg-ink-900 mx-auto rounded-xl flex items-center justify-center text-white text-[10px] font-bold mb-4">SCAN QRIS</div>
-                <div class="bg-success-soft text-success text-xs font-bold py-2 rounded-lg">Saldo masuk otomatis ✓</div>
+            {:else}
+              <div class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-[var(--hairline)] overflow-hidden">
+                <div class="p-4 border-b border-[var(--hairline)] flex justify-between items-center bg-[var(--paper-2)]">
+                  <span class="text-xs font-bold text-ink">Top Up Saldo</span>
+                  <span class="text-[10px] bg-[var(--accent-tint)] text-[var(--accent-ink)] px-2 py-0.5 rounded font-bold">QRIS</span>
+                </div>
+                <div class="p-6 text-center">
+                  <div class="w-32 h-32 bg-[oklch(0.19_0.02_235)] mx-auto rounded-xl flex items-center justify-center text-white text-[10px] font-bold mb-4">SCAN QRIS</div>
+                  <div class="bg-[var(--color-success-soft)] text-[var(--color-success)] text-xs font-bold py-2 rounded-lg">Saldo masuk otomatis ✓</div>
+                </div>
               </div>
-            </div>
+            {/if}
           {/if}
 
           {#if activeStep === 3}
-            <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-ink-100 overflow-hidden">
-              <div class="p-4 border-b border-ink-100 flex justify-between items-center bg-ink-50">
-                <span class="text-xs font-bold text-ink-900">Katalog Layanan</span>
-                <span class="text-[10px] bg-primary-100 text-primary-700 px-2 py-0.5 rounded">8.185</span>
+            {#if panelTrans}
+              <div in:panelTrans={panelIntro} class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-[var(--hairline)] overflow-hidden">
+                <div class="p-4 border-b border-[var(--hairline)] flex justify-between items-center bg-[var(--paper-2)]">
+                  <span class="text-xs font-bold text-ink">Katalog Layanan</span>
+                  <span class="text-[10px] bg-[var(--accent-tint)] text-[var(--accent-ink)] px-2 py-0.5 rounded font-bold">8.270</span>
+                </div>
+                <div class="p-4 space-y-2">
+                  {#each catalogRow as r}
+                    <div class="flex justify-between items-center bg-[var(--paper-2)] rounded-lg px-3 py-2 text-xs text-ink-2">
+                      <span>{r.label}</span><span class="font-bold text-[var(--accent-ink)] num">{r.price}</span>
+                    </div>
+                  {/each}
+                </div>
               </div>
-              <div class="p-4 space-y-2">
-                {#each ['IG Followers 1k — Rp18', 'TT Views 1k — Rp8', 'YT Views 1k — Rp25'] as l}
-                  <div class="flex justify-between items-center bg-ink-50 rounded-lg px-3 py-2 text-xs text-ink-700">
-                    <span>{l}</span><span class="text-accent-600 font-bold">Pilih →</span>
-                  </div>
-                {/each}
+            {:else}
+              <div class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-[var(--hairline)] overflow-hidden">
+                <div class="p-4 border-b border-[var(--hairline)] flex justify-between items-center bg-[var(--paper-2)]">
+                  <span class="text-xs font-bold text-ink">Katalog Layanan</span>
+                  <span class="text-[10px] bg-[var(--accent-tint)] text-[var(--accent-ink)] px-2 py-0.5 rounded font-bold">8.270</span>
+                </div>
+                <div class="p-4 space-y-2">
+                  {#each catalogRow as r}
+                    <div class="flex justify-between items-center bg-[var(--paper-2)] rounded-lg px-3 py-2 text-xs text-ink-2">
+                      <span>{r.label}</span><span class="font-bold text-[var(--accent-ink)] num">{r.price}</span>
+                    </div>
+                  {/each}
+                </div>
               </div>
-            </div>
+            {/if}
           {/if}
 
           {#if activeStep === 4}
-            <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm space-y-3">
-              <div class="bg-white p-4 rounded-xl shadow-lg border border-ink-100 text-left">
-                <div class="text-[10px] text-ink-400 uppercase mb-1">Link</div>
-                <div class="text-xs text-ink-600 bg-ink-50 rounded px-2 py-1.5 mb-2">instagram.com/p/abcd</div>
-                <div class="flex justify-between text-xs text-ink-600"><span>Quantity</span><span class="font-bold">1.000</span></div>
-                <div class="flex justify-between text-sm mt-2 pt-2 border-t border-dashed border-ink-100"><span class="font-bold text-ink-800">Total</span><span class="font-display font-bold text-primary">Rp 18</span></div>
-                <div class="bg-primary text-white text-center rounded-full py-2 mt-3 text-sm font-bold">Pesan Sekarang</div>
+            {#if panelTrans}
+              <div in:panelTrans={panelIntro} class="w-full max-w-sm space-y-3">
+                <div class="bg-white p-4 rounded-xl shadow-lg border border-[var(--hairline)] text-left">
+                  <div class="text-[10px] text-ink-3 uppercase mb-1 font-bold tracking-wider">Link</div>
+                  <div class="text-xs text-ink-2 bg-[var(--paper-2)] rounded px-2 py-1.5 mb-2 font-mono">instagram.com/p/abcd</div>
+                  <div class="flex justify-between text-xs text-ink-2"><span>Quantity</span><span class="font-bold num">1.000</span></div>
+                  <div class="flex justify-between text-sm mt-2 pt-2 border-t border-dashed border-[var(--hairline)]"><span class="font-bold text-ink">Total</span><span class="font-display font-bold text-[var(--accent-ink)] num">Rp7.395</span></div>
+                  <div class="bg-[var(--accent-ink)] text-white text-center rounded-full py-2 mt-3 text-sm font-bold">Pesan Sekarang</div>
+                </div>
               </div>
-            </div>
+            {:else}
+              <div class="w-full max-w-sm space-y-3">
+                <div class="bg-white p-4 rounded-xl shadow-lg border border-[var(--hairline)] text-left">
+                  <div class="text-[10px] text-ink-3 uppercase mb-1 font-bold tracking-wider">Link</div>
+                  <div class="text-xs text-ink-2 bg-[var(--paper-2)] rounded px-2 py-1.5 mb-2 font-mono">instagram.com/p/abcd</div>
+                  <div class="flex justify-between text-xs text-ink-2"><span>Quantity</span><span class="font-bold num">1.000</span></div>
+                  <div class="flex justify-between text-sm mt-2 pt-2 border-t border-dashed border-[var(--hairline)]"><span class="font-bold text-ink">Total</span><span class="font-display font-bold text-[var(--accent-ink)] num">Rp7.395</span></div>
+                  <div class="bg-[var(--accent-ink)] text-white text-center rounded-full py-2 mt-3 text-sm font-bold">Pesan Sekarang</div>
+                </div>
+              </div>
+            {/if}
           {/if}
 
           {#if activeStep === 5}
-            <div in:fly={{ y: 20, duration: 400 }} class="w-full max-w-sm space-y-3">
-              <div class="grid grid-cols-2 gap-3">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-ink-100">
-                  <div class="text-[10px] text-ink-400 mb-1 font-bold">Saldo</div>
-                  <div class="text-xl font-bold text-primary">Rp 249.982</div>
-                </div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-ink-100">
-                  <div class="text-[10px] text-ink-400 mb-1 font-bold">Order Hari Ini</div>
-                  <div class="text-xl font-bold text-ink-800">37</div>
-                </div>
-              </div>
-              <div class="bg-white p-4 rounded-xl shadow-sm border border-ink-100 space-y-2">
-                <div class="text-[10px] text-ink-400 font-bold">Status Live</div>
-                {#each [{ s: 'Proses', c: 'bg-status-progress' }, { s: 'Selesai', c: 'bg-status-complete' }] as r}
-                  <div class="flex justify-between items-center text-xs">
-                    <span class="font-mono text-ink-500">SOC-8823{r.s === 'Proses' ? '1' : '0'}</span>
-                    <span class="text-white {r.c} px-2 py-0.5 rounded-full text-[10px] font-bold">{r.s}</span>
+            {#if panelTrans}
+              <div in:panelTrans={panelIntro} class="w-full max-w-sm space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--hairline)]">
+                    <div class="text-[10px] text-ink-3 mb-1 font-bold">Saldo</div>
+                    <div class="text-xl font-bold text-[var(--accent-ink)] num">Rp 249.982</div>
                   </div>
-                {/each}
+                  <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--hairline)]">
+                    <div class="text-[10px] text-ink-3 mb-1 font-bold">Order Hari Ini</div>
+                    <div class="text-xl font-bold text-ink num">37</div>
+                  </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--hairline)] space-y-2">
+                  <div class="text-[10px] text-ink-3 font-bold">Status Live</div>
+                  {#each [{ s: 'Proses', c: 'bg-[var(--color-warning)]' }, { s: 'Selesai', c: 'bg-[var(--color-success)]' }] as r}
+                    <div class="flex justify-between items-center text-xs">
+                      <span class="font-mono text-ink-2 num">SOC-8823{r.s === 'Proses' ? '1' : '0'}</span>
+                      <span class="text-white {r.c} px-2 py-0.5 rounded-full text-[10px] font-bold">{r.s}</span>
+                    </div>
+                  {/each}
+                </div>
               </div>
-            </div>
+            {:else}
+              <div class="w-full max-w-sm space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--hairline)]">
+                    <div class="text-[10px] text-ink-3 mb-1 font-bold">Saldo</div>
+                    <div class="text-xl font-bold text-[var(--accent-ink)] num">Rp 249.982</div>
+                  </div>
+                  <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--hairline)]">
+                    <div class="text-[10px] text-ink-3 mb-1 font-bold">Order Hari Ini</div>
+                    <div class="text-xl font-bold text-ink num">37</div>
+                  </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--hairline)] space-y-2">
+                  <div class="text-[10px] text-ink-3 font-bold">Status Live</div>
+                  {#each [{ s: 'Proses', c: 'bg-[var(--color-warning)]' }, { s: 'Selesai', c: 'bg-[var(--color-success)]' }] as r}
+                    <div class="flex justify-between items-center text-xs">
+                      <span class="font-mono text-ink-2 num">SOC-8823{r.s === 'Proses' ? '1' : '0'}</span>
+                      <span class="text-white {r.c} px-2 py-0.5 rounded-full text-[10px] font-bold">{r.s}</span>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {/if}
           {/if}
         </div>
       </div>
@@ -160,12 +274,13 @@
 </section>
 
 <style>
+  /* L2 review-animations: progress width → transform scaleX (GPU-safe).
+     transform-origin left + scaleX 0 → 1. */
   @keyframes progress {
-    0% {
-      width: 0%;
-    }
-    100% {
-      width: 100%;
-    }
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+  .animate-\[progress_6s_linear_forwards\] {
+    animation: progress 6s linear forwards;
   }
 </style>

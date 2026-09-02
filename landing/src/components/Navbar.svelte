@@ -2,68 +2,52 @@
   import { onMount } from 'svelte';
 
   let isScrolled = false;
-  let isMenuOpen = false;
 
   const loginLink = 'https://app.socio.id/login';
-  const regLink = 'https://app.socio.id/daftar';
-  const resellerLink = 'https://app.socio.id/daftar?mode=reseller';
+  const regLink = 'https://app.socio.id/daftar?mode=reseller';
 
+  // D1: scroll-state — blur + hairline pas threshold 24px (plan §3 navbar)
   onMount(() => {
-    const handleScroll = () => {
-      isScrolled = window.scrollY > 20;
+    const onScroll = () => {
+      isScrolled = window.scrollY > 24;
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   });
 </script>
 
 <nav
-  class="fixed w-full z-50 transition-all duration-300 {isScrolled
-    ? 'bg-white/90 backdrop-blur-md shadow-sm py-3'
-    : 'bg-transparent py-5'}"
+  class="fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter,padding] duration-300
+    {isScrolled ? 'bg-[color-mix(in_oklab,var(--paper)_82%,transparent)] backdrop-blur-xl' : 'bg-transparent'}"
+  style="border-bottom: 1px solid {isScrolled ? 'var(--hairline)' : 'transparent'}"
+  aria-label="Navigasi utama"
 >
-  <div class="container mx-auto px-5 md:px-6 flex justify-between items-center">
-    <a href="/" class="font-display font-black text-xl md:text-2xl tracking-tight">
-      <span class="text-ink-900">socio</span><span class="text-primary">.id</span>
+  <div
+    class="mx-auto flex max-w-6xl items-center justify-between px-5 md:px-8
+      {isScrolled ? 'py-3' : 'py-5'} transition-all duration-300"
+  >
+    <a href="/" class="font-display text-xl font-bold tracking-tight md:text-2xl" aria-label="Socio.id — beranda">
+      <span class="text-ink">socio</span><span class="text-accent-ink">.id</span>
     </a>
 
-    <!-- Desktop: 3 CTAs jelas -->
-    <div class="hidden md:flex gap-2 text-sm font-bold items-center">
-      <a href="#layanan" class="px-3 py-2 text-ink-600 hover:text-ink-900 transition">Layanan</a>
-      <a href="#cara-kerja" class="px-3 py-2 text-ink-600 hover:text-ink-900 transition">Cara Kerja</a>
-      <a href="#harga" class="px-3 py-2 text-ink-600 hover:text-ink-900 transition">Harga</a>
-      <span class="w-px h-5 bg-ink-200 mx-1"></span>
-      <a href={loginLink} class="px-4 py-2 text-ink-700 hover:text-primary transition">Masuk</a>
-      <a href={regLink} class="px-5 py-2.5 rounded-full border border-ink-200 bg-white hover:bg-ink-50 transition">Daftar</a>
+    <!-- Desktop ≥768px: nav penuh (plan: Layanan · Reseller · Blog + Masuk + Daftar accent-ink) -->
+    <div class="hidden items-center gap-1 md:flex">
+      <a href="/layanan" class="rounded-lg px-3 py-2 text-sm font-semibold text-ink-2 transition-colors hover:text-ink">Layanan</a>
+      <a href="/reseller" class="rounded-lg px-3 py-2 text-sm font-semibold text-ink-2 transition-colors hover:text-ink">Reseller</a>
+      <a href="/blog" class="rounded-lg px-3 py-2 text-sm font-semibold text-ink-2 transition-colors hover:text-ink">Blog</a>
+      <span class="mx-2 h-5 w-px bg-[var(--hairline-strong)]" aria-hidden="true"></span>
+      <a href={loginLink} class="rounded-lg px-3 py-2 text-sm font-semibold text-ink-2 transition-colors hover:text-ink">Masuk</a>
       <a
-        href={resellerLink}
-        class="bg-amber-400 text-ink-900 px-5 py-2.5 rounded-full hover:bg-amber-500 transition shadow-md flex items-center gap-1"
+        href={regLink}
+        class="rounded-full bg-[var(--accent-ink)] px-5 py-2.5 text-sm font-bold text-white shadow-sm
+          transition-transform duration-150 hover:bg-[var(--accent-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-focus-ring)]
+          active:scale-[0.97]"
       >
-        👑 Reseller
+        Daftar Rp50rb
       </a>
     </div>
 
-    <button
-      class="md:hidden w-11 h-11 grid place-items-center rounded-xl bg-white shadow-sm border border-ink-100 text-ink-700"
-      onclick={() => (isMenuOpen = !isMenuOpen)}
-      aria-label="Buka menu"
-      aria-expanded={isMenuOpen}
-    >
-      {isMenuOpen ? '✕' : '☰'}
-    </button>
+    <!-- Mobile: logo saja — semua navigasi utama ada di FloatingTabDock (no hamburger) -->
   </div>
-
-  {#if isMenuOpen}
-    <div
-      class="absolute top-full left-0 w-full bg-white shadow-xl border-t border-ink-100 p-5 flex flex-col gap-3 md:hidden"
-    >
-      <a href="#layanan" class="text-base font-bold text-ink-700 py-2" onclick={() => (isMenuOpen = false)}>Layanan</a>
-      <a href="#cara-kerja" class="text-base font-bold text-ink-700 py-2" onclick={() => (isMenuOpen = false)}>Cara Kerja</a>
-      <a href="#harga" class="text-base font-bold text-ink-700 py-2" onclick={() => (isMenuOpen = false)}>Harga</a>
-      <hr class="border-ink-100 my-1" />
-      <a href={loginLink} class="text-center py-3 font-bold text-ink-700 bg-ink-50 rounded-xl" onclick={() => (isMenuOpen = false)}>Masuk</a>
-      <a href={regLink} class="text-center py-3 font-bold text-white bg-primary rounded-xl shadow-md" onclick={() => (isMenuOpen = false)}>Daftar Gratis — Member</a>
-      <a href={resellerLink} class="text-center py-3 font-bold text-ink-900 bg-amber-400 rounded-xl shadow-md flex items-center justify-center gap-2" onclick={() => (isMenuOpen = false)}>👑 Daftar Reseller</a>
-    </div>
-  {/if}
 </nav>

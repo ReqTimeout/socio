@@ -1,0 +1,49 @@
+---
+// D7: ArtThumb — SVG art generatif deterministik per artikel (seed slug),
+// konsisten build-ke-build. 16:9, warna brand, 0 request eksternal (gate SEO §1).
+interface Props {
+  seed: string;
+  size?: 'sm' | 'lg';
+  class?: string;
+}
+
+const { seed, size = 'sm', class: cls = '' } = Astro.props;
+
+// Deterministik dari slug: hash sederhana → pilih pola
+let seedHash = 0;
+for (let i = 0; i < seed.length; i++) seedHash = (seedHash * 31 + seed.charCodeAt(i)) >>> 0;
+const variant = seedHash % 4;
+
+const w = 600;
+const height = size === 'lg' ? 340 : 340;
+const wFull = size === 'lg' ? 1000 : w;
+
+// Pola geometris brand — variasi via seed
+const patterns = [
+  // 0: lingkaran konsentris + diagonal
+  `<circle cx="150" cy="170" r="130" fill="var(--accent-tint)"/><circle cx="150" cy="170" r="86" fill="var(--paper)"/><circle cx="150" cy="170" r="46" fill="var(--accent-ink)" opacity="0.85"/><path d="M320 340 560 0" stroke="var(--ink)" stroke-opacity="0.08" stroke-width="40"/>`,
+  // 1: bar chart hairline
+  `<rect x="60" y="220" width="52" height="80" rx="6" fill="var(--accent-ink)" opacity="0.9"/><rect x="140" y="170" width="52" height="130" rx="6" fill="var(--accent-ink)" opacity="0.65"/><rect x="220" y="120" width="52" height="180" rx="6" fill="var(--accent-ink)" opacity="0.45"/><rect x="300" y="60" width="52" height="240" rx="6" fill="var(--accent-ink)" opacity="0.3"/><path d="M60 60 560 290" stroke="var(--ink)" stroke-opacity="0.1" stroke-width="3" stroke-dasharray="8 8"/>`,
+  // 2: avatar stack (followers)
+  `<circle cx="140" cy="120" r="44" fill="var(--accent-tint)"/><circle cx="140" cy="120" r="20" fill="var(--accent-ink)"/><path d="M90 190a50 50 0 0 1 100 0" fill="none" stroke="var(--accent-ink)" stroke-width="10" opacity="0.3"/><circle cx="330" cy="220" r="60" fill="var(--accent-tint)"/><circle cx="330" cy="220" r="28" fill="var(--accent-ink)" opacity="0.7"/><path d="M250 310a80 80 0 0 1 160 0" fill="none" stroke="var(--accent-ink)" stroke-width="12" opacity="0.2"/>`,
+  // 3: grid dots + pulse
+  `<g fill="var(--accent-ink)">${[0, 1, 2, 3, 4].map((r) => [0, 1, 2, 3, 4, 5].map((c) => `<circle cx="${90 + c * 84}" cy="${70 + r * 56}" r="${((r + c) % 3) + 4}" opacity="${0.9 - (r + c) * 0.09}"/>`).join('')).join('')}</g><path d="M80 280 Q300 160 520 280" stroke="var(--ink)" stroke-opacity="0.12" stroke-width="6" fill="none"/>`,
+];
+---
+
+<svg
+  viewBox="0 0 600 340"
+  width={wFull}
+  height={height}
+  role="img"
+  aria-label="Ilustrasi artikel"
+  class={`block rounded-xl border border-[var(--hairline)] bg-[var(--paper-2)] ${cls}`}
+  preserveAspectRatio="xMidYMid slice"
+>
+  <rect width="600" height="340" fill="var(--paper)" />
+  <g transform={size === 'lg' ? `scale(${1000 / 600})` : ''}>
+    <g transform="scale(1 1)">
+      {patterns[variant] && <g set:html={patterns[variant]} />}
+    </g>
+  </g>
+</svg>

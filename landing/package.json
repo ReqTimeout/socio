@@ -12,12 +12,14 @@
     "check": "astro check"
   },
   "dependencies": {
+    "@astrojs/mdx": "4",
+    "@astrojs/sitemap": "^3.7.4",
     "@astrojs/svelte": "^7.2.5",
     "@socio/ui": "workspace:*",
+    "@tailwindcss/vite": "^4.1.0",
     "astro": "^5.17.1",
     "svelte": "^5.49.1",
     "tailwindcss": "^4.1.0",
-    "@tailwindcss/vite": "^4.1.0",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
