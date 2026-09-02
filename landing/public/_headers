@@ -1,0 +1,16 @@
+# socio.id — Cloudflare Pages custom headers
+# Per AGENTS.md §2.1 security headers + REBUILD_PLAN §5 security wajib.
+# CSP: static Astro, inline script (JSON-LD + module) + inline style diperlukan.
+# Semua aset self-hosted (fonts, images) — no external asset origins.
+# WAJIB: setiap perubahan CSP diuji di preview URL sebelum cutover socio.id.
+
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://app.socio.id; object-src 'none'
+
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
