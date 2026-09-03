@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Avatar, Button, Input, toast } from "@socio/ui";
+  import { Avatar, Button, Icon, Input, toast } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { formatRupiah } from "$lib/format";
@@ -170,8 +170,8 @@
           >
         {:else}
           <span
-            class="absolute -bottom-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full bg-ink-900 text-[10px] text-white"
-            aria-hidden="true">✎</span
+            class="absolute -bottom-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full bg-ink-900 text-white"
+            aria-hidden="true"><Icon name="edit" size={11} stroke={2.5} /></span
           >
         {/if}
       </button>

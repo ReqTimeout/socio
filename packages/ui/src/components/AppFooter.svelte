@@ -85,9 +85,10 @@
         &copy; {new Date().getFullYear()} Socio.id · Panel SMM Indonesia
       </p>
       <p class="text-[11px] text-ink-500">
-        Butuh bantuan? <a
+        Butuh bantuan?
+        <a
           href="/tiket"
-          class="font-semibold text-primary hover:underline">Buat tiket</a
+          class="font-bold text-primary underline-offset-2 hover:underline">Buat tiket</a
         > — balas &lt; 5 menit
       </p>
     </div>

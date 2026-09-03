@@ -98,12 +98,12 @@
   // Quick actions — copy hangat + glow brand saat hover (layered dgn card-lift)
   const quick = [
     {
-      href: "/pesan",
-      label: "Pesan",
-      desc: "Followers & likes, proses otomatis",
-      icon: "rocket",
-      chip: "from-primary-500 to-accent-500",
-      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(79,70,229,0.32)]",
+      href: "/saldo/top-up",
+      label: "Top Up",
+      desc: "Transfer BCA, ±5 menit",
+      icon: "wallet",
+      chip: "from-emerald-400 to-emerald-600",
+      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(16,163,74,0.32)]",
     },
     {
       href: "/layanan",
@@ -126,8 +126,8 @@
       label: "Affiliate",
       desc: "Ajak teman, dapat komisi",
       icon: "gift",
-      chip: "from-emerald-400 to-emerald-600",
-      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(16,163,74,0.28)]",
+      chip: "from-primary-500 to-accent-500",
+      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(79,70,229,0.32)]",
     },
   ];
 
@@ -197,12 +197,12 @@
             <span class="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
           </span>
           <span
-            class="inline-flex items-center gap-1 rounded-full bg-primary/5 px-2 py-0.5 text-xs font-bold text-primary"
+            class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary ring-1 ring-primary/20"
             >Aktif</span
           >
         {:else}
           <span
-            class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700"
+            class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-success ring-1 ring-success/20"
             >Siap</span
           >
         {/if}

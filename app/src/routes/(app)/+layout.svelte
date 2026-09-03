@@ -124,9 +124,15 @@
     </div>
   </header>
 
-  <!-- Main content — offset for sidebar on desktop -->
+  <!-- Main content — offset for sidebar on desktop.
+       pb-40 (mobile, FAB aktif): FAB duduk ~108px + dock ~70px — konten terakhir
+       butuh clearance supaya tidak tertutup FAB/dock (P2-02/P3-01). -->
   <main class="lg:ml-72">
-    <div class="mx-auto w-full max-w-7xl px-4 pb-12 pt-6 sm:px-6 lg:px-10">
+    <div
+      class="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 lg:px-10 {showFab
+        ? 'pb-40 lg:pb-12'
+        : 'pb-28 lg:pb-12'}"
+    >
       {@render children()}
     </div>
     <AppFooter />

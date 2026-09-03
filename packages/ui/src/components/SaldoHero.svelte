@@ -66,9 +66,15 @@
       <NumberFlow value={balance} format={fmt} duration={0.9} />
     </p>
     {#if insight && (insight.deposit7 > 0 || insight.spend7 > 0)}
-      <p class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur">
+      <p
+        class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur"
+      >
         <Icon name="activity" size={12} />
         7 hari: masuk {fmt(insight.deposit7)} · keluar {fmt(insight.spend7)}
+      </p>
+    {:else}
+      <p class="mt-1 text-[11px] font-medium text-white/60">
+        Mutasi 7 hari terakhir ada di <span class="font-semibold text-white/85">Riwayat</span>
       </p>
     {/if}
 
