@@ -90,6 +90,28 @@
       <Icon name="chevron_left" size={20} />
     </a>
     <h1 class="font-display text-lg font-bold tracking-tight lg:text-[1.55rem]">Top Up Saldo</h1>
+    <!-- Stepper ringkas — 3 langkah di satu layar (P3-06): nominal → transfer → konfirmasi -->
+    <div
+      class="ml-auto hidden items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-400 sm:flex"
+      aria-hidden="true"
+    >
+      <span class="flex items-center gap-1 text-primary">
+        <span class="grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] text-white"
+          >1</span
+        >
+        Nominal
+        <Icon name="chevron_right" size={11} class="text-ink-300" />
+        <span class="flex items-center gap-1">
+          <span class="grid h-4 w-4 place-items-center rounded-full bg-ink-100 text-[9px]">2</span>
+        </span>
+        Transfer
+        <Icon name="chevron_right" size={11} class="text-ink-300" />
+        <span class="flex items-center gap-1">
+          <span class="grid h-4 w-4 place-items-center rounded-full bg-ink-100 text-[9px]">3</span>
+        </span>
+        Konfirmasi
+      </span>
+    </div>
   </div>
   <div class="space-y-5">
     {#if form?.error}

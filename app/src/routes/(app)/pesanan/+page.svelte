@@ -140,6 +140,9 @@
 
   <!-- Mini summary — cepat scan tanpa scroll -->
   {#if counts.all > 0}
+    <p class="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-400 lg:hidden">
+      Ringkasan pesanan
+    </p>
     <div class="grid grid-cols-4 gap-2 lg:gap-3">
       <div
         class="rounded-xl border border-ink-100 bg-surface px-2.5 py-2.5 text-center lg:px-4 lg:py-3"

@@ -25,8 +25,6 @@
     return $page.url.pathname.startsWith(href);
   }
 
-  const fmt = (n: number) => "Rp" + Math.round(n).toLocaleString("id-ID");
-
   const displayName = $derived(user.name || user.username || "User");
   const level = $derived(user.level || "Member");
 
@@ -119,14 +117,22 @@ async function handleLogout() {
     {/each}
   </nav>
 
-  <!-- Saldo ringkas — single source tetap hero, ini cuma hint -->
-  <div class="mx-3 mb-3 rounded-xl bg-gradient-to-br from-ink-900 to-ink-800 p-3 text-white">
-    <p class="text-[10px] font-bold uppercase tracking-wide text-white/60">Saldo</p>
-    <p class="mt-0.5 font-display text-sm font-extrabold tabular-nums">{fmt(user.balance)}</p>
-    <a href="/saldo/top-up" class="mt-2 flex items-center justify-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ink-900 transition hover:bg-white/90">
-      <Icon name="plus" size={12} stroke={2.5} /> Top Up
-    </a>
-  </div>
+  <!-- Saldo — icon-only hint (P3-02: nominal hanya di SaldoHero Beranda/Saldo
+       page supaya tidak duplikat 4 tempat). Tap → /saldo lihat nominal. -->
+  <a
+    href="/saldo"
+    class="mx-3 mb-3 flex items-center gap-2.5 rounded-xl bg-ink-50 px-3 py-2.5 text-left transition hover:bg-ink-100"
+    aria-label="Buka halaman saldo"
+  >
+    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-ink-900 to-ink-800 text-white">
+      <Icon name="wallet" size={15} stroke={2} />
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block text-xs font-bold text-ink-800">Saldo</span>
+      <span class="block text-[10px] text-ink-500">Lihat & top up</span>
+    </span>
+    <Icon name="chevron_right" size={14} class="text-ink-400" />
+  </a>
 
   <!-- User card -->
   <div class="border-t border-ink-100 p-3">

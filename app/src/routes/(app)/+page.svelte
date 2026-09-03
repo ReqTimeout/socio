@@ -331,16 +331,17 @@
     </div>
   {/if}
 
-  <!-- INLINE-STAT: premium — mobile stacked, desktop inline pills -->
+  <!-- INLINE-STAT (P3-04): typographic strip — no card chrome, hairline divider.
+       Containment variance per DESIGN.md §B.7 (ledger style, bukan card stack). -->
   <div
-    class="grid grid-cols-1 gap-2.5 sm:grid-cols-3 lg:gap-3 {(data.stats.totalDeposit ?? 0) >=
-    5_000_000
-      ? 'rounded-2xl border border-amber-200/60 bg-gradient-to-br from-white via-amber-50/40 to-white p-3 shadow-[0_8px_24px_-12px_rgba(245,158,11,0.35)]'
-      : 'gap-3'}"
+    class="grid grid-cols-3 divide-x divide-ink-100 rounded-2xl border border-ink-100 bg-surface px-2 py-3.5 sm:px-4 lg:px-6 lg:py-4 {(data
+      .stats.totalDeposit ?? 0) >= 5_000_000
+      ? 'ring-1 ring-amber-200/70 bg-gradient-to-br from-white via-amber-50/40 to-white'
+      : ''}"
   >
     {#if (data.stats.totalDeposit ?? 0) >= 5_000_000}
       <div
-        class="col-span-full flex items-center justify-between rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 px-3 py-2 text-white shadow-sm"
+        class="col-span-full -mx-2 mb-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 px-3 py-2 text-white shadow-sm sm:-mx-4 lg:-mx-6"
       >
         <span class="flex items-center gap-1.5 text-xs font-bold tracking-wide">
           <span class="grid h-6 w-6 place-items-center rounded-full bg-white/20 backdrop-blur">
@@ -353,65 +354,50 @@
         >
       </div>
     {/if}
-    <div
-      class="surface-pop flex items-center justify-between rounded-2xl border border-ink-100 bg-surface px-4 py-3 lg:px-5 lg:py-4 {(data
-        .stats.totalDeposit ?? 0) >= 5_000_000
-        ? 'ring-1 ring-amber-200/50'
-        : ''}"
-    >
+    <div class="flex flex-col items-center gap-0.5 px-1 lg:gap-1">
       <span
         class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-500"
       >
-        <span class="grid h-6 w-6 place-items-center rounded-lg bg-ink-50 text-ink-600">
-          <Icon name="receipt" size={12} stroke={2} />
-        </span>
+        <Icon name="receipt" size={13} stroke={2} class="text-ink-400" />
         Pesanan
       </span>
       <span
-        class="flex items-center gap-1.5 font-display text-sm font-bold tabular-nums text-ink-900 lg:text-base"
+        class="flex items-center gap-1.5 font-display text-lg font-extrabold tabular-nums text-ink-900 sm:text-xl lg:text-2xl"
       >
         {data.stats.totalOrders.toLocaleString("id-ID")}
-        {#if data.stats.deltaOrders !== undefined && data.stats.deltaOrders !== 0}
-          <span
-            class="rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data.stats
-              .deltaOrders >= 0
-              ? 'bg-success/10 text-success'
-              : 'bg-danger/10 text-danger'}"
-            >{data.stats.deltaOrders >= 0 ? "+" : ""}{data.stats.deltaOrders.toFixed(1)}%</span
-          >
-        {/if}
       </span>
+      {#if data.stats.deltaOrders !== undefined && data.stats.deltaOrders !== 0}
+        <span
+          class="rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data.stats
+            .deltaOrders >= 0
+            ? 'bg-success/10 text-success'
+            : 'bg-danger/10 text-danger'}"
+          >{data.stats.deltaOrders >= 0 ? "+" : ""}{data.stats.deltaOrders.toFixed(1)}%</span
+        >
+      {/if}
     </div>
-    <div
-      class="surface-pop relative flex items-center justify-between rounded-2xl border bg-surface px-4 py-3 lg:px-5 lg:py-4 {(data
-        .stats.totalDeposit ?? 0) >= 5_000_000
-        ? 'border-amber-200 bg-gradient-to-br from-white to-amber-50/50'
-        : 'border-ink-100'}"
-    >
+    <div class="flex flex-col items-center gap-0.5 px-1 lg:gap-1">
       <span
         class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide {(data.stats
           .totalDeposit ?? 0) >= 5_000_000
           ? 'text-amber-600'
           : 'text-ink-500'}"
       >
-        <span
-          class="grid h-6 w-6 place-items-center rounded-lg {(data.stats.totalDeposit ?? 0) >=
-          5_000_000
-            ? 'bg-amber-100 text-amber-600'
-            : 'bg-ink-50 text-ink-600'}"
-        >
-          <Icon name="wallet" size={12} stroke={2} />
-        </span>
+        <Icon
+          name="wallet"
+          size={13}
+          stroke={2}
+          class={(data.stats.totalDeposit ?? 0) >= 5_000_000 ? "text-amber-500" : "text-ink-400"}
+        />
         Deposit
       </span>
       <span
-        class="flex items-center gap-1.5 font-display text-sm font-bold tabular-nums lg:text-base {(data
+        class="flex items-center gap-1.5 font-display text-lg font-extrabold tabular-nums sm:text-xl lg:text-2xl {(data
           .stats.totalDeposit ?? 0) >= 5_000_000
           ? 'text-amber-700'
           : 'text-ink-900'}"
       >
         {#if (data.stats.totalDeposit ?? 0) >= 5_000_000}
-          <!-- star dekoratif — konteks "VIP" dijelaskan value deposit + judul kartu -->
           <span
             class="grid h-5 w-5 place-items-center rounded-full bg-gradient-to-br from-amber-300 to-yellow-500 text-white shadow-sm"
             ><Icon name="star" size={10} stroke={2.5} /></span
@@ -420,18 +406,15 @@
         {formatRupiah(data.stats.totalDeposit)}
       </span>
     </div>
-    <div
-      class="surface-pop flex items-center justify-between rounded-2xl border border-ink-100 bg-surface px-4 py-3 lg:px-5 lg:py-4"
-    >
+    <div class="flex flex-col items-center gap-0.5 px-1 lg:gap-1">
       <span
         class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-500"
       >
-        <span class="grid h-6 w-6 place-items-center rounded-lg bg-ink-50 text-ink-600">
-          <Icon name="banknote" size={12} stroke={2} />
-        </span>
+        <Icon name="banknote" size={13} stroke={2} class="text-ink-400" />
         Belanja
       </span>
-      <span class="font-display text-sm font-bold tabular-nums text-ink-900 lg:text-base"
+      <span
+        class="font-display text-lg font-extrabold tabular-nums text-ink-900 sm:text-xl lg:text-2xl"
         >{formatRupiah(data.stats.totalSpent)}</span
       >
     </div>
@@ -581,9 +564,7 @@
           </a>
         </div>
       {:else}
-        <ul
-          class="overflow-hidden rounded-card border border-ink-100 bg-surface shadow-card divide-y divide-ink-100 lg:rounded-2xl"
-        >
+        <ul class="divide-y divide-ink-100">
           {#each data.recent as o, i (o.id)}
             {@const p = (() => {
               const n = (o.serviceName || "").toLowerCase();
@@ -607,7 +588,7 @@
               <a
                 href="/pesanan"
                 title={serviceDisplayName(o.serviceName)}
-                class="group flex min-w-0 items-center gap-2.5 px-2.5 py-2.5 transition-colors hover:bg-ink-50 active:bg-ink-100 sm:gap-3 sm:px-4 sm:py-3.5 lg:gap-3 lg:px-4 lg:py-3.5"
+                class="group flex min-w-0 items-center gap-2.5 -mx-2.5 rounded-xl px-2.5 py-2.5 transition-colors hover:bg-ink-50 active:bg-ink-100 sm:gap-3 sm:mx-0 sm:px-3 sm:py-3 lg:px-3.5 lg:py-3.5"
               >
                 <div
                   class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br {p.grad} text-white transition-transform duration-200 group-hover:scale-110 sm:h-10 sm:w-10"
