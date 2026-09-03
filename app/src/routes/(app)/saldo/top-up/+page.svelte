@@ -190,9 +190,7 @@
                 >Aktif</span
               >
             </div>
-            <div class="mt-0.5 text-xs text-ink-600">
-              Gratis · Dikonfirmasi admin ±5 menit jam kerja
-            </div>
+            <div class="mt-0.5 text-xs text-ink-600">Gratis · Dikonfirmasi admin ±5 menit</div>
             <div class="mt-1 text-xs text-ink-500">
               <span class="font-semibold text-ink-700">{data.bcaNumber}</span> a.n. {data.bcaName}
             </div>
@@ -342,10 +340,10 @@
     <div class="surface-pop rounded-2xl border border-ink-100 bg-surface p-5">
       <div class="text-xs font-bold uppercase tracking-wide text-ink-500">Ringkas akun</div>
       <div class="mt-2 text-sm text-ink-600">
-        {data.history.length ? `${data.history.length} invoice terakhir` : "Belum ada invoice"}
+        {data.history.length ? `${data.history.length} top-up terakhir` : "Belum ada top-up"}
       </div>
       <div class="mt-4 rounded-xl bg-ink-50 p-3 text-xs text-ink-600">
-        Deposit dikonfirmasi admin — ±5 menit jam kerja, ±1 jam di luar jam kerja.
+        Deposit dikonfirmasi admin — ±5 menit.
       </div>
     </div>
   </aside>
@@ -450,7 +448,7 @@
         class="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink-200 bg-ink-50 p-8 transition-colors hover:border-primary hover:bg-primary/5"
       >
         <Icon name="image" size={32} class="text-ink-500" />
-        <div class="mt-2 text-sm font-semibold">Tap untuk pilih foto</div>
+        <div class="mt-2 text-sm font-semibold">Sentuh untuk pilih foto</div>
         <div class="text-xs text-ink-500">JPG/PNG/WebP · Max 2MB</div>
         <input
           type="file"

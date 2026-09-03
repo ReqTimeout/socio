@@ -126,7 +126,7 @@
     <div>
       <p class="font-display text-2xl font-extrabold tracking-tight">Riwayat Pesanan</p>
       <p class="mt-1 text-sm text-ink-500">
-        Pantau status tiap order secara real-time — refill & pembatalan sat-set di sini.
+        Pantau status tiap order secara real-time — refill & pembatalan sekali klik di sini.
       </p>
     </div>
     <a

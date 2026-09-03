@@ -104,7 +104,7 @@
           >
         {:else}
           <div class="rounded-xl bg-ink-800 px-3 py-2 text-center text-xs text-ink-300">
-            Minimal {formatRupiah(data.minWithdraw)} untuk withdraw
+            Minimal {formatRupiah(data.minWithdraw)} untuk penarikan
           </div>
         {/if}
       </div>
@@ -184,7 +184,7 @@
     >
     <div class="min-w-0 space-y-0.5">
       <p class="text-[11px] font-extrabold uppercase tracking-wide text-amber-700">
-        Withdraw = saldo akun Socio kamu
+        Penarikan = saldo akun Socio kamu
       </p>
       <p class="text-xs leading-relaxed text-amber-800">
         Komisi kamu masuk sebagai <span class="font-bold">saldo akun</span> — bisa langsung dipakai untuk
@@ -215,7 +215,7 @@
       <h2 class="font-display text-base font-bold">Tarik Komisi</h2>
       <p class="text-sm leading-relaxed text-ink-600">
         <span class="font-bold text-ink-900">{formatRupiah(data.commission)}</span> akan diajukan —
-        kalau admin approve, langsung jadi
+        kalau admin menyetujui, langsung jadi
         <span class="font-semibold text-ink-900">saldo akun</span>
         kamu. Bisa buat order, nggak hangus.
         <span class="text-ink-500">Belum bisa diuangkan ke rekening, ya.</span>

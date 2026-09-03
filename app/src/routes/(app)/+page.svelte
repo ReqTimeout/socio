@@ -15,7 +15,7 @@
 
   let { data } = $props();
 
-  const firstName = $derived((data.user?.name ?? "Kawan").split(" ")[0]);
+  const firstName = $derived((data.user?.name ?? "Sobat").split(" ")[0]);
 
   // Time-aware greeting (WIB) — client clock → Asia/Jakarta.
   // Range: pagi 04-10, siang 11-14, sore 15-17, malam 18-03.
@@ -198,12 +198,12 @@
           </span>
           <span
             class="inline-flex items-center gap-1 rounded-full bg-primary/5 px-2 py-0.5 text-xs font-bold text-primary"
-            >Live</span
+            >Aktif</span
           >
         {:else}
           <span
             class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700"
-            >Ready</span
+            >Siap</span
           >
         {/if}
         <span class="truncate">{subtitle}</span>
@@ -285,7 +285,7 @@
           Pesan Cepat
         </h2>
         <span class="hidden text-xs text-ink-500 lg:inline"
-          >Tap — link terakhir otomatis terisi</span
+          >Sekali sentuh, link terisi otomatis</span
         >
       </div>
 
@@ -317,7 +317,7 @@
                 <span class="rounded-full bg-ink-100 px-1.5 py-0.5 font-bold text-ink-600"
                   >{q.times > 1 ? `${q.times}×` : "Baru"}</span
                 >
-                <span>tap untuk pesan lagi</span>
+                <span>sentuh untuk pesan lagi</span>
               </span>
             </span>
             <span
@@ -346,10 +346,10 @@
           <span class="grid h-6 w-6 place-items-center rounded-full bg-white/20 backdrop-blur">
             <Icon name="star" size={12} stroke={2.5} />
           </span>
-          VIP — Deposit di atas 5jt
+          VIP — Deposit di atas 5 juta
         </span>
         <span class="text-[11px] font-semibold opacity-90"
-          >Terima kasih sudah percaya — Socios!</span
+          >Terima kasih sudah percaya — Sahabat Socio!</span
         >
       </div>
     {/if}
@@ -525,7 +525,7 @@
               class="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition active:scale-95 hover:opacity-95 sm:mt-2"
             >
               <Icon name="plus" size={14} stroke={2.5} />
-              <span class="sm:hidden">Mulai</span>
+              <span class="sm:hidden">Mulai Sekarang</span>
               <span class="hidden sm:inline">Mulai Sekarang</span>
             </a>
           </div>
@@ -558,7 +558,7 @@
           <EmptyOrdersArt size={112} class="relative mx-auto mb-3 text-ink-300" />
           <p class="relative text-sm font-bold text-ink-800">Pesanan pertama menunggu</p>
           <p class="relative mt-1 text-xs text-ink-500">
-            <span class="lg:hidden">Mulai dari 500 rupiah — proses otomatis 30-60 detik.</span>
+            <span class="lg:hidden">Pilih layanan favorit — proses otomatis.</span>
             <span class="hidden lg:inline"
               >Pilih layanan favoritmu, sistem kami proses otomatis.</span
             >
@@ -646,7 +646,7 @@
     </span>
     <span class="text-ink-300">•</span>
     <span class="inline-flex items-center gap-1">
-      <Icon name="refresh" size={13} class="text-primary" /> Sync tiap jam
+      <Icon name="refresh" size={13} class="text-primary" /> Sinkron otomatis
     </span>
   </div>
 </section>

@@ -105,7 +105,7 @@
     >
       Katalog Layanan
     </h1>
-    <p class="mt-1.5 text-[14px] text-ink-500">Pilih kategori, atur jumlah, langsung gas.</p>
+    <p class="mt-1.5 text-[14px] text-ink-500">Pilih kategori, atur jumlah, langsung pesan.</p>
   </div>
 
   <!-- Search — playful floating -->

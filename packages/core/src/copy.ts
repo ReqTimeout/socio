@@ -24,7 +24,7 @@ export const copy = {
   empty: {
     orders: {
       title: "Pesanan pertama menunggu",
-      desc: "Mulai dari 500 rupiah — proses otomatis 30-60 detik setelah bayar.",
+      desc: "Pilih layanan favorit — sistem kami proses otomatis setelah bayar.",
       cta: "Buat Pesanan",
     },
     services: {
@@ -37,17 +37,17 @@ export const copy = {
       cta: "Buat Tiket",
     },
     notif: {
-      title: "Tenang aja",
+      title: "Belum ada notifikasi",
       desc: "Nanti muncul di sini kalau ada update pesanan atau promo buatmu.",
     },
     balance: {
       title: "Riwayat masih kosong",
-      desc: "Top up pertama bakal tampil di sini — ±5 menit di jam kerja, ±1 jam di luar.",
+      desc: "Top up pertama bakal tampil di sini — ±5 menit.",
       cta: "Top Up Sekarang",
     },
     affiliate: {
       title: "Belum ada downline",
-      desc: "Bagarkan link referral — tiap order downline, komisimu jalan otomatis.",
+      desc: "Bagikan link referral — tiap order downline, komisimu jalan otomatis.",
     },
   },
   order: {
@@ -66,7 +66,7 @@ export const copy = {
     title: "Top up berapa?",
     successTitle: "Saldo bertambah!",
     successDesc: (amount: string) =>
-      `Saldo kamu +${amount}. Gaskeun pesanan pertamamu!`,
+      `Saldo kamu +${amount}. Langsung bisa dipakai untuk pesanan pertamamu.`,
   },
   ticket: {
     cta: "Kirim Tiket",

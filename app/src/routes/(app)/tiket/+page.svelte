@@ -158,7 +158,7 @@
         >
           {data.tickets.length} tiket
         </span>
-        <span class="text-ink-500">· tap kartu untuk buka percakapan</span>
+        <span class="text-ink-500">· sentuh kartu untuk buka percakapan</span>
       </div>
     {/if}
 
