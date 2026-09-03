@@ -28,8 +28,8 @@
   class="lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px] border border-white/40 bg-white/75 backdrop-blur-2xl
     shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18),0_4px_16px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04]
     p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] supports-[backdrop-filter]:bg-white/60
-    dark:border-ink-700/60 dark:bg-ink-900/80 dark:shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6),0_4px_16px_rgba(0,0,0,0.4)] dark:ring-white/[0.06]
-    dark:supports-[backdrop-filter]:bg-ink-900/70"
+    dark:border-ink-600/50 dark:bg-ink-100/80 dark:shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6),0_4px_16px_rgba(0,0,0,0.4)] dark:ring-white/[0.06]
+    dark:supports-[backdrop-filter]:bg-ink-100/70"
   style="grid-template-columns: repeat({items.length}, 1fr); view-transition-name: bottom-nav;"
   aria-label="Navigasi utama"
 >
@@ -43,7 +43,7 @@
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-ink-900
         active:scale-[0.96]
         {active
-        ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-100 dark:text-ink-900 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
+        ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-800 dark:text-ink-100 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
         : 'text-ink-800 hover:text-ink-900 dark:hover:text-ink-200'}"
     >
       <span class="relative">
