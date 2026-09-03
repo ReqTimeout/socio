@@ -40,13 +40,13 @@ Pendamping [`UIUX_DASHBOARD_PLAN.md`](./UIUX_DASHBOARD_PLAN.md). Centang tiap is
 
 | # | Issue | File | Done |
 |---|---|---|---|
-| P2-01 | Avatar circle pakai Icon `pencil` (bukan unicode `✎`) | `akun/+page.svelte` | [ ] |
-| P2-02 | FAB menutup card terakhir di mobile — tambah bottom-pad konten | `(app)/+page.svelte`, semua `(app)/+page.svelte` non-pesan | [ ] |
-| P2-03 | Saldo Hero tanpa copy → tambah subline / sparkline mini | `saldo/SaldoHero.svelte` | [ ] |
-| P2-04 | Status "Error" pucat di mobile → bg-danger/15 | `packages/ui/src/components/StatusBadge.svelte` | [ ] |
-| P2-05 | Quick action "Buat Pesanan" duplicate dengan FAB — hapus salah satu | `(app)/+page.svelte` | [ ] |
-| P2-06 | Footer link overlap primary "Buat Tiket" | `AppFooter.svelte` | [ ] |
-| P2-07 | Live chip background ketika dark mode — cek kontras 4.5:1 | `+page.svelte` | [ ] |
+| P2-01 | Avatar circle pakai Icon `pencil` (bukan unicode `✎`) | `akun/+page.svelte` | [x] |
+| P2-02 | FAB menutup card terakhir di mobile — tambah bottom-pad konten | `(app)/+page.svelte`, semua `(app)/+page.svelte` non-pesan | [x] |
+| P2-03 | Saldo Hero tanpa copy → tambah subline / sparkline mini | `saldo/SaldoHero.svelte` | [x] |
+| P2-04 | Status "Error" pucat di mobile → bg-danger/15 | `packages/ui/src/components/StatusBadge.svelte` | [x] |
+| P2-05 | Quick action "Buat Pesanan" duplicate dengan FAB — hapus salah satu | `(app)/+page.svelte` | [x] |
+| P2-06 | Footer link overlap primary "Buat Tiket" | `AppFooter.svelte` | [x] |
+| P2-07 | Live chip background ketika dark mode — cek kontras 4.5:1 | `+page.svelte` | [x] |
 
 ---
 
