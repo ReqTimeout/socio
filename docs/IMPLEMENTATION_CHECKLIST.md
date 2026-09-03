@@ -78,10 +78,10 @@ Pendamping [`UIUX_DASHBOARD_PLAN.md`](./UIUX_DASHBOARD_PLAN.md). Centang tiap is
 
 | # | Issue | File | Done |
 |---|---|---|---|
-| P5-01 | Sidebar logout pakai ConfirmDialog (konsisten) | `packages/ui/src/components/Sidebar.svelte` | [ ] |
-| P5-02 | Akun Regenerate API Key + Logout pakai ConfirmDialog (bukan native) | `akun/+page.svelte` | [ ] |
-| P5-03 | AvatarUpload magic-bytes check | `akun/+page.server.ts` | [ ] |
-| P5-04 | SavedLinks chips clickable primary style | `(app)/pesan/+page.svelte` | [ ] |
+| P5-01 | Sidebar logout pakai ConfirmDialog (konsisten) | `packages/ui/src/components/Sidebar.svelte` | [x] |
+| P5-02 | Akun Regenerate API Key + Logout pakai ConfirmDialog (bukan native) | `akun/+page.svelte` | [x] |
+| P5-03 | AvatarUpload magic-bytes check | `akun/+page.server.ts` | [x] |
+| P5-04 | SavedLinks chips clickable primary style | `(app)/pesan/+page.svelte` | [x] |
 
 ---
 
