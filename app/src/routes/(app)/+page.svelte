@@ -179,7 +179,7 @@
   <header
     class="reveal flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
   >
-    <div class="min-w-0">
+    <div class="w-full min-w-0">
       <h1
         class="font-display text-xl font-extrabold tracking-tight lg:text-[1.85rem] lg:leading-none lg:tracking-[-0.015em]"
       >
@@ -187,7 +187,7 @@
         <span class="inline-block motion-safe:animate-[wave_2s_ease-in-out_1]">{greetEmoji}</span>
       </h1>
       <p
-        class="mt-1.5 flex w-full min-w-0 flex-wrap items-center gap-1.5 text-sm lg:mt-2 lg:text-[14px] text-ink-500"
+        class="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5 text-sm lg:mt-2 lg:text-[14px] text-ink-500"
       >
         {#if data.activeOrders > 0}
           <span class="relative flex h-2 w-2 shrink-0" aria-hidden="true">
