@@ -63,7 +63,7 @@
     edit_user: "bg-amber-100 text-amber-800 border-amber-300",
     update_order_status: "bg-sky-100 text-sky-800 border-sky-300",
     edit_order_provider: "bg-sky-100 text-sky-800 border-sky-300",
-    enable_maintenance: "bg-ink-900 text-white border-ink-900",
+    enable_maintenance: "bg-ink-900 text-ink-50 border-ink-900",
     disable_maintenance: "bg-ink-100 text-ink-700 border-ink-200",
     create_coupon: "bg-emerald-100 text-emerald-800 border-emerald-300",
     delete_coupon: "bg-red-100 text-red-700 border-red-300",
@@ -187,11 +187,13 @@
       <h1
         class="flex items-center gap-2.5 font-display text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl"
       >
-        <span class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-white shadow-sm">
+        <span
+          class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-ink-50 shadow-sm"
+        >
           <Icon name="shield" size={18} stroke={2.5} />
         </span>
         Audit Log
-        <span class="rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-bold text-white"
+        <span class="rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-bold text-ink-50"
           >{data.total.toLocaleString("id-ID")}</span
         >
       </h1>
@@ -227,7 +229,7 @@
       {#if data.q || data.action}
         <a
           href="/admin/audit"
-          class="inline-flex items-center gap-1 rounded-full bg-ink-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-ink-800"
+          class="inline-flex items-center gap-1 rounded-full bg-ink-900 px-3 py-1.5 text-xs font-bold text-ink-50 hover:bg-ink-800"
         >
           <Icon name="x" size={12} /> Reset
         </a>
@@ -240,7 +242,7 @@
           href={chipHref("")}
           class="inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-bold transition-all {data.action ===
           ''
-            ? 'border-transparent bg-ink-900 text-white shadow-sm'
+            ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
             : 'border-ink-200 bg-surface text-ink-600 hover:bg-ink-50'}"
         >
           Semua
@@ -251,7 +253,7 @@
             href={chipHref(a.key)}
             class="inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all {data.action ===
             a.key
-              ? 'border-transparent bg-ink-900 text-white shadow-sm'
+              ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
               : 'border-ink-200 bg-surface text-ink-600 hover:bg-ink-50'}"
             title={a.key}
           >
@@ -290,14 +292,14 @@
           <div class="flex items-start justify-between gap-3 p-3">
             <div class="flex min-w-0 flex-1 items-start gap-2.5">
               <span
-                class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-ink-900 text-white"
+                class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-ink-900 text-ink-50"
               >
                 <Icon name={h.icon} size={14} stroke={2.5} />
               </span>
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-1.5">
                   <span
-                    class="inline-flex items-center gap-1 rounded-full bg-ink-900 px-2 py-0.5 text-xs font-bold text-white"
+                    class="inline-flex items-center gap-1 rounded-full bg-ink-900 px-2 py-0.5 text-xs font-bold text-ink-50"
                     >@{l.adminUsername ?? l.adminId}</span
                   >
                   <span
@@ -354,7 +356,7 @@
             href={pageHref(p)}
             class="inline-flex h-9 min-w-9 items-center justify-center rounded-full px-3 text-xs font-semibold tabular-nums transition-colors
               {p === data.page
-              ? 'bg-ink-900 text-white shadow-sm'
+              ? 'bg-ink-900 text-ink-50 shadow-sm'
               : 'border border-ink-200 bg-surface text-ink-600 hover:border-ink-300 hover:bg-ink-50'}"
             aria-current={p === data.page ? "page" : undefined}>{p}</a
           >

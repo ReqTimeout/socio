@@ -130,7 +130,7 @@
     <Icon name="bell" size={18} />
     {#if hasUnread}
       <span
-        class="absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-danger px-1 text-[10px] font-extrabold leading-none text-white shadow-[0_2px_8px_rgba(220,38,38,0.45)] motion-safe:animate-[pulse_1.6s_ease-in-out_infinite]"
+        class="absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-danger px-1 text-[10px] font-extrabold leading-none text-ink-50 shadow-[0_2px_8px_rgba(220,38,38,0.45)] motion-safe:animate-[pulse_1.6s_ease-in-out_infinite]"
         aria-live="polite"
       >
         {label}

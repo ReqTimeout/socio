@@ -73,7 +73,7 @@
               class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold {m.type ===
               'admin'
                 ? 'bg-amber-500 text-white'
-                : 'bg-ink-900 text-white'}"
+                : 'bg-ink-900 text-ink-50'}"
             >
               <span
                 class="h-1.5 w-1.5 rounded-full {m.type === 'admin' ? 'bg-white' : 'bg-white/70'}"

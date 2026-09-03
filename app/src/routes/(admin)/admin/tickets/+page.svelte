@@ -199,7 +199,7 @@
         </h1>
         <p class="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs font-medium text-ink-500">
           {#if hasFilter}
-            <span class="rounded-full bg-ink-900 px-2.5 py-1 text-white"
+            <span class="rounded-full bg-ink-900 px-2.5 py-1 text-ink-50"
               >{fmt(data.total)} cocok filter</span
             >
             <span class="text-ink-300">·</span>
@@ -275,7 +275,7 @@
     {#if hasFilter}
       <a
         href="/admin/tickets"
-        class="inline-flex items-center gap-1 rounded-full bg-ink-900 px-3 py-2 text-xs font-bold text-white hover:bg-ink-800"
+        class="inline-flex items-center gap-1 rounded-full bg-ink-900 px-3 py-2 text-xs font-bold text-ink-50 hover:bg-ink-800"
       >
         <Icon name="x" size={12} /> Reset
       </a>
@@ -291,7 +291,7 @@
         href={chipHref(s)}
         class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200
           {active
-          ? 'border-transparent bg-ink-900 text-white shadow-sm'
+          ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
           : 'border-ink-200 bg-surface text-ink-600 hover:border-ink-300 hover:text-ink-800'}"
       >
         {#if s}<span class="h-1.5 w-1.5 rounded-full {active ? 'bg-white' : b!.dot}"></span>{/if}
@@ -336,7 +336,7 @@
         class="sticky top-0 z-10 flex items-center justify-between border-b border-ink-100 bg-ink-50/50 px-3 py-2.5 backdrop-blur"
       >
         <span class="text-xs font-bold uppercase tracking-wide text-ink-500">Daftar tiket</span>
-        <span class="rounded-full bg-ink-900 px-2 py-0.5 text-[11px] font-bold text-white"
+        <span class="rounded-full bg-ink-900 px-2 py-0.5 text-[11px] font-bold text-ink-50"
           >{fmt(data.total)}</span
         >
       </div>
@@ -429,7 +429,7 @@
                 href={pageHref(p)}
                 class="inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-xs font-bold tabular-nums {p ===
                 data.page
-                  ? 'bg-ink-900 text-white'
+                  ? 'bg-ink-900 text-ink-50'
                   : 'border border-ink-200 bg-surface hover:bg-ink-50'}">{p}</a
               >
             {/if}

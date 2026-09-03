@@ -27,7 +27,9 @@
 <nav
   class="lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px] border border-white/40 bg-white/75 backdrop-blur-2xl
     shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18),0_4px_16px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04]
-    p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] supports-[backdrop-filter]:bg-white/60"
+    p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] supports-[backdrop-filter]:bg-white/60
+    dark:border-ink-700/60 dark:bg-ink-900/80 dark:shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6),0_4px_16px_rgba(0,0,0,0.4)] dark:ring-white/[0.06]
+    dark:supports-[backdrop-filter]:bg-ink-900/70"
   style="grid-template-columns: repeat({items.length}, 1fr); view-transition-name: bottom-nav;"
   aria-label="Navigasi utama"
 >
@@ -38,11 +40,11 @@
       aria-current={active ? "page" : undefined}
       onclick={() => haptic(active ? 6 : 10)}
       class="group relative flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-full px-1 py-2 transition-all duration-300
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-ink-900
         active:scale-[0.96]
         {active
-        ? 'bg-ink-900 text-white shadow-[0_4px_16px_rgba(15,23,42,0.22)]'
-        : 'text-ink-800 hover:text-ink-900'}"
+        ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-100 dark:text-ink-900 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
+        : 'text-ink-800 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-100'}"
     >
       <span class="relative">
         <span
@@ -54,7 +56,7 @@
         </span>
         {#if badgeFor(item.href, item.badge)}
           <span
-            class="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 grid place-items-center rounded-full bg-danger text-white text-[9px] font-bold leading-none ring-2 ring-white shadow-sm"
+            class="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 grid place-items-center rounded-full bg-danger text-ink-50 text-[9px] font-bold leading-none ring-2 ring-white dark:ring-ink-900 shadow-sm"
           >
             {(badgeFor(item.href, item.badge) ?? 0) > 99
               ? "99+"

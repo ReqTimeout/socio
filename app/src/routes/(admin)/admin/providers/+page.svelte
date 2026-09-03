@@ -136,12 +136,14 @@
       <h1
         class="flex items-center gap-2.5 font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-[28px]"
       >
-        <span class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-white shadow-sm">
+        <span
+          class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-ink-50 shadow-sm"
+        >
           <Icon name="zap" size={18} stroke={2.5} />
         </span>
         Provider SMM
         <span
-          class="hidden sm:inline-flex items-center gap-1 rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-bold tracking-wide text-white"
+          class="hidden sm:inline-flex items-center gap-1 rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-bold tracking-wide text-ink-50"
         >
           {fmt(data.providers.length)} aktif
         </span>
@@ -240,7 +242,7 @@
   <div class="overflow-hidden rounded-2xl border border-ink-100 bg-surface">
     <div class="flex items-center justify-between border-b border-ink-100 bg-ink-50/40 px-4 py-2.5">
       <h2 class="text-xs font-bold uppercase tracking-wide text-ink-500">Daftar provider</h2>
-      <span class="rounded-full bg-ink-900 px-2 py-0.5 text-[11px] font-bold text-white"
+      <span class="rounded-full bg-ink-900 px-2 py-0.5 text-[11px] font-bold text-ink-50"
         >{data.providers.length}</span
       >
     </div>
@@ -333,7 +335,7 @@
               <button
                 type="button"
                 onclick={() => askSync(p)}
-                class="inline-flex items-center justify-center gap-1 rounded-full bg-ink-900 px-2 py-2 text-xs font-bold text-white hover:bg-ink-800"
+                class="inline-flex items-center justify-center gap-1 rounded-full bg-ink-900 px-2 py-2 text-xs font-bold text-ink-50 hover:bg-ink-800"
                 ><Icon name="refresh" size={12} />Sync</button
               >
               <button
@@ -442,7 +444,7 @@
                       type="button"
                       onclick={() => askSync(p)}
                       title="Sync katalog"
-                      class="grid h-8 w-8 place-items-center rounded-full bg-ink-900 text-white hover:bg-ink-800"
+                      class="grid h-8 w-8 place-items-center rounded-full bg-ink-900 text-ink-50 hover:bg-ink-800"
                       ><Icon name="refresh" size={14} /></button
                     >
                     <button

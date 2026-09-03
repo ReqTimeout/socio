@@ -84,7 +84,7 @@
   ];
 
   const chipActive =
-    "rounded-full bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors";
+    "rounded-full bg-ink-900 px-3 py-1.5 text-xs font-semibold text-ink-50 transition-colors";
   const chipIdle =
     "rounded-full border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-500 transition-colors hover:border-ink-300 hover:text-ink-700";
 </script>

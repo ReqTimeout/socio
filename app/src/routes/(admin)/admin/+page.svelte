@@ -113,7 +113,7 @@
       <h1
         class="flex items-center gap-2 font-display text-xl font-extrabold tracking-tight lg:text-2xl"
       >
-        <span class="grid h-8 w-8 place-items-center rounded-xl bg-ink-900 text-white shadow-sm">
+        <span class="grid h-8 w-8 place-items-center rounded-xl bg-ink-900 text-ink-50 shadow-sm">
           <Icon name="shield" size={15} stroke={2.5} />
         </span>
         Command Center
@@ -267,7 +267,7 @@
             onclick={() => (filter = fl.key)}
             class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 active:scale-95
               {filter === fl.key
-              ? 'border-transparent bg-ink-900 text-white shadow-sm'
+              ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
               : 'border-ink-100 bg-surface text-ink-500 hover:border-ink-200 hover:text-ink-700'}"
           >
             <Icon name={fl.icon} size={12} stroke={2.25} />
@@ -326,7 +326,7 @@
     <!-- aksi terakhir kamu + shortcut -->
     <div class="space-y-4">
       <div
-        class="reveal relative overflow-hidden rounded-2xl border border-ink-800 bg-ink-900 p-4 text-white"
+        class="reveal relative overflow-hidden rounded-2xl border border-ink-800 bg-ink-900 p-4 text-ink-50"
         style="--d:480ms"
       >
         <div

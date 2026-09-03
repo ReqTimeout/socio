@@ -149,11 +149,13 @@
       <h1
         class="flex items-center gap-2.5 font-display text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl"
       >
-        <span class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-white shadow-sm">
+        <span
+          class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-ink-50 shadow-sm"
+        >
           <Icon name="mail" size={18} stroke={2.5} />
         </span>
         Email Marketing
-        <span class="rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-bold text-white"
+        <span class="rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-bold text-ink-50"
           >{data.total}</span
         >
       </h1>
@@ -189,7 +191,7 @@
           type="button"
           class="rounded-full border px-3 py-1.5 text-xs font-bold transition-colors {data.status ===
           s
-            ? 'border-transparent bg-ink-900 text-white shadow-sm'
+            ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
             : 'border-ink-200 bg-surface text-ink-600 hover:bg-ink-50'}"
           onclick={() => setFilter(s)}>{s === "" ? "Semua" : statusLabel(s)}</button
         >
@@ -256,7 +258,7 @@
               <button
                 type="button"
                 onclick={() => askAction(c, "send")}
-                class="flex-1 rounded-full bg-ink-900 px-3 py-2 text-xs font-bold text-white hover:bg-ink-800"
+                class="flex-1 rounded-full bg-ink-900 px-3 py-2 text-xs font-bold text-ink-50 hover:bg-ink-800"
                 >Kirim</button
               >
             {:else if c.status !== "cancelled"}
@@ -341,7 +343,7 @@
                     <button
                       type="button"
                       onclick={() => askAction(c, "send")}
-                      class="inline-flex items-center gap-1 rounded-full bg-ink-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-ink-800"
+                      class="inline-flex items-center gap-1 rounded-full bg-ink-900 px-3 py-1.5 text-xs font-bold text-ink-50 hover:bg-ink-800"
                       ><Icon name="mail" size={12} />Kirim</button
                     >
                   {:else if c.status !== "cancelled"}

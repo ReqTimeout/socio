@@ -246,12 +246,12 @@
         class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
           {active
           ? f.key === 'Pending'
-            ? 'border-transparent bg-status-pending text-white shadow-sm'
+            ? 'border-transparent bg-status-pending text-ink-50 shadow-sm'
             : f.key === 'Success'
-              ? 'border-transparent bg-status-complete text-white shadow-sm'
+              ? 'border-transparent bg-status-complete text-ink-50 shadow-sm'
               : f.key === 'Canceled'
-                ? 'border-transparent bg-status-canceled text-white shadow-sm'
-                : 'border-transparent bg-ink-900 text-white shadow-sm'
+                ? 'border-transparent bg-status-canceled text-ink-50 shadow-sm'
+                : 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
           : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
       >
         <Icon name={f.icon} size={11} stroke={2.5} />
@@ -364,7 +364,7 @@
                         confirmId = d.id;
                         modalOpen = true;
                       }}
-                      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-success px-3 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-success/90 hover:shadow-md active:scale-95"
+                      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-success px-3 text-xs font-bold text-ink-50 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-success/90 hover:shadow-md active:scale-95"
                     >
                       <Icon name="check" size={12} stroke={2.75} />
                       Confirm
@@ -375,7 +375,7 @@
                         rejectId = d.id;
                         rejectOpen = true;
                       }}
-                      class="inline-flex h-9 items-center gap-1 rounded-full border border-danger-soft bg-danger-soft/50 px-3 text-xs font-bold text-danger transition-all hover:bg-danger hover:text-white active:scale-95"
+                      class="inline-flex h-9 items-center gap-1 rounded-full border border-danger-soft bg-danger-soft/50 px-3 text-xs font-bold text-danger transition-all hover:bg-danger hover:text-ink-50 active:scale-95"
                     >
                       <Icon name="x" size={12} stroke={2.75} />
                       Tolak
@@ -472,7 +472,7 @@
                   confirmId = d.id;
                   modalOpen = true;
                 }}
-                class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-success px-3 text-xs font-bold text-white shadow-sm transition-all active:scale-95 hover:bg-success/90"
+                class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-success px-3 text-xs font-bold text-ink-50 shadow-sm transition-all active:scale-95 hover:bg-success/90"
               >
                 <Icon name="check" size={12} stroke={2.75} />
                 Confirm
@@ -483,7 +483,7 @@
                   rejectId = d.id;
                   rejectOpen = true;
                 }}
-                class="inline-flex h-10 flex-1 items-center justify-center gap-1 rounded-full border border-danger-soft bg-danger-soft/50 px-3 text-xs font-bold text-danger transition-all active:scale-95 hover:bg-danger hover:text-white"
+                class="inline-flex h-10 flex-1 items-center justify-center gap-1 rounded-full border border-danger-soft bg-danger-soft/50 px-3 text-xs font-bold text-danger transition-all active:scale-95 hover:bg-danger hover:text-ink-50"
               >
                 <Icon name="x" size={12} stroke={2.75} />
                 Tolak
@@ -513,7 +513,7 @@
             href={pageHref(p)}
             class="inline-flex h-9 min-w-9 items-center justify-center rounded-full px-3 text-xs font-semibold tabular-nums transition-colors
               {p === data.page
-              ? 'bg-ink-900 text-white shadow-sm'
+              ? 'bg-ink-900 text-ink-50 shadow-sm'
               : 'border border-ink-200 bg-surface text-ink-600 hover:border-ink-300 hover:bg-ink-50'}"
             aria-current={p === data.page ? "page" : undefined}>{p}</a
           >

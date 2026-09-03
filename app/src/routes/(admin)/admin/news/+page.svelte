@@ -43,7 +43,7 @@
     if (cat.includes("Turun")) return "bg-amber-50 border-amber-200 text-amber-700";
     if (cat.toLowerCase().includes("promo")) return "bg-rose-50 border-rose-200 text-rose-700";
     if (cat.toLowerCase().includes("maintenance")) return "bg-ink-100 border-ink-200 text-ink-600";
-    return "bg-ink-900 border-transparent text-white";
+    return "bg-ink-900 border-transparent text-ink-50";
   }
 
   function openAdd() {
@@ -114,11 +114,13 @@
       <h1
         class="flex items-center gap-2.5 font-display text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl"
       >
-        <span class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-white shadow-sm">
+        <span
+          class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-ink-50 shadow-sm"
+        >
           <Icon name="megaphone" size={18} stroke={2.5} />
         </span>
         Berita
-        <span class="rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-bold text-white"
+        <span class="rounded-full bg-ink-900 px-2.5 py-1 text-[11px] font-bold text-ink-50"
           >{data.total}</span
         >
         {#if data.q}<span
@@ -213,7 +215,7 @@
             <button
               type="button"
               onclick={() => openEdit(r)}
-              class="flex-1 rounded-full bg-ink-900 px-3 py-2 text-xs font-bold text-white hover:bg-ink-800"
+              class="flex-1 rounded-full bg-ink-900 px-3 py-2 text-xs font-bold text-ink-50 hover:bg-ink-800"
               >Edit</button
             >
             <button
@@ -265,7 +267,7 @@
                   <button
                     type="button"
                     onclick={() => openEdit(r)}
-                    class="grid h-8 w-8 place-items-center rounded-full bg-ink-900 text-white hover:bg-ink-800"
+                    class="grid h-8 w-8 place-items-center rounded-full bg-ink-900 text-ink-50 hover:bg-ink-800"
                     title="Edit"><Icon name="settings" size={14} /></button
                   >
                   <button

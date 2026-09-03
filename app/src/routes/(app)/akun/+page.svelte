@@ -302,7 +302,7 @@
             document.documentElement.classList.remove("dark");
           }}
           class="rounded-full px-3 py-1.5 text-xs font-semibold {data.user.theme === 'light'
-            ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+            ? 'bg-ink-900 text-ink-50 dark:bg-white dark:text-ink-900'
             : 'bg-ink-100 dark:bg-ink-100'}">Light</button
         >
         <button
@@ -315,7 +315,7 @@
             document.documentElement.classList.add("dark");
           }}
           class="rounded-full px-3 py-1.5 text-xs font-semibold {data.user.theme === 'dark'
-            ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+            ? 'bg-ink-900 text-ink-50 dark:bg-white dark:text-ink-900'
             : 'bg-ink-100 dark:bg-ink-100'}">Dark</button
         >
       </div>

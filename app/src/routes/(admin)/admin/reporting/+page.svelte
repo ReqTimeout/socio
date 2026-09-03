@@ -121,7 +121,7 @@
         <a
           href={rangeHref(r.key)}
           class="rounded-full px-3 py-1.5 transition-all {data.range === r.key
-            ? 'bg-ink-900 text-white shadow-sm'
+            ? 'bg-ink-900 text-ink-50 shadow-sm'
             : 'text-ink-500 hover:text-ink-700'}"
         >
           {r.label}

@@ -354,7 +354,7 @@
             type="file"
             accept="image/*"
             onchange={onPickFile}
-            class="block w-full cursor-pointer rounded-xl border border-ink-200 bg-surface px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-ink-900 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-ink-800"
+            class="block w-full cursor-pointer rounded-xl border border-ink-200 bg-surface px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-ink-900 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-ink-50 hover:file:bg-ink-800"
           />
           {#if uploadPreview}
             <div class="overflow-hidden rounded-xl border border-ink-200 bg-ink-50">

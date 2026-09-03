@@ -265,7 +265,7 @@
       <button
         type="button"
         onclick={openAdd}
-        class="inline-flex h-10 items-center gap-1.5 rounded-full bg-ink-900 px-4 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-ink-800 hover:shadow-md active:scale-95"
+        class="inline-flex h-10 items-center gap-1.5 rounded-full bg-ink-900 px-4 text-sm font-bold text-ink-50 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-ink-800 hover:shadow-md active:scale-95"
       >
         <Icon name="plus" size={14} stroke={2.75} />
         Tambah Layanan
@@ -355,7 +355,7 @@
       href={chipHref(null)}
       class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {!data.cat
-        ? 'border-transparent bg-ink-900 text-white shadow-sm'
+        ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
         : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
     >
       <Icon name="layers" size={12} stroke={2.25} />
@@ -366,7 +366,7 @@
         href={chipHref(c.id)}
         class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
           {Number(data.cat) === c.id
-          ? 'border-transparent bg-ink-900 text-white shadow-sm'
+          ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
           : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
       >
         {c.name}
@@ -384,7 +384,7 @@
       href={statusChipHref("")}
       class="inline-flex min-h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {!data.status
-        ? 'border-transparent bg-ink-900 text-white shadow-sm'
+        ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
         : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
     >
       Semua status
@@ -393,7 +393,7 @@
       href={statusChipHref("1")}
       class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {data.status === '1'
-        ? 'border-transparent bg-success text-white shadow-sm'
+        ? 'border-transparent bg-success text-ink-50 shadow-sm'
         : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
     >
       <span class="h-1.5 w-1.5 rounded-full {data.status === '1' ? 'bg-white' : 'bg-success'}"
@@ -404,7 +404,7 @@
       href={statusChipHref("0")}
       class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {data.status === '0'
-        ? 'border-transparent bg-ink-700 text-white shadow-sm'
+        ? 'border-transparent bg-ink-700 text-ink-50 shadow-sm'
         : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
     >
       <span class="h-1.5 w-1.5 rounded-full {data.status === '0' ? 'bg-white' : 'bg-ink-400'}"
@@ -535,7 +535,7 @@
                   <button
                     type="button"
                     onclick={() => openEdit(s)}
-                    class="grid h-9 w-9 place-items-center rounded-full bg-ink-900 text-white shadow-sm transition-all hover:bg-ink-800 active:scale-95"
+                    class="grid h-9 w-9 place-items-center rounded-full bg-ink-900 text-ink-50 shadow-sm transition-all hover:bg-ink-800 active:scale-95"
                     aria-label="Edit {s.serviceName}"
                   >
                     <Icon name="edit" size={14} stroke={2.5} />
@@ -647,7 +647,7 @@
             <button
               type="button"
               onclick={() => openEdit(s)}
-              class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 text-xs font-bold text-white shadow-sm transition-all hover:bg-ink-800 active:scale-95"
+              class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 text-xs font-bold text-ink-50 shadow-sm transition-all hover:bg-ink-800 active:scale-95"
             >
               <Icon name="edit" size={12} stroke={2.5} />
               Edit
@@ -677,7 +677,7 @@
             href={pageHref(p)}
             class="inline-flex h-9 min-w-9 items-center justify-center rounded-full px-3 text-xs font-semibold tabular-nums transition-colors
               {p === data.page
-              ? 'bg-ink-900 text-white shadow-sm'
+              ? 'bg-ink-900 text-ink-50 shadow-sm'
               : 'border border-ink-200 bg-surface text-ink-600 hover:border-ink-300 hover:bg-ink-50'}"
             aria-current={p === data.page ? "page" : undefined}>{p}</a
           >
@@ -776,7 +776,7 @@
     class="fixed inset-x-0 bottom-0 z-40 flex flex-wrap items-center justify-center gap-2 border-t border-ink-100 bg-surface/95 p-3 shadow-2xl backdrop-blur lg:bottom-4 lg:left-1/2 lg:right-auto lg:w-auto lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:px-4 lg:py-2.5"
   >
     <span
-      class="inline-flex items-center gap-1.5 rounded-full bg-ink-900 px-2.5 py-1 text-xs font-bold text-white"
+      class="inline-flex items-center gap-1.5 rounded-full bg-ink-900 px-2.5 py-1 text-xs font-bold text-ink-50"
     >
       <span class="h-1.5 w-1.5 rounded-full bg-accent-500"></span>
       {selected.size} dipilih
@@ -802,7 +802,7 @@
           },
         };
       }}
-      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-danger px-3 text-xs font-bold text-white shadow-sm transition-all active:scale-95 hover:bg-danger/90"
+      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-danger px-3 text-xs font-bold text-ink-50 shadow-sm transition-all active:scale-95 hover:bg-danger/90"
     >
       <Icon name="trash" size={12} stroke={2.5} />
       Hapus

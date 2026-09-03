@@ -207,7 +207,7 @@
         : "Pilih beberapa pesanan untuk refund massal"}
       title={selectMode ? "Keluar mode pilih" : "Pilih beberapa pesanan"}
       class="ml-auto min-h-[44px] shrink-0 rounded-full px-3 py-2 text-xs font-bold transition-all active:scale-95
-        {selectMode ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
+        {selectMode ? 'bg-ink-900 text-ink-50' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
     >
       <Icon name="check" size={14} class="sm:hidden" />
       <span class="hidden sm:inline">{selectMode ? "Batal" : "Pilih Banyak"}</span>

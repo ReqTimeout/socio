@@ -142,7 +142,7 @@
       <div
         class="relative flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-500"
       >
-        <span class="grid h-6 w-6 place-items-center rounded-lg bg-ink-900 text-white"
+        <span class="grid h-6 w-6 place-items-center rounded-lg bg-ink-900 text-ink-50"
           ><Icon name="arrow_down" size={12} stroke={2.5} /></span
         >
         Pengeluaran
@@ -163,7 +163,7 @@
         onclick={() => selectType(f.v)}
         class="min-h-[44px] shrink-0 rounded-full px-3.5 py-2 text-xs font-bold transition-all duration-200 active:scale-95
           {currentType === f.v
-          ? 'bg-ink-900 text-white shadow-sm'
+          ? 'bg-ink-900 text-ink-50 shadow-sm'
           : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
       >
         {f.label}

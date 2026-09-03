@@ -292,7 +292,7 @@
       href={chipHref("")}
       class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {!data.status
-        ? 'border-transparent bg-ink-900 text-white shadow-sm'
+        ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
         : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
     >
       <Icon name="layers" size={12} stroke={2.25} />
@@ -306,16 +306,16 @@
           const s = String(f).toLowerCase();
           if (data.status === f)
             return s === 'success'
-              ? 'border-transparent bg-status-complete text-white shadow-sm'
+              ? 'border-transparent bg-status-complete text-ink-50 shadow-sm'
               : s === 'pending'
-                ? 'border-transparent bg-status-pending text-white shadow-sm'
+                ? 'border-transparent bg-status-pending text-ink-50 shadow-sm'
                 : s === 'error' || s === 'canceled'
-                  ? 'border-transparent bg-status-canceled text-white shadow-sm'
+                  ? 'border-transparent bg-status-canceled text-ink-50 shadow-sm'
                   : s === 'partial'
-                    ? 'border-transparent bg-status-partial text-white shadow-sm'
+                    ? 'border-transparent bg-status-partial text-ink-50 shadow-sm'
                     : s === 'processing' || s === 'in progress'
-                      ? 'border-transparent bg-status-progress text-white shadow-sm'
-                      : 'border-transparent bg-ink-900 text-white shadow-sm';
+                      ? 'border-transparent bg-status-progress text-ink-50 shadow-sm'
+                      : 'border-transparent bg-ink-900 text-ink-50 shadow-sm';
           return 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700';
         })()}"
       >
@@ -411,7 +411,7 @@
                 <button
                   type="button"
                   onclick={() => openDetail(o)}
-                  class="inline-flex h-9 items-center gap-1.5 rounded-full bg-ink-900 px-3 text-xs font-bold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-ink-800 hover:shadow-md active:scale-95"
+                  class="inline-flex h-9 items-center gap-1.5 rounded-full bg-ink-900 px-3 text-xs font-bold text-ink-50 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-ink-800 hover:shadow-md active:scale-95"
                 >
                   <Icon name="arrow_right" size={12} stroke={2.75} />
                   Detail
@@ -493,7 +493,7 @@
             <button
               type="button"
               onclick={() => openDetail(o)}
-              class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 text-xs font-bold text-white shadow-sm transition-all active:scale-95 hover:bg-ink-800"
+              class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 text-xs font-bold text-ink-50 shadow-sm transition-all active:scale-95 hover:bg-ink-800"
             >
               <Icon name="arrow_right" size={12} stroke={2.75} />
               Detail & Edit
@@ -523,7 +523,7 @@
             href={pageHref(p)}
             class="inline-flex h-9 min-w-9 items-center justify-center rounded-full px-3 text-xs font-semibold tabular-nums transition-colors
               {p === data.page
-              ? 'bg-ink-900 text-white shadow-sm'
+              ? 'bg-ink-900 text-ink-50 shadow-sm'
               : 'border border-ink-200 bg-surface text-ink-600 hover:border-ink-300 hover:bg-ink-50'}"
             aria-current={p === data.page ? "page" : undefined}>{p}</a
           >
@@ -675,12 +675,12 @@
                 onclick={() => (confirmStatus = st)}
                 class="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-all active:scale-95
                   {st === 'Success'
-                  ? 'bg-status-complete text-white shadow-sm hover:opacity-90'
+                  ? 'bg-status-complete text-ink-50 shadow-sm hover:opacity-90'
                   : st === 'Error'
-                    ? 'bg-status-canceled text-white shadow-sm hover:opacity-90'
+                    ? 'bg-status-canceled text-ink-50 shadow-sm hover:opacity-90'
                     : st === 'Partial'
-                      ? 'bg-status-partial text-white shadow-sm hover:opacity-90'
-                      : 'bg-ink-900 text-white shadow-sm hover:bg-ink-800'}"
+                      ? 'bg-status-partial text-ink-50 shadow-sm hover:opacity-90'
+                      : 'bg-ink-900 text-ink-50 shadow-sm hover:bg-ink-800'}"
               >
                 {#if st === "Success"}
                   <Icon name="check" size={11} stroke={3} />
@@ -752,7 +752,7 @@
           <button
             type="button"
             onclick={() => (confirmEditProv = true)}
-            class="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-ink-900 text-sm font-bold text-white shadow-sm transition-all hover:bg-ink-800 active:scale-95"
+            class="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-ink-900 text-sm font-bold text-ink-50 shadow-sm transition-all hover:bg-ink-800 active:scale-95"
           >
             <Icon name="check" size={13} stroke={2.75} />
             Simpan Detail Provider
@@ -789,7 +789,7 @@
           <button
             type="button"
             onclick={() => (confirmRefund = true)}
-            class="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-danger text-sm font-bold text-white shadow-sm transition-all hover:bg-danger/90 active:scale-95"
+            class="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-danger text-sm font-bold text-ink-50 shadow-sm transition-all hover:bg-danger/90 active:scale-95"
           >
             <Icon name="arrow_down" size={13} stroke={2.75} />
             Refund{refundAmount > 0
