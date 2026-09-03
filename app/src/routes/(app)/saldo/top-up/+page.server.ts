@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
 import { deposits } from "@socio/db/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, gte, inArray } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { createHmac, randomInt } from "node:crypto";
 import { uploadToR2 } from "$lib/server/r2";
@@ -21,6 +21,49 @@ function signSuffix(userId: number, suffix: number): string {
 /** Kode unik 3 digit (111..999) — acak per deposit (B-08: dulu derivasi userId, identik antar deposit). */
 function newSuffix(): number {
   return randomInt(111, 1000);
+}
+
+/** Batas fallback kalau data belum cukup untuk hitung proporsi Populer. */
+const FALLBACK_CHIPS = [50000, 100000, 200000, 500000] as const;
+
+/** Tentukan nominal Populer dari data 30 hari terakhir (lintas user).
+ *  - Hitung distribusi nominal deposit berstatus Success + Pending (recent signal).
+ *  - Cari nominal yang paling banyak dipakai, kalau >= 20% share dari total deposit → tandai Populer.
+ *  - Kalau dataset < 20 deposit → fallback ke Rp100.000 (chip index-1 default).
+ */
+async function pickPopularNominal(): Promise<{ chips: number[]; popular: number | null }> {
+  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+  try {
+    const rows = await db
+      .select({ amount: deposits.postAmount })
+      .from(deposits)
+      .where(and(gte(deposits.createdAt, since), inArray(deposits.status, ["Success", "Pending"])))
+      .limit(500);
+    if (rows.length < 20) {
+      return { chips: [...FALLBACK_CHIPS], popular: FALLBACK_CHIPS[1] };
+    }
+    // Bucket ke kelipatan Rp50.000 biar tidak ada banyak nominal unik kecil.
+    const buckets = new Map<number, number>();
+    for (const r of rows) {
+      const a = Number(r.amount ?? 0);
+      if (a < 20000) continue;
+      const bucket = Math.round(a / 50000) * 50000;
+      buckets.set(bucket, (buckets.get(bucket) ?? 0) + 1);
+    }
+    // Top 4 bucket by count.
+    const sorted = [...buckets.entries()].sort((a, b) => b[1] - a[1]);
+    if (sorted.length === 0) return { chips: [...FALLBACK_CHIPS], popular: FALLBACK_CHIPS[1] };
+    const top = sorted
+      .slice(0, 4)
+      .map(([amt]) => amt)
+      .sort((a, b) => a - b);
+    const [winner, winnerCount] = sorted[0];
+    const total = rows.length;
+    const share = winnerCount / total;
+    return { chips: top, popular: share >= 0.2 ? winner : null };
+  } catch {
+    return { chips: [...FALLBACK_CHIPS], popular: FALLBACK_CHIPS[1] };
+  }
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -45,6 +88,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   const userId = Number(locals.user.id);
   const suffix = newSuffix();
+  const popular = await pickPopularNominal();
   return {
     history,
     balance: locals.user.balance ?? 0,
@@ -54,6 +98,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     // Preview kode unik + HMAC; action validasi signature (anti-tamper).
     suffix,
     suffixSig: signSuffix(userId, suffix),
+    chips: popular.chips,
+    popularNominal: popular.popular,
   };
 };
 

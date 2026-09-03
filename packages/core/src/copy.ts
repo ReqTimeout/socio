@@ -42,7 +42,7 @@ export const copy = {
     },
     balance: {
       title: "Riwayat masih kosong",
-      desc: "Top up pertama bakal tampil di sini — prosesnya < 1 menit.",
+      desc: "Top up pertama bakal tampil di sini — ±5 menit di jam kerja, ±1 jam di luar.",
       cta: "Top Up Sekarang",
     },
     affiliate: {

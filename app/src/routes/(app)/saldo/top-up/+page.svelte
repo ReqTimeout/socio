@@ -26,7 +26,10 @@
   let proofDepositId = $state<number | null>(null);
   let proofOpen = $state(false);
 
-  const chips = [50000, 100000, 200000, 500000];
+  const chips = $derived(
+    data.chips?.length ? data.chips.map((v) => Number(v)) : [50000, 100000, 200000, 500000],
+  );
+  const popularNominal = $derived(data.popularNominal == null ? null : Number(data.popularNominal));
 
   function setChip(v: number) {
     haptic(8);
@@ -112,12 +115,18 @@
       <div class="grid grid-cols-2 gap-3">
         {#each chips as c, i (c)}
           {@const active = amount === c && !custom}
+          {@const isPopular = popularNominal === c}
           <button
             type="button"
             style={revealDelay(i, 0, 40)}
             onclick={() => setChip(c)}
             class="chip-press group relative overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-200 reveal
-            {active ? 'border-primary bg-primary/5' : 'border-ink-200 hover:border-ink-300'}"
+            {active
+              ? 'border-primary bg-primary/5'
+              : isPopular
+                ? 'border-primary/40 bg-primary/[0.03] hover:border-primary/60'
+                : 'border-ink-200 hover:border-ink-300'}"
+            aria-label={`Nominal ${formatRupiah(c)}${isPopular ? " (populer)" : ""}`}
           >
             <span
               class="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full transition
@@ -126,7 +135,7 @@
               <Icon name="check" size={12} stroke={3} class="text-white" />
             </span>
             <div class="font-display text-lg font-extrabold tabular-nums">{formatRupiah(c)}</div>
-            {#if i === 1}
+            {#if isPopular}
               <div class="mt-0.5 text-[10px] font-bold text-primary">Populer</div>
             {/if}
           </button>
@@ -154,27 +163,55 @@
       </div>
     </div>
 
-    <!-- Metode pembayaran (saat ini: transfer BCA manual) -->
+    <!-- Metode pembayaran (saat ini hanya BCA — tampil sebagai info card langsung,
+         bukan radio selector, supaya tidak misleading "pilih" padahal cuma 1 opsi).
+         Tambah note "E-wallet & QRIS segera" supaya user paham roadmap. -->
     <div>
-      <label class="mb-2 block text-sm font-bold">Metode Pembayaran</label>
+      <div class="mb-2 flex items-baseline justify-between">
+        <label class="text-sm font-bold">Metode Pembayaran</label>
+        <span class="text-[10px] font-semibold uppercase tracking-wide text-ink-400"
+          >1 tersedia</span
+        >
+      </div>
       <div
-        class="flex w-full items-center gap-3 rounded-2xl border-2 border-primary bg-primary/5 p-4 text-left shadow-[0_10px_28px_-12px_rgba(79,70,229,0.30)]"
+        class="rounded-2xl border-2 border-primary bg-primary/5 p-4 shadow-[0_10px_28px_-12px_rgba(79,70,229,0.30)]"
       >
-        <div
-          class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-sm font-bold text-white"
-        >
-          BCA
-        </div>
-        <div class="min-w-0 flex-1">
-          <div class="text-sm font-bold">Transfer Bank BCA</div>
-          <div class="text-xs text-ink-600">Gratis · Dikonfirmasi admin 1–30 menit</div>
-        </div>
-        <div
-          class="grid h-5 w-5 place-items-center rounded-full border-2 border-primary bg-primary"
-        >
-          <Icon name="check" size={12} stroke={3} class="text-white" />
+        <div class="flex items-start gap-3">
+          <div
+            class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-sm font-bold text-white"
+            aria-hidden="true"
+          >
+            BCA
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-baseline justify-between gap-2">
+              <div class="text-sm font-bold">Transfer Bank BCA</div>
+              <span class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-ink-50"
+                >Aktif</span
+              >
+            </div>
+            <div class="mt-0.5 text-xs text-ink-600">
+              Gratis · Dikonfirmasi admin ±5 menit jam kerja
+            </div>
+            <div class="mt-1 text-xs text-ink-500">
+              <span class="font-semibold text-ink-700">{data.bcaNumber}</span> a.n. {data.bcaName}
+            </div>
+            <button
+              type="button"
+              onclick={copyBca}
+              class="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+              aria-label="Salin nomor rekening BCA"
+            >
+              <Icon name="copy" size={12} stroke={2.5} />
+              Salin Nomor
+            </button>
+          </div>
         </div>
       </div>
+      <p class="mt-2 text-[11px] text-ink-500">
+        <Icon name="info" size={11} class="-mt-0.5 mr-0.5 inline align-baseline" />
+        E-wallet, QRIS, & kripto segera hadir.
+      </p>
     </div>
 
     <!-- Ringkasan — playful glow -->
@@ -308,7 +345,7 @@
         {data.history.length ? `${data.history.length} invoice terakhir` : "Belum ada invoice"}
       </div>
       <div class="mt-4 rounded-xl bg-ink-50 p-3 text-xs text-ink-600">
-        Deposit dikonfirmasi admin — rata 5 menit di jam kerja.
+        Deposit dikonfirmasi admin — ±5 menit jam kerja, ±1 jam di luar jam kerja.
       </div>
     </div>
   </aside>
