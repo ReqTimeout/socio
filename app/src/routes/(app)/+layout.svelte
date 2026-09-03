@@ -30,9 +30,14 @@
   );
   let confirmLogout = $state(false);
 
-  function doLogout() {
+  async function doLogout() {
     haptic(18);
-    fetch("/api/auth/sign-out", { method: "POST" }).then(() => (location.href = "/login"));
+    try {
+      await fetch("/logout", { method: "POST", credentials: "same-origin" });
+    } catch {
+      // Gagal jaringan — tetap redirect
+    }
+    window.location.assign("/login");
   }
 
   // Nav utama mobile (floating bottom dock) — 5 item: Katalog (repeat flow) masuk dock

@@ -47,9 +47,14 @@
     }, {}),
   );
 
-  function handleLogout() {
+async function handleLogout() {
     haptic();
-    fetch("/api/auth/sign-out", { method: "POST" }).then(() => (location.href = "/login"));
+    try {
+      await fetch("/logout", { method: "POST", credentials: "same-origin" });
+    } catch {
+      // Gagal jaringan — tetap redirect
+    }
+    window.location.assign("/login");
   }
 </script>
 

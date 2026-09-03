@@ -369,10 +369,16 @@
         >
       </a>
       <button
-        onclick={() => {
+        onclick={async () => {
           haptic();
-          if (confirm(copy.account.logoutConfirm))
-            fetch("/api/auth/sign-out", { method: "POST" }).then(() => (location.href = "/login"));
+          if (confirm(copy.account.logoutConfirm)) {
+            try {
+              await fetch("/logout", { method: "POST", credentials: "same-origin" });
+            } catch {
+              // Gagal jaringan — tetap redirect
+            }
+            window.location.assign("/login");
+          }
         }}
         class="row-slide flex w-full items-center justify-between px-4 py-3.5 text-left text-sm font-medium text-danger hover:bg-ink-50 active:scale-[0.99]"
       >

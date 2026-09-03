@@ -228,8 +228,12 @@
   async function logout() {
     haptic();
     sheetOpen = false;
-    await fetch("/logout", { method: "POST" });
-    goto("/login");
+    try {
+      await fetch("/logout", { method: "POST", credentials: "same-origin" });
+    } catch {
+      // Gagal jaringan — tetap terus ke /login
+    }
+    window.location.assign("/login");
   }
 </script>
 
@@ -276,22 +280,8 @@
         >
           <Icon name={dark ? "sun" : "moon"} size={17} />
         </button>
-        <NotifBell count={data.unreadCount ?? 0} href="/notif" />
       </div>
     </div>
-    <!-- Command palette trigger -->
-    <button
-      type="button"
-      onclick={() => (paletteOpen = true)}
-      class="mb-4 flex w-full items-center gap-2 rounded-xl border border-ink-200 bg-ink-50/60 px-3 py-2 text-sm text-ink-400 transition-colors hover:border-ink-300 hover:bg-ink-50"
-    >
-      <Icon name="search" size={15} />
-      <span class="flex-1 text-left">Cari halaman / aksi…</span>
-      <kbd
-        class="rounded border border-ink-200 bg-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink-400"
-        >⌘K</kbd
-      >
-    </button>
     <nav class="space-y-1">
       <div class="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-widest text-ink-500">
         Operasional
@@ -390,6 +380,40 @@
       </button>
       <NotifBell count={data.unreadCount ?? 0} href="/notif" />
       <a href="/akun" class="text-sm font-medium text-ink-500">@{data.admin.username}</a>
+    </div>
+  </header>
+
+  <!-- Desktop topbar — bell & search dipindahkan ke sini supaya terpisah dari sidebar nav -->
+  <header
+    class="sticky top-0 z-20 hidden h-14 items-center gap-3 border-b border-ink-100 bg-surface/85 px-6 backdrop-blur-md lg:flex"
+    style="view-transition-name: admin-topbar;"
+  >
+    <button
+      type="button"
+      onclick={() => (paletteOpen = true)}
+      class="flex h-9 w-72 items-center gap-2 rounded-lg border border-ink-200 bg-ink-50/60 px-3 text-sm text-ink-500 transition-colors hover:border-ink-300 hover:bg-ink-50"
+      aria-label="Buka command palette"
+    >
+      <Icon name="search" size={15} />
+      <span class="flex-1 text-left">Cari halaman / aksi…</span>
+      <kbd
+        class="rounded border border-ink-200 bg-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink-500"
+        >⌘K</kbd
+      >
+    </button>
+    <div class="ml-auto flex items-center gap-2">
+      <NotifBell count={data.unreadCount ?? 0} href="/notif" />
+      <div class="h-6 w-px bg-ink-200"></div>
+      <a
+        href="/akun"
+        class="flex items-center gap-2 rounded-full px-2.5 py-1 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-100"
+      >
+        <span
+          class="grid h-6 w-6 place-items-center rounded-full bg-ink-100 text-[11px] font-bold text-ink-700"
+          >{(data.admin.username ?? "A").slice(0, 1).toUpperCase()}</span
+        >
+        @{data.admin.username}
+      </a>
     </div>
   </header>
 
