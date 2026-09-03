@@ -40,7 +40,7 @@ export const actions: Actions = {
 
     // 0. Turnstile (skipped automatically when SOCIO_TURNSTILE_ENABLED != 1)
     const turnstileToken = String(form.get("turnstile") ?? "");
-    if (!(await verifyTurnstile(turnstileToken, getClientAddress()))) {
+    if (!(await verifyTurnstile(turnstileToken))) {
       return fail(400, { error: "Verifikasi gagal. Coba lagi.", email });
     }
 

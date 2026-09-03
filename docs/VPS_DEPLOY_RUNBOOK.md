@@ -439,6 +439,10 @@ SOCIO_SECURE_COOKIES=1
 SOCIO_TURNSTILE_ENABLED=0                            # set 1 setelah dapat prod CF keys
 SOCIO_TURNSTILE_SITEKEY=
 SOCIO_TURNSTILE_SECRET=
+# Client IP belakang proxy (Cloudflare). Tanpa ini semua klien terlihat sebagai
+# IP docker gateway → rate-limit global shared + session log IP salah.
+# (Catatan Turnstile: siteverify dikirim TANPA remoteip — token-only, aman.)
+ADDRESS_HEADER=cf-connecting-ip
 
 # Email (Resend — verified domain)
 RESEND_API_KEY=re_xxx

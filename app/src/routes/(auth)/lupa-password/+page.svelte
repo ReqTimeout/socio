@@ -9,8 +9,15 @@
 
   const sitekey = $derived(data.turnstileSitekey);
   let turnstileEl = $state<HTMLElement | null>(null);
+  let turnstileHandle: ReturnType<typeof renderTurnstile> | null = null;
   $effect(() => {
-    if (sitekey && turnstileEl) renderTurnstile("turnstile-widget", sitekey, "forgot");
+    if (sitekey && turnstileEl)
+      turnstileHandle = renderTurnstile("turnstile-widget", sitekey, "forgot");
+  });
+  // Tokens are single-use — reset the widget after a failed submit so the
+  // next attempt sends a fresh token.
+  $effect(() => {
+    if (form?.error && turnstileHandle) turnstileHandle.reset();
   });
 
   function onEmailInput(e: Event) {

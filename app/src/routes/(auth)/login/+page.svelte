@@ -13,10 +13,20 @@
 
   const sitekey = $derived(data.turnstileSitekey);
   let turnstileEl = $state<HTMLElement | null>(null);
+  let turnstileHandle: ReturnType<typeof renderTurnstile> | null = null;
 
   $effect(() => {
     if (sitekey && turnstileEl) {
-      renderTurnstile("turnstile-widget", sitekey, "login");
+      turnstileHandle = renderTurnstile("turnstile-widget", sitekey, "login");
+    }
+  });
+
+  // After a failed submit the form action re-renders with `form` populated.
+  // Turnstile tokens are single-use — reset the widget so the next attempt
+  // gets a fresh token (otherwise every retry sends the consumed token).
+  $effect(() => {
+    if (form?.error && turnstileHandle) {
+      turnstileHandle.reset();
     }
   });
 

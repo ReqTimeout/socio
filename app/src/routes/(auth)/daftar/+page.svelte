@@ -45,8 +45,15 @@
 
   const sitekey = $derived(data.turnstileSitekey);
   let turnstileEl = $state<HTMLElement | null>(null);
+  let turnstileHandle: ReturnType<typeof renderTurnstile> | null = null;
   $effect(() => {
-    if (sitekey && turnstileEl) renderTurnstile("turnstile-widget", sitekey, "signup");
+    if (sitekey && turnstileEl)
+      turnstileHandle = renderTurnstile("turnstile-widget", sitekey, "signup");
+  });
+  // Tokens are single-use — reset the widget after a failed submit so the
+  // next attempt sends a fresh token.
+  $effect(() => {
+    if (form?.error && turnstileHandle) turnstileHandle.reset();
   });
 
   const strength = ["Sangat lemah", "Lemah", "Sedang", "Kuat", "Sangat kuat"];

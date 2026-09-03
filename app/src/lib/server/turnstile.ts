@@ -25,7 +25,7 @@ interface TurnstileResponse {
  * Never call this from the browser — the secret must stay server-only.
  * Docs: https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
  */
-export async function verifyTurnstile(token: string, remoteIp?: string): Promise<boolean> {
+export async function verifyTurnstile(token: string): Promise<boolean> {
   // Disabled (no SOCIO_TURNSTILE_ENABLED=1) → skip gate entirely (safe default).
   if (!TURNSTILE_ENABLED) return true;
   // Dev never renders the widget (the load fn returns an empty sitekey), so
@@ -35,6 +35,10 @@ export async function verifyTurnstile(token: string, remoteIp?: string): Promise
     // No secret configured → skip Turnstile gate (unconfigured prod).
     return true;
   }
+  if (!token) {
+    console.warn("[turnstile] rejected: empty token (widget not solved/failed to render)");
+    return false;
+  }
   try {
     const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
@@ -42,12 +46,19 @@ export async function verifyTurnstile(token: string, remoteIp?: string): Promise
       body: new URLSearchParams({
         secret: TURNSTILE_SECRET,
         response: token,
-        ...(remoteIp ? { remoteip: remoteIp } : {}),
+        // NOTE: remoteip intentionally omitted. Behind Traefik + Cloudflare
+        // proxy, getClientAddress() without ADDRESS_HEADER returns the docker
+        // gateway IP for everyone — sending it made siteverify reject EVERY
+        // token (IP-bound mismatch). Token-only verification is sufficient.
       }),
     });
     const data = (await res.json()) as TurnstileResponse;
+    if (data.success !== true) {
+      console.warn("[turnstile] rejected:", data["error-codes"]?.join(", ") ?? "unknown");
+    }
     return data.success === true;
-  } catch {
+  } catch (e) {
+    console.error("[turnstile] siteverify unreachable:", (e as Error)?.message);
     return false;
   }
 }

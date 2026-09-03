@@ -28,7 +28,7 @@ export const actions: Actions = {
         error: "Terlalu banyak permintaan. Coba lagi nanti.",
       });
 
-    const ok = await verifyTurnstile(turnstileToken, getClientAddress());
+    const ok = await verifyTurnstile(turnstileToken);
     if (!ok)
       return fail(400, {
         error: "Verifikasi humans failed. Refresh and try again.",

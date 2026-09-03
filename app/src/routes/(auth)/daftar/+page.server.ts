@@ -96,7 +96,7 @@ export const actions: Actions = {
       return fail(429, { ...baseErr, error: "Terlalu banyak pendaftaran. Coba lagi nanti." });
     }
 
-    const ok = await verifyTurnstile(turnstileToken, getClientAddress());
+    const ok = await verifyTurnstile(turnstileToken);
     if (!ok) {
       return fail(400, { ...baseErr, error: "Verifikasi humans failed. Refresh and try again." });
     }
