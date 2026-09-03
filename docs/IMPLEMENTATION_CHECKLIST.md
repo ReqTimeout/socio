@@ -67,10 +67,10 @@ Pendamping [`UIUX_DASHBOARD_PLAN.md`](./UIUX_DASHBOARD_PLAN.md). Centang tiap is
 
 | # | Issue | File | Done |
 |---|---|---|---|
-| P4-01 | Pesan Cepat empty inline (user baru) | `(app)/+page.svelte` | [ ] |
-| P4-02 | Chart empty branch copy diperjelas | `(app)/+page.svelte` | [ ] |
-| P4-03 | Pesanan empty branch konsisten | `pesanan/+page.svelte` | [ ] |
-| P4-04 | Tiket empty "Berarti semuanya lancar" — tetap | (verifikasi) | [ ] |
+| P4-01 | Pesan Cepat empty inline (user baru) | `(app)/+page.svelte` | [x] |
+| P4-02 | Chart empty branch copy diperjelas | `(app)/+page.svelte` | [x] |
+| P4-03 | Pesanan empty branch konsisten | `pesanan/+page.svelte` | [x] |
+| P4-04 | Tiket empty "Berarti semuanya lancar" — tetap | (verifikasi) | [x] |
 
 ---
 
