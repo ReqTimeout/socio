@@ -54,12 +54,12 @@ Pendamping [`UIUX_DASHBOARD_PLAN.md`](./UIUX_DASHBOARD_PLAN.md). Centang tiap is
 
 | # | Issue | File | Done |
 |---|---|---|---|
-| P3-01 | Mobile dock FAB overlap list terakhir → padding-bottom konsisten | `(app)/+page.svelte`, `+layout.svelte` | [ ] |
-| P3-02 | Sidebar Saldo mini tanpa nominal → icon-only | `packages/ui/src/components/Sidebar.svelte` | [ ] |
-| P3-03 | Pesanan mini-summary tambah "Pesanan Berjalan" label mobile | `pesanan/+page.svelte` | [ ] |
-| P3-04 | Beranda stats VIP pakai typographic strip (no card) | `(app)/+page.svelte` | [ ] |
-| P3-05 | Pesanan Terbaru pakai ledger rows (no card border) | `(app)/+page.svelte`, `pesanan/+page.svelte` | [ ] |
-| P3-06 | Top Up wizard stepper visible | `saldo/top-up/+page.svelte` | [ ] |
+| P3-01 | Mobile dock FAB overlap list terakhir → padding-bottom konsisten | `(app)/+page.svelte`, `+layout.svelte` | [x] |
+| P3-02 | Sidebar Saldo mini tanpa nominal → icon-only | `packages/ui/src/components/Sidebar.svelte` | [x] |
+| P3-03 | Pesanan mini-summary tambah "Pesanan Berjalan" label mobile | `pesanan/+page.svelte` | [x] |
+| P3-04 | Beranda stats VIP pakai typographic strip (no card) | `(app)/+page.svelte` | [x] |
+| P3-05 | Pesanan Terbaru pakai ledger rows (no card border) | `(app)/+page.svelte`, `pesanan/+page.svelte` | [x] |
+| P3-06 | Top Up wizard stepper visible | `saldo/top-up/+page.svelte` | [x] |
 
 ---
 
