@@ -77,10 +77,23 @@ export const actions: Actions = {
     if (file.size > 2_000_000) return fail(400, { error: "Ukuran maksimal 2MB." });
     if (!file.type.startsWith("image/")) return fail(400, { error: "File harus gambar." });
 
+    // P5-03: Validasi magic-bytes (signature file) — cegah upload non-image
+    // dengan MIME type spoofed. Header 12 byte pertama cukup untuk verifikasi.
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const sig = Array.from(buf.slice(0, 12))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    const isJpeg = sig.startsWith("ffd8ff");
+    const isPng = sig.startsWith("89504e47");
+    const isWebp = sig.startsWith("52494646") && sig.includes("57454250"); // "RIFF...WEBP"
+    if (!isJpeg && !isPng && !isWebp) {
+      return fail(400, { error: "Konten file bukan gambar (signature tidak cocok)." });
+    }
+
     const userId = Number(locals.user!.id);
-    const ext = file.type.split("/")[1] ?? "jpg";
+    // Samakan extension dengan magic-bytes (bukan file.type) supaya konsisten
+    const ext = isJpeg ? "jpg" : isPng ? "png" : "webp";
     const key = `avatars/${userId}.${ext}`;
-    const buf = Buffer.from(await file.arrayBuffer());
     await uploadToR2(key, buf, file.type);
     return { success: "Avatar diperbarui.", ts: Date.now() };
   },

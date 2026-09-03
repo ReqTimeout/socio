@@ -355,7 +355,7 @@
                     }
                   }}
                   title={sv.link}
-                  class="min-h-[44px] shrink-0 rounded-full bg-ink-100 px-3 py-2 text-xs font-medium transition active:scale-95 hover:bg-ink-200 reveal"
+                  class="min-h-[44px] shrink-0 rounded-full border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-medium text-primary transition active:scale-95 hover:bg-primary/10 reveal"
                 >
                   {sv.label || sv.link.slice(0, 20)}
                 </button>

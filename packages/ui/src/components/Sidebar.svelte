@@ -4,6 +4,7 @@
   import Icon from "./Icon.svelte";
   import Avatar from "./Avatar.svelte";
   import Wordmark from "./Wordmark.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
 
   type Item = { href: string; label: string; icon: string; badge?: number; section?: string };
 
@@ -45,7 +46,9 @@
     }, {}),
   );
 
-async function handleLogout() {
+  let confirmLogout = $state(false);
+
+  async function doLogout() {
     haptic();
     try {
       await fetch("/logout", { method: "POST", credentials: "same-origin" });
@@ -53,6 +56,11 @@ async function handleLogout() {
       // Gagal jaringan — tetap redirect
     }
     window.location.assign("/login");
+  }
+
+  function handleLogout() {
+    haptic();
+    confirmLogout = true;
   }
 </script>
 
@@ -156,6 +164,16 @@ async function handleLogout() {
     </div>
   </div>
 </aside>
+
+<ConfirmDialog
+  bind:open={confirmLogout}
+  title="Keluar dari akun ini?"
+  message="Kamu akan keluar dan perlu login lagi."
+  confirmLabel="Keluar"
+  cancelLabel="Batal"
+  danger
+  onConfirm={doLogout}
+/>
 
 <style>
   /* Icon pop 1× saat item jadi aktif */

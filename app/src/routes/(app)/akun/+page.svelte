@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Avatar, Button, Icon, Input, toast } from "@socio/ui";
+  import { Avatar, Button, ConfirmDialog, Icon, Input, toast } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { formatRupiah } from "$lib/format";
@@ -46,6 +46,45 @@
   });
   let revealKey = $state(false);
   let keyBusy = $state(false);
+  let confirmRegen = $state(false);
+  let confirmLogout = $state(false);
+
+  async function doLogout() {
+    haptic();
+    try {
+      await fetch("/logout", { method: "POST", credentials: "same-origin" });
+    } catch {
+      // Gagal jaringan — tetap redirect
+    }
+    window.location.assign("/login");
+  }
+
+  async function doRegenKey() {
+    haptic();
+    keyBusy = true;
+    try {
+      const fd = new FormData();
+      const res = await fetch("?/apiKey", { method: "POST", body: fd });
+      const r = await res.json();
+      if (r.type === "failure") {
+        toast(r.data?.error ?? "Gagal", "error");
+      } else {
+        const data = (r.data as any) ?? {};
+        if (data.apiKey) apiKey = data.apiKey;
+        revealKey = true;
+        toast(data.success ?? "API Key diperbarui", "success");
+      }
+    } catch {
+      toast("Gagal", "error");
+    } finally {
+      keyBusy = false;
+    }
+  }
+
+  function regenKey() {
+    if (keyBusy) return;
+    confirmRegen = true;
+  }
 
   function submit(_action: string) {
     return async (input: any) => {
@@ -93,26 +132,6 @@
     }
     avatarBusy = false;
     input.value = "";
-  }
-
-  async function regenKey() {
-    if (!confirm("API Key lama akan langsung nonaktif. Lanjut?")) return;
-    haptic();
-    keyBusy = true;
-    try {
-      const fd = new FormData();
-      const res = await fetch("?/apiKey", { method: "POST", body: fd });
-      const r = await res.json();
-      if (r.type === "failure") {
-        toast(r.data?.error ?? "Gagal", "error");
-      } else {
-        apiKey = r.data?.apiKey ?? apiKey;
-        toast(r.data?.success ?? "API Key diperbarui", "success");
-      }
-    } catch {
-      toast("Gagal", "error");
-    }
-    keyBusy = false;
   }
 
   async function copyKey() {
@@ -369,16 +388,9 @@
         >
       </a>
       <button
-        onclick={async () => {
+        onclick={() => {
           haptic();
-          if (confirm(copy.account.logoutConfirm)) {
-            try {
-              await fetch("/logout", { method: "POST", credentials: "same-origin" });
-            } catch {
-              // Gagal jaringan — tetap redirect
-            }
-            window.location.assign("/login");
-          }
+          confirmLogout = true;
         }}
         class="row-slide flex w-full items-center justify-between px-4 py-3.5 text-left text-sm font-medium text-danger hover:bg-ink-50 active:scale-[0.99]"
       >
@@ -387,6 +399,26 @@
     </div>
   </div>
 </section>
+
+<!-- ConfirmDialogs (P5-02/P5-01) — konsisten dengan mobile sheet, bukan native browser confirm -->
+<ConfirmDialog
+  bind:open={confirmRegen}
+  title="Perbarui API Key?"
+  message="API Key lama langsung nonaktif. Aplikasi pihak ketiga yang pakai key lama akan error sampai kamu update key-nya."
+  confirmLabel="Perbarui"
+  cancelLabel="Batal"
+  danger
+  onConfirm={doRegenKey}
+/>
+<ConfirmDialog
+  bind:open={confirmLogout}
+  title={copy.account.logoutConfirm}
+  message="Kamu akan keluar dan perlu login lagi."
+  confirmLabel="Keluar"
+  cancelLabel="Batal"
+  danger
+  onConfirm={doLogout}
+/>
 
 <style>
   /* Level badge — micro-shine sweep sekali saat mount (bukan loop) */
