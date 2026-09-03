@@ -18,21 +18,21 @@ Pendamping [`UIUX_DASHBOARD_PLAN.md`](./UIUX_DASHBOARD_PLAN.md). Centang tiap is
 
 | # | Issue | File | Done |
 |---|---|---|---|
-| P1-01 | Chip "Live" → "Aktif" | `app/src/routes/(app)/+page.svelte` | [ ] |
-| P1-02 | Chip "Ready" → "Siap" | `app/src/routes/(app)/+page.svelte` | [ ] |
-| P1-03 | Trust line "Sync tiap jam" → "Sinkron tiap menit via SSE" | `app/src/routes/(app)/+page.svelte` | [ ] |
-| P1-04 | "Tap — link terakhir otomatis terisi" → "Sekali sentuh, link terisi otomatis" | `app/src/routes/(app)/+page.svelte` | [ ] |
-| P1-05 | "tap untuk pesan lagi" → "Sentuh untuk pesan lagi" | `app/src/routes/(app)/+page.svelte`, `pesanan/+page.svelte` | [ ] |
-| P1-06 | Typo "Bagarkan" → "Bagikan" | `packages/core/src/copy.ts` | [ ] |
-| P1-07 | "Withdraw / approve" → "Penarikan / setujui" | `app/src/routes/(app)/affiliate/+page.svelte`, `affiliate/+page.server.ts` | [ ] |
-| P1-08 | Empty notif "Tenang aja" → "Belum ada notifikasi baru" | `packages/core/src/copy.ts` | [ ] |
-| P1-09 | "Mulai dari 500 rupiah" factual error → ganti / jatuh | `packages/core/src/copy.ts` | [ ] |
-| P1-10 | "5jt / 5ribu" → "5 juta / 5 ribu" | `app/src/routes/(app)/+page.svelte`, `saldo/top-up/+page.svelte` | [ ] |
-| P1-11 | "sat-set" slang → "sekali klik" | `pesanan/+page.svelte` | [ ] |
-| P1-12 | "10 invoice terakhir" → "10 top-up terakhir" | `saldo/top-up/+page.svelte` | [ ] |
-| P1-13 | "Program Account" → "Program Affiliate" (jika bukan typo) | `app/src/routes/(app)/+layout.svelte` (pageTitles) | [ ] |
-| P1-14 | "Mulai" terlalu pendek di mobile → "Mulai Sekarang" | `packages/core/src/copy.ts` | [ ] |
-| P1-15 | Empty Pesan copy dirapikan (Bahasa konsisten) | `packages/core/src/copy.ts` | [ ] |
+| P1-01 | Chip "Live" → "Aktif" | `app/src/routes/(app)/+page.svelte` | [x] |
+| P1-02 | Chip "Ready" → "Siap" | `app/src/routes/(app)/+page.svelte` | [x] |
+| P1-03 | Trust line "Sync tiap jam" → "Sinkron tiap menit via SSE" | `app/src/routes/(app)/+page.svelte` | [x] |
+| P1-04 | "Tap — link terakhir otomatis terisi" → "Sekali sentuh, link terisi otomatis" | `app/src/routes/(app)/+page.svelte` | [x] |
+| P1-05 | "tap untuk pesan lagi" → "Sentuh untuk pesan lagi" | `app/src/routes/(app)/+page.svelte`, `pesanan/+page.svelte` | [x] |
+| P1-06 | Typo "Bagarkan" → "Bagikan" | `packages/core/src/copy.ts` | [x] |
+| P1-07 | "Withdraw / approve" → "Penarikan / setujui" | `app/src/routes/(app)/affiliate/+page.svelte`, `affiliate/+page.server.ts` | [x] |
+| P1-08 | Empty notif "Tenang aja" → "Belum ada notifikasi baru" | `packages/core/src/copy.ts` | [x] |
+| P1-09 | "Mulai dari 500 rupiah" factual error → ganti / jatuh | `packages/core/src/copy.ts` | [x] |
+| P1-10 | "5jt / 5ribu" → "5 juta / 5 ribu" | `app/src/routes/(app)/+page.svelte`, `saldo/top-up/+page.svelte` | [x] |
+| P1-11 | "sat-set" slang → "sekali klik" | `pesanan/+page.svelte` | [x] |
+| P1-12 | "10 invoice terakhir" → "10 top-up terakhir" | `saldo/top-up/+page.svelte` | [x] |
+| P1-13 | "Program Account" → "Program Affiliate" (jika bukan typo) | `app/src/routes/(app)/+layout.svelte` (pageTitles) | [x] |
+| P1-14 | "Mulai" terlalu pendek di mobile → "Mulai Sekarang" | `packages/core/src/copy.ts` | [x] |
+| P1-15 | Empty Pesan copy dirapikan (Bahasa konsisten) | `packages/core/src/copy.ts` | [x] |
 
 ---
 
