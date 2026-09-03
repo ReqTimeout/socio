@@ -187,7 +187,7 @@
         <span class="inline-block motion-safe:animate-[wave_2s_ease-in-out_1]">{greetEmoji}</span>
       </h1>
       <p
-        class="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm lg:mt-2 lg:text-[14px] text-ink-500"
+        class="mt-1.5 flex w-full min-w-0 flex-wrap items-center gap-1.5 text-sm lg:mt-2 lg:text-[14px] text-ink-500"
       >
         {#if data.activeOrders > 0}
           <span class="relative flex h-2 w-2 shrink-0" aria-hidden="true">
@@ -206,7 +206,7 @@
             >Siap</span
           >
         {/if}
-        <span class="truncate">{subtitle}</span>
+        <span class="min-w-0 flex-1 truncate">{subtitle}</span>
       </p>
     </div>
     <a
