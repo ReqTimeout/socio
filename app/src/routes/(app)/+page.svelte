@@ -272,23 +272,27 @@
     </div>
   </div>
 
-  <!-- Pesan Cepat — repeat flow: layanan yang paling sering di-order, 1 tap langsung ke form -->
-  {#if data.quickOrders?.length}
-    <div class="reveal" style={revealDelay(0, 80)}>
-      <div class="mb-2.5 flex items-center justify-between">
-        <h2 class="flex items-center gap-1.5 font-display text-base font-bold tracking-tight">
-          <span
-            class="grid h-6 w-6 place-items-center rounded-lg bg-gradient-to-br from-accent-400 to-accent-600 text-white"
-          >
-            <Icon name="zap" size={13} stroke={2.25} />
-          </span>
-          Pesan Cepat
-        </h2>
+  <!-- Pesan Cepat — repeat flow: layanan yang paling sering di-order, 1 sentuh langsung ke form.
+       P4-01: user baru (tanpa repeat order) tetap lihat section dengan empty state inline —
+       bukan void kosong, supaya belajar bahwa fitur ini ada. -->
+  <div class="reveal" style={revealDelay(0, 80)}>
+    <div class="mb-2.5 flex items-center justify-between">
+      <h2 class="flex items-center gap-1.5 font-display text-base font-bold tracking-tight">
+        <span
+          class="grid h-6 w-6 place-items-center rounded-lg bg-gradient-to-br from-accent-400 to-accent-600 text-white"
+        >
+          <Icon name="zap" size={13} stroke={2.25} />
+        </span>
+        Pesan Cepat
+      </h2>
+      {#if data.quickOrders?.length}
         <span class="hidden text-xs text-ink-500 lg:inline"
           >Sekali sentuh, link terisi otomatis</span
         >
-      </div>
+      {/if}
+    </div>
 
+    {#if data.quickOrders?.length}
       <div
         class="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 -mx-4 px-4 pb-2 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-4 lg:overflow-visible lg:px-0 lg:scroll-px-0"
       >
@@ -328,8 +332,35 @@
           </a>
         {/each}
       </div>
-    </div>
-  {/if}
+    {:else}
+      <!-- Empty inline: user baru — jelasin nilai fitur + arah ke katalog -->
+      <div
+        class="flex items-center gap-3 rounded-2xl border border-dashed border-ink-200 bg-surface px-4 py-3.5"
+      >
+        <span
+          class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/5 text-primary"
+        >
+          <Icon name="zap" size={18} stroke={1.75} />
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="block text-sm font-semibold text-ink-800"
+            >Layanan favoritmu bakal tampil di sini</span
+          >
+          <span class="mt-0.5 block text-xs leading-snug text-ink-500">
+            Setelah pesanan pertama selesai, pesan lagi cukup sekali sentuh.
+          </span>
+        </span>
+        <a
+          href="/layanan"
+          onclick={() => haptic(8)}
+          class="hidden shrink-0 items-center gap-1 rounded-full bg-primary/10 px-3.5 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20 sm:inline-flex"
+        >
+          Lihat Katalog
+          <Icon name="chevron_right" size={13} stroke={2.5} />
+        </a>
+      </div>
+    {/if}
+  </div>
 
   <!-- INLINE-STAT (P3-04): typographic strip — no card chrome, hairline divider.
        Containment variance per DESIGN.md §B.7 (ledger style, bukan card stack). -->
@@ -472,8 +503,8 @@
               Minggu ini belum ada aktivitas
             </p>
             <p class="text-xs text-ink-500 [text-wrap:balance]">
-              Total {data.stats.totalOrders.toLocaleString("id-ID")} pesanan kamu aman — mari lanjut:
-              Pesan Cepat di atas pakai link terakhirmu.
+              {data.stats.totalOrders.toLocaleString("id-ID")} pesanan kamu tersimpan rapi — pesanan baru
+              minggu ini bakal tampil di grafik.
             </p>
             <a
               href={data.quickOrders?.[0]
@@ -508,8 +539,7 @@
               class="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition active:scale-95 hover:opacity-95 sm:mt-2"
             >
               <Icon name="plus" size={14} stroke={2.5} />
-              <span class="sm:hidden">Mulai Sekarang</span>
-              <span class="hidden sm:inline">Mulai Sekarang</span>
+              Mulai Sekarang
             </a>
           </div>
         {/if}

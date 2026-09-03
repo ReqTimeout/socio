@@ -232,15 +232,13 @@
           {copy.empty.orders.desc}
         </p>
       {:else}
-        <div
-          class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-ink-100 text-ink-500"
-        >
-          <Icon name="receipt" size={28} />
-        </div>
-        <p class="text-sm font-bold">
-          {`Tidak ada pesanan ${tabs.find((t) => t.f === data.filter)?.label ?? ""}`}
+        <EmptyOrdersArt size={88} class="relative mx-auto mb-3 text-ink-300" />
+        <p class="relative text-sm font-bold text-ink-800">
+          Tidak ada pesanan {tabs.find((t) => t.f === data.filter)?.label ?? ""}
         </p>
-        <p class="mt-1 text-xs text-ink-500">Coba ganti filter atau buat pesanan baru.</p>
+        <p class="relative mt-1 text-xs leading-relaxed text-ink-500">
+          Coba ganti filter di atas, atau buat pesanan baru.
+        </p>
       {/if}
       <a
         href="/pesan"
