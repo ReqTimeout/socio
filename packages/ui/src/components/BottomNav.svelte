@@ -44,7 +44,7 @@
         active:scale-[0.96]
         {active
         ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-100 dark:text-ink-900 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
-        : 'text-ink-800 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-100'}"
+        : 'text-ink-800 hover:text-ink-900 dark:hover:text-ink-200'}"
     >
       <span class="relative">
         <span

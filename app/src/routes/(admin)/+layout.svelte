@@ -293,9 +293,7 @@
       >
     </button>
     <nav class="space-y-1">
-      <div
-        class="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-widest text-ink-500 dark:text-ink-300"
-      >
+      <div class="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-widest text-ink-500">
         Operasional
       </div>
       {#each primaryNav as n (n.href)}
@@ -323,7 +321,7 @@
         </a>
       {/each}
       <div
-        class="mt-3 border-t border-ink-100 px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-widest text-ink-500 dark:text-ink-300"
+        class="mt-3 border-t border-ink-100 px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-widest text-ink-500"
       >
         Konten &amp; Sistem
       </div>
@@ -418,7 +416,7 @@
           n.href,
         )
           ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-100 dark:text-ink-900 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
-          : 'text-ink-500 hover:text-ink-700 dark:text-ink-300 dark:hover:text-ink-100'}"
+          : 'text-ink-500 hover:text-ink-700 dark:hover:text-ink-300'}"
       >
         <Icon name={n.icon} size={18} stroke={isActive(n.href) ? 2.4 : 1.9} />
         <span class="leading-none">{n.label}</span>
@@ -434,7 +432,7 @@
       aria-label="Menu lainnya"
       class="flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[9px] font-bold tracking-wide leading-none transition-all duration-300 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 {inMoreActive
         ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-100 dark:text-ink-900 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
-        : 'text-ink-500 hover:text-ink-700 dark:text-ink-300 dark:hover:text-ink-100'}"
+        : 'text-ink-500 hover:text-ink-700 dark:hover:text-ink-300'}"
     >
       <Icon name="more_horizontal" size={18} stroke={inMoreActive ? 2.4 : 1.9} />
       <span class="leading-none">Lainnya</span>
