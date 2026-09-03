@@ -27,6 +27,12 @@
 @import "tailwindcss";
 @import "@socio/ui/app.css";
 
+/* Dark mode = class toggle (.dark di <html>, di-set app.html + toggle admin).
+ * Tanpa ini, dark: variants Tailwind v4 mengikuti prefers-color-scheme OS —
+ * padahal app punya toggle manual → dock/badge dark: variants tidak pernah
+ * aktif saat user toggle theme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Tailwind v4 auto-detection skips node_modules, so utility classes used only
    inside the symlinked @socio/ui package (e.g. bg-accent-500 in Button/Sidebar)
    never get generated. Register the package source explicitly so every shared
