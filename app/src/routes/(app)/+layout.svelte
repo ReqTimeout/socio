@@ -44,7 +44,8 @@
   // sesuai audit UI/UX 23 Agt 2026 (docs/audituiux.md P1.1)
   const navItems = [
     { href: "/", label: "Home", icon: "home" },
-    { href: "/layanan", label: "Layanan", icon: "grid" },
+    { href: "/layanan", label: "Katalog", icon: "grid" },
+    { href: "/pesan", label: "Pesan", icon: "rocket" },
     { href: "/pesanan", label: "Pesanan", icon: "receipt" },
     { href: "/saldo", label: "Saldo", icon: "wallet" },
     { href: "/tiket", label: "Tiket", icon: "ticket" },
@@ -78,8 +79,9 @@
   };
   const pageTitle = $derived(pageTitles[$page.url.pathname] ?? "socio.id");
 
-  // FAB "pesan baru" — sembunyikan di halaman pesan itu sendiri
-  const showFab = $derived($page.url.pathname !== "/pesan");
+  // FAB dihapus: dock sudah punya Pesan (P6-02). Tetap skip FAB di /pesan
+  // untuk konsistensi (tidak ada gunanya menampilkan FAB di halaman itu).
+  const showFab = $derived(false);
 </script>
 
 <div class="min-h-dvh bg-ink-50 text-ink-900">

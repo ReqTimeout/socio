@@ -11,20 +11,58 @@
   let dialog = $state<HTMLDivElement | null>(null);
   let lastFocused: HTMLElement | null = null;
 
+  // Selector fokus yang eligible untuk tab-trap (a11y WAI-ARIA APG).
+  const FOCUSABLE =
+    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  function getFocusable(): HTMLElement[] {
+    if (!dialog) return [];
+    return Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
+  }
+
   function close() {
     open = false;
   }
 
   function onKey(e: KeyboardEvent) {
-    if (e.key === "Escape" && open) close();
+    if (!open) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+      return;
+    }
+    // Tab trap — cycle focus di dalam sheet (P8-03).
+    if (e.key === "Tab") {
+      const items = getFocusable();
+      if (items.length === 0) {
+        e.preventDefault();
+        dialog?.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && (active === first || !dialog?.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !dialog?.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
   }
 
-  // Scroll-lock + focus trap + restore focus (a11y drawer)
+  // Scroll-lock + focus trap + restore focus (a11y drawer — P8-03)
   $effect(() => {
     if (open) {
       lastFocused = document.activeElement as HTMLElement;
       document.body.style.overflow = "hidden";
-      dialog?.focus();
+      // Microtask supaya DOM ter-render dulu.
+      queueMicrotask(() => {
+        const items = getFocusable();
+        if (items.length > 0) items[0].focus();
+        else dialog?.focus();
+      });
       window.addEventListener("keydown", onKey);
     } else {
       document.body.style.overflow = "";

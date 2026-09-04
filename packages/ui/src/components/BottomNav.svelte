@@ -23,13 +23,11 @@
   }
 </script>
 
-<!-- iPhone premium dock: floating glass pill, superellipse 28px, blur-2xl, safe-area -->
+<!-- iPhone premium dock: floating glass pill, superellipse 28px, blur-2xl, safe-area.
+     Glass chrome token-driven (P7-02) — tidak ada literal `bg-white/75`. -->
 <nav
-  class="lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px] border border-white/40 bg-white/75 backdrop-blur-2xl
-    shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18),0_4px_16px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04]
-    p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] supports-[backdrop-filter]:bg-white/60
-    dark:border-ink-600/50 dark:bg-ink-100/80 dark:shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6),0_4px_16px_rgba(0,0,0,0.4)] dark:ring-white/[0.06]
-    dark:supports-[backdrop-filter]:bg-ink-100/70"
+  class="glass lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px]
+    p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
   style="grid-template-columns: repeat({items.length}, 1fr); view-transition-name: bottom-nav;"
   aria-label="Navigasi utama"
 >

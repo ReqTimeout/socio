@@ -427,7 +427,7 @@
 
   <!-- ===== Mobile: Floating Bottom Dock — iPhone premium glass pill ===== -->
   <nav
-    class="fixed inset-x-3 bottom-3 z-40 grid grid-cols-7 items-center gap-1 rounded-[28px] border border-white/40 bg-white/75 backdrop-blur-2xl p-2 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18),0_4px_16px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04] supports-[backdrop-filter]:bg-white/60 dark:border-ink-600/50 dark:bg-ink-100/80 dark:shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6),0_4px_16px_rgba(0,0,0,0.4)] dark:ring-white/[0.06] dark:supports-[backdrop-filter]:bg-ink-100/70 lg:hidden"
+    class="glass fixed inset-x-3 bottom-3 z-40 grid grid-cols-7 items-center gap-1 rounded-[28px] p-2 lg:hidden"
     style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));"
     aria-label="Menu admin utama"
   >

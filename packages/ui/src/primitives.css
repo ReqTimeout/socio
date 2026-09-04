@@ -18,6 +18,40 @@
   }
 }
 
+/* ---- Numeric lock (P7-03) ----
+ * Default ON untuk semua teks. Opt-out dengan `tabular-nums-off` (jarang —
+ * cukup untuk nilai dekoratif/teks campuran yang tidak boleh rata kolom).
+ * Plus Jakarta Sans Variable + Sora sama-sama expose tnum/lnum. */
+@layer base {
+  :root {
+    font-feature-settings: var(--font-feature-numeric);
+  }
+}
+@layer utilities {
+  .tabular-nums-off {
+    font-feature-settings: "tnum" 0, "lnum" 0;
+  }
+}
+
+/* ---- Glass surface (P7-02) ----
+ * Token-driven floating panels (BottomNav dock, admin nav glass, modal chrome).
+ * Fallback solid untuk browser tanpa backdrop-filter. */
+@layer utilities {
+  .glass {
+    background-color: var(--glass-bg-fallback); /* fallback no-blur */
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 10px 40px -12px rgb(15 23 42 / 0.18),
+      0 4px 16px rgb(15 23 42 / 0.08);
+  }
+  @supports (backdrop-filter: blur(20px)) or (-webkit-backdrop-filter: blur(20px)) {
+    .glass {
+      background-color: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+  }
+}
+
 /* ---- Shimmer skeleton (used during load, not empty-gradient) ---- */
 @layer components {
   .skeleton {

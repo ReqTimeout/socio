@@ -1,5 +1,11 @@
 # Setup Resend — Email Verifikasi + Notifikasi
 
+> **Status 2026-09-02: OPSIONAL (fallback only).** Primary email sekarang self-hosted SMTP
+> `mail.socio.id` (nodemailer, STARTTLS 587) — sudah live & verified.
+> Resend hanya dipakai kalau `RESEND_API_KEY` di-set di Coolify (fallback otomatis di
+> `app/src/lib/server/email.ts`). Ikuti guide ini hanya kalau mau redundancy provider.
+> Deliverability self-hosted SMTP masih menunggu PTR record (manual Tencent Cloud console).
+
 > Tujuan: kirim email signup verification, notifikasi deposit, notif order, dll via Resend.
 > Dipakai `app/src/lib/server/email.ts:27` (lazy-import resend).
 

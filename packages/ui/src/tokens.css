@@ -110,6 +110,20 @@
   --spacing-row: 44px;
   --spacing-row-tight: 36px;
   --text-table: 13px;
+
+  /* ---- Glass (floating dock, sheet, nav) — token-driven, anti-tell #7 ----
+   * Dipakai oleh BottomNav (mobile dock) + admin nav glass + Sheet backdrop.
+   * Tidak boleh literal `bg-white/75` di component — pakai var(--glass-bg). */
+  --glass-bg: rgb(255 255 255 / 0.72);
+  --glass-bg-fallback: rgb(255 255 255 / 0.92);
+  --glass-border: rgb(255 255 255 / 0.45);
+  --glass-ring: rgb(0 0 0 / 0.04);
+
+  /* ---- Numeric typographic lock (P7-03) ----
+   * Semua angka tabular + lining by default. Saldo, totals, qty, timestamps
+   * tidak akan "berjoget" saat update. Opt-out dengan `font-feature-settings:
+   * "tnum" 0` per elemen (jarang, hanya untuk desorative math). */
+  --font-feature-numeric: "tnum" 1, "lnum" 1;
 }
 
 /* G-U20: dark mode — remap ink + surface scale under .dark so every
@@ -143,4 +157,11 @@
   --color-status-complete: #34d399;
   --color-status-canceled: #f87171;
   --color-status-partial: #a78bfa;
+
+  /* G-U20 dark glass: lebih gelap + lebih kontras agar tetap premium di
+     mode gelap. Backdrop blur wajib (browser fallback ke fallback solid). */
+  --glass-bg: rgb(15 22 35 / 0.72);
+  --glass-bg-fallback: rgb(15 22 35 / 0.92);
+  --glass-border: rgb(255 255 255 / 0.06);
+  --glass-ring: rgb(255 255 255 / 0.06);
 }

@@ -106,28 +106,20 @@
       glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(16,163,74,0.32)]",
     },
     {
-      href: "/layanan",
-      label: "Katalog",
-      desc: "6.000+ layanan, satu dashboard",
-      icon: "grid",
-      chip: "from-accent-400 to-accent-600",
-      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(6,182,212,0.32)]",
-    },
-    {
-      href: "/tiket",
-      label: "Bantuan",
-      desc: "Tiket dibalas < 5 menit",
-      icon: "ticket",
-      chip: "from-violet-500 to-primary-600",
-      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(124,58,237,0.30)]",
-    },
-    {
       href: "/affiliate",
       label: "Affiliate",
       desc: "Ajak teman, dapat komisi",
       icon: "gift",
       chip: "from-primary-500 to-accent-500",
       glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(79,70,229,0.32)]",
+    },
+    {
+      href: "/akun",
+      label: "Akun",
+      desc: "Profil & pengaturan",
+      icon: "user",
+      chip: "from-cyan-400 to-cyan-600",
+      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(6,182,212,0.32)]",
     },
   ];
 
@@ -244,7 +236,7 @@
     </div>
 
     <div
-      class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 lg:col-span-4 lg:gap-3 lg:self-stretch content-start"
+      class="grid grid-cols-3 gap-3 lg:grid-cols-3 lg:col-span-4 lg:gap-3 lg:self-stretch content-start"
     >
       {#each quick as item, i (item.href)}
         <a

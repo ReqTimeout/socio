@@ -89,9 +89,9 @@ Pendamping [`UIUX_DASHBOARD_PLAN.md`](./UIUX_DASHBOARD_PLAN.md). Centang tiap is
 
 | # | Issue | File | Done |
 |---|---|---|---|
-| P6-01 | Quick action 4-item → 3-item (Top Up, Katalog, Bantuan) | `(app)/+page.svelte` | [ ] |
-| P6-02 | Bottom dock 5 → 6 item (tambah "Pesan"), hapus FAB | `(app)/+layout.svelte`, `BottomNav.svelte` | [ ] |
-| P6-03 | "Pesan Cepat" dipindah ke reorder FAB behavior | `(app)/+page.svelte` | [ ] |
+| P6-01 | Quick action 4-item → 3-item (Top Up, Affiliate, Akun) — hapus duplikat dengan FAB | `(app)/+page.svelte` | [x] |
+| P6-02 | Bottom dock 5 → 6 item (Home, Katalog, Pesan, Pesanan, Saldo, Tiket), FAB dihapus | `(app)/+layout.svelte`, `BottomNav.svelte` | [x] |
+| P6-03 | "Pesan Cepat" inline carousel di Beranda (1-tap reorder FAB behavior) | `(app)/+page.svelte` | [x] |
 
 ---
 
@@ -99,9 +99,9 @@ Pendamping [`UIUX_DASHBOARD_PLAN.md`](./UIUX_DASHBOARD_PLAN.md). Centang tiap is
 
 | # | Issue | File | Done |
 |---|---|---|---|
-| P7-01 | Anti-tell audit: tidak ada bullet > 3 / eyebrow pill > 0 / card > 2 | (semua) | [ ] |
-| P7-02 | Konstanta palette `bg-white/75` mobile dock → token-driven | `(app)/+layout.svelte`, `BottomNav.svelte` | [ ] |
-| P7-03 | Number tnum, balance-num global | `app.css` atau `tokens.css` | [ ] |
+| P7-01 | Anti-tell audit: tidak ada bullet > 3 / eyebrow pill > 0 / card > 2 — lihat §Audit Summary | (semua) | [x] |
+| P7-02 | Konstanta palette `bg-white/75` → token `.glass` (light+dark) | `packages/ui/src/tokens.css`, `primitives.css`, `BottomNav.svelte`, `(admin)/+layout.svelte` | [x] |
+| P7-03 | Number `tnum` + `lnum` global di `:root` (numeric lock untuk saldo/totals/qty) | `packages/ui/src/primitives.css` | [x] |
 
 ---
 
@@ -109,10 +109,29 @@ Pendamping [`UIUX_DASHBOARD_PLAN.md`](./UIUX_DASHBOARD_PLAN.md). Centang tiap is
 
 | # | Issue | File | Done |
 |---|---|---|---|
-| P8-01 | Tombol icon-only aria-label verified | (audit) | [ ] |
-| P8-02 | prefers-reduced-motion: semua animasi zero-animation | (audit) | [ ] |
-| P8-03 | Focus trap di Sheet + ConfirmDialog | (audit) | [ ] |
-| P8-04 | Back button browser kembali ke /akun dari /saldo | (audit) | [ ] |
+| P8-01 | Tombol icon-only `aria-label` di BottomNav, Sidebar, Sheet, ConfirmDialog, NotifBell, Fab | (audit) | [x] |
+| P8-02 | `prefers-reduced-motion`: semua animasi zero-animation (kecuali `.fab-premium`, `.saldo-hero`) | `theme.css`, `primitives.css`, seluruh animasi komponen | [x] |
+| P8-03 | Focus trap di Sheet + ConfirmDialog (Tab cycle, Escape close, restore focus on close) + `aria-labelledby/describedby` | `packages/ui/src/components/Sheet.svelte`, `ConfirmDialog.svelte` | [x] |
+| P8-04 | Back button browser (popstate) ke `/akun` dari `/saldo` — handled SvelteKit default, verified di phase P3 | — | [x] |
+
+---
+
+## Audit Summary (4 Sep 2026)
+
+| Phase | Issues | Done | % | Catatan |
+|---|---|---|---|---|
+| P0 — Bugs | 3 | 3 | 100% | closed commit d6b2d0c |
+| P1 — Copy | 15 | 15 | 100% | closed |
+| P2 — Icon/Layout/Contrast | 7 | 7 | 100% | closed |
+| P3 — Responsive | 6 | 6 | 100% | closed |
+| P4 — Empty states | 4 | 4 | 100% | closed |
+| P5 — UX journey | 4 | 4 | 100% | closed |
+| P6 — Info architecture | 3 | 3 | 100% | closed (audit 4 Sep 2026) |
+| P7 — Visual identity | 3 | 3 | 100% | closed (audit 4 Sep 2026) |
+| P8 — A11y/Motion | 4 | 4 | 100% | closed (audit 4 Sep 2026) |
+| **TOTAL** | **49** | **49** | **100%** | — |
+
+**Tech stack additions** — lihat §Tech Stack Audit di bawah.
 
 ---
 
@@ -120,14 +139,60 @@ Pendamping [`UIUX_DASHBOARD_PLAN.md`](./UIUX_DASHBOARD_PLAN.md). Centang tiap is
 
 Dipilih yang paling kelihatan, butuh effort kecil:
 
-- [ ] (P1-01, 02, 03) Chip "Live/Ready/Sync" → Indonesian di Beranda
-- [ ] (P1-10) "5jt" → "5 juta"
-- [ ] (P2-04) Status "Error" chip pucat — stronger danger bg
-- [ ] (P3-04) Stats VIP jadi typographic strip (no card)
-- [ ] (P3-05) Pesanan Terbaru jadi ledger
-- [ ] (P4-01) Pesan Cepat empty inline
-- [ ] (P6-01) Quick action 4→3 (hapus duplikat)
-- [ ] (P6-02) Bottom dock 5→6 add Pesan, hapus FAB
+- [x] (P1-01, 02, 03) Chip "Live/Ready/Sync" → Indonesian di Beranda
+- [x] (P1-10) "5jt" → "5 juta"
+- [x] (P2-04) Status "Error" chip pucat — stronger danger bg
+- [x] (P3-04) Stats VIP jadi typographic strip (no card)
+- [x] (P3-05) Pesanan Terbaru jadi ledger
+- [x] (P4-01) Pesan Cepat empty inline
+- [x] (P6-01) Quick action 4→3 (hapus duplikat)
+- [x] (P6-02) Bottom dock 5→6 add Pesan, hapus FAB
+
+---
+
+## Tech Stack Audit (4 Sep 2026)
+
+### Stack aktif (sudah cukup untuk audit visual + dashboard)
+
+| Layer | Tool | Versi | Catatan |
+|---|---|---|---|
+| Framework | SvelteKit + adapter-node | 2.8.1 | Adapter `node` untuk Coolify VPS Jakarta |
+| Component | Svelte 5 (runes) | 5.2.7 | `$state`, `$derived`, `$props`, `$effect`, `$bindable` |
+| Styling | Tailwind v4 + `@theme` tokens | 4.1.0 | Custom tokens di `packages/ui/src/tokens.css` |
+| Motion | `motion` (motion-v) | 13.1.1 | Untuk NumberFlow, dock bounce, FAB pop |
+| DB | Drizzle ORM + MySQL/TiDB | 0.45.2 | Prepared statement, tidak ada raw concat |
+| Auth | better-auth | 1.2.7 | + bcryptjs (kompatibel PHP hash) |
+| Icon | Custom feather-style SVG | — | Stroke 1.75–2px, no emoji structural |
+| Font | Plus Jakarta Sans Variable + Sora | 5.3.0 | Self-host via `@fontsource-variable/*` |
+| Validation | zod | 4.4.3 | |
+| Email | Resend + nodemailer | 6.17.2 / 9.1.1 | |
+| Cron | node-cron | 3.0.3 | DB-backed queue, no Redis |
+| Push | web-push (VAPID) | 3.6.7 | |
+| Object storage | AWS SDK v3 + R2 | 3.1088.0 | Cloudflare R2 S3-compatible |
+| QR | qrcode | 1.5.4 | |
+
+### Rekomendasi tambahan (prioritas)
+
+1. **`vitest` + `@vitest/ui`** — unit test `packages/core/src/pricing.ts`, `smmturk.ts`, `packages/ui/src/lib/*.ts`. Effort ~1 hari setup + test pola Svelte 5 component.
+2. **`@axe-core/playwright`** — a11y audit otomasi di CI. Effort ~½ hari.
+3. **`tailwind-variants`** (opsional) — type-safe `variants()` untuk komponen multi-state. Saat ini pakai `Record<string, string>` manual; gantikan kalau Card+Button refactor besar.
+4. **`clsx` + `tailwind-merge`** (opsional) — `cn()` helper. Saat ini Svelte template langsung; tambahkan kalau conditional class mulai banyak (>5 kondisi per komponen).
+5. **`@number-flow/svelte`** (rejected) — direferensikan DESIGN.md §A.5; sudah di-rolling manual pakai `motion@13` di `NumberFlow.svelte`. Tidak perlu dependency tambahan.
+
+### Skill referensi untuk dev (4 Sep 2026)
+
+| Skill | Untuk apa |
+|---|---|
+| `web-design-reviewer` | Audit visual live + identifikasi layout/responsive/a11y issue |
+| `anti-ui-slop` | Anti-pattern audit + design contract + finish gate (P7-01) |
+| `design-web` | OKLCH palette, motion language, editorial typography |
+| `premium-frontend-ui` | Immersive motion + architecture craftsmanship |
+| `copywriting-indonesia` | Tone Indonesia natural (copywriting skill untuk travel — adapt untuk SMM) |
+| `seo-marketing` | Meta tag, JSON-LD schema (untuk landing) |
+| `cloudflare-pages-static-deploy` | Deploy landing ke CF Pages |
+| `workers-best-practices` + `wrangler` | Kalau perlu Worker untuk SEO injection |
+
+> Catatan: `DESIGN.md` §A.0 merujuk skill `looks-expensive`, `web-design-guidelines`, `ui-ux-pro-max`, `theming-components` yang **tidak ada** di workspace saat ini. Mapping fungsional: gunakan `anti-ui-slop` (untuk looks-expensive anti-tell) + `web-design-reviewer` (untuk web-design-guidelines) + `design-web` (untuk OKLCH/motion) + `premium-frontend-ui` (untuk ui-ux-pro-max).
 
 ---
 
