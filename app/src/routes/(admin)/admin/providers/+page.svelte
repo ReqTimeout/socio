@@ -363,7 +363,7 @@
 
       <!-- Desktop: table -->
       <div class="hidden lg:block">
-        <table class="w-full text-sm">
+        <table class="w-full min-w-[800px] text-sm">
           <thead class="sticky top-0 z-10 bg-ink-50/80 backdrop-blur">
             <tr
               class="border-b border-ink-100 text-left text-[11px] font-bold uppercase tracking-wide text-ink-400"

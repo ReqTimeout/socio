@@ -34,7 +34,10 @@
     primary: "bg-primary text-white shadow-sm hover:bg-primary-700",
     accent: "bg-accent-700 text-white shadow-sm hover:brightness-90",
     ghost: "bg-ink-100 text-ink-700 hover:bg-ink-200",
-    danger: "bg-danger text-white shadow-sm hover:bg-red-700",
+    /* P2-12: pakai red-600 (Tailwind default, #dc2626) bukan --color-danger
+       karena di dark mode --color-danger = #f87171 (terang) dan white text
+       di atasnya = 2.76:1 FAIL. red-600 darker red = white text 4.83:1 ✅ */
+    danger: "bg-red-600 text-white shadow-sm hover:bg-red-700 dark:hover:bg-red-500",
   };
   const sizes: Record<Size, string> = {
     sm: "px-4 py-2 text-sm",

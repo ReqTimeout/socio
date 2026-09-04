@@ -243,7 +243,7 @@
     {:else}
       <!-- Desktop table -->
       <div class="mt-3 hidden overflow-x-auto rounded-2xl border border-ink-100 lg:block">
-        <table class="w-full text-sm">
+        <table class="w-full min-w-[800px] text-sm">
           <thead class="bg-ink-50 text-left text-xs uppercase tracking-wide text-ink-500">
             <tr>
               <th class="px-4 py-3 font-semibold">Downline</th>

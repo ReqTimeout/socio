@@ -19,7 +19,8 @@ function rp(n: number): string {
 // Status order yang sedang aktif dipoll ke provider
 const ACTIVE_ORDER_STATUS = ["Pending", "Processing", "In progress", "Refilling"] as const;
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, depends }) => {
+  depends("admin:dashboard");
   if (!locals.user) throw redirect(303, "/login");
 
   const now = new Date();

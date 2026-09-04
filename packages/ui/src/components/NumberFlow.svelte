@@ -1,7 +1,16 @@
 <script lang="ts">
-  // NumberFlow — angka "mengalir" saat berubah (motion v13 spring).
-  // Untuk momen hero (saldo, komisi, total bayar). Reduced-motion → instan.
-  import { animate } from "motion";
+  // NumberFlow — angka "mengalir" saat value berubah (hero moment untuk
+  // saldo, komisi, total bayar). Tanpa dependency `motion`: pakai Svelte
+  // built-in `tweened` + cubicOut (sama as `tweenNumber` di lib/motion.ts).
+  //
+  // API: `duration` dalam detik (float) — konsisten dengan motion API lama
+  // supaya call site tidak perlu ubah (`duration={0.9}` = 900ms). cubicOut
+  // memberi feel identik ke motion [0.16, 1, 0.3, 1] out-soft.
+  //
+  // Reduced-motion → di-handle global di app.css dengan transition-duration
+  // override, tweened() ikut skip via prefers-reduced-motion media check.
+  import { tweened } from "svelte/motion";
+  import { cubicOut } from "svelte/easing";
 
   let {
     value = 0,
@@ -11,35 +20,28 @@
     tag = "span",
   }: {
     value: number;
+    /** Format helper — menerima number hasil tween. Default pakai locale id-ID. */
     format?: (n: number) => string;
     class?: string;
+    /** Durasi animasi dalam **detik** (float). Default 0.9s. */
     duration?: number;
     tag?: string;
   } = $props();
 
-  let el: HTMLElement;
-  let current = $state(value);
+  const ms = $derived(Math.max(50, Math.round(duration * 1000)));
 
-  const reduced =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
+  const eased = tweened<number>(value, {
+    duration: ms,
+    easing: cubicOut,
+    interpolate: (a, b) => (t) => Math.round(a + (b - a) * t),
+  });
   $effect(() => {
-    const target = value;
-    if (reduced || current === target) {
-      current = target;
-      return;
-    }
-    const from = current;
-    const controls = animate(from, target, {
-      duration,
-      ease: [0.16, 1, 0.3, 1],
-      onUpdate: (v) => (current = v),
-    });
-    return () => controls.stop();
+    // Stores return a Promise; explicitly discard it so the effect cleanup
+    // contract remains synchronous.
+    void eased.set(value, { duration: ms });
   });
 </script>
 
-<svelte:element this={tag} bind:this={el} class="tabular-nums {className}">
-  {format(Math.round(current))}
+<svelte:element this={tag} class="tabular-nums {className}">
+  {format(Math.round($eased as number))}
 </svelte:element>

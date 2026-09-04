@@ -118,7 +118,7 @@
           >
             <Icon name={data.maintenance ? "alert" : "check"} size={14} stroke={2.5} />
           </span>
-          <h3 class="text-sm font-semibold">Maintenance Mode</h3>
+          <h2 class="text-sm font-semibold">Maintenance Mode</h2>
         </div>
         <p class="mt-1 text-xs text-ink-500">
           Blokir user order saat deploy/fix. Admin tetap bisa akses.
@@ -149,7 +149,7 @@
           <span class="grid h-8 w-8 place-items-center rounded-lg bg-ink-100 text-ink-500">
             <Icon name="shield" size={14} stroke={2.5} />
           </span>
-          <h3 class="text-sm font-semibold">2FA Admin (TOTP)</h3>
+          <h2 class="text-sm font-semibold">2FA Admin (TOTP)</h2>
         </div>
         <p class="mt-1 text-xs text-ink-500">
           Wajibkan kode TOTP saat login admin. Belum di-enforce — menunggu implementasi M3.5.
@@ -171,7 +171,7 @@
           >
             <Icon name="link" size={14} stroke={2.5} />
           </span>
-          <h3 class="text-sm font-semibold">API Publik</h3>
+          <h2 class="text-sm font-semibold">API Publik</h2>
         </div>
         <p class="mt-1 text-xs text-ink-500">
           Endpoint <code>/api/v1/*</code> untuk user (order via API).
@@ -206,7 +206,7 @@
           >
             <Icon name="mail" size={14} stroke={2.5} />
           </span>
-          <h3 class="text-sm font-semibold">Verifikasi Email Signup</h3>
+          <h2 class="text-sm font-semibold">Verifikasi Email Signup</h2>
         </div>
         <p class="mt-1 text-xs text-ink-500">Wajibkan konfirmasi email sebelum akun aktif.</p>
       </div>
@@ -280,7 +280,7 @@
           </div>
           <div class="flex justify-between">
             <dt class="text-ink-500">Jual ke user</dt>
-            <dd class="tabular-nums font-bold text-primary">Rp {fmt(Math.round(calcSell))}</dd>
+            <dd class="tabular-nums font-bold text-primary-ink">Rp {fmt(Math.round(calcSell))}</dd>
           </div>
           <div class="flex justify-between">
             <dt class="text-ink-500">Profit</dt>
@@ -357,7 +357,7 @@
                 {#if data.sampleService}
                   <p class="rounded-lg bg-ink-50 px-2 py-1 text-[10px] text-ink-500">
                     Preview ({data.sampleService.name}, 1000):
-                    <strong class="text-primary">Rp {fmt(Math.round(previewSell))}</strong>
+                    <strong class="text-primary-ink">Rp {fmt(Math.round(previewSell))}</strong>
                   </p>
                 {/if}
                 <label class="block">
@@ -424,7 +424,7 @@
       </ul>
 
       <!-- Desktop table -->
-      <table class="hidden w-full text-sm lg:table">
+      <table class="hidden w-full min-w-[800px] text-sm lg:table">
         <thead>
           <tr
             class="border-b border-ink-100 text-left text-[10px] font-bold uppercase tracking-wide text-ink-400"
@@ -582,6 +582,7 @@
               <select
                 name="role"
                 value={u.role}
+                aria-label="Pilih role untuk {u.username}"
                 onchange={(e) => (e.currentTarget.form as HTMLFormElement).requestSubmit()}
                 class="rounded-lg border border-ink-200 bg-surface px-2 py-1 text-xs font-semibold focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
               >

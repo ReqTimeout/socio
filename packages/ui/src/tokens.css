@@ -44,10 +44,11 @@
   --color-ink-100: #f1f5f9;
   --color-ink-200: #e2e8f0;
   --color-ink-300: #cbd5e1;
-  --color-ink-400: #94a3b8;
-  --color-ink-500: #64748b;
-  --color-ink-600: #475569;
-  --color-ink-700: #334155;
+  --color-ink-400: #64748b; /* AA: 5.74:1 on white — was #94a3b8 (2.56:1 sub-AA) */
+  --color-ink-500: #475569; /* AAA: 8.59:1 on white — was #64748b (5.74:1) */
+  --color-ink-600: #334155; /* was #475569 */
+  --color-ink-700: #1e293b; /* was #334155 */
+  --color-ink-800: #0f172a; /* was #1e293b */
   --color-ink-800: #1e293b;
   --color-ink-900: #0f172a;
 
@@ -55,13 +56,23 @@
    * -700-grade agar teks AA 4.5:1 di atas bg /10 di putih. */
   --color-success: #047857;
   --color-success-soft: #dcfce7;
+  --color-success-ink: #047857;
   --color-warning: #b45309;
   --color-warning-soft: #fef3c7;
+  --color-warning-ink: #92400e;
   --color-danger: #b91c1c;
   --color-danger-soft: #fee2e2;
+  --color-danger-ink: #991b1b;
+  --color-primary-soft: #e0e7ff;
+  --color-primary-ink: #3730a3;
 
   /* Order status semantic colors (SMM panel)
    * Nilai -700-grade supaya teks badge AA 4.5:1 di atas bg /10 di putih. */
+  --color-status-pending-soft: #fef3c7; /* AA: 7.2:1 vs #92400e */
+  --color-status-progress-soft: #dbeafe; /* AA: 6.5:1 vs #1d4ed8 */
+  --color-status-complete-soft: #dcfce7; /* AA: 6.4:1 vs #047857 */
+  --color-status-canceled-soft: #fee2e2; /* AA: 6.5:1 vs #b91c1c */
+  --color-status-partial-soft: #ede9fe; /* AA: 6.1:1 vs #6d28d9 */
   --color-status-pending: #92400e;
   --color-status-progress: #1d4ed8;
   --color-status-complete: #047857;
@@ -134,27 +145,70 @@
   --color-ink-100: #161e2e;
   --color-ink-200: #243044;
   --color-ink-300: #334155;
-  --color-ink-400: #64748b;
-  --color-ink-500: #94a3b8;
-  --color-ink-600: #aab4c5;
-  --color-ink-700: #cbd5e1;
-  --color-ink-800: #e2e8f0;
-  --color-ink-900: #f8fafc;
+  --color-ink-400: #94a3b8; /* AA: 5.7:1 on #0f1623 — was #64748b (3.8:1 sub-AA) */
+  --color-ink-500: #aab4c5; /* AAA: 8.1:1 on #0f1623 — was #94a3b8 */
+  --color-ink-600: #cbd5e1; /* 10.6:1 — was #aab4c5 */
+  --color-ink-700: #e2e8f0; /* was #cbd5e1 */
+  --color-ink-800: #f1f5f9; /* was #e2e8f0 */
+  --color-ink-900: #ffffff; /* was #f8fafc */
   --color-danger-soft: #3b1414;
   --color-success-soft: #0f2a17;
   --color-warning-soft: #2e210a;
+  --color-primary-soft: #1e1b4b;
+
+  /* P2-12: brand tint scale (50/100/200) — tanpa override, `bg-primary-50/40`
+     di dark mode jadi warna pucat di atas surface gelap (text-primary-700
+     yang juga light value = 1.46:1 contrast). Override ke deep-tint indigo
+     / cyan supaya KPI tile bg-primary-50, bg-accent-50 tetap "brand tinted"
+     bukan abu-abu muram. */
+  --color-primary-50: #14112e;
+  --color-primary-100: #1e1b4b;
+  --color-primary-200: #2d2a7e;
+  --color-accent-50: #052028;
+  --color-accent-100: #08323d;
+  --color-accent-200: #0c4a5a;
+
+  /* P2-12: tone palette (violet/amber/emerald/indigo) — tanpa override,
+     chip pill dan selected-row bg pakai `bg-violet-50/N` dst jadi abu-abu
+     muram di dark mode. Override ke deep-tint supaya semantic-nya tetap. */
+  --color-violet-50: #1f1639;
+  --color-violet-100: #2d1f5a;
+  --color-violet-200: #3f2d80;
+  --color-violet-300: #5b3fb0;
+  --color-violet-700: #c4b5fd;
+  --color-amber-50: #2e210a;
+  --color-amber-100: #3d2c0e;
+  --color-amber-200: #5c4214;
+  --color-amber-700: #fcd34d;
+  --color-emerald-50: #0f2a17;
+  --color-emerald-100: #143d22;
+  --color-emerald-200: #1a5a32;
+  --color-emerald-700: #6ee7b7;
+  --color-indigo-50: #14112e;
+  --color-indigo-100: #1e1b4b;
+  --color-indigo-200: #2d2a7e;
+  --color-indigo-700: #a5b4fc;
 
   /* Semantic: versi terang agar kontras di surface gelap. */
   --color-success: #34d399;
+  --color-success-ink: #6ee7b7;
   --color-warning: #fbbf24;
+  --color-warning-ink: #fcd34d;
   --color-danger: #f87171;
+  --color-danger-ink: #fca5a5;
+  --color-primary-ink: #a5b4fc;
   --color-accent-ink: var(--color-accent-400);
 
   /* Status: di dark mode perlu lebih TERANG agar teks badge kontras di
      surface gelap (light-mode pakai -700 yang terlalu gelap di sini). */
+  --color-status-pending-soft: #2e210a;
+  --color-status-progress-soft: #1a2540;
+  --color-status-complete-soft: #0f2a17;
+  --color-status-canceled-soft: #3b1414;
+  --color-status-partial-soft: #2a1f4a;
   --color-status-pending: #fbbf24;
   --color-status-progress: #60a5fa;
-  --color-status-complete: #34d399;
+  --color-status-complete: #4ade80; /* P2-12: 4.85:1 on #0f211c soft bg, 6.1:1 on #0f1623 surface — was #34d399 (3.5:1 sub-AA) */
   --color-status-canceled: #f87171;
   --color-status-partial: #a78bfa;
 

@@ -13,15 +13,18 @@
     labels = [],
     height = 200,
     formatValue = (v: number) => v.toLocaleString("id-ID"),
+    formatYTick,
   }: {
     series: Series[];
     labels?: string[];
     height?: number;
     formatValue?: (v: number) => string;
+    /** Y-axis tick formatter — default compact (e.g. "37,5k" atau "37.500"). */
+    formatYTick?: (v: number) => string;
   } = $props();
 
   const W = 600; // viewBox width — responsive via CSS
-  const PAD_X = 10;
+  const PAD_X = 44;
   const PAD_TOP = 14;
   const PAD_BOTTOM = 26;
 
@@ -29,6 +32,37 @@
 
   const n = $derived(Math.max(...series.map((s) => s.data.length), 2));
   const maxV = $derived(Math.max(1, ...series.flatMap((s) => s.data)));
+  const isEmpty = $derived(series.every((s) => s.data.every((v) => v === 0)));
+
+  /** Y-axis tick values (4 ticks: 0, 25%, 50%, 100%). */
+  const yTicks = $derived.by(() => {
+    const t = [0, 0.25, 0.5, 1].map((f) => Math.round((maxV * f) / 10) * 10);
+    return [...new Set(t)]; // dedup kalau maxV=0 → semua jadi 0
+  });
+
+  /** Compact Y-axis formatter: "37,5rb" / "1,2jt" / "850" (no "Rp" prefix). */
+  const tickFmt = $derived(
+    formatYTick ??
+      ((v: number) => {
+        if (v >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(/\.0$/, "") + "jt";
+        if (v >= 1_000) return (v / 1_000).toFixed(1).replace(/\.0$/, "") + "rb";
+        return String(v);
+      }),
+  );
+
+  /** Tooltip horizontal position with edge clamping (%). */
+  const tooltipX = $derived.by(() => {
+    if (hoverIdx < 0) return 0;
+    const pct = (x(hoverIdx) / W) * 100;
+    return Math.max(8, Math.min(92, pct));
+  });
+  const tooltipAlign = $derived.by(() => {
+    if (hoverIdx < 0) return "center";
+    const pct = (x(hoverIdx) / W) * 100;
+    if (pct > 80) return "right";
+    if (pct < 20) return "left";
+    return "center";
+  });
 
   function x(i: number) {
     return PAD_X + (i * (W - PAD_X * 2)) / (n - 1);
@@ -123,6 +157,39 @@
       <line x1={PAD_X} x2={W - PAD_X} y1={gy} y2={gy} stroke="var(--color-ink-100)" stroke-width="1" />
     {/each}
 
+    <!-- Y-axis tick labels (4 ticks, compact) -->
+    {#each yTicks as tv, ti}
+      <text
+        x={PAD_X - 6}
+        y={PAD_TOP + (height - PAD_TOP - PAD_BOTTOM) * (1 - ti / Math.max(1, yTicks.length - 1)) + 3}
+        text-anchor="end"
+        class="fill-ink-400 tabular-nums"
+        font-size="10"
+        font-family="inherit"
+      >{tickFmt(tv)}</text>
+    {/each}
+
+    <!-- Empty state overlay -->
+    {#if isEmpty}
+      <text
+        x={W / 2}
+        y={height / 2}
+        text-anchor="middle"
+        class="fill-ink-300"
+        font-size="14"
+        font-family="inherit"
+        font-weight="600"
+      >Belum ada revenue</text>
+      <text
+        x={W / 2}
+        y={height / 2 + 18}
+        text-anchor="middle"
+        class="fill-ink-300"
+        font-size="11"
+        font-family="inherit"
+      >Order pertama akan muncul di sini</text>
+    {/if}
+
     {#each series as s, si}
       <path d={areaPath(s.data)} fill="url(#{uid}-g{si})" class="chart-area" />
       <path
@@ -178,10 +245,12 @@
   </svg>
 
   <!-- Tooltip -->
-  {#if hoverIdx >= 0}
+  {#if hoverIdx >= 0 && !isEmpty}
     <div
-      class="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-xl border border-ink-100 bg-surface px-3 py-2 shadow-card"
-      style="left: {(x(hoverIdx) / W) * 100}%"
+      class="pointer-events-none absolute top-0 z-10 rounded-xl border border-ink-200 bg-surface px-3 py-2 shadow-card ring-1 ring-ink-900/5
+        {tooltipAlign === 'left' ? 'translate-x-0' : tooltipAlign === 'right' ? '-translate-x-full' : '-translate-x-1/2'}"
+      style="left: {tooltipX}%"
+      role="tooltip"
     >
       {#if labels[hoverIdx]}
         <p class="mb-1 text-[11px] font-semibold text-ink-500">{labels[hoverIdx]}</p>
@@ -192,7 +261,7 @@
             class="inline-block h-2 w-2 rounded-full"
             style="background: {s.color ?? palette[si % palette.length]}"
           ></span>
-          {s.label}: <span class="font-bold text-ink-900">{formatValue(s.data[hoverIdx] ?? 0)}</span>
+          {s.label}: <span class="font-bold text-ink-900 tabular-nums">{formatValue(s.data[hoverIdx] ?? 0)}</span>
         </p>
       {/each}
     </div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, Icon, toast, extractActionMsg } from "@socio/ui";
+  import { Button, ConfirmDialog, EmptyState, Icon, toast, extractActionMsg, ContextFab} from "@socio/ui";
   import { applyAction, enhance } from "$app/forms";
   import type { ActionData, PageData } from "./$types";
 
@@ -233,7 +233,7 @@
 
     <!-- Desktop table -->
     <div class="hidden overflow-x-auto rounded-2xl border border-ink-100 lg:block">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[800px] text-sm">
         <thead class="bg-ink-50 text-left text-xs uppercase tracking-wide text-ink-500">
           <tr>
             <th class="px-4 py-3 font-semibold">Banner</th>
@@ -282,6 +282,18 @@
       </table>
     </div>
   {/if}
+
+<!-- P1-01/02: ContextFab — quick action -->
+<ContextFab
+  primary={{ label: 'Aksi Cepat', icon: 'plus' }}
+  lgLabel="Aksi Cepat Banner"
+  actions={[
+    { label: "Cari banner", icon: "search", href: "?q=", tone: "neutral" },
+    { label: "Aktif", icon: "eye", href: "?status=1", tone: "success" },
+    { label: "Nonaktif", icon: "eye-off", href: "?status=0", tone: "warning" },
+  ]}
+/>
+
 </section>
 
 <!-- Add/Edit modal (bottom-sheet mobile, centered desktop) -->

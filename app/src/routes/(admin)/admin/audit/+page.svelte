@@ -17,80 +17,78 @@
       minute: "2-digit",
     });
 
-  // Human labels — gampang dimengerti (bukan snake_case)
-  const ACTION_LABELS: Record<string, { label: string; icon: string }> = {
-    confirm_deposit: { label: "Konfirmasi deposit", icon: "wallet" },
-    reject_deposit: { label: "Tolak deposit", icon: "x" },
-    change_level: { label: "Ubah level user", icon: "user" },
-    suspend_user: { label: "Blokir user", icon: "lock" },
-    edit_user: { label: "Edit user", icon: "settings" },
-    update_order_status: { label: "Update status order", icon: "receipt" },
-    edit_order_provider: { label: "Edit provider order", icon: "zap" },
-    enable_maintenance: { label: "Maintenance ON", icon: "shield" },
-    disable_maintenance: { label: "Maintenance OFF", icon: "shield" },
-    create_coupon: { label: "Buat kupon", icon: "gift" },
-    delete_coupon: { label: "Hapus kupon", icon: "gift" },
-    create_banner: { label: "Buat banner", icon: "image" },
-    update_banner: { label: "Update banner", icon: "image" },
-    delete_banner: { label: "Hapus banner", icon: "image" },
-    activate_banner: { label: "Aktifkan banner", icon: "image" },
-    deactivate_banner: { label: "Nonaktifkan banner", icon: "image" },
-    create_news: { label: "Buat berita", icon: "megaphone" },
-    update_news: { label: "Update berita", icon: "megaphone" },
-    delete_news: { label: "Hapus berita", icon: "megaphone" },
-    delete_user: { label: "Hapus user", icon: "user" },
-    update_user: { label: "Update user", icon: "user" },
-    create_user: { label: "Buat user", icon: "user" },
-    sync_provider: { label: "Sync provider", icon: "refresh" },
-    add_provider: { label: "Tambah provider", icon: "zap" },
-    edit_provider: { label: "Edit provider", icon: "zap" },
-    delete_provider: { label: "Hapus provider", icon: "zap" },
-    test_provider: { label: "Tes provider", icon: "zap" },
-    reply_ticket: { label: "Balas tiket", icon: "ticket" },
-    close_ticket: { label: "Tutup tiket", icon: "ticket" },
-    reopen_ticket: { label: "Buka tiket", icon: "ticket" },
-    save_pricing_rules: { label: "Simpan harga", icon: "tag" },
-    apply_pricing_to_catalog: { label: "Update katalog harga", icon: "tag" },
+  // P2-02: Tone per action (success / warning / danger / primary / neutral)
+  // Align dengan ContextFab tones (5 kategori) — bukan raw Tailwind shades.
+  type ActionMeta = { label: string; icon: string; tone: ActionTone };
+  const ACTIONS: Record<string, ActionMeta> = {
+    // === Deposit ===
+    confirm_deposit: { label: "Konfirmasi deposit", icon: "check", tone: "success" },
+    reject_deposit: { label: "Tolak deposit", icon: "x", tone: "danger" },
+    adjust_balance: { label: "Adjust saldo", icon: "wallet", tone: "warning" },
+    // === User ===
+    create_user: { label: "Buat user", icon: "user-plus", tone: "success" },
+    update_user: { label: "Update user", icon: "user", tone: "neutral" },
+    edit_user: { label: "Edit user", icon: "settings", tone: "neutral" },
+    delete_user: { label: "Hapus user", icon: "trash", tone: "danger" },
+    change_level: { label: "Ubah level user", icon: "shield", tone: "warning" },
+    suspend_user: { label: "Blokir user", icon: "lock", tone: "danger" },
+    // === Order ===
+    update_order_status: { label: "Update status order", icon: "receipt", tone: "neutral" },
+    edit_order_provider: { label: "Edit provider order", icon: "zap", tone: "warning" },
+    // === Maintenance ===
+    enable_maintenance: { label: "Maintenance ON", icon: "shield", tone: "warning" },
+    disable_maintenance: { label: "Maintenance OFF", icon: "shield", tone: "neutral" },
+    // === Coupon ===
+    create_coupon: { label: "Buat kupon", icon: "gift", tone: "success" },
+    delete_coupon: { label: "Hapus kupon", icon: "gift", tone: "danger" },
+    // === Banner ===
+    create_banner: { label: "Buat banner", icon: "image", tone: "primary" },
+    update_banner: { label: "Update banner", icon: "image", tone: "neutral" },
+    delete_banner: { label: "Hapus banner", icon: "image", tone: "danger" },
+    activate_banner: { label: "Aktifkan banner", icon: "image", tone: "success" },
+    deactivate_banner: { label: "Nonaktifkan banner", icon: "image", tone: "neutral" },
+    // === News ===
+    create_news: { label: "Buat berita", icon: "megaphone", tone: "primary" },
+    update_news: { label: "Update berita", icon: "megaphone", tone: "neutral" },
+    delete_news: { label: "Hapus berita", icon: "megaphone", tone: "danger" },
+    // === Provider ===
+    sync_provider: { label: "Sync provider", icon: "refresh", tone: "primary" },
+    add_provider: { label: "Tambah provider", icon: "zap", tone: "success" },
+    edit_provider: { label: "Edit provider", icon: "zap", tone: "neutral" },
+    delete_provider: { label: "Hapus provider", icon: "zap", tone: "danger" },
+    test_provider: { label: "Tes provider", icon: "zap", tone: "warning" },
+    encrypt_provider_keys: { label: "Encrypt provider keys", icon: "lock", tone: "warning" },
+    // === Ticket ===
+    reply_ticket: { label: "Balas tiket", icon: "ticket", tone: "neutral" },
+    close_ticket: { label: "Tutup tiket", icon: "ticket", tone: "danger" },
+    reopen_ticket: { label: "Buka tiket", icon: "ticket", tone: "success" },
+    // === Email campaign ===
+    create_email_campaign: { label: "Buat campaign email", icon: "mail", tone: "primary" },
+    delete_email_campaign: { label: "Hapus campaign email", icon: "mail", tone: "danger" },
+    // === Pricing ===
+    save_pricing_rules: { label: "Simpan harga", icon: "tag", tone: "warning" },
+    apply_pricing_to_catalog: { label: "Update katalog harga", icon: "tag", tone: "success" },
   };
-  function humanAction(action: string): { label: string; icon: string } {
-    return ACTION_LABELS[action] ?? { label: action.replace(/_/g, " "), icon: "clock" };
+
+  type ActionTone = "success" | "warning" | "danger" | "primary" | "neutral";
+  function humanAction(action: string): ActionMeta {
+    return ACTIONS[action] ?? { label: action.replace(/_/g, " "), icon: "clock", tone: "neutral" };
   }
-  const ACTION_TONE: Record<string, string> = {
-    confirm_deposit: "bg-emerald-100 text-emerald-800 border-emerald-300",
-    reject_deposit: "bg-red-100 text-red-700 border-red-300",
-    change_level: "bg-violet-100 text-violet-800 border-violet-300",
-    suspend_user: "bg-amber-100 text-amber-800 border-amber-300",
-    edit_user: "bg-amber-100 text-amber-800 border-amber-300",
-    update_order_status: "bg-sky-100 text-sky-800 border-sky-300",
-    edit_order_provider: "bg-sky-100 text-sky-800 border-sky-300",
-    enable_maintenance: "bg-ink-900 text-ink-50 border-ink-900",
-    disable_maintenance: "bg-ink-100 text-ink-700 border-ink-200",
-    create_coupon: "bg-emerald-100 text-emerald-800 border-emerald-300",
-    delete_coupon: "bg-red-100 text-red-700 border-red-300",
-    create_banner: "bg-violet-100 text-violet-800 border-violet-300",
-    update_banner: "bg-violet-100 text-violet-800 border-violet-300",
-    delete_banner: "bg-red-100 text-red-700 border-red-300",
-    activate_banner: "bg-emerald-100 text-emerald-800 border-emerald-300",
-    deactivate_banner: "bg-ink-100 text-ink-600 border-ink-200",
-    create_news: "bg-sky-100 text-sky-800 border-sky-300",
-    update_news: "bg-sky-100 text-sky-800 border-sky-300",
-    delete_news: "bg-red-100 text-red-700 border-red-300",
-    save_pricing_rules: "bg-amber-100 text-amber-800 border-amber-300",
-    apply_pricing_to_catalog: "bg-emerald-100 text-emerald-800 border-emerald-300",
-    create_user: "bg-emerald-100 text-emerald-800 border-emerald-300",
-    update_user: "bg-sky-100 text-sky-800 border-sky-300",
-    delete_user: "bg-red-100 text-red-700 border-red-300",
-    sync_provider: "bg-sky-100 text-sky-800 border-sky-300",
-    add_provider: "bg-emerald-100 text-emerald-800 border-emerald-300",
-    edit_provider: "bg-violet-100 text-violet-800 border-violet-300",
-    delete_provider: "bg-red-100 text-red-700 border-red-300",
-    test_provider: "bg-amber-100 text-amber-800 border-amber-300",
-    reply_ticket: "bg-sky-100 text-sky-800 border-sky-300",
-    close_ticket: "bg-red-100 text-red-700 border-red-300",
-    reopen_ticket: "bg-emerald-100 text-emerald-800 border-emerald-300",
+
+  // Tone → Tailwind class (align dengan ContextFab & StatusBadge)
+  const TONE_CLS: Record<ActionTone, string> = {
+    success: "bg-success-soft text-success-ink border-success/30",
+    warning: "bg-warning-soft text-warning-ink border-warning/30",
+    danger: "bg-danger-soft text-danger-ink border-danger/30",
+    primary: "bg-primary-soft text-primary-ink border-primary/30",
+    neutral: "bg-ink-50 text-ink-700 border-ink-200",
   };
-  const toneFor = (action: string) =>
-    ACTION_TONE[action] ?? "bg-ink-50 text-ink-600 border-ink-200";
+  const toneFor = (action: string) => TONE_CLS[humanAction(action).tone];
+
+  // IP resolved check: "0.0.0.0" / null / empty = unresolved (no proxy header)
+  function ipResolved(ip: string | null | undefined): boolean {
+    return !!ip && ip !== "0.0.0.0";
+  }
 
   // Pretty detail — ubah JSON kampret jadi kalimat enak dibaca (bukan markupPercent FlatPer1k)
   function prettyDetail(d: unknown): { k: string; v: string }[] | null {
@@ -307,14 +305,26 @@
                       l.action,
                     )}"
                   >
-                    <Icon name={h.icon} size={11} />
+                    <Icon name={h.icon} size={11} stroke={2.5} />
                     {h.label}
                   </span>
                   <span class="text-xs font-medium text-ink-500"
                     >{l.entity}{l.entityId ? ` #${l.entityId}` : ""}</span
                   >
                   <span class="hidden sm:inline text-xs text-ink-300">·</span>
-                  <span class="text-xs font-mono text-ink-400">{l.ip ?? "—"}</span>
+                  {#if ipResolved(l.ip)}
+                    <span class="font-mono text-xs font-medium text-ink-500" title="IP resolved via proxy header"
+                      >{l.ip}</span
+                    >
+                  {:else}
+                    <span
+                      class="inline-flex items-center gap-0.5 rounded-md bg-warning-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-warning-ink ring-1 ring-warning/20"
+                      title="IP tidak ter-resolve — request tidak lewat trusted proxy. Cek TRUST_PROXY_HEADERS=true & reverse proxy config."
+                    >
+                      <Icon name="alert-triangle" size={9} stroke={2.75} />
+                      {l.ip ?? "unresolved"}
+                    </span>
+                  {/if}
                 </div>
                 {#if detail && detail.length > 0}
                   <div class="mt-1.5 flex flex-wrap gap-x-2 gap-y-1">
@@ -345,7 +355,7 @@
         href={pageHref(Math.max(1, data.page - 1))}
         class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50"
         class:pointer-events-none={data.page === 1}
-        class:opacity-50={data.page === 1}
+        class:text-ink-400={data.page === 1}
         aria-label="Previous page">← Prev</a
       >
       {#each pageList as p}
@@ -366,7 +376,7 @@
         href={pageHref(Math.min(data.pages, data.page + 1))}
         class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50"
         class:pointer-events-none={data.page === data.pages}
-        class:opacity-50={data.page === data.pages}
+        class:text-ink-400={data.page === data.pages}
         aria-label="Next page">Next →</a
       >
     </nav>

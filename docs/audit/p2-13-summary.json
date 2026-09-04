@@ -1,0 +1,82 @@
+[
+  {
+    "page": "admin-dashboard",
+    "path": "/admin",
+    "score": 47,
+    "FCP": "11722",
+    "LCP": "15345",
+    "TBT": "359",
+    "CLS": "0.000",
+    "SI": "11722"
+  },
+  {
+    "page": "admin-orders",
+    "path": "/admin/orders",
+    "score": 48,
+    "FCP": "12270",
+    "LCP": "21483",
+    "TBT": "318",
+    "CLS": "0.000",
+    "SI": "12270"
+  },
+  {
+    "page": "admin-services",
+    "path": "/admin/services",
+    "score": 39,
+    "FCP": "21847",
+    "LCP": "31154",
+    "TBT": "649",
+    "CLS": "0.000",
+    "SI": "21847"
+  },
+  {
+    "page": "admin-users",
+    "path": "/admin/users",
+    "score": 52,
+    "FCP": "9071",
+    "LCP": "15569",
+    "TBT": "247",
+    "CLS": "0.000",
+    "SI": "9203"
+  },
+  {
+    "page": "admin-deposits",
+    "path": "/admin/deposits",
+    "score": 52,
+    "FCP": "9338",
+    "LCP": "15702",
+    "TBT": "243",
+    "CLS": "0.000",
+    "SI": "9348"
+  },
+  {
+    "page": "admin-tickets",
+    "path": "/admin/tickets",
+    "score": 49,
+    "FCP": "12495",
+    "LCP": "22985",
+    "TBT": "288",
+    "CLS": "0.000",
+    "SI": "13340"
+  },
+  {
+    "page": "admin-settings",
+    "path": "/admin/settings",
+    "score": 51,
+    "FCP": "12589",
+    "LCP": "22994",
+    "TBT": "246",
+    "CLS": "0.000",
+    "SI": "12589"
+  },
+  {
+    "page": "admin-pricing",
+    "path": "/admin/pricing",
+    "score": 52,
+    "FCP": "8680",
+    "LCP": "15012",
+    "TBT": "226",
+    "CLS": "0.000",
+    "SI": "10735"
+  }
+]

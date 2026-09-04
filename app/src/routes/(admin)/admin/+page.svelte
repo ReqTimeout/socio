@@ -1,10 +1,50 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { invalidate } from "$app/navigation";
   import { Chart, Icon, StatusBadge, tweenNumber } from "@socio/ui";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
 
   const m = $derived(data.metrics);
+
+  // P2-08: Live auto-refresh (10s) — pause saat tab hidden, pause saat user interact 5s
+  let refreshTimer: ReturnType<typeof setInterval> | null = null;
+  let userPauseTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastRefreshed = $state(Date.now());
+  let isPaused = $state(false);
+
+  function scheduleRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => {
+      if (document.hidden) return;
+      if (isPaused) return;
+      invalidate("admin:dashboard").finally(() => {
+        lastRefreshed = Date.now();
+      });
+    }, 10_000);
+  }
+
+  function pauseRefresh() {
+    isPaused = true;
+    if (userPauseTimer) clearTimeout(userPauseTimer);
+    userPauseTimer = setTimeout(() => {
+      isPaused = false;
+    }, 5_000);
+  }
+
+  onMount(() => {
+    scheduleRefresh();
+    return () => {
+      if (refreshTimer) clearInterval(refreshTimer);
+      if (userPauseTimer) clearTimeout(userPauseTimer);
+    };
+  });
+
+  function fmtCountdown(ts: number): string {
+    const elapsed = Math.max(0, 10 - Math.floor((Date.now() - ts) / 1000));
+    return `${elapsed}s`;
+  }
 
   function rp(n: number) {
     return "Rp" + Math.round(n).toLocaleString("id-ID");
@@ -26,7 +66,7 @@
   const feedMeta: Record<string, { icon: string; cls: string }> = {
     order: { icon: "receipt", cls: "bg-accent-soft text-accent-ink" },
     deposit: { icon: "wallet", cls: "bg-warning-soft text-warning" },
-    user: { icon: "user", cls: "bg-primary-soft text-primary-600" },
+    user: { icon: "user", cls: "bg-primary-soft text-primary-ink" },
     audit: { icon: "shield", cls: "bg-ink-100 text-ink-600" },
   };
 
@@ -122,7 +162,12 @@
     </div>
     <div class="flex items-center gap-2">
       <span
-        class="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1.5 text-xs font-bold text-success motion-safe:animate-[pulse_2.4s_ease-in-out_infinite]"
+        class="inline-flex cursor-pointer items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-bold text-success transition-colors hover:bg-success/15 motion-safe:animate-[pulse_2.4s_ease-in-out_infinite]"
+        title={isPaused ? "Auto-refresh dijeda sebentar" : "Auto-refresh tiap 10 detik"}
+        onclick={pauseRefresh}
+        onkeydown={(e) => (e.key === "Enter" || e.key === " ") && pauseRefresh()}
+        role="button"
+        tabindex="0"
       >
         <span class="relative flex h-2 w-2">
           <span
@@ -130,7 +175,10 @@
           ></span>
           <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
         </span>
-        Live · auto-refresh 10s
+        <span>Live · auto-refresh 10s</span>
+        <span class="rounded-md bg-success/15 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-success-ink">
+          {fmtCountdown(lastRefreshed)}
+        </span>
       </span>
     </div>
   </header>
@@ -253,7 +301,7 @@
         </div>
         <a
           href="/admin/audit"
-          class="inline-flex min-h-[36px] items-center gap-1 rounded-full px-3 text-xs font-bold text-primary-600 transition-colors hover:bg-primary-soft"
+          class="inline-flex min-h-[36px] items-center gap-1 rounded-full px-3 text-xs font-bold text-primary-ink transition-colors hover:bg-primary-soft"
         >
           Lihat semua <Icon name="arrow_right" size={13} stroke={2.5} />
         </a>
@@ -367,7 +415,7 @@
           </a>
           <a
             href="/admin/users"
-            class="group flex items-center gap-2 rounded-xl border border-ink-100 px-3 py-2.5 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-primary-500/40 hover:text-primary-600"
+            class="group flex items-center gap-2 rounded-xl border border-ink-100 px-3 py-2.5 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-primary-500/40 hover:text-primary-ink"
           >
             <Icon name="users" size={16} stroke={2.25} /> Users
           </a>
@@ -398,12 +446,20 @@
           </p>
         </div>
       </div>
-      <a
-        href="/admin/reporting"
-        class="inline-flex min-h-[36px] items-center gap-1 rounded-full px-3 text-xs font-bold text-primary-600 transition-colors hover:bg-primary-soft"
-      >
-        Detail <Icon name="arrow_right" size={13} stroke={2.5} />
-      </a>
+      <div class="flex items-center gap-3">
+        <dl class="hidden text-right sm:block">
+          <dt class="text-[10px] font-semibold uppercase tracking-wider text-ink-400">Rata-rata/hari</dt>
+          <dd class="font-mono text-xs font-bold tabular-nums text-ink-700">
+            {rp(revenueTotal7d / Math.max(1, data.chart.labels.length))}
+          </dd>
+        </dl>
+        <a
+          href="/admin/reporting"
+          class="inline-flex min-h-[36px] items-center gap-1 rounded-full px-3 text-xs font-bold text-primary-ink transition-colors hover:bg-primary-soft"
+        >
+          Detail <Icon name="arrow_right" size={13} stroke={2.5} />
+        </a>
+      </div>
     </div>
     <div class="mx-auto w-full max-w-3xl">
       <Chart

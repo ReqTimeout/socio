@@ -73,3 +73,5 @@ db-check.mjs
 /stat-*.png
 /text-fix-*.png
 /verify-*.png
+# Playwright CLI output (may contain credentials)
+.playwright-cli/

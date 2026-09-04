@@ -6,6 +6,9 @@ const config = {
   preprocess: vitePreprocess(),
   kit: {
     adapter: adapter(),
+    // Inline tiny route styles to avoid extra render-blocking requests. Keep the
+    // shared Tailwind sheet external so it remains cacheable across admin pages.
+    inlineStyleThreshold: 4096,
   },
 };
 

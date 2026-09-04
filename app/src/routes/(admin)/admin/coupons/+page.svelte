@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, Icon, toast } from "@socio/ui";
+  import { Button, ConfirmDialog, EmptyState, Icon, toast, ContextFab} from "@socio/ui";
   import { enhance } from "$app/forms";
   import { formatRupiah } from "$lib/format";
   import type { ActionData, PageData } from "./$types";
@@ -100,7 +100,7 @@
         <span class="mx-1 text-ink-300">·</span>
         <span class="font-semibold text-success">{data.stats.active}</span> aktif
         <span class="mx-1 text-ink-300">·</span>
-        dipakai <span class="font-semibold text-accent-600">{data.stats.used}×</span>
+        dipakai <span class="font-semibold text-accent-ink">{data.stats.used}×</span>
       </p>
     </div>
     <Button onclick={openCreate}><Icon name="plus" size={16} stroke={2.5} /> Kupon baru</Button>
@@ -128,7 +128,7 @@
   {:else}
     <!-- Desktop table -->
     <div class="hidden overflow-x-auto rounded-2xl border border-ink-100 bg-surface lg:block">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[800px] text-sm">
         <thead
           class="sticky top-0 z-10 border-b border-ink-100 bg-ink-50/90 text-left text-xs uppercase tracking-wide text-ink-500 backdrop-blur"
         >
@@ -233,6 +233,18 @@
       {/each}
     </ul>
   {/if}
+
+<!-- P1-01/02: ContextFab — quick action -->
+<ContextFab
+  primary={{ label: 'Aksi Cepat', icon: 'plus' }}
+  lgLabel="Aksi Cepat Kupon"
+  actions={[
+    { label: "Cari kupon", icon: "search", href: "?q=", tone: "neutral" },
+    { label: "Aktif", icon: "check", href: "?status=active", tone: "success" },
+    { label: "Expired", icon: "clock", href: "?status=expired", tone: "warning" },
+  ]}
+/>
+
 </section>
 
 <!-- Modal create/edit -->

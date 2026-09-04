@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, Icon, toast } from "@socio/ui";
+  import { Button, ConfirmDialog, EmptyState, Icon, toast, ContextFab} from "@socio/ui";
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -167,7 +167,7 @@
         </span>
         {#if data.queueFailed}
           <span
-            class="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-red-600"
+            class="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-red-700"
           >
             <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>{data.queueFailed} gagal
           </span>
@@ -199,7 +199,7 @@
     </div>
     <span class="text-[11px] font-medium text-ink-400"
       >Segment: all / active 7d / high_spender 30d / churn_risk — blast via <code
-        class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px]">email_queue</code
+        class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px] text-ink-700">email_queue</code
       ></span
     >
   </div>
@@ -265,7 +265,7 @@
               <button
                 type="button"
                 onclick={() => askAction(c, "cancel")}
-                class="flex-1 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-100"
+                class="flex-1 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100"
                 >Batalkan</button
               >
             {/if}
@@ -284,7 +284,7 @@
 
     <!-- Desktop table -->
     <div class="hidden overflow-hidden rounded-2xl border border-ink-100 lg:block">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[800px] text-sm">
         <thead class="bg-ink-50/80 text-left text-xs uppercase tracking-wide text-ink-500">
           <tr>
             <th class="px-4 py-2.5 font-semibold">Campaign</th>
@@ -350,7 +350,7 @@
                     <button
                       type="button"
                       onclick={() => askAction(c, "cancel")}
-                      class="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100"
+                      class="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"
                       >Batalkan</button
                     >
                   {/if}
@@ -399,6 +399,18 @@
       </div>
     {/if}
   {/if}
+
+<!-- P1-01/02: ContextFab — quick action -->
+<ContextFab
+  primary={{ label: 'Aksi Cepat', icon: 'plus' }}
+  lgLabel="Aksi Cepat Email"
+  actions={[
+    { label: "Cari campaign", icon: "search", href: "?q=", tone: "neutral" },
+    { label: "Sent", icon: "send", href: "?status=sent", tone: "success" },
+    { label: "Draft", icon: "file-text", href: "?status=draft", tone: "warning" },
+  ]}
+/>
+
 </section>
 
 <!-- Add/Edit modal -->

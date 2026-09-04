@@ -24,6 +24,16 @@ export { default as ServiceCard } from "./components/ServiceCard.svelte";
 export { default as BottomNav } from "./components/BottomNav.svelte";
 export { default as Sidebar } from "./components/Sidebar.svelte";
 export { default as Fab } from "./components/Fab.svelte";
+export {
+  default as ContextFab,
+  type ContextFabAction,
+} from "./components/ContextFab.svelte";
+export {
+  default as FilterDropdown,
+  type FilterGroup,
+  type FilterOption,
+} from "./components/FilterDropdown.svelte";
+export { default as CsvExportButton } from "./components/CsvExportButton.svelte";
 export { default as QtyStepper } from "./components/QtyStepper.svelte";
 export { default as EmptyState } from "./components/EmptyState.svelte";
 export { default as AdminArt } from "./components/AdminArt.svelte";
@@ -44,6 +54,8 @@ export {
 export { default as NotifBell } from "./components/NotifBell.svelte";
 export { default as AuthBackdrop } from "./components/AuthBackdrop.svelte";
 export { default as NumberFlow } from "./components/NumberFlow.svelte";
+export { default as OrbField } from "./components/OrbField.svelte";
+export { default as Stat } from "./components/Stat.svelte";
 
 // SVG art system (uiuxuser.md §2.4) — line-art 1.5px, ink + 1 aksen, motion-safe
 export { default as EmptyOrdersArt } from "./art/EmptyOrders.svelte";

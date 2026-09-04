@@ -23,7 +23,6 @@
     "bcryptjs": "^2.4.3",
     "better-auth": "1.2.7",
     "drizzle-orm": "^0.45.2",
-    "motion": "^13.1.1",
     "mysql2": "^3.11.4",
     "node-cron": "^3.0.3",
     "nodemailer": "^9.1.1",

@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, Icon, toast } from "@socio/ui";
+  import {
+    Button,
+    ConfirmDialog,
+    ContextFab,
+    CsvExportButton,
+    EmptyState,
+    FilterDropdown,
+    Icon,
+    toast,
+  } from "@socio/ui";
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { formatRupiah } from "$lib/format";
@@ -32,6 +41,8 @@
   let selected = $state<Set<number>>(new Set());
   let confirmSuspend = $state(false); // G30: confirm dialog aksi destruktif
   let confirmAdjust = $state(false);
+  let confirmBulk = $state<null | "suspend" | "activate">(null); // P2-09: bulk action dialog
+  let bulkSubmitting = $state(false); // P2-09: lock buttons while request inflight
 
   function openManage(u: UserRow) {
     manage = u;
@@ -116,9 +127,9 @@
   // A-16: hanya level yang benar-benar ada di DB (Demo/Blacklist/Developers = level mati legacy).
   const levels = ["Member", "Agen", "Reseller", "Admin"];
   const levelTone: Record<string, string> = {
-    Admin: "bg-primary-50 text-primary-700",
-    Developers: "bg-primary-50 text-primary-700",
-    Reseller: "bg-accent-50 text-accent-700",
+    Admin: "bg-primary-50 text-primary-ink",
+    Developers: "bg-primary-50 text-primary-ink",
+    Reseller: "bg-accent-50 text-accent-ink",
     Agen: "bg-success-soft text-success",
     Member: "bg-ink-100 text-ink-600",
     Demo: "bg-warning-soft text-warning",
@@ -191,7 +202,7 @@
         <span class="mx-1 text-ink-300">·</span>
         <span class="font-semibold text-success">{fmt(data.stats.active)}</span> aktif
         <span class="mx-1 text-ink-300">·</span>
-        <span class="font-semibold text-accent-600">{fmt(data.stats.verified)}</span> verified
+        <span class="font-semibold text-accent-ink">{fmt(data.stats.verified)}</span> verified
       </p>
     </div>
 
@@ -214,6 +225,7 @@
       {#if data.level}<input type="hidden" name="level" value={data.level} />{/if}
       {#if data.status}<input type="hidden" name="status" value={data.status} />{/if}
       {#if data.verified}<input type="hidden" name="verified" value={data.verified} />{/if}
+      <CsvExportButton href="/admin/users/export" label="Export" />
       {#if hasFilter}
         <a
           href="/admin/users"
@@ -227,7 +239,7 @@
   </header>
 
   <!-- KPI strip (4 cards, premium tone-on-tone) -->
-  <div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+  <div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-2 xl:grid-cols-4">
     <div class="reveal rounded-2xl border border-ink-100 bg-surface p-3.5 sm:p-4" style="--d:60ms">
       <div
         class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-400 sm:text-[11px]"
@@ -263,13 +275,13 @@
       style="--d:180ms"
     >
       <div
-        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-accent-700 sm:text-[11px]"
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-accent-ink sm:text-[11px]"
       >
         <Icon name="check" size={12} stroke={2.5} />
         Verified
       </div>
       <div
-        class="mt-1.5 font-display text-xl font-extrabold tabular-nums text-accent-700 sm:text-2xl"
+        class="mt-1.5 font-display text-xl font-extrabold tabular-nums text-accent-ink sm:text-2xl"
       >
         {fmt(data.stats.verified)}
       </div>
@@ -294,133 +306,62 @@
     </div>
   </div>
 
-  <!-- Quick level filter chips (always visible) -->
-  <form
-    method="GET"
-    class="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
-    aria-label="Filter level"
-  >
-    {#if data.q}<input type="hidden" name="q" value={data.q} />{/if}
-    {#if data.status}<input type="hidden" name="status" value={data.status} />{/if}
-    {#if data.verified}<input type="hidden" name="verified" value={data.verified} />{/if}
-    <button
-      type="submit"
-      name="level"
-      value=""
-      aria-pressed={!data.level}
-      class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
-        {!data.level
-        ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
-    >
-      <Icon name="layers" size={12} stroke={2.25} />
-      Semua level
-    </button>
-    {#each levels as lv}
-      <button
-        type="submit"
-        name="level"
-        value={lv}
-        aria-pressed={data.level === lv}
-        class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
-          {data.level === lv
-          ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
-          : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
-      >
-        {lv}
-      </button>
-    {/each}
-  </form>
+  <!-- P2-06: Unified filter dropdown (multi-select level + single status/verified) -->
+  <div class="flex flex-wrap items-center gap-2">
+    <FilterDropdown
+      groups={[
+        {
+          key: "level",
+          label: "Level",
+          type: "multi",
+          options: [
+            { value: "Member", label: "Member", icon: "user" },
+            { value: "Agen", label: "Agen", icon: "shield" },
+            { value: "Reseller", label: "Reseller", icon: "star" },
+            { value: "Admin", label: "Admin", icon: "shield" },
+          ],
+          selected: data.levels ?? [],
+        },
+        {
+          key: "status",
+          label: "Status",
+          type: "single",
+          options: [
+            { value: "", label: "Semua" },
+            { value: "1", label: "Aktif", icon: "check" },
+            { value: "0", label: "Suspended", icon: "ban" },
+          ],
+          selected: data.status ? [data.status] : [],
+        },
+        {
+          key: "verified",
+          label: "Verifikasi",
+          type: "single",
+          options: [
+            { value: "", label: "Semua" },
+            { value: "1", label: "Verified", icon: "check" },
+            { value: "0", label: "Belum" },
+          ],
+          selected: data.verified ? [data.verified] : [],
+        },
+      ]}
+    />
 
-  <!-- Status + verified chips -->
-  <form
-    method="GET"
-    class="-mx-1 flex flex-wrap items-center gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
-    aria-label="Filter status & verifikasi"
-  >
-    {#if data.q}<input type="hidden" name="q" value={data.q} />{/if}
-    {#if data.level}<input type="hidden" name="level" value={data.level} />{/if}
-    <span class="mr-1 hidden text-[11px] font-semibold text-ink-400 sm:inline">Status:</span>
-    <button
-      type="submit"
-      name="status"
-      value=""
-      aria-pressed={!data.status}
-      class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all active:scale-95
-        {!data.status
-        ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
-    >
-      Semua
-    </button>
-    <button
-      type="submit"
-      name="status"
-      value="1"
-      aria-pressed={data.status === "1"}
-      class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all active:scale-95
-        {data.status === '1'
-        ? 'border-transparent bg-success text-ink-50 shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
-    >
-      <span class="h-1.5 w-1.5 rounded-full {data.status === '1' ? 'bg-white' : 'bg-success'}"
-      ></span>
-      Aktif
-    </button>
-    <button
-      type="submit"
-      name="status"
-      value="0"
-      aria-pressed={data.status === "0"}
-      class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all active:scale-95
-        {data.status === '0'
-        ? 'border-transparent bg-danger text-ink-50 shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
-    >
-      <span class="h-1.5 w-1.5 rounded-full {data.status === '0' ? 'bg-white' : 'bg-danger'}"
-      ></span>
-      Suspended
-    </button>
-    <span class="mx-1 h-3 w-px bg-ink-200"></span>
-    <span class="mr-1 hidden text-[11px] font-semibold text-ink-400 sm:inline">Verifikasi:</span>
-    <button
-      type="submit"
-      name="verified"
-      value=""
-      aria-pressed={!data.verified}
-      class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all active:scale-95
-        {!data.verified
-        ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
-    >
-      Semua
-    </button>
-    <button
-      type="submit"
-      name="verified"
-      value="1"
-      aria-pressed={data.verified === "1"}
-      class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all active:scale-95
-        {data.verified === '1'
-        ? 'border-transparent bg-accent-600 text-white shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
-    >
-      <Icon name="check" size={11} stroke={2.75} />
-      Verified
-    </button>
-    <button
-      type="submit"
-      name="verified"
-      value="0"
-      aria-pressed={data.verified === "0"}
-      class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-all active:scale-95
-        {data.verified === '0'
-        ? 'border-transparent bg-ink-700 text-ink-50 shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
-    >
-      Belum
-    </button>
-  </form>
+    {#if data.levels?.length || data.status || data.verified}
+      <a
+        href="/admin/users"
+        class="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-3 py-1.5 text-xs font-semibold text-ink-500 transition-all hover:border-danger hover:text-danger active:scale-95"
+        aria-label="Reset semua filter"
+      >
+        <Icon name="x" size={12} stroke={2.5} />
+        Reset semua
+      </a>
+    {/if}
+
+    <span class="ml-auto text-[11px] text-ink-500">
+      {fmt(data.total)} user cocok filter
+    </span>
+  </div>
 
   {#if form?.error}
     <div class="rounded-xl bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
@@ -444,7 +385,7 @@
   {:else}
     <!-- Desktop table — 7 kolom kompak (ID+nama di-merge ke kolom User biar muat 1280px) -->
     <div class="hidden overflow-x-auto rounded-2xl border border-ink-100 bg-surface lg:block">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[800px] text-sm">
         <thead
           class="sticky top-0 z-10 border-b border-ink-100 bg-ink-50/90 text-left text-xs uppercase tracking-wide text-ink-500 backdrop-blur"
         >
@@ -501,7 +442,7 @@
                       <span class="shrink-0 text-xs tabular-nums text-ink-400">#{u.id}</span>
                     </div>
                     <div class="truncate text-xs text-ink-400">{u.email}</div>
-                    {#if u.fullName}<div class="truncate text-xs text-ink-300">
+                    {#if u.fullName}<div class="truncate text-xs text-ink-500">
                         {u.fullName}
                       </div>{/if}
                   </div>
@@ -665,7 +606,7 @@
         href={pageHref(Math.max(1, data.page - 1))}
         class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 {data.page ===
         1
-          ? 'pointer-events-none opacity-50'
+          ? 'pointer-events-none text-ink-300'
           : ''}"
         aria-label="Previous page">← Prev</a
       >
@@ -687,7 +628,7 @@
         href={pageHref(Math.min(data.pages, data.page + 1))}
         class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 {data.page ===
         data.pages
-          ? 'pointer-events-none opacity-50'
+          ? 'pointer-events-none text-ink-300'
           : ''}"
         aria-label="Next page">Next →</a
       >
@@ -695,21 +636,97 @@
   {/if}
 </section>
 
-<!-- Bulk action bar -->
+<!-- P2-09: Bulk action toolbar (slide-up di mobile, pill di desktop) -->
 {#if selected.size > 0}
+  <!-- Hidden form Suspend: target ?/bulkSuspend. ConfirmDialog controls submit. -->
+  <form
+    id="bulk-form-suspend"
+    method="POST"
+    action="?/bulkSuspend"
+    use:enhance={() => async (input: any) => {
+      bulkSubmitting = false;
+      confirmBulk = null;
+      const { result, update } = input;
+      if (result.type === "failure") toast((result.data as any)?.error ?? "Gagal", "error");
+      else {
+        toast((result.data as any)?.success ?? "OK", "success");
+        selected = new Set();
+      }
+      await update();
+    }}
+    class="hidden"
+  >
+    {#each [...selected] as id}
+      <input type="hidden" name="ids" value={id} />
+    {/each}
+  </form>
+  <!-- Hidden form Aktifkan: target ?/bulkActivate. -->
+  <form
+    id="bulk-form-activate"
+    method="POST"
+    action="?/bulkActivate"
+    use:enhance={() => async (input: any) => {
+      bulkSubmitting = false;
+      confirmBulk = null;
+      const { result, update } = input;
+      if (result.type === "failure") toast((result.data as any)?.error ?? "Gagal", "error");
+      else {
+        toast((result.data as any)?.success ?? "OK", "success");
+        selected = new Set();
+      }
+      await update();
+    }}
+    class="hidden"
+  >
+    {#each [...selected] as id}
+      <input type="hidden" name="ids" value={id} />
+    {/each}
+  </form>
+
+  <!-- z-30 di mobile (dock z-40 di atasnya). bottom-24 supaya di atas dock. -->
   <div
-    class="fixed inset-x-0 bottom-0 z-40 flex flex-wrap items-center justify-center gap-2 border-t border-ink-100 bg-surface/95 p-3 shadow-2xl backdrop-blur lg:bottom-4 lg:left-1/2 lg:right-auto lg:w-auto lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:px-4 lg:py-2.5"
+    role="region"
+    aria-label="Bulk actions toolbar"
+    aria-live="polite"
+    class="reveal fixed inset-x-0 bottom-24 z-30 flex flex-wrap items-center justify-center gap-2 border-t border-ink-100 bg-surface/95 p-3 shadow-2xl backdrop-blur-xl supports-[backdrop-filter]:bg-surface/80 lg:bottom-6 lg:left-1/2 lg:right-auto lg:w-auto lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:px-4 lg:py-2.5"
+    style="--d:60ms"
   >
     <span
-      class="inline-flex items-center gap-1.5 rounded-full bg-ink-900 px-2.5 py-1 text-xs font-bold text-ink-50"
+      class="inline-flex items-center gap-1.5 rounded-full bg-ink-900 px-2.5 py-1 text-xs font-bold text-ink-50 tabular-nums"
     >
-      <span class="h-1.5 w-1.5 rounded-full bg-accent-500"></span>
+      <span class="pulse-dot h-1.5 w-1.5 rounded-full bg-accent-500"></span>
       {selected.size} user dipilih
     </span>
+
+    <!-- Suspend — destructive, pakai confirm dialog -->
+    <button
+      type="button"
+      disabled={bulkSubmitting}
+      onclick={() => (confirmBulk = "suspend")}
+      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-warning px-3 text-xs font-bold text-ink-50 shadow-sm transition-all active:scale-95 hover:bg-warning/90 disabled:opacity-60"
+      aria-label={`Suspend ${selected.size} user`}
+    >
+      <Icon name="ban" size={12} stroke={2.75} />
+      Suspend
+    </button>
+
+    <!-- Aktifkan — reversible, tetap confirm untuk konsistensi -->
+    <button
+      type="button"
+      disabled={bulkSubmitting}
+      onclick={() => (confirmBulk = "activate")}
+      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-success px-3 text-xs font-bold text-ink-50 shadow-sm transition-all active:scale-95 hover:bg-success/90 disabled:opacity-60"
+      aria-label={`Aktifkan ${selected.size} user`}
+    >
+      <Icon name="check" size={12} stroke={2.75} />
+      Aktifkan
+    </button>
+
     <button
       type="button"
       onclick={exportCsv}
-      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-success px-3 text-xs font-bold text-ink-50 shadow-sm transition-all active:scale-95 hover:bg-success/90"
+      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-bold text-ink-50 shadow-sm transition-all active:scale-95 hover:bg-primary/90"
+      aria-label={`Export ${selected.size} user ke CSV`}
     >
       <Icon name="download" size={12} stroke={2.75} />
       Export CSV
@@ -718,10 +735,75 @@
       type="button"
       onclick={() => (selected = new Set())}
       class="inline-flex h-9 items-center gap-1 rounded-full border border-ink-200 bg-surface px-3 text-xs font-bold text-ink-600 transition-colors hover:bg-ink-50"
+      aria-label="Reset selection"
     >
+      <Icon name="x" size={12} stroke={2.75} />
       Batal
     </button>
   </div>
+
+  <!-- P2-09 confirm dialog: bulk suspend -->
+  <ConfirmDialog
+    bind:open={
+      () => confirmBulk === "suspend",
+      (v) => {
+        if (!v) confirmBulk = null;
+      }
+    }
+    title={`Suspend ${selected.size} user?`}
+    message={`User yang di-suspend tidak bisa login sampai diaktifkan kembali. Admin dilewati otomatis.`}
+    confirmLabel="Ya, Suspend"
+    cancelLabel="Batal"
+    danger
+  >
+    <div class="flex gap-3">
+      <Button type="button" variant="ghost" full onclick={() => (confirmBulk = null)}>Batal</Button>
+      <Button
+        type="button"
+        variant="danger"
+        full
+        disabled={bulkSubmitting}
+        onclick={() => {
+          bulkSubmitting = true;
+          const f = document.getElementById("bulk-form-suspend") as HTMLFormElement | null;
+          f?.requestSubmit();
+        }}
+      >
+        {bulkSubmitting ? "Memproses…" : "Ya, Suspend"}
+      </Button>
+    </div>
+  </ConfirmDialog>
+
+  <!-- P2-09 confirm dialog: bulk activate -->
+  <ConfirmDialog
+    bind:open={
+      () => confirmBulk === "activate",
+      (v) => {
+        if (!v) confirmBulk = null;
+      }
+    }
+    title={`Aktifkan ${selected.size} user?`}
+    message={`User akan diaktifkan kembali dan bisa login. Admin dilewati otomatis.`}
+    confirmLabel="Ya, Aktifkan"
+    cancelLabel="Batal"
+  >
+    <div class="flex gap-3">
+      <Button type="button" variant="ghost" full onclick={() => (confirmBulk = null)}>Batal</Button>
+      <Button
+        type="button"
+        variant="primary"
+        full
+        disabled={bulkSubmitting}
+        onclick={() => {
+          bulkSubmitting = true;
+          const f = document.getElementById("bulk-form-activate") as HTMLFormElement | null;
+          f?.requestSubmit();
+        }}
+      >
+        {bulkSubmitting ? "Memproses…" : "Ya, Aktifkan"}
+      </Button>
+    </div>
+  </ConfirmDialog>
 {/if}
 
 <!-- Kelola modal (level + status + adjust saldo) -->
@@ -764,7 +846,7 @@
       <!-- Ganti level -->
       <div class="space-y-2">
         <div class="flex items-center gap-1.5 text-xs font-bold text-ink-500">
-          <Icon name="crown" size={12} stroke={2.5} class="text-accent-600" />
+          <Icon name="crown" size={12} stroke={2.5} class="text-accent-ink" />
           Ubah Level
         </div>
         <form method="POST" action="?/setLevel" use:enhance={onResult} class="flex gap-2">
@@ -963,6 +1045,18 @@
     </form>
   </ConfirmDialog>
 {/if}
+
+<!-- P1-01/02: ContextFab — quick action Users -->
+<ContextFab
+  primary={{ label: "Aksi Cepat", icon: "plus" }}
+  lgLabel="Aksi Cepat User"
+  actions={[
+    { label: "Cari user", icon: "search", href: "#user-search-input", tone: "neutral" },
+    { label: "User aktif", icon: "user-check", href: "?status=1", tone: "success" },
+    { label: "Suspended", icon: "ban", href: "?status=0", tone: "warning" },
+    { label: "Belum verified", icon: "mail-x", href: "?verified=0", tone: "neutral" },
+  ]}
+/>
 
 <style>
   /* Stagger reveal untuk stat cards + table rows + mobile cards */

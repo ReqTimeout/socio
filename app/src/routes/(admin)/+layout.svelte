@@ -7,60 +7,68 @@
   let { data, children } = $props();
 
   /** Nav utama yang tampil di floating dock mobile + sidebar desktop */
-  const primaryNav = [
+  // P1-03: Mobile dock slim — 4 items primary (Home/Orders/Deposit + Lainnya)
+  // Users/Layanan/Harga dipindah ke bottom sheet "Lainnya" (P1-04 grouped)
+  // P1-06: `badge?: keyof typeof data | string` → reactive badge count di top-right icon
+  const primaryNav: { href: string; label: string; icon: string; keywords?: string[]; badge?: "pendingOrders" | "pendingDeposits" }[] = [
     { href: "/admin", label: "Home", icon: "home" },
-    {
-      href: "/admin/users",
-      keywords: ["user", "pengguna", "member"],
-      label: "Users",
-      icon: "user",
-    },
     {
       href: "/admin/orders",
       keywords: ["order", "pesanan", "transaksi"],
       label: "Orders",
       icon: "receipt",
+      badge: "pendingOrders",
     },
     {
       href: "/admin/deposits",
       keywords: ["deposit", "topup", "top up", "saldo"],
       label: "Deposit",
       icon: "wallet",
+      badge: "pendingDeposits",
     },
+    { href: "/admin/users", label: "Users", icon: "user" },
+  ];
+  /** Nav tambahan — diakses dari bottom sheet "Lainnya" (mobile) atau sidebar (desktop).
+   * P1-04: grouped jadi Operasional + Konten & Sistem dengan mini header.
+   * Note: Layanan + Harga dipindah dari primaryNav (P1-03) — masuk Operasional group. */
+  const moreNav: { href: string; label: string; icon: string; group: "Operasional" | "Konten & Sistem"; keywords?: string[] }[] = [
+    // OPERASIONAL
     {
       href: "/admin/services",
       keywords: ["layanan", "jasa", "katalog"],
       label: "Layanan",
       icon: "grid",
+      group: "Operasional",
     },
-    { href: "/admin/pricing", label: "Harga", icon: "tag" },
-  ];
-  /** Nav tambahan — diakses dari bottom sheet "Lainnya" (mobile) atau sidebar (desktop) */
-  const moreNav = [
+    {
+      href: "/admin/pricing",
+      keywords: ["harga", "pricing", "markup"],
+      label: "Harga",
+      icon: "tag",
+      group: "Operasional",
+    },
+    { href: "/admin/tickets", label: "Tickets", icon: "ticket", group: "Operasional", keywords: ["tiket", "komplain", "support"] },
+    { href: "/admin/reporting", label: "Reporting", icon: "chart", group: "Operasional" },
+    // KONTEN & SISTEM
     {
       href: "/admin/coupons",
       keywords: ["kupon", "promo", "voucher"],
       label: "Kupon",
       icon: "percent",
+      group: "Konten & Sistem",
     },
-    {
-      href: "/admin/tickets",
-      keywords: ["tiket", "komplain", "support"],
-      label: "Tickets",
-      icon: "ticket",
-    },
-    { href: "/admin/providers", label: "Provider", icon: "zap" },
-    { href: "/admin/reporting", label: "Reporting", icon: "chart" },
-    { href: "/admin/affiliate", label: "Affiliate", icon: "gift" },
-    { href: "/admin/banners", label: "Banner", icon: "image" },
-    { href: "/admin/news", label: "Berita", icon: "megaphone" },
-    { href: "/admin/email", label: "Email", icon: "mail" },
-    { href: "/admin/audit", label: "Audit Log", icon: "shield" },
+    { href: "/admin/providers", label: "Provider", icon: "zap", group: "Konten & Sistem" },
+    { href: "/admin/affiliate", label: "Affiliate", icon: "gift", group: "Konten & Sistem" },
+    { href: "/admin/banners", label: "Banner", icon: "image", group: "Konten & Sistem" },
+    { href: "/admin/news", label: "Berita", icon: "megaphone", group: "Konten & Sistem" },
+    { href: "/admin/email", label: "Email", icon: "mail", group: "Konten & Sistem" },
+    { href: "/admin/audit", label: "Audit Log", icon: "shield", group: "Konten & Sistem" },
     {
       href: "/admin/settings",
       keywords: ["pengaturan", "setelan", "konfigurasi"],
       label: "Settings",
       icon: "settings",
+      group: "Konten & Sistem",
     },
   ];
   const allPages = [
@@ -257,9 +265,10 @@
     </div>
   {/if}
 
-  <!-- Desktop sidebar — same width as user sidebar (w-64) for system consistency -->
+  <!-- Desktop sidebar — w-60 (240px, was w-64/256px). Lebih compact 16px
+       supaya main content dapat lebih banyak ruang (P0-02 audit planadmin.md V-03). -->
   <aside
-    class="hidden w-64 shrink-0 border-r border-ink-100 bg-surface p-4 lg:block"
+    class="hidden w-60 shrink-0 border-r border-ink-100 bg-surface p-4 lg:block"
     style="view-transition-name: admin-sidebar;"
   >
     <div class="mb-6 flex items-center justify-between gap-2 px-2">
@@ -363,86 +372,103 @@
     </div>
   </aside>
 
-  <!-- Mobile topbar (compact — bottom dock is primary nav) -->
-  <header
-    class="sticky top-0 z-30 flex items-center justify-between border-b border-ink-100 bg-surface px-4 py-2.5 lg:hidden"
-    style="view-transition-name: admin-topbar;"
-  >
-    <span class="font-display font-bold">Admin</span>
-    <div class="flex items-center gap-2">
+  <!-- Wrapper: flex-col berisi topbar + main. Tanpa wrapper ini, desktop
+       topbar jadi sibling of main di flex-row outer dan rebut space main (V-01). -->
+  <div class="flex min-w-0 flex-1 flex-col">
+    <!-- Mobile topbar (compact — bottom dock is primary nav) -->
+    <header
+      class="sticky top-0 z-30 flex items-center justify-between border-b border-ink-100 bg-surface px-4 py-2.5 lg:hidden"
+      style="view-transition-name: admin-topbar;"
+    >
+      <span class="font-display font-bold">Admin</span>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          onclick={() => (paletteOpen = true)}
+          class="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100"
+          aria-label="Cari halaman atau aksi"
+        >
+          <Icon name="search" size={17} />
+        </button>
+        <NotifBell count={data.unreadCount ?? 0} href="/notif" />
+        <a href="/akun" class="text-sm font-medium text-ink-500">@{data.admin.username}</a>
+      </div>
+    </header>
+
+    <!-- Desktop topbar — bell & search dipindahkan ke sini supaya terpisah dari sidebar nav -->
+    <header
+      class="sticky top-0 z-20 hidden h-14 items-center gap-3 border-b border-ink-100 bg-surface/85 px-6 backdrop-blur-md lg:flex"
+      style="view-transition-name: admin-topbar;"
+    >
       <button
         type="button"
         onclick={() => (paletteOpen = true)}
-        class="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100"
-        aria-label="Cari halaman atau aksi"
+        class="flex h-9 w-72 items-center gap-2 rounded-lg border border-ink-200 bg-ink-50/60 px-3 text-sm text-ink-500 transition-colors hover:border-ink-300 hover:bg-ink-50"
+        aria-label="Buka command palette"
       >
-        <Icon name="search" size={17} />
-      </button>
-      <NotifBell count={data.unreadCount ?? 0} href="/notif" />
-      <a href="/akun" class="text-sm font-medium text-ink-500">@{data.admin.username}</a>
-    </div>
-  </header>
-
-  <!-- Desktop topbar — bell & search dipindahkan ke sini supaya terpisah dari sidebar nav -->
-  <header
-    class="sticky top-0 z-20 hidden h-14 items-center gap-3 border-b border-ink-100 bg-surface/85 px-6 backdrop-blur-md lg:flex"
-    style="view-transition-name: admin-topbar;"
-  >
-    <button
-      type="button"
-      onclick={() => (paletteOpen = true)}
-      class="flex h-9 w-72 items-center gap-2 rounded-lg border border-ink-200 bg-ink-50/60 px-3 text-sm text-ink-500 transition-colors hover:border-ink-300 hover:bg-ink-50"
-      aria-label="Buka command palette"
-    >
-      <Icon name="search" size={15} />
-      <span class="flex-1 text-left">Cari halaman / aksi…</span>
-      <kbd
-        class="rounded border border-ink-200 bg-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink-500"
-        >⌘K</kbd
-      >
-    </button>
-    <div class="ml-auto flex items-center gap-2">
-      <NotifBell count={data.unreadCount ?? 0} href="/notif" />
-      <div class="h-6 w-px bg-ink-200"></div>
-      <a
-        href="/akun"
-        class="flex items-center gap-2 rounded-full px-2.5 py-1 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-100"
-      >
-        <span
-          class="grid h-6 w-6 place-items-center rounded-full bg-ink-100 text-[11px] font-bold text-ink-700"
-          >{(data.admin.username ?? "A").slice(0, 1).toUpperCase()}</span
+        <Icon name="search" size={15} />
+        <span class="flex-1 text-left">Cari halaman / aksi…</span>
+        <kbd
+          class="rounded border border-ink-200 bg-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink-500"
+          >⌘K</kbd
         >
-        @{data.admin.username}
-      </a>
-    </div>
-  </header>
+      </button>
+      <div class="ml-auto flex items-center gap-2">
+        <NotifBell count={data.unreadCount ?? 0} href="/notif" />
+        <div class="h-6 w-px bg-ink-200"></div>
+        <a
+          href="/akun"
+          class="flex items-center gap-2 rounded-full px-2.5 py-1 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-100"
+        >
+          <span
+            class="grid h-6 w-6 place-items-center rounded-full bg-ink-100 text-[11px] font-bold text-ink-700"
+            >{(data.admin.username ?? "A").slice(0, 1).toUpperCase()}</span
+          >
+          @{data.admin.username}
+        </a>
+      </div>
+    </header>
 
-  <!-- min-w-0: flex item default min-width:auto → konten lebar (tabel) mendorong
+    <!-- min-w-0: flex item default min-width:auto → konten lebar (tabel) mendorong
        halamannya lebih lebar dari viewport tanpa ini.
-       max-w-7xl + mx-auto: stretch content comfortably on 1440px without
-       cards/supports feeling alone. -->
-  <main class="mx-auto min-w-0 w-full max-w-7xl flex-1 p-4 pb-28 lg:p-8 lg:pb-10">
-    {@render children()}
-  </main>
+       max-w-[1600px] (was max-w-7xl/1280px): stretch content comfortably on 1440px tanpa
+       whitespace besar di kedua sisi konten (P0-01 audit planadmin.md V-01). -->
+    <main class="mx-auto min-w-0 w-full max-w-[1600px] flex-1 p-4 pb-32 lg:px-6 lg:py-6 lg:pb-10">
+      {@render children()}
+    </main>
+  </div>
+  <!-- /wrapper flex-col -->
 
   <!-- ===== Mobile: Floating Bottom Dock — iPhone premium glass pill ===== -->
   <nav
-    class="glass fixed inset-x-3 bottom-3 z-40 grid grid-cols-7 items-center gap-1 rounded-[28px] p-2 lg:hidden"
+    class="glass fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 items-center gap-1 rounded-[28px] p-2 lg:hidden"
     style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));"
     aria-label="Menu admin utama"
   >
     {#each primaryNav as n (n.href)}
+      {@const badgeCount = n.badge ? Number((data as any)[n.badge] ?? 0) : 0}
       <a
         href={n.href}
         onclick={() => haptic(isActive(n.href) ? 6 : 10)}
         aria-current={isActive(n.href) ? "page" : undefined}
-        class="flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[9px] font-bold tracking-wide leading-none transition-all duration-300 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-ink-900 {isActive(
+        aria-label={badgeCount > 0 ? `${n.label} (${badgeCount} pending)` : n.label}
+        class="relative flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[9px] font-bold tracking-wide leading-none transition-all duration-300 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-ink-900 {isActive(
           n.href,
         )
           ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-800 dark:text-ink-100 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
           : 'text-ink-500 hover:text-ink-700 dark:hover:text-ink-300'}"
       >
-        <Icon name={n.icon} size={18} stroke={isActive(n.href) ? 2.4 : 1.9} />
+        <span class="relative">
+          <Icon name={n.icon} size={18} stroke={isActive(n.href) ? 2.4 : 1.9} />
+          {#if badgeCount > 0}
+            <span
+              class="absolute -right-1.5 -top-1.5 grid min-h-[14px] min-w-[14px] place-items-center rounded-full bg-danger px-1 text-[8px] font-extrabold leading-none text-ink-50 shadow-sm ring-2 ring-surface"
+              aria-hidden="true"
+            >
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </span>
+          {/if}
+        </span>
         <span class="leading-none">{n.label}</span>
       </a>
     {/each}
@@ -550,32 +576,44 @@
       >
         <div class="mx-auto mb-2 h-1 w-10 rounded-full bg-ink-200"></div>
         <div class="px-3 py-2 text-xs font-semibold text-ink-400">Menu lainnya</div>
-        <nav class="space-y-0.5">
-          {#each moreNav as n (n.href)}
-            <a
-              href={n.href}
-              onclick={() => {
-                haptic();
-                sheetOpen = false;
-              }}
-              aria-current={isActive(n.href) ? "page" : undefined}
-              class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors {isActive(
-                n.href,
-              )
-                ? 'bg-primary-50 text-primary-700'
-                : 'text-ink-700 hover:bg-ink-50'}"
-            >
-              <Icon name={n.icon} size={20} />
-              <span class="flex-1">{n.label}</span>
-              {#if isActive(n.href)}
-                <span
-                  class="rounded-full bg-primary-500 px-2 py-0.5 text-[10px] font-bold text-white"
-                  >Aktif</span
-                >
-              {:else}
-                <Icon name="chevron_right" size={16} class="text-ink-400" />
-              {/if}
-            </a>
+        <nav class="space-y-3">
+          {#each ["Operasional", "Konten & Sistem"] as groupName (groupName)}
+            {@const items = moreNav.filter((n) => n.group === groupName)}
+            {#if items.length > 0}
+              <div>
+                <div class="px-3 pb-1 pt-1 text-[10px] font-extrabold uppercase tracking-widest text-ink-400">
+                  {groupName}
+                </div>
+                <div class="space-y-0.5">
+                  {#each items as n (n.href)}
+                    <a
+                      href={n.href}
+                      onclick={() => {
+                        haptic();
+                        sheetOpen = false;
+                      }}
+                      aria-current={isActive(n.href) ? "page" : undefined}
+                      class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors {isActive(
+                        n.href,
+                      )
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-ink-700 hover:bg-ink-50'}"
+                    >
+                      <Icon name={n.icon} size={18} />
+                      <span class="flex-1">{n.label}</span>
+                      {#if isActive(n.href)}
+                        <span
+                          class="rounded-full bg-primary-500 px-2 py-0.5 text-[10px] font-bold text-white"
+                          >Aktif</span
+                        >
+                      {:else}
+                        <Icon name="chevron_right" size={14} class="text-ink-400" />
+                      {/if}
+                    </a>
+                  {/each}
+                </div>
+              </div>
+            {/if}
           {/each}
         </nav>
         <div class="my-2 border-t border-ink-100"></div>

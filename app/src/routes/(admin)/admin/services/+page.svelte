@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, Icon, toast } from "@socio/ui";
+  import { Button, ConfirmDialog, EmptyState, Icon, toast, ContextFab } from "@socio/ui";
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { formatRupiah } from "$lib/format";
@@ -30,8 +30,8 @@
 
   // Badge warna per provider
   const provTone: Record<string, string> = {
-    SMMturk: "bg-primary-50 text-primary-700",
-    JAP: "bg-accent-50 text-accent-700",
+    SMMturk: "bg-primary-50 text-primary-ink",
+    JAP: "bg-accent-50 text-accent-ink",
     IRVAN: "bg-warning-50 text-warning-700",
     SMC: "bg-success-50 text-success-700",
     MANUAL: "bg-ink-100 text-ink-600",
@@ -230,7 +230,7 @@
         <span class="mx-1 text-ink-300">·</span>
         <span class="font-semibold text-success">{fmt(data.stats.active)}</span> aktif
         <span class="mx-1 text-ink-300">·</span>
-        <span class="font-semibold text-primary-600">{fmt(data.stats.categories)}</span> kategori
+        <span class="font-semibold text-primary-ink">{fmt(data.stats.categories)}</span> kategori
       </p>
     </div>
     <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
@@ -331,13 +331,13 @@
       style="--d:180ms"
     >
       <div
-        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-primary-700 sm:text-[11px]"
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-primary-ink sm:text-[11px]"
       >
         <Icon name="grid" size={12} stroke={2.25} />
         Kategori
       </div>
       <div
-        class="mt-1.5 font-display text-xl font-extrabold tabular-nums sm:text-2xl text-primary-700"
+        class="mt-1.5 font-display text-xl font-extrabold tabular-nums sm:text-2xl text-primary-ink"
       >
         {fmt(data.stats.categories)}
       </div>
@@ -345,16 +345,17 @@
     </div>
   </div>
 
-  <!-- Category chips -->
-  <div
+  <!-- Category chips (filter navigation, pakai aria-current — bukan tab role
+       karena tidak ada tabpanel dan link ini stand-alone navigation). -->
+  <nav
     class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
-    role="tablist"
     aria-label="Filter kategori"
   >
     <a
       href={chipHref(null)}
+      aria-current={!data.cat ? "page" : undefined}
       class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
-        {!data.cat
+          {!data.cat
         ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
         : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
     >
@@ -364,6 +365,7 @@
     {#each data.categories as c (c.id)}
       <a
         href={chipHref(c.id)}
+        aria-current={Number(data.cat) === c.id ? "page" : undefined}
         class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
           {Number(data.cat) === c.id
           ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
@@ -372,16 +374,16 @@
         {c.name}
       </a>
     {/each}
-  </div>
+  </nav>
 
-  <!-- Status chips (semantic per status, 36px tap target) -->
-  <div
+  <!-- Status chips (filter navigation, aria-current bukan tab role). -->
+  <nav
     class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
-    role="tablist"
     aria-label="Filter status"
   >
     <a
       href={statusChipHref("")}
+      aria-current={!data.status ? "page" : undefined}
       class="inline-flex min-h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {!data.status
         ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
@@ -391,6 +393,7 @@
     </a>
     <a
       href={statusChipHref("1")}
+      aria-current={data.status === "1" ? "page" : undefined}
       class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {data.status === '1'
         ? 'border-transparent bg-success text-ink-50 shadow-sm'
@@ -402,6 +405,7 @@
     </a>
     <a
       href={statusChipHref("0")}
+      aria-current={data.status === "0" ? "page" : undefined}
       class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {data.status === '0'
         ? 'border-transparent bg-ink-700 text-ink-50 shadow-sm'
@@ -411,7 +415,7 @@
       ></span>
       Nonaktif
     </a>
-  </div>
+  </nav>
 
   {#if form?.error}
     <div class="rounded-xl bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
@@ -451,9 +455,9 @@
             <th class="w-12 p-3 font-semibold">ID</th><th class="w-32 p-3 font-semibold"
               >Kategori</th
             ><th class="p-3 font-semibold">Layanan</th>
-            <th class="w-24 p-3 text-right font-semibold">Harga (M/R/A)</th><th
-              class="w-20 p-3 font-semibold">Provider</th
-            >
+            <th class="w-36 p-3 text-right font-semibold" title="Harga Member / Reseller / API"
+              >Harga</th
+            ><th class="w-20 p-3 font-semibold">Provider</th>
             <th class="w-20 p-3 font-semibold">Status</th><th
               class="w-24 p-3 text-right font-semibold">Aksi</th
             >
@@ -490,7 +494,7 @@
               </td>
               <td class="p-3 text-right tabular-nums">
                 <div class="font-bold text-ink-900">{formatRupiah(s.price)}</div>
-                <div class="text-[11px] text-ink-400">
+                <div class="whitespace-nowrap text-[11px] text-ink-400">
                   R {formatRupiah(s.priceReseller)} · A {formatRupiah(s.priceApi)}
                 </div>
               </td>
@@ -665,7 +669,7 @@
         href={pageHref(Math.max(1, data.page - 1))}
         class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 {data.page ===
         1
-          ? 'pointer-events-none opacity-50'
+          ? 'pointer-events-none text-ink-300'
           : ''}"
         aria-label="Previous page">← Prev</a
       >
@@ -687,7 +691,7 @@
         href={pageHref(Math.min(data.pages, data.page + 1))}
         class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 {data.page ===
         data.pages
-          ? 'pointer-events-none opacity-50'
+          ? 'pointer-events-none text-ink-300'
           : ''}"
         aria-label="Next page">Next →</a
       >
@@ -703,7 +707,7 @@
       <span class="transition-transform group-open:rotate-180" aria-hidden="true">▾</span>
     </summary>
     <div class="overflow-x-auto border-t border-ink-100">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[800px] text-sm">
         <thead
           class="border-b border-ink-100 bg-ink-50/50 text-left text-xs uppercase tracking-wide text-ink-500"
         >
@@ -1257,13 +1261,13 @@
         <div class="grid grid-cols-3 gap-2 text-center">
           <div class="rounded-xl bg-primary-50 px-2 py-2">
             <div class="text-[10px] font-semibold uppercase text-ink-500">Member</div>
-            <div class="text-sm font-bold tabular-nums text-primary-700">
+            <div class="text-sm font-bold tabular-nums text-primary-ink">
               {formatRupiah(viewSvc.price)}
             </div>
           </div>
           <div class="rounded-xl bg-accent-50 px-2 py-2">
             <div class="text-[10px] font-semibold uppercase text-ink-500">Reseller</div>
-            <div class="text-sm font-bold tabular-nums text-accent-700">
+            <div class="text-sm font-bold tabular-nums text-accent-ink">
               {formatRupiah(viewSvc.priceReseller)}
             </div>
           </div>
@@ -1494,6 +1498,18 @@
     onConfirm={confirm.action}
   />
 {/if}
+
+<!-- P1-01/02: ContextFab — quick action -->
+<ContextFab
+  primary={{ label: "Aksi Cepat", icon: "plus" }}
+  lgLabel="Aksi Cepat Layanan"
+  actions={[
+    { label: "Cari layanan", icon: "search", href: "?q=", tone: "neutral" },
+    { label: "Kategori", icon: "tag", href: "?cat=", tone: "neutral" },
+    { label: "Aktif", icon: "zap", href: "?status=1", tone: "success" },
+    { label: "Nonaktif", icon: "zap-off", href: "?status=0", tone: "warning" },
+  ]}
+/>
 
 <style>
   /* Stagger reveal untuk stat cards + table rows + mobile cards + categories */

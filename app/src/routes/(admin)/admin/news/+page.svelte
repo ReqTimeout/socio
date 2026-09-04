@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, Icon, toast } from "@socio/ui";
+  import { Button, ConfirmDialog, EmptyState, Icon, toast, ContextFab} from "@socio/ui";
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -176,8 +176,8 @@
     💡 Tip: setiap <span class="font-semibold text-ink-600">Simpan</span> akan push ke
     <span class="font-bold">NotifBell</span>
     semua user status `1` (muncul di
-    <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px]">/notif?type=news</code>) &
-    set <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px]">read_popup=0</code> untuk popup.
+    <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px] text-ink-700">/notif?type=news</code>) &
+    set <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px] text-ink-700">read_popup=0</code> untuk popup.
   </p>
 
   {#if data.items.length === 0}
@@ -231,7 +231,7 @@
 
     <!-- Desktop table -->
     <div class="hidden overflow-hidden rounded-2xl border border-ink-100 lg:block">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[800px] text-sm">
         <thead class="bg-ink-50/80 text-left text-xs uppercase tracking-wide text-ink-500">
           <tr>
             <th class="px-4 py-2.5 font-semibold">ID</th>
@@ -313,6 +313,18 @@
       </div>
     {/if}
   {/if}
+
+<!-- P1-01/02: ContextFab — quick action -->
+<ContextFab
+  primary={{ label: 'Aksi Cepat', icon: 'plus' }}
+  lgLabel="Aksi Cepat Berita"
+  actions={[
+    { label: "Cari berita", icon: "search", href: "?q=", tone: "neutral" },
+    { label: "Published", icon: "globe", href: "?status=published", tone: "success" },
+    { label: "Draft", icon: "file-text", href: "?status=draft", tone: "warning" },
+  ]}
+/>
+
 </section>
 
 <!-- Add/Edit modal -->

@@ -31,15 +31,15 @@
     Reseller: {
       icon: "crown",
       gradient: "from-accent-500 to-pink-500",
-      chip: "bg-accent-50 text-accent-700",
-      text: "text-accent-700",
+      chip: "bg-accent-50 text-accent-ink",
+      text: "text-accent-ink",
       ring: "focus:ring-accent-500/20",
     },
     Admin: {
       icon: "key",
       gradient: "from-primary-500 to-violet-500",
-      chip: "bg-primary-50 text-primary-700",
-      text: "text-primary-700",
+      chip: "bg-primary-50 text-primary-ink",
+      text: "text-primary-ink",
       ring: "focus:ring-primary-500/20",
     },
   };
@@ -213,7 +213,7 @@
   <!-- Catalog stats: distribution + samples -->
   <div class="rounded-2xl border border-ink-100 bg-surface p-4">
     <div class="mb-3 flex items-center gap-2">
-      <span class="grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary-700">
+      <span class="grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary-ink">
         <Icon name="chart" size={16} stroke={2.5} />
       </span>
       <div>
@@ -321,7 +321,7 @@
                 value="1"
                 checked={active[lv]}
                 onchange={(e) => (active[lv] = (e.currentTarget as HTMLInputElement).checked)}
-                class="h-4 w-4 cursor-pointer rounded border-ink-300 text-primary-600 focus:ring-primary-500"
+                class="h-4 w-4 cursor-pointer rounded border-ink-300 text-primary-ink focus:ring-primary-500"
               />
               {active[lv] ? "Aktif" : "Nonaktif"}
             </label>
@@ -353,6 +353,7 @@
                   name="markup_{lv}"
                   bind:value={markup[lv]}
                   disabled={!active[lv]}
+                  aria-label="Markup {lv} (persen)"
                   class="w-full bg-transparent pr-6 text-2xl font-extrabold tabular-nums text-ink-900 focus:outline-none disabled:opacity-40"
                 />
                 <span
@@ -420,9 +421,8 @@
                 <span class="font-mono text-ink-700">{fmtRp(sampleBase)}</span>
                 <Icon name="arrow_right" size={10} stroke={2.5} class="text-ink-400" />
                 <span
-                  class="rounded-md bg-white px-1.5 py-0.5 font-extrabold tabular-nums {levelTone[
-                    lv
-                  ].text}">{fmtRp(priceFor(lv))}</span
+                  class="rounded-md bg-ink-100 px-1.5 py-0.5 font-extrabold tabular-nums text-ink-900"
+                  aria-hidden="true">{fmtRp(priceFor(lv))}</span
                 >
               </div>
               <span class="text-ink-300">·</span>
@@ -557,12 +557,13 @@
         </button>
       </div>
 
-      <!-- Live before/after multiplier per level -->
-      <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <!-- Live before/after multiplier per level (decorative preview,
+           aria-hidden karena nilai aktual sudah ditampilkan di slider/input) -->
+      <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3" aria-hidden="true">
         <div
           class="rounded-lg border {Number(markup.Member) > 0
             ? 'border-ink-900 bg-ink-900/5'
-            : 'border-ink-100 bg-white/70'} px-3 py-2 text-xs"
+            : 'border-ink-100 bg-ink-50/50'} px-3 py-2 text-xs"
         >
           <p class="flex items-center gap-1 font-bold text-ink-700">
             <Icon name="user" size={11} stroke={2.75} /> Member
@@ -583,7 +584,7 @@
         <div
           class="rounded-lg border {Number(markup.Agen) > 0
             ? 'border-success bg-success/5'
-            : 'border-ink-100 bg-white/70'} px-3 py-2 text-xs"
+            : 'border-ink-100 bg-ink-50/50'} px-3 py-2 text-xs"
         >
           <p class="flex items-center gap-1 font-bold text-ink-700">
             <Icon name="shield" size={11} stroke={2.75} /> Agen
@@ -604,7 +605,7 @@
         <div
           class="rounded-lg border {Number(markup.Reseller) > 0
             ? 'border-accent-600 bg-accent-50/50'
-            : 'border-ink-100 bg-white/70'} px-3 py-2 text-xs"
+            : 'border-ink-100 bg-ink-50/50'} px-3 py-2 text-xs"
         >
           <p class="flex items-center gap-1 font-bold text-ink-700">
             <Icon name="crown" size={11} stroke={2.75} /> Reseller

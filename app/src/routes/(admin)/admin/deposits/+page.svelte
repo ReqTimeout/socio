@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, StatusBadge, EmptyState, Icon, toast } from "@socio/ui";
+  import {
+    Button,
+    ConfirmDialog,
+    ContextFab,
+    CsvExportButton,
+    EmptyState,
+    Icon,
+    StatusBadge,
+    toast,
+  } from "@socio/ui";
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { formatRupiah } from "$lib/format";
@@ -243,6 +252,8 @@
       {@const active = (data.status || "") === f.key}
       <a
         href={chipHref(f.key as Status | "")}
+        role="tab"
+        aria-selected={active}
         class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
           {active
           ? f.key === 'Pending'
@@ -271,7 +282,7 @@
   {:else}
     <!-- Desktop table — clean ledger + method icon avatar -->
     <div class="hidden overflow-x-auto rounded-2xl border border-ink-100 bg-surface lg:block">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[800px] text-sm">
         <thead
           class="sticky top-0 z-10 border-b border-ink-100 bg-ink-50/90 text-left text-xs uppercase tracking-wide text-ink-500 backdrop-blur"
         >
@@ -301,16 +312,16 @@
                 </div>
               </td>
               <td class="px-3 py-3 text-ink-700">
-                <div class="flex items-center gap-2">
+                <div class="flex min-w-0 items-center gap-2">
                   <span
                     class="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br text-white shadow-sm {m.tone}"
                   >
                     <Icon name={m.icon} size={13} stroke={2.5} />
                   </span>
-                  <span class="font-medium">{d.methodName}</span>
+                  <span class="truncate font-medium" title={d.methodName}>{d.methodName}</span>
                   {#if d.untukApa === "reseller"}
                     <span
-                      class="inline-flex items-center gap-0.5 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-bold text-primary-700"
+                      class="inline-flex items-center gap-0.5 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-bold text-primary-ink"
                     >
                       <Icon name="crown" size={9} stroke={2.75} />
                       Reseller
@@ -337,8 +348,8 @@
                       onerror={(e) =>
                         ((e.currentTarget as HTMLImageElement).style.display = "none")}
                     />
-                    <span class="text-[10px] font-bold text-primary-700">Bukti</span>
-                    <Icon name="external" size={10} stroke={2.5} class="text-primary-700" />
+                    <span class="text-[10px] font-bold text-primary-ink">Bukti</span>
+                    <Icon name="external" size={10} stroke={2.5} class="text-primary-ink" />
                   </a>
                 {:else}
                   <span
@@ -421,7 +432,7 @@
                     {d.methodName} · ID {d.userId}
                     {#if d.untukApa === "reseller"}
                       <span
-                        class="inline-flex items-center gap-0.5 rounded-full bg-primary-50 px-1.5 py-0.5 text-[10px] font-bold text-primary-700"
+                        class="inline-flex items-center gap-0.5 rounded-full bg-primary-50 px-1.5 py-0.5 text-[10px] font-bold text-primary-ink"
                       >
                         <Icon name="crown" size={9} stroke={2.75} />
                         Reseller
@@ -456,8 +467,8 @@
                       onerror={(e) =>
                         ((e.currentTarget as HTMLImageElement).style.display = "none")}
                     />
-                    <span class="text-[10px] font-bold text-primary-700">Bukti</span>
-                    <Icon name="external" size={9} stroke={2.5} class="text-primary-700" />
+                    <span class="text-[10px] font-bold text-primary-ink">Bukti</span>
+                    <Icon name="external" size={9} stroke={2.5} class="text-primary-ink" />
                   </a>
                 {/if}
                 <StatusBadge status={d.status} />
@@ -502,7 +513,7 @@
         href={pageHref(Math.max(1, data.page - 1))}
         class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 disabled:pointer-events-none disabled:opacity-50"
         class:pointer-events-none={data.page === 1}
-        class:opacity-50={data.page === 1}
+        class:text-ink-400={data.page === 1}
         aria-label="Previous page">← Prev</a
       >
       {#each pageList as p}
@@ -523,7 +534,7 @@
         href={pageHref(Math.min(data.pages, data.page + 1))}
         class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 disabled:pointer-events-none disabled:opacity-50"
         class:pointer-events-none={data.page === data.pages}
-        class:opacity-50={data.page === data.pages}
+        class:text-ink-400={data.page === data.pages}
         aria-label="Next page">Next →</a
       >
     </nav>
@@ -571,7 +582,7 @@
               class="h-7 w-7 shrink-0 rounded object-cover ring-1 ring-ink-100"
               onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
             />
-            <span class="text-[10px] font-bold text-primary-700">Lihat ↗</span>
+            <span class="text-[10px] font-bold text-primary-ink">Lihat ↗</span>
           </a>
         {:else}
           <span class="inline-flex items-center gap-1 font-bold text-danger">
@@ -634,6 +645,18 @@
     </div>
   </form>
 </ConfirmDialog>
+
+<!-- P1-01/02: ContextFab — quick action -->
+<ContextFab
+  primary={{ label: "Aksi Cepat", icon: "plus" }}
+  lgLabel="Aksi Cepat Deposit"
+  actions={[
+    { label: "Cari deposit", icon: "search", href: "?q=", tone: "neutral" },
+    { label: "Pending", icon: "clock", href: "?status=Pending", tone: "warning" },
+    { label: "Sukses", icon: "check", href: "?status=Success", tone: "success" },
+    { label: "Batal", icon: "x-circle", href: "?status=Batal", tone: "danger" },
+  ]}
+/>
 
 <style>
   /* Reveal animation — transform + opacity only (GPU-friendly) */

@@ -13,13 +13,13 @@
 
   const STATUS_TONE: Record<string, { bg: string; text: string; label: string }> = {
     Pending: { bg: "bg-warning-soft", text: "text-warning", label: "Pending" },
-    Processing: { bg: "bg-primary-soft", text: "text-primary-600", label: "Proses" },
-    "In progress": { bg: "bg-primary-soft", text: "text-primary-600", label: "Berjalan" },
+    Processing: { bg: "bg-primary-soft", text: "text-primary-ink", label: "Proses" },
+    "In progress": { bg: "bg-primary-soft", text: "text-primary-ink", label: "Berjalan" },
     Success: { bg: "bg-success-soft", text: "text-success", label: "Sukses" },
     Partial: { bg: "bg-warning-soft", text: "text-warning", label: "Sebagian" },
     Error: { bg: "bg-danger/10", text: "text-danger", label: "Error" },
     Canceled: { bg: "bg-ink-100", text: "text-ink-500", label: "Batal" },
-    Refilling: { bg: "bg-primary-soft", text: "text-primary-600", label: "Refill" },
+    Refilling: { bg: "bg-primary-soft", text: "text-primary-ink", label: "Refill" },
   };
 
   function rangeHref(r: string) {
@@ -132,7 +132,7 @@
 
   {#if data.overview.totalOrders === 0}
     <div
-      class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
+      class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-warning-ink"
     >
       <Icon name="alert" size={16} stroke={2} class="mt-0.5 shrink-0 text-amber-600" />
       <span
@@ -145,7 +145,7 @@
   {/if}
 
   <!-- Overview stats -->
-  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-2 xl:grid-cols-4">
     <div class="reveal" style="--d:60ms">
       <StatCard
         label="Total order"

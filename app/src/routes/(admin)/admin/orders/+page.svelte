@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { Button, StatusBadge, EmptyState, ConfirmDialog, Icon, toast } from "@socio/ui";
+  import {
+    Button,
+    ContextFab,
+    ConfirmDialog,
+    CsvExportButton,
+    EmptyState,
+    Icon,
+    StatusBadge,
+    toast,
+  } from "@socio/ui";
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { formatRupiah } from "$lib/format";
@@ -123,6 +132,10 @@
     return `/admin/orders?${s.toString()}`;
   }
   // href chip filter status (reset ke page 1, pertahankan q)
+  // P2-04: display label map (DB status → short label)
+  const CHIP_LABEL: Record<string, string> = {
+    "In progress": "Progress",
+  };
   function chipHref(f: string) {
     const s = new URLSearchParams();
     if (data.q) s.set("q", data.q);
@@ -173,7 +186,7 @@
         <span class="mx-1 text-ink-300">·</span>
         <span class="font-semibold text-warning">{fmt(data.stats.pending.count)}</span> pending
         <span class="mx-1 text-ink-300">·</span>
-        <span class="font-semibold text-primary-600">{fmt(data.stats.processing.count)}</span>
+        <span class="font-semibold text-primary-ink">{fmt(data.stats.processing.count)}</span>
         proses
       </p>
     </div>
@@ -206,7 +219,7 @@
   </header>
 
   <!-- KPI strip (4 cards, semantic tone-on-tone + total value) -->
-  <div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+  <div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-2 xl:grid-cols-4">
     <div
       class="reveal rounded-2xl border border-success-soft bg-success-soft/30 p-3.5 sm:p-4"
       style="--d:60ms"
@@ -246,13 +259,13 @@
       style="--d:180ms"
     >
       <div
-        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-primary-700 sm:text-[11px]"
+        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-primary-ink sm:text-[11px]"
       >
         <span class="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-primary-500"></span>
         Proses
       </div>
       <div
-        class="mt-1.5 font-display text-xl font-extrabold tabular-nums sm:text-2xl text-primary-700"
+        class="mt-1.5 font-display text-xl font-extrabold tabular-nums sm:text-2xl text-primary-ink"
       >
         {fmt(data.stats.processing.count)}
       </div>
@@ -290,6 +303,8 @@
   >
     <a
       href={chipHref("")}
+      role="tab"
+      aria-selected={!data.status}
       class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {!data.status
         ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
@@ -301,6 +316,8 @@
     {#each filters.filter(Boolean) as f}
       <a
         href={chipHref(f)}
+        role="tab"
+        aria-selected={String(data.status).toLowerCase() === String(f).toLowerCase()}
         class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
           {(() => {
           const s = String(f).toLowerCase();
@@ -336,7 +353,7 @@
             class="h-1.5 w-1.5 rounded-full {data.status === f ? 'bg-white' : 'bg-status-progress'}"
           ></span>
         {/if}
-        {f}
+        {CHIP_LABEL[f] ?? f}
       </a>
     {/each}
   </div>
@@ -361,7 +378,7 @@
   {:else}
     <!-- Desktop table — clean ledger + service icon avatar -->
     <div class="hidden overflow-x-auto rounded-2xl border border-ink-100 bg-surface lg:block">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[800px] text-sm">
         <thead
           class="sticky top-0 z-10 border-b border-ink-100 bg-ink-50/90 text-left text-xs uppercase tracking-wide text-ink-500 backdrop-blur"
         >
@@ -511,7 +528,7 @@
         href={pageHref(Math.max(1, data.page - 1))}
         class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 {data.page ===
         1
-          ? 'pointer-events-none opacity-50'
+          ? 'pointer-events-none text-ink-300'
           : ''}"
         aria-label="Previous page">← Prev</a
       >
@@ -533,7 +550,7 @@
         href={pageHref(Math.min(data.pages, data.page + 1))}
         class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 {data.page ===
         data.pages
-          ? 'pointer-events-none opacity-50'
+          ? 'pointer-events-none text-ink-300'
           : ''}"
         aria-label="Next page">Next →</a
       >
@@ -665,7 +682,7 @@
         <hr class="border-ink-100" />
         <div class="space-y-2">
           <div class="flex items-center gap-1.5 text-xs font-bold text-ink-500">
-            <Icon name="refresh" size={12} stroke={2.5} class="text-primary-600" />
+            <Icon name="refresh" size={12} stroke={2.5} class="text-primary-ink" />
             Ubah Status
           </div>
           <div class="flex flex-wrap gap-2">
@@ -703,7 +720,7 @@
         <hr class="border-ink-100" />
         <div class="space-y-2">
           <div class="flex items-center gap-1.5 text-xs font-bold text-ink-500">
-            <Icon name="zap" size={12} stroke={2.5} class="text-accent-600" />
+            <Icon name="zap" size={12} stroke={2.5} class="text-accent-ink" />
             Edit Detail Provider
           </div>
           <div class="relative">
@@ -899,6 +916,18 @@
     </form>
   </ConfirmDialog>
 {/if}
+
+<!-- P1-01/02: ContextFab — quick action -->
+<ContextFab
+  primary={{ label: "Aksi Cepat", icon: "plus" }}
+  lgLabel="Aksi Cepat Order"
+  actions={[
+    { label: "Cari order", icon: "search", href: "?q=", tone: "neutral" },
+    { label: "Pending", icon: "clock", href: "?status=Pending", tone: "warning" },
+    { label: "Processing", icon: "loader", href: "?status=Processing", tone: "primary" },
+    { label: "Sukses", icon: "check-circle", href: "?status=Success", tone: "success" },
+  ]}
+/>
 
 <style>
   /* Stagger reveal untuk stat cards + table rows + mobile cards */

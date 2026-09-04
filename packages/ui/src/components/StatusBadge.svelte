@@ -18,47 +18,47 @@
   const map: Record<string, { label: string; cls: string }> = {
     pending: {
       label: "Pending",
-      cls: "bg-status-pending/15 text-status-pending ring-1 ring-status-pending/20",
+      cls: "bg-status-pending-soft text-status-pending ring-1 ring-status-pending/15",
     },
     proses: {
       label: "Proses",
-      cls: "bg-status-progress/15 text-status-progress ring-1 ring-status-progress/20",
+      cls: "bg-status-progress-soft text-status-progress ring-1 ring-status-progress/15",
     },
     processing: {
       label: "Proses",
-      cls: "bg-status-progress/15 text-status-progress ring-1 ring-status-progress/20",
+      cls: "bg-status-progress-soft text-status-progress ring-1 ring-status-progress/15",
     },
     "in progress": {
       label: "Proses",
-      cls: "bg-status-progress/15 text-status-progress ring-1 ring-status-progress/20",
+      cls: "bg-status-progress-soft text-status-progress ring-1 ring-status-progress/15",
     },
     selesai: {
       label: "Selesai",
-      cls: "bg-status-complete/15 text-status-complete ring-1 ring-status-complete/20",
+      cls: "bg-status-complete-soft text-status-complete ring-1 ring-status-complete/15",
     },
     success: {
       label: "Selesai",
-      cls: "bg-status-complete/15 text-status-complete ring-1 ring-status-complete/20",
+      cls: "bg-status-complete-soft text-status-complete ring-1 ring-status-complete/15",
     },
     batal: {
       label: "Batal",
-      cls: "bg-status-canceled/15 text-status-canceled ring-1 ring-status-canceled/20",
+      cls: "bg-status-canceled-soft text-status-canceled ring-1 ring-status-canceled/15",
     },
     canceled: {
       label: "Batal",
-      cls: "bg-status-canceled/15 text-status-canceled ring-1 ring-status-canceled/20",
+      cls: "bg-status-canceled-soft text-status-canceled ring-1 ring-status-canceled/15",
     },
     partial: {
       label: "Partial",
-      cls: "bg-status-partial/15 text-status-partial ring-1 ring-status-partial/20",
+      cls: "bg-status-partial-soft text-status-partial ring-1 ring-status-partial/15",
     },
     error: {
       label: "Error",
-      cls: "bg-status-canceled/15 text-status-canceled ring-1 ring-status-canceled/20",
+      cls: "bg-status-canceled-soft text-status-canceled ring-1 ring-status-canceled/15",
     },
     refilling: {
       label: "Refill",
-      cls: "bg-status-progress/15 text-status-progress ring-1 ring-status-progress/20",
+      cls: "bg-status-progress-soft text-status-progress ring-1 ring-status-progress/15",
     },
   };
   const s = $derived(map[String(status).toLowerCase()] ?? map.pending);

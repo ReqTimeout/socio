@@ -13,6 +13,7 @@ import { getSetting } from "$lib/server/admin";
 import { ensureAdminSchema } from "@socio/db/ensure";
 import { startCron } from "./cron";
 import { SESSION_COOKIE } from "$lib/server/session";
+import { getClientIp } from "$lib/server/ip";
 import type { Handle } from "@sveltejs/kit";
 
 if (process.env.SOCIO_CRON_ENABLED === "1") {
@@ -107,10 +108,8 @@ async function authHook({ event, resolve }: Parameters<Handle>[0]) {
   event.locals.session = session?.session ?? null;
   event.locals.user = session?.user ?? null;
 
-  (event.locals as any).ip =
-    event.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    event.request.headers.get("x-real-ip") ||
-    "0.0.0.0";
+  // P2-03: Centralized IP extraction via $lib/server/ip (cf-connecting-ip > x-forwarded-for > x-real-ip)
+  (event.locals as any).ip = getClientIp(event) ?? "0.0.0.0";
 
   try {
     await ensureAdminSchema();

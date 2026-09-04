@@ -5,6 +5,7 @@
     Chart,
     Icon,
     PromoBanner,
+    OrbField,
     revealDelay,
     EmptyOrdersArt,
   } from "@socio/ui";
@@ -155,65 +156,66 @@
 </svelte:head>
 
 <section class="space-y-5 lg:space-y-6 relative">
-  <!-- Ambient time-wash — compact on desktop -->
+  <!-- Hero greeting — premium editorial layout with OrbField backdrop (M5 upgrade)
+     Palette shifts by time-of-day untuk ambient feel. -->
+<header class="reveal relative -mx-4 sm:-mx-6 lg:-mx-10 overflow-hidden rounded-b-[28px]">
+  <OrbField palette={phase === 'dawn' ? 'dawn' : phase === 'night' ? 'night' : 'primary'} intensity="soft" />
   <div
-    aria-hidden="true"
-    class="pointer-events-none absolute -inset-x-4 -top-4 h-[140px] lg:h-[160px] -z-10 overflow-hidden rounded-b-[20px] opacity-60 lg:-inset-x-8"
-    style="contain: paint;"
+    class="relative z-10 px-4 pt-5 pb-6 sm:px-6 lg:px-10 lg:pt-7 lg:pb-8
+      bg-gradient-to-b {ambient} backdrop-blur-[2px]"
   >
-    <div class="absolute inset-0 bg-gradient-to-b {ambient} blur-[18px]"></div>
-    <div
-      class="absolute inset-0 opacity-[0.04] [background:radial-gradient(circle_at_30%_20%,white,transparent_40%),radial-gradient(circle_at_80%_10%,white,transparent_35%)]"
-    ></div>
-  </div>
-
-  <!-- Greeting — time-aware (WIB) + dismiss excess motion -->
-  <header
-    class="reveal flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
-  >
-    <div class="w-full min-w-0">
-      <h1
-        class="font-display text-xl font-extrabold tracking-tight lg:text-[1.85rem] lg:leading-none lg:tracking-[-0.015em]"
-      >
-        {greeting}, {firstName}
-        <span class="inline-block motion-safe:animate-[wave_2s_ease-in-out_1]">{greetEmoji}</span>
-      </h1>
-      <p
-        class="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5 text-sm lg:mt-2 lg:text-[14px] text-ink-500"
-      >
-        {#if data.activeOrders > 0}
-          <span class="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+    <div class="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+      <div class="w-full min-w-0">
+        <p
+          class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500"
+        >
+          <span class="inline-block h-px w-6 bg-ink-300"></span>
+          <span>{phase === 'dawn' ? 'Pagi' : phase === 'day' ? 'Siang' : phase === 'dusk' ? 'Sore' : 'Malam'}</span>
+        </p>
+        <h1
+          class="mt-1 font-display text-2xl font-extrabold tracking-tight lg:text-[2.25rem] lg:leading-[1.05] lg:tracking-[-0.02em]"
+        >
+          {greeting}, <span class="bg-gradient-to-br from-primary-700 to-accent-600 bg-clip-text text-transparent">{firstName}</span>
+          <span class="inline-block motion-safe:animate-[wave_2s_ease-in-out_1]">{greetEmoji}</span>
+        </h1>
+        <p
+          class="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 text-sm lg:text-[14.5px] text-ink-500"
+        >
+          {#if data.activeOrders > 0}
+            <span class="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+              <span
+                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-50"
+              ></span>
+              <span class="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
+            </span>
             <span
-              class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-50"
-            ></span>
-            <span class="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
-          </span>
-          <span
-            class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary ring-1 ring-primary/20"
-            >Aktif</span
-          >
-        {:else}
-          <span
-            class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-success ring-1 ring-success/20"
-            >Siap</span
-          >
-        {/if}
-        <span class="min-w-0 flex-1 truncate">{subtitle}</span>
-      </p>
+              class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary ring-1 ring-primary/20"
+              >Aktif</span
+            >
+          {:else}
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-success ring-1 ring-success/20"
+              >Siap</span
+            >
+          {/if}
+          <span class="min-w-0 flex-1 truncate">{subtitle}</span>
+        </p>
+      </div>
+      <a
+        href="/akun"
+        class="group flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-600 to-accent-600 px-3 py-1.5 text-xs font-bold text-white shadow-[0_6px_16px_-8px_rgba(79,70,229,0.7)] transition-all active:scale-95 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_-8px_rgba(79,70,229,0.6)] motion-safe:animate-[pop_480ms_cubic-bezier(0.16,1,0.3,1)] lg:px-4 lg:py-2 lg:gap-2 lg:text-[13px]"
+      >
+        <Icon
+          name="sparkles"
+          size={13}
+          stroke={2.25}
+          class="transition-transform group-hover:rotate-12"
+        />
+        {data.user?.level ?? "Member"}
+      </a>
     </div>
-    <a
-      href="/akun"
-      class="group flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-600 to-accent-600 px-3 py-1.5 text-xs font-bold text-white shadow-[0_6px_16px_-8px_rgba(79,70,229,0.7)] transition-all active:scale-95 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_-8px_rgba(79,70,229,0.6)] motion-safe:animate-[pop_480ms_cubic-bezier(0.16,1,0.3,1)] lg:px-4 lg:py-2 lg:gap-2 lg:text-[13px]"
-    >
-      <Icon
-        name="sparkles"
-        size={13}
-        stroke={2.25}
-        class="transition-transform group-hover:rotate-12"
-      />
-      {data.user?.level ?? "Member"}
-    </a>
-  </header>
+  </div>
+</header>
 
   <!-- Banner promo (admin-managed, fallback dummy) -->
   {#if data.banners?.length}
