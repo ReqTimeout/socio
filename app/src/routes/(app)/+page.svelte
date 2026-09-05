@@ -4,6 +4,7 @@
     StatusBadge,
     Chart,
     Icon,
+    LiveDot,
     PromoBanner,
     OrbField,
     revealDelay,
@@ -96,8 +97,17 @@
     return copy.dashboard.subtitleActive(data.activeOrders);
   });
 
-  // Quick actions — copy hangat + glow brand saat hover (layered dgn card-lift)
+  // Quick actions — UX2: 4 item dalam 2×2 mobile (Pesan naik ke urutan 1, primary action).
+  // Akun dipindah ke sidebar/BottomNav (sudah ada). Desc bahasa hangat + glow brand.
   const quick = [
+    {
+      href: "/pesan",
+      label: "Pesan",
+      desc: "Pilih layanan → order",
+      icon: "rocket",
+      chip: "from-primary-500 to-accent-500",
+      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(79,70,229,0.32)]",
+    },
     {
       href: "/saldo/top-up",
       label: "Top Up",
@@ -107,20 +117,20 @@
       glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(16,163,74,0.32)]",
     },
     {
+      href: "/layanan",
+      label: "Layanan",
+      desc: "8.270 layanan aktif",
+      icon: "grid",
+      chip: "from-amber-400 to-orange-500",
+      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(245,158,11,0.32)]",
+    },
+    {
       href: "/affiliate",
       label: "Affiliate",
       desc: "Ajak teman, dapat komisi",
       icon: "gift",
-      chip: "from-primary-500 to-accent-500",
-      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(79,70,229,0.32)]",
-    },
-    {
-      href: "/akun",
-      label: "Akun",
-      desc: "Profil & pengaturan",
-      icon: "user",
-      chip: "from-cyan-400 to-cyan-600",
-      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(6,182,212,0.32)]",
+      chip: "from-pink-500 to-rose-500",
+      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(236,72,153,0.32)]",
     },
   ];
 
@@ -256,8 +266,9 @@
       />
     </div>
 
+    <!-- UX2: mobile 2×2 (4 item dalam grid-cols-2), desktop side panel 1×4 (lg:grid-cols-4). -->
     <div
-      class="grid grid-cols-3 gap-3 lg:grid-cols-3 lg:col-span-4 lg:gap-3 lg:self-stretch content-start"
+      class="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:col-span-4 lg:gap-2.5 lg:self-stretch content-start"
     >
       {#each quick as item, i (item.href)}
         <a
@@ -265,7 +276,7 @@
           onclick={() => haptic(8)}
           style={revealDelay(i, 0, 60)}
           class="card-lift group flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
-            lg:gap-2.5 lg:py-3 lg:px-3.5 {item.glow}"
+            lg:flex-col lg:items-start lg:gap-2 lg:py-3 lg:px-3 {item.glow}"
         >
           <span
             class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br {item.chip}
@@ -273,9 +284,9 @@
           >
             <Icon name={item.icon} size={20} stroke={2} />
           </span>
-          <span class="min-w-0">
-            <span class="block text-sm font-bold text-ink-800 lg:text-[14px]">{item.label}</span>
-            <!-- Desktop: deskripsi lengkap -->
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-bold text-ink-800 lg:text-[13px]">{item.label}</span>
+            <!-- Desktop: deskripsi lengkap (1 baris truncate) -->
             <span class="hidden truncate text-xs text-ink-500 lg:block lg:text-[11.5px]"
               >{item.desc}</span
             >
@@ -561,10 +572,18 @@
 
     <!-- Pesanan terbaru -->
     <div class="lg:col-span-5 lg:sticky lg:top-20 self-start">
-      <div class="mb-3 flex items-center justify-between">
-        <h2 class="font-display text-base font-bold tracking-tight lg:text-[17px]">
-          Pesanan Terbaru
-        </h2>
+      <div class="mb-3 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <h2 class="font-display text-base font-bold tracking-tight lg:text-[17px]">
+            Pesanan Terbaru
+          </h2>
+          <LiveDot
+            lastUpdate={data.recent[0]?.createdAt ?? null}
+            variant="success"
+            label="Live"
+            interval={30000}
+          />
+        </div>
         <a
           href="/pesanan"
           class="flex items-center gap-0.5 text-xs font-bold text-primary hover:text-primary-800"

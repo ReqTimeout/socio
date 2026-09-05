@@ -24,10 +24,17 @@
   } = $props();
 
   const fmt = (n: number) => "Rp" + n.toLocaleString("id-ID");
+
+  // UX2: insight collapsible di mobile, always expanded di desktop (lg+).
+  // Default mobile closed — supaya tidak dorong saldo keluar fold pertama.
+  let insightOpen = $state(false);
+  const hasInsight = $derived(
+    insight != null && (insight.deposit7 > 0 || insight.spend7 > 0),
+  );
 </script>
 
 <section
-  class="saldo-hero group relative overflow-hidden rounded-2xl bg-emerald-gradient text-white p-5 lg:p-6 safe-top"
+  class="saldo-hero group relative overflow-hidden rounded-2xl bg-emerald-gradient text-white px-5 py-3 lg:px-6 lg:py-6 safe-top"
 >
   <!-- static emerald — no animation (requested) -->
   <div class="saldo-grad pointer-events-none absolute inset-0" aria-hidden="true"></div>
@@ -65,12 +72,47 @@
     <p class="font-display font-extrabold text-[2rem] lg:text-[2.45rem] leading-tight tabular-nums tracking-tight mt-2 drop-shadow-[0_1px_0_rgba(0,0,0,0.12)]">
       <NumberFlow value={balance} format={fmt} duration={0.9} />
     </p>
-    {#if insight && (insight.deposit7 > 0 || insight.spend7 > 0)}
-      <p
-        class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur"
+    {#if hasInsight}
+      <!-- Mobile (lg:hidden): chevron toggle — compact by default, expand on tap.
+           Desktop (lg:block): always visible inline. -->
+      <button
+        type="button"
+        onclick={() => {
+          insightOpen = !insightOpen;
+          haptic(insightOpen ? 8 : 6);
+        }}
+        aria-expanded={insightOpen}
+        aria-controls="saldo-insight-detail"
+        class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur
+          transition-colors hover:bg-white/18 lg:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
       >
         <Icon name="activity" size={12} />
-        7 hari: masuk {fmt(insight.deposit7)} · keluar {fmt(insight.spend7)}
+        7 hari: {fmt((insight?.deposit7 ?? 0) - (insight?.spend7 ?? 0))}
+        <Icon
+          name="chevron_down"
+          size={12}
+          stroke={2.5}
+          class="transition-transform duration-240 {insightOpen ? 'rotate-180' : 'rotate-0'}"
+        />
+      </button>
+      <div
+        id="saldo-insight-detail"
+        aria-hidden={!insightOpen}
+        class="grid lg:!grid-rows-[1fr] transition-[grid-template-rows] duration-240 ease-out lg:!opacity-100
+          {insightOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'} lg:opacity-100"
+      >
+        <div class="overflow-hidden">
+          <p class="mt-1 text-[11px] font-medium text-white/70 lg:hidden">
+            Pengeluaran 7 hari: {fmt(insight?.spend7 ?? 0)} · Top up {fmt(insight?.deposit7 ?? 0)}
+          </p>
+        </div>
+      </div>
+      <!-- Desktop: inline narrative chip, no chevron -->
+      <p
+        class="mt-1 hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur"
+      >
+        <Icon name="activity" size={12} />
+        7 hari: masuk {fmt(insight?.deposit7 ?? 0)} · keluar {fmt(insight?.spend7 ?? 0)}
       </p>
     {:else}
       <p class="mt-1 text-[11px] font-medium text-white/60">

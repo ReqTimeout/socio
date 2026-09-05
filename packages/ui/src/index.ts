@@ -76,3 +76,5 @@ export {
   hoverLift,
 } from "./lib/motion.js";
 export type { StaggerInOpts, TweenNumberOpts } from "./lib/motion.js";
+
+export { default as LiveDot } from "./components/LiveDot.svelte";

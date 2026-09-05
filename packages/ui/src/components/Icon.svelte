@@ -16,6 +16,8 @@
     search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35",
     chevron_right: "M9 18l6-6-6-6",
     chevron_left: "M15 18l-6-6 6-6",
+    chevron_up: "M18 15l-6-6-6 6",
+    chevron_down: "M6 9l6 6 6-6",
     check: "M20 6L9 17l-5-5",
     x: "M18 6L6 18M6 6l12 12",
     menu: "M3 12h18M3 6h18M3 18h18",
