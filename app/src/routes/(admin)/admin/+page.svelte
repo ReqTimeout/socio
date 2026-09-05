@@ -176,7 +176,9 @@
           <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
         </span>
         <span>Live · auto-refresh 10s</span>
-        <span class="rounded-md bg-success/15 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-success-ink">
+        <span
+          class="rounded-md bg-success/15 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-success-ink"
+        >
           {fmtCountdown(lastRefreshed)}
         </span>
       </span>
@@ -448,7 +450,9 @@
       </div>
       <div class="flex items-center gap-3">
         <dl class="hidden text-right sm:block">
-          <dt class="text-[10px] font-semibold uppercase tracking-wider text-ink-400">Rata-rata/hari</dt>
+          <dt class="text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+            Rata-rata/hari
+          </dt>
           <dd class="font-mono text-xs font-bold tabular-nums text-ink-700">
             {rp(revenueTotal7d / Math.max(1, data.chart.labels.length))}
           </dd>

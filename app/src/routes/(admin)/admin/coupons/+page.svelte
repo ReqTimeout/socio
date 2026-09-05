@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ConfirmDialog, EmptyState, Icon, toast, ContextFab} from "@socio/ui";
+  import { Button, ConfirmDialog, EmptyState, Icon, toast, ContextFab } from "@socio/ui";
   import { enhance } from "$app/forms";
   import { formatRupiah } from "$lib/format";
   import type { ActionData, PageData } from "./$types";
@@ -234,17 +234,16 @@
     </ul>
   {/if}
 
-<!-- P1-01/02: ContextFab — quick action -->
-<ContextFab
-  primary={{ label: 'Aksi Cepat', icon: 'plus' }}
-  lgLabel="Aksi Cepat Kupon"
-  actions={[
-    { label: "Cari kupon", icon: "search", href: "?q=", tone: "neutral" },
-    { label: "Aktif", icon: "check", href: "?status=active", tone: "success" },
-    { label: "Expired", icon: "clock", href: "?status=expired", tone: "warning" },
-  ]}
-/>
-
+  <!-- P1-01/02: ContextFab — quick action -->
+  <ContextFab
+    primary={{ label: "Aksi Cepat", icon: "plus" }}
+    lgLabel="Aksi Cepat Kupon"
+    actions={[
+      { label: "Cari kupon", icon: "search", href: "?q=", tone: "neutral" },
+      { label: "Aktif", icon: "check", href: "?status=active", tone: "success" },
+      { label: "Expired", icon: "clock", href: "?status=expired", tone: "warning" },
+    ]}
+  />
 </section>
 
 <!-- Modal create/edit -->

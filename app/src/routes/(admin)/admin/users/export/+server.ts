@@ -23,7 +23,12 @@ export const GET: RequestHandler = async (event) => {
 
   const q = String(url.searchParams.get("q") ?? "").trim();
   const levelParam = String(url.searchParams.get("level") ?? "");
-  const levels = levelParam ? levelParam.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const levels = levelParam
+    ? levelParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
   const status = String(url.searchParams.get("status") ?? "");
   const verified = String(url.searchParams.get("verified") ?? "");
 
@@ -76,11 +81,12 @@ export const GET: RequestHandler = async (event) => {
 
   const csv = toCsvUtf8(rows, columns);
   const stamp = dateStamp();
-  const filterTag = levels.length > 1
-    ? "-l" + levels.length
-    : levels.length === 1
-      ? "-" + levels[0].toLowerCase()
-      : "";
+  const filterTag =
+    levels.length > 1
+      ? "-l" + levels.length
+      : levels.length === 1
+        ? "-" + levels[0].toLowerCase()
+        : "";
   const filename = `socio-users${filterTag}-${stamp}.csv`;
 
   return sendCsv(csv, filename);

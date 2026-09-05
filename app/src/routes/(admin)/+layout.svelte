@@ -10,7 +10,13 @@
   // P1-03: Mobile dock slim — 4 items primary (Home/Orders/Deposit + Lainnya)
   // Users/Layanan/Harga dipindah ke bottom sheet "Lainnya" (P1-04 grouped)
   // P1-06: `badge?: keyof typeof data | string` → reactive badge count di top-right icon
-  const primaryNav: { href: string; label: string; icon: string; keywords?: string[]; badge?: "pendingOrders" | "pendingDeposits" }[] = [
+  const primaryNav: {
+    href: string;
+    label: string;
+    icon: string;
+    keywords?: string[];
+    badge?: "pendingOrders" | "pendingDeposits";
+  }[] = [
     { href: "/admin", label: "Home", icon: "home" },
     {
       href: "/admin/orders",
@@ -31,7 +37,13 @@
   /** Nav tambahan — diakses dari bottom sheet "Lainnya" (mobile) atau sidebar (desktop).
    * P1-04: grouped jadi Operasional + Konten & Sistem dengan mini header.
    * Note: Layanan + Harga dipindah dari primaryNav (P1-03) — masuk Operasional group. */
-  const moreNav: { href: string; label: string; icon: string; group: "Operasional" | "Konten & Sistem"; keywords?: string[] }[] = [
+  const moreNav: {
+    href: string;
+    label: string;
+    icon: string;
+    group: "Operasional" | "Konten & Sistem";
+    keywords?: string[];
+  }[] = [
     // OPERASIONAL
     {
       href: "/admin/services",
@@ -47,7 +59,13 @@
       icon: "tag",
       group: "Operasional",
     },
-    { href: "/admin/tickets", label: "Tickets", icon: "ticket", group: "Operasional", keywords: ["tiket", "komplain", "support"] },
+    {
+      href: "/admin/tickets",
+      label: "Tickets",
+      icon: "ticket",
+      group: "Operasional",
+      keywords: ["tiket", "komplain", "support"],
+    },
     { href: "/admin/reporting", label: "Reporting", icon: "chart", group: "Operasional" },
     // KONTEN & SISTEM
     {
@@ -581,7 +599,9 @@
             {@const items = moreNav.filter((n) => n.group === groupName)}
             {#if items.length > 0}
               <div>
-                <div class="px-3 pb-1 pt-1 text-[10px] font-extrabold uppercase tracking-widest text-ink-400">
+                <div
+                  class="px-3 pb-1 pt-1 text-[10px] font-extrabold uppercase tracking-widest text-ink-400"
+                >
                   {groupName}
                 </div>
                 <div class="space-y-0.5">

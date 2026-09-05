@@ -313,8 +313,9 @@
                   >
                   <span class="hidden sm:inline text-xs text-ink-300">·</span>
                   {#if ipResolved(l.ip)}
-                    <span class="font-mono text-xs font-medium text-ink-500" title="IP resolved via proxy header"
-                      >{l.ip}</span
+                    <span
+                      class="font-mono text-xs font-medium text-ink-500"
+                      title="IP resolved via proxy header">{l.ip}</span
                     >
                   {:else}
                     <span

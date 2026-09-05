@@ -11,7 +11,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const q = String(url.searchParams.get("q") ?? "");
   // P2-06: Multi-level support — comma-separated (e.g. "Member,Agen")
   const levelParam = String(url.searchParams.get("level") ?? "");
-  const levels = levelParam ? levelParam.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const levels = levelParam
+    ? levelParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
   const status = String(url.searchParams.get("status") ?? ""); // "1" active | "0" suspended
   const verified = String(url.searchParams.get("verified") ?? ""); // "1" yes | "0" no
   const rawP = Number(url.searchParams.get("p") ?? 1);
@@ -96,13 +101,7 @@ const ADJUST_HARD_CAP = 1_000_000; // Rp 1.000.000 per aksi
 /** P2-09: Parse IDs dari form (support `ids=1,2,3` atau multi-value `ids`). */
 function parseIds(form: FormData): number[] {
   const raw = form.getAll("ids").flatMap((v) => String(v).split(","));
-  return [
-    ...new Set(
-      raw
-        .map((s) => Number(s.trim()))
-        .filter((n) => Number.isFinite(n) && n > 0),
-    ),
-  ];
+  return [...new Set(raw.map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0))];
 }
 
 export const actions: Actions = {
@@ -235,7 +234,12 @@ export const actions: Actions = {
    */
   bulkSuspend: async ({ request, locals }) => {
     assertAdmin(locals);
-    const _rate = await assertAdminRate("user-bulk-suspend", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const _rate = await assertAdminRate(
+      "user-bulk-suspend",
+      (locals as any).ip ?? "0.0.0.0",
+      5,
+      60,
+    );
     if (_rate) return _rate;
     const form = await request.formData();
     const ids = parseIds(form);
@@ -272,7 +276,12 @@ export const actions: Actions = {
 
   bulkActivate: async ({ request, locals }) => {
     assertAdmin(locals);
-    const _rate = await assertAdminRate("user-bulk-activate", (locals as any).ip ?? "0.0.0.0", 5, 60);
+    const _rate = await assertAdminRate(
+      "user-bulk-activate",
+      (locals as any).ip ?? "0.0.0.0",
+      5,
+      60,
+    );
     if (_rate) return _rate;
     const form = await request.formData();
     const ids = parseIds(form);
