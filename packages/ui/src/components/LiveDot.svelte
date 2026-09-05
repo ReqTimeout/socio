@@ -51,7 +51,9 @@
       : null,
   );
 
-  const display = $derived(ts != null ? `Diperbarui ${relTime(ts, now)}` : null);
+  const display = $derived(
+    ts != null ? `Diperbarui ${relTime(ts, now)}` : null,
+  );
 
   $effect(() => {
     if (typeof document === "undefined") return;
@@ -62,8 +64,11 @@
     onVis();
     document.addEventListener("visibilitychange", onVis);
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return () => document.removeEventListener("visibilitychange", onVis);
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (reduce)
+      return () => document.removeEventListener("visibilitychange", onVis);
 
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
@@ -78,12 +83,17 @@
 </script>
 
 <span
-  class="inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase { variant === 'primary' ? 'text-primary' : 'text-emerald-700' }"
+  class="inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase {variant ===
+  'primary'
+    ? 'text-primary'
+    : 'text-emerald-700'}"
   aria-live="polite"
   aria-atomic="true"
 >
   <span
-    class="relative inline-grid h-2 w-2 place-items-center rounded-full {dotColor} {tabVisible ? 'live-dot-pulse' : ''}"
+    class="relative inline-grid h-2 w-2 place-items-center rounded-full {dotColor} {tabVisible
+      ? 'live-dot-pulse'
+      : ''}"
     aria-hidden="true"
   ></span>
   {#if display}
