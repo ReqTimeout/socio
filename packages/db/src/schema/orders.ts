@@ -56,6 +56,8 @@ export const orders = mysqlTable(
     pollPriority: int("poll_priority").notNull().default(5),
     couponCode: varchar("coupon_code", { length: 40 }),
     discount: double("discount").notNull().default(0),
+    isManual: int("is_manual").notNull().default(0),
+    manualNotes: text("manual_notes"),
   },
   (t) => ({
     userIdx: index("idx_user_id").on(t.userId),

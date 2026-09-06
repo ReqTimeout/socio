@@ -191,6 +191,13 @@
         proses
       </p>
     </div>
+    <a
+      href="/admin/orders/new"
+      class="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-600"
+    >
+      <Icon name="plus" size={12} stroke={2.5} />
+      Manual
+    </a>
     <form method="GET" class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
       {#if data.status}<input type="hidden" name="status" value={data.status} />{/if}
       <div class="relative w-full min-w-0 flex-1 sm:w-80">
