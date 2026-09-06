@@ -1140,7 +1140,7 @@ Setiap phase wajib cek 8 anti-pattern dari `docs/DESIGN.md` §B.8:
 - [ ] Screenshot before/after saved
 - [ ] Commit: `fix(UX2): beranda hero compaction + quick grid 2x2`
 
-### UX3 — Pesan Form [ ]
+### UX3 — Pesan Form [PARTIAL — rollback due to saved_links schema gap; see docs/audit/dashboard/migration-saved-links.md]
 - [ ] Mobile bottom-CTA pinned (di atas dock)
 - [ ] Desktop 2-column form
 - [ ] Real-time validation (link pattern + qty range)
