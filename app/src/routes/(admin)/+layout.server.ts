@@ -1,18 +1,35 @@
-import { redirect } from "@sveltejs/kit";
+import { redirect, error } from "@sveltejs/kit";
 import { ensureAdminSchema } from "@socio/db/ensure";
 import { db } from "@socio/db";
-import { notifications, deposits, orders } from "@socio/db/schema";
+import { notifications, deposits, orders, adminRoles } from "@socio/db/schema";
 import { eq, sql, and } from "drizzle-orm";
 import { getSetting } from "$lib/server/admin";
 import { getClientIp } from "$lib/server/ip";
+import { normalizeRole, ROLE_LABEL, can, requiredPermissionForPath } from "@socio/core/rbac";
 import type { LayoutServerLoad } from "./$types";
 
 export const load: LayoutServerLoad = async (event) => {
-  const { locals, request } = event;
+  const { locals, url } = event;
   if (!locals.user) throw redirect(303, "/login");
   if ((locals.user as any).level !== "Admin") throw redirect(303, "/");
 
   await ensureAdminSchema();
+
+  // P3-01 RBAC: resolve role (admin_roles overrides, fallback to "admin")
+  const [roleRow] = await db
+    .select({ role: adminRoles.role })
+    .from(adminRoles)
+    .where(eq(adminRoles.userId, Number(locals.user.id)))
+    .limit(1);
+  const rawRole = roleRow?.role ?? null;
+  const role = normalizeRole(rawRole);
+  const roleLabel = ROLE_LABEL[role];
+
+  // Enforce per-route permission (longest prefix match). Null = any admin.
+  const required = requiredPermissionForPath(url.pathname);
+  if (required && !can(role, required)) {
+    throw error(403, `Akses ditolak · role kamu: ${role} · butuh: ${required}`);
+  }
 
   // P2-03: Pakai centralized IP resolver (cf-connecting-ip > x-forwarded-for > x-real-ip)
   const ip = getClientIp(event) ?? "0.0.0.0";
@@ -43,6 +60,9 @@ export const load: LayoutServerLoad = async (event) => {
       name: locals.user.fullName ?? locals.user.username,
       username: locals.user.username,
       level: (locals.user as any).level,
+      role,
+      roleLabel,
+      rawRole,
     },
     ip,
     unreadCount: Number(unreadAdmin ?? 0),

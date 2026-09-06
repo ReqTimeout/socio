@@ -2,6 +2,7 @@
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { haptic, Icon, NotifBell } from "@socio/ui";
+  import { can, requiredPermissionForPath, ROLE_BADGE } from "@socio/core/rbac";
   import CommandPalette from "$lib/components/CommandPalette.svelte";
 
   let { data, children } = $props();
@@ -89,10 +90,24 @@
       group: "Konten & Sistem",
     },
   ];
-  const allPages = [
-    ...primaryNav.map((n) => ({ ...n, group: "Operasional" })),
-    ...moreNav.map((n) => ({ ...n, group: "Konten & Sistem" })),
-  ];
+  const role = $derived((data as any)?.admin?.role ?? "admin");
+  const roleBadge = $derived((ROLE_BADGE as any)[role] ?? (ROLE_BADGE as any)["admin"]);
+  const visiblePrimaryNav = $derived(
+    primaryNav.filter((n) => {
+      const perm = requiredPermissionForPath(n.href);
+      return !perm || can(role, perm);
+    }),
+  );
+  const visibleMoreNav = $derived(
+    moreNav.filter((n) => {
+      const perm = requiredPermissionForPath(n.href);
+      return !perm || can(role, perm);
+    }),
+  );
+  const visibleAllPages = $derived([
+    ...visiblePrimaryNav.map((n) => ({ ...n, group: "Operasional" })),
+    ...visibleMoreNav.map((n) => ({ ...n, group: "Konten & Sistem" })),
+  ]);
 
   let sheetOpen = $state(false);
   let paletteOpen = $state(false);
@@ -117,7 +132,7 @@
     if (href === "/admin") return $page.url.pathname === "/admin";
     return $page.url.pathname.startsWith(href);
   }
-  const inMoreActive = $derived(moreNav.some((n) => isActive(n.href)));
+  const inMoreActive = $derived(visibleMoreNav.some((n) => isActive(n.href)));
 
   async function toggleMaintenanceOff() {
     const fd = new FormData();
@@ -313,7 +328,7 @@
       <div class="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-widest text-ink-500">
         Operasional
       </div>
-      {#each primaryNav as n (n.href)}
+      {#each visiblePrimaryNav as n (n.href)}
         <a
           href={n.href}
           aria-current={isActive(n.href) ? "page" : undefined}
@@ -342,7 +357,7 @@
       >
         Konten &amp; Sistem
       </div>
-      {#each moreNav as n (n.href)}
+      {#each visibleMoreNav as n (n.href)}
         <a
           href={n.href}
           aria-current={isActive(n.href) ? "page" : undefined}
@@ -383,9 +398,15 @@
       >
       <span class="min-w-0 flex-1">
         <span class="block truncate text-sm font-bold text-ink-800">@{data.admin.username}</span>
-        <span class="block text-[11px] font-semibold uppercase tracking-wide text-ink-400"
-          >{data.admin.level}</span
-        >
+        <span class="flex flex-wrap items-center gap-1.5">
+          <span class="block text-[11px] font-semibold uppercase tracking-wide text-ink-400"
+            >{data.admin.level}</span
+          >
+          <span
+            class="inline-flex items-center rounded-full bg-gradient-to-r px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm {roleBadge.tone}"
+            >{roleBadge.label}</span
+          >
+        </span>
       </span>
     </div>
   </aside>
@@ -463,7 +484,7 @@
     style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));"
     aria-label="Menu admin utama"
   >
-    {#each primaryNav as n (n.href)}
+    {#each visiblePrimaryNav as n (n.href)}
       {@const badgeCount = n.badge ? Number((data as any)[n.badge] ?? 0) : 0}
       <a
         href={n.href}
@@ -596,7 +617,7 @@
         <div class="px-3 py-2 text-xs font-semibold text-ink-400">Menu lainnya</div>
         <nav class="space-y-3">
           {#each ["Operasional", "Konten & Sistem"] as groupName (groupName)}
-            {@const items = moreNav.filter((n) => n.group === groupName)}
+            {@const items = visibleMoreNav.filter((n) => n.group === groupName)}
             {#if items.length > 0}
               <div>
                 <div
@@ -665,7 +686,11 @@
     </div>
   {/if}
   <!-- Command palette (⌘K / Ctrl+K / tombol search) -->
-  <CommandPalette open={paletteOpen} onclose={() => (paletteOpen = false)} pages={allPages} />
+  <CommandPalette
+    open={paletteOpen}
+    onclose={() => (paletteOpen = false)}
+    pages={visibleAllPages}
+  />
 </div>
 
 <style>

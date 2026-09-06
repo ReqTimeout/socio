@@ -47,7 +47,6 @@
   $effect(() => {
     if (!apiKey) apiKey = data.user.apiKey ?? "";
   });
-  let revealKey = $state(false);
   let keyBusy = $state(false);
   let confirmRegen = $state(false);
   let confirmLogout = $state(false);
@@ -72,10 +71,9 @@
       if (r.type === "failure") {
         toast(r.data?.error ?? "Gagal", "error");
       } else {
-        const data = (r.data as any) ?? {};
-        if (data.apiKey) apiKey = data.apiKey;
-        revealKey = true;
-        toast(data.success ?? "API Key diperbarui", "success");
+        const d = (r.data as any) ?? {};
+        if (d.apiKey) apiKey = d.apiKey;
+        toast(d.success ?? "API Key diperbarui", "success");
       }
     } catch {
       toast("Gagal", "error");
@@ -415,7 +413,6 @@
             type="button"
             onclick={() => {
               editMode = "apikey";
-              revealKey = true;
             }}
             class="grid h-8 w-8 place-items-center rounded-full text-ink-400 hover:bg-ink-50 hover:text-ink-700"
             aria-label="Lihat API key"

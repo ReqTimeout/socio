@@ -751,7 +751,7 @@
       }
     }
     title={`Suspend ${selected.size} user?`}
-    message={`User yang di-suspend tidak bisa login sampai diaktifkan kembali. Admin dilewati otomatis.`}
+    message="User yang di-suspend tidak bisa login sampai diaktifkan kembali. Admin dilewati otomatis."
     confirmLabel="Ya, Suspend"
     cancelLabel="Batal"
     danger
@@ -783,7 +783,7 @@
       }
     }
     title={`Aktifkan ${selected.size} user?`}
-    message={`User akan diaktifkan kembali dan bisa login. Admin dilewati otomatis.`}
+    message="User akan diaktifkan kembali dan bisa login. Admin dilewati otomatis."
     confirmLabel="Ya, Aktifkan"
     cancelLabel="Batal"
   >

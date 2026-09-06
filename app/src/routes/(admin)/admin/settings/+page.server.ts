@@ -7,7 +7,7 @@ import { env } from "$env/dynamic/private";
 import { DEFAULT_PRICING_RULES } from "$lib/server/pricing-defaults";
 import type { Actions, PageServerLoad } from "./$types";
 
-const ROLE_LIST = ["superadmin", "admin", "operator", "viewer"] as const;
+const ROLE_LIST = ["super_admin", "admin", "operator", "finance"] as const;
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.user) throw redirect(303, "/login");
