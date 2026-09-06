@@ -30,10 +30,19 @@
       Error {$page.status}
     </p>
     <h1 class="mt-2 text-2xl font-bold text-ink-900">
-      {$page.status === 500 ? "Server sedang bermasalah" : "Halaman tidak ditemukan"}
+      {#if $page.status === 403}
+        Akses ditolak
+      {:else if $page.status === 500}
+        Server sedang bermasalah
+      {:else}
+        Halaman tidak ditemukan
+      {/if}
     </h1>
     <p class="mt-3 text-sm leading-relaxed text-ink-600">
-      {$page.error?.message ?? "Terjadi kesalahan tak terduga. Coba lagi beberapa saat."}
+      {$page.error?.message ??
+        ($page.status === 403
+          ? "Kamu tidak punya izin untuk halaman ini. Hubungi super admin untuk akses."
+          : "Terjadi kesalahan tak terduga. Coba lagi beberapa saat.")}
     </p>
 
     <div class="mt-7 flex flex-col gap-2">

@@ -1,0 +1,41 @@
+-- Migration SQL: create missing tables from Drizzle schema before production
+-- Run via: docker exec -i rebicrj57r3afbg9knieq9ks mysql -usocio -p$PASS socio_smm < migration.sql
+-- 
+-- Context: packages/db/src/schema/ has tables that production DB doesn't have
+-- (rebuild migration story is aspirational, not enforced in CI). Any deploy
+-- that uses these tables crashes 500.
+--
+-- Last verified: 2026-09-06 against commit 02e470c
+
+-- 1) saved_links (NEW — used by /pesan FormChips repeat-order)
+CREATE TABLE IF NOT EXISTS saved_links (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  label VARCHAR(100) NOT NULL DEFAULT '',
+  link TEXT NOT NULL,
+  service_id INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX user_idx (user_id)
+) ENGINE=InnoDB;
+-- Backfill from favorites (matching columns we have there)
+INSERT IGNORE INTO saved_links (user_id, label, link, service_id, created_at)
+SELECT user_id, '', '', service_id, created_at FROM favorites;
+
+-- 2) pricing_rules (NEW — used by /admin/settings/proxy)
+-- Schema match packages/db/src/schema/pricingRules.ts:
+--   level: ENUM('Member','Agen','Reseller','Admin')
+--   markup_percent, flat_per_1k, min_profit_per_1k: DOUBLE
+--   is_active: TINYINT(1)
+-- Tidak ada created_at/updated_at di Drizzle schema
+CREATE TABLE IF NOT EXISTS pricing_rules (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  level ENUM('Member','Agen','Reseller','Admin') NOT NULL,
+  markup_percent DOUBLE NOT NULL DEFAULT 0,
+  flat_per_1k DOUBLE NOT NULL DEFAULT 0,
+  min_profit_per_1k DOUBLE NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uniq_level (level)
+) ENGINE=InnoDB;
+-- Backfill defaults for known levels
+INSERT IGNORE INTO pricing_rules (level, markup_percent, is_active) VALUES
+  ('Member', 0.05, 1), ('Agen', 0.03, 1), ('Reseller', 0.01, 1), ('Admin', 0.00, 1);

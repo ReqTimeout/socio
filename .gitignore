@@ -75,3 +75,4 @@ db-check.mjs
 /verify-*.png
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
+app/vite.config.ts.timestamp-*.mjs
