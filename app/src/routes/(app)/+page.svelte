@@ -658,7 +658,10 @@
                   <Icon name={p.icon} size={18} />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-semibold lg:text-[14px]">
+                  <div
+                    class="truncate text-sm font-semibold lg:text-[14px]"
+                    title={serviceDisplayName(o.serviceName)}
+                  >
                     {serviceDisplayName(o.serviceName)}
                   </div>
                   <div class="truncate text-xs text-ink-500 lg:text-[12.5px]">

@@ -79,7 +79,7 @@
         onclick={() => haptic(10)}
       >
         <Icon name="receipt" size={16} />
-        Mutasi
+        Riwayat
       </a>
     </div>
   </div>

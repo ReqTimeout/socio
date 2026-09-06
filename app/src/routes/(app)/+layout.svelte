@@ -89,6 +89,11 @@
 </script>
 
 <div class="min-h-dvh bg-ink-50 text-ink-900">
+  <a
+    href="#main"
+    class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-ink-900 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"
+    >Lewati ke konten utama</a
+  >
   <!-- Desktop sidebar -->
   <Sidebar items={sidebarItems} user={data.user} />
 
@@ -133,7 +138,7 @@
   <!-- Main content — offset for sidebar on desktop.
        pb-40 (mobile, FAB aktif): FAB duduk ~108px + dock ~70px — konten terakhir
        butuh clearance supaya tidak tertutup FAB/dock (P2-02/P3-01). -->
-  <main class="lg:ml-72">
+  <main id="main" class="lg:ml-72">
     <div
       class="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 lg:px-10 {showFab
         ? 'pb-40 lg:pb-12'

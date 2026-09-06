@@ -98,8 +98,8 @@
 </svelte:head>
 
 <section class="space-y-3 lg:space-y-4">
-  <!-- Intro header (desktop) — tighter -->
-  <div class="hidden lg:block">
+  <!-- Intro header (mobile only — desktop pakai topbar title, jangan duplikat) -->
+  <div class="lg:hidden">
     <h1
       class="font-display text-[1.55rem] font-extrabold tracking-tight leading-none tracking-[-0.01em]"
     >
@@ -172,7 +172,9 @@
       >
         <Icon name="star" size={16} stroke={2.5} class={data.params.fav ? "fill-white" : ""} />
         <span class="hidden sm:inline">Favorit</span><span
-          >{data.favCount ? ` ${data.favCount}` : ""}</span
+          title={data.favCount
+            ? `${data.favCount} layanan favorit — sentuh untuk lihat`
+            : undefined}>{data.favCount ? ` (${data.favCount})` : ""}</span
         >
       </button>
     </div>
