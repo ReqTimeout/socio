@@ -60,6 +60,7 @@ export const ROUTE_PERMISSION: Record<string, string | null> = {
   "/admin/affiliate": "affiliate:read",
   "/admin/reporting": "reporting:read",
   "/admin/audit": "audit:read",
+  "/admin/refunds": "refund:request",
 };
 
 // All permissions per role (explicit list — no wildcard except super_admin)
@@ -96,6 +97,9 @@ const PERMISSIONS: Record<AdminRole, Set<string>> = {
     "affiliate:read",
     "reporting:read",
     "audit:read",
+    "refund:request",
+    "refund:approve",
+    "refund:reject",
   ]),
   operator: new Set([
     "orders:read",
@@ -112,6 +116,8 @@ const PERMISSIONS: Record<AdminRole, Set<string>> = {
     "deposits:reject",
     "balance_logs:read",
     "refund:request",
+    "refund:approve",
+    "refund:reject",
     "reporting:read",
     "audit:read",
   ]),

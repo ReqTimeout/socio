@@ -68,6 +68,7 @@
       keywords: ["tiket", "komplain", "support"],
     },
     { href: "/admin/reporting", label: "Reporting", icon: "chart", group: "Operasional" },
+    { href: "/admin/refunds", label: "Refunds", icon: "banknote", group: "Operasional" },
     // KONTEN & SISTEM
     {
       href: "/admin/coupons",

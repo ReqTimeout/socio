@@ -177,10 +177,8 @@ export const actions: Actions = {
   },
 
   /**
-   * Refund manual per order (G-refund): admin input order ID → dana kembali ke
-   * saldo user. Full refund = harga order saat ini; optional `amount` = refund
-   * parsial. Idempotent via CAS `WHERE is_refund = 0` (pola sama dgn cron
-   * auto-refund) — double-klik / 2 admin tidak bisa refund ganda.
+   * Refund manual per order — via P3-03 dual-approval workflow.
+   * < Rp50k → auto-execute (langsung refund). >= Rp50k → pending approval admin kedua.
    */
   refund: async ({ request, locals }) => {
     assertAdmin(locals);
@@ -189,18 +187,13 @@ export const actions: Actions = {
     const form = await request.formData();
     const id = Number(form.get("id"));
     const rawAmount = Number(form.get("amount") ?? 0);
+    const reason = String(form.get("reason") ?? "").trim();
 
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID order tidak valid." });
-    if (!Number.isFinite(rawAmount) || rawAmount < 0)
-      return fail(400, { error: "Nominal refund tidak valid." });
+    if (!reason) return fail(400, { error: "Alasan refund wajib diisi." });
 
     const [o] = await db
-      .select({
-        status: orders.status,
-        userId: orders.userId,
-        price: orders.price,
-        isRefund: orders.isRefund,
-      })
+      .select({ status: orders.status, userId: orders.userId, price: orders.price, isRefund: orders.isRefund })
       .from(orders)
       .where(eq(orders.id, id))
       .limit(1);
@@ -211,45 +204,28 @@ export const actions: Actions = {
     if (!o.userId) return fail(400, { error: "Order tidak punya user (API/anonim)." });
 
     const price = Number(o.price) || 0;
-    const refundAmount = rawAmount > 0 ? Math.min(rawAmount, price) : price;
-    if (refundAmount <= 0)
-      return fail(400, { error: "Harga order 0 — tidak ada dana untuk di-refund." });
+    const want = rawAmount > 0 ? rawAmount : price;
+    const refundAmount = Math.min(want, price);
+    if (refundAmount <= 0) return fail(400, { error: "Harga order 0 — tidak ada dana untuk di-refund." });
 
-    // CAS: klaim is_refund atomik supaya tidak dobel
-    const [claim]: any[] = await db
-      .update(orders)
-      .set({ isRefund: 1, price: sql`GREATEST(${orders.price} - ${refundAmount}, 0)` })
-      .where(and(eq(orders.id, id), eq(orders.isRefund, 0)));
-    const affected = Number((Array.isArray(claim) ? claim[0] : claim)?.affectedRows ?? 0);
-    if (affected === 0) return fail(409, { error: `Order #${id} sudah di-refund proses lain.` });
-
-    await db
-      .update(users)
-      .set({ balance: sql`${users.balance} + ${refundAmount}` })
-      .where(eq(users.id, o.userId));
-    await db.insert(balanceLogs).values({
-      userId: o.userId,
-      type: "ref",
-      amount: refundAmount,
-      note: `Refund manual oleh admin — order #${id} (${o.status})`,
-      createdAt: new Date(),
-    });
-
-    await logAudit({
-      adminId: Number(locals.user.id),
-      action: "manual_refund_order",
-      entity: "order",
-      entityId: id,
-      detail: { userId: o.userId, amount: refundAmount, orderStatus: o.status },
-      ip: (locals as any).ip,
-    });
     try {
-      await notifyOrderUpdate(o.userId, id, "Dana order dikembalikan admin");
-    } catch {
-      // notif best-effort
+      const { requestRefund } = await import("$lib/server/refund");
+      const res: any = await requestRefund({
+        orderId: id,
+        amount: refundAmount,
+        reason,
+        requestedBy: Number(locals.user.id),
+        ip: (locals as any).ip,
+      });
+      if (res.auto) {
+        return { success: `Order #${id} di-refund otomatis Rp${refundAmount.toLocaleString("id-ID")} ( < Rp50k).` };
+      }
+      if (res.pending) {
+        return { success: `Refund Rp${refundAmount.toLocaleString("id-ID")} untuk order #${id} menunggu approval admin kedua (≥ Rp50k).` };
+      }
+      return { success: `Refund diproses.` };
+    } catch (e: any) {
+      return fail(400, { error: e?.message ?? "Gagal request refund." });
     }
-    return {
-      success: `Order #${id} di-refund ${refundAmount.toLocaleString("id-ID")} ke saldo user #${o.userId}.`,
-    };
   },
 };

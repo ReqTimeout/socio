@@ -65,6 +65,7 @@
   let confirmEditProv = $state(false);
   let confirmRefund = $state(false);
   let refundAmount = $state(0); // 0 = full refund
+  let refundReason = $state("");
 
   function openDetail(o: OrderRow) {
     detail = o;
@@ -901,18 +902,30 @@
         const { result, update } = input;
         confirmRefund = false;
         refundAmount = 0;
+        refundReason = "";
         if (result.type === "failure") toast((result.data as any)?.error ?? "Gagal", "error");
         else toast((result.data as any)?.success ?? "OK", "success");
         await update();
       }}
-      class="flex gap-3"
+      class="space-y-3"
     >
       <input type="hidden" name="id" value={detail.id} />
       <input type="hidden" name="amount" value={refundAmount} />
-      <Button type="button" variant="ghost" full onclick={() => (confirmRefund = false)}
-        >Batal</Button
-      >
-      <Button type="submit" variant="danger" full>Ya, Refund</Button>
+      <textarea
+        name="reason"
+        bind:value={refundReason}
+        placeholder="Alasan refund — mis. Order gagal, user request, partial fulfillment"
+        required
+        rows="2"
+        class="w-full rounded-xl border border-ink-200 px-3 py-2 text-sm"
+      ></textarea>
+      <p class="text-[11px] text-ink-400">≥ Rp50.000 butuh approval admin kedua.</p>
+      <div class="flex gap-3">
+        <Button type="button" variant="ghost" full onclick={() => (confirmRefund = false)}
+          >Batal</Button
+        >
+        <Button type="submit" variant="danger" full>Ya, Refund</Button>
+      </div>
     </form>
   </ConfirmDialog>
 {/if}
