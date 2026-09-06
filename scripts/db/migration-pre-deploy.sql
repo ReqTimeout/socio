@@ -39,3 +39,15 @@ CREATE TABLE IF NOT EXISTS pricing_rules (
 -- Backfill defaults for known levels
 INSERT IGNORE INTO pricing_rules (level, markup_percent, is_active) VALUES
   ('Member', 0.05, 1), ('Agen', 0.03, 1), ('Reseller', 0.01, 1), ('Admin', 0.00, 1);
+
+-- 3) deposits verified columns (P3-04 — bukti transfer verify)
+-- Idempotent: only add if not exists (MySQL <8.0.23 does not support ADD COLUMN IF NOT EXISTS)
+SET @col1 = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='deposits' AND COLUMN_NAME='verified_by');
+SET @sql1 = IF(@col1=0, 'ALTER TABLE deposits ADD COLUMN verified_by INT NULL', 'SELECT 1');
+PREPARE stmt1 FROM @sql1; EXECUTE stmt1; DEALLOCATE PREPARE stmt1;
+SET @col2 = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='deposits' AND COLUMN_NAME='verified_at');
+SET @sql2 = IF(@col2=0, 'ALTER TABLE deposits ADD COLUMN verified_at DATETIME NULL', 'SELECT 1');
+PREPARE stmt2 FROM @sql2; EXECUTE stmt2; DEALLOCATE PREPARE stmt2;
+SET @col3 = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='deposits' AND COLUMN_NAME='verification_notes');
+SET @sql3 = IF(@col3=0, 'ALTER TABLE deposits ADD COLUMN verification_notes TEXT NULL', 'SELECT 1');
+PREPARE stmt3 FROM @sql3; EXECUTE stmt3; DEALLOCATE PREPARE stmt3;

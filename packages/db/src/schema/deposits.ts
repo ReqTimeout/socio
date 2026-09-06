@@ -30,6 +30,9 @@ export const deposits = mysqlTable(
     invoiceVirtual: varchar("invoice_virtual", { length: 128 }).notNull().default(""),
     untukApa: mysqlEnum("untuk_apa", ["smm", "reseller"]),
     img: text("img").notNull(),
+    verifiedBy: int("verified_by"),
+    verifiedAt: datetime("verified_at"),
+    verificationNotes: text("verification_notes"),
   },
   (t) => ({
     userIdx: index("user_id_idx").on(t.userId),

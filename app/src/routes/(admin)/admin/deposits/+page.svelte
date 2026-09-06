@@ -166,6 +166,19 @@
     </form>
   </header>
 
+  <div class="flex justify-end">
+    <a
+      href="/admin/deposits/verify"
+      class="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-600"
+    >
+      <Icon name="image" size={14} />
+      Verifikasi Bukti
+      {#if data.stats.Pending.count > 0}
+        <span class="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-extrabold text-amber-700">{data.stats.Pending.count}</span>
+      {/if}
+    </a>
+  </div>
+
   <!-- KPI strip (3 cards, semantic tone-on-tone + total value) -->
   <div class="grid grid-cols-3 gap-2 sm:gap-3">
     <div

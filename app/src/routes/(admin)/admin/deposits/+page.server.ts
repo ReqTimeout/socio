@@ -1,9 +1,10 @@
 import { db } from "@socio/db";
-import { deposits, users, balanceLogs } from "@socio/db/schema";
+import { deposits, users, balanceLogs, adminRoles } from "@socio/db/schema";
 import { sql, desc, eq, and, ne } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import { creditAffiliateCommission } from "$lib/server/affiliate";
+import { can, normalizeRole } from "@socio/core/rbac";
 import type { PageServerLoad, Actions } from "./$types";
 
 const STATUSES = ["Pending", "Success", "Canceled"] as const;
@@ -96,6 +97,8 @@ export const actions: Actions = {
   confirm: async ({ request, locals }) => {
     // A-02/A-03 defense-in-depth
     assertAdmin(locals);
+    const [roleRow] = await db.select({ role: adminRoles.role }).from(adminRoles).where(eq(adminRoles.userId, Number(locals.user!.id))).limit(1);
+    if (!can(normalizeRole(roleRow?.role ?? "admin"), "deposits:approve")) return fail(403, { error: "Role kamu tidak bisa konfirmasi deposit." });
     const _rate = await assertAdminRate("deposit-confirm", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -136,7 +139,7 @@ export const actions: Actions = {
 
         // affectedRows cek via raw SQL (Drizzle MySQL UPDATE belum support .returning)
         const upd = await tx.execute(sql`
-          UPDATE deposits SET status = 'Success'
+          UPDATE deposits SET status = 'Success', verified_by = ${Number(locals.user!.id)}, verified_at = NOW()
           WHERE id = ${id} AND status = 'Pending'
         `);
         // mysql2 ResultSetHeader.affectedRows — drizzle bisa return array [header, fields]
@@ -189,6 +192,8 @@ export const actions: Actions = {
   },
   reject: async ({ request, locals }) => {
     assertAdmin(locals);
+    const [roleRow2] = await db.select({ role: adminRoles.role }).from(adminRoles).where(eq(adminRoles.userId, Number(locals.user!.id))).limit(1);
+    if (!can(normalizeRole(roleRow2?.role ?? "admin"), "deposits:approve")) return fail(403, { error: "Role kamu tidak bisa menolak deposit." });
     const _rate = await assertAdminRate("deposit-reject", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -196,7 +201,7 @@ export const actions: Actions = {
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });
     // A-05: hanya Pending yang bisa ditolak. Canceled/Success → 409 idempotent.
     const upd = await db.execute(sql`
-      UPDATE deposits SET status = 'Canceled'
+      UPDATE deposits SET status = 'Canceled', verified_by = ${Number(locals.user!.id)}, verified_at = NOW(), verification_notes = 'Rejected via deposits list'
       WHERE id = ${id} AND status = 'Pending'
     `);
     const affected = Number((upd as unknown as { affectedRows?: number }).affectedRows ?? 0);
