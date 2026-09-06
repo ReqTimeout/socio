@@ -7,6 +7,7 @@ import { setupTotpForUser, getTotpInfo, verifyAndEnable, getBackupCodesPlain, di
 import { decryptTotpSecret } from "$lib/server/2fa";
 import { generateSecret, otpauthURL } from "@socio/core/totp";
 import QRCode from "qrcode";
+import bcrypt from "bcryptjs";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -64,13 +65,11 @@ export const actions: Actions = {
     const password = String(form.get("password") ?? "");
     const code = String(form.get("code") ?? "").trim();
     // Require password check via accounts table (reuse login logic)
-    const { db: db2 } = await import("@socio/db");
     const { accounts, users: usersTbl } = await import("@socio/db/schema");
     const [user] = await db.select().from(usersTbl).where(eq(usersTbl.id, Number(locals.user!.id))).limit(1);
     if (!user) throw error(404, "User not found");
     const [account] = await db.select().from(accounts).where(eq(accounts.userId, String(user.id))).limit(1);
     if (!account?.password) return fail(400, { error: "Akun tidak punya password." });
-    const bcrypt = await import("bcryptjs");
     if (!bcrypt.compareSync(password, account.password)) return fail(400, { error: "Password salah." });
     // If code provided, verify it (TOTP or backup)
     if (code) {

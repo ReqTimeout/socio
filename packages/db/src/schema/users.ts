@@ -64,7 +64,7 @@ export const users = mysqlTable(
     tokenLogin: varchar("token_login", { length: 128 }).notNull(),
     theme: mysqlEnum("theme", ["light", "dark"]).notNull().default("light"),
     waNumber: text("wa_number").notNull(),
-    totpSecret: varchar("totp_secret", { length: 100 }).notNull().default(""),
+    totpSecret: varchar("totp_secret", { length: 255 }).notNull().default(""),
     totpEnabled: boolean("totp_enabled").notNull().default(false),
     totpBackupCodes: text("totp_backup_codes"),
   },
