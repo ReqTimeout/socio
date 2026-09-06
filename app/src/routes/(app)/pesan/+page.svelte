@@ -97,9 +97,7 @@
 
   // ── Inline validation (UX3.3) — link pattern + qty range
   type LinkValidation =
-    | { ok: true; platform: string }
-    | { ok: false; reason: string }
-    | { ok: null };
+    { ok: true; platform: string } | { ok: false; reason: string } | { ok: null };
   function validateLink(url: string): LinkValidation {
     if (!url.trim()) return { ok: null };
     try {
@@ -442,9 +440,9 @@
                 {#if linkHasError}
                   <Icon name="alert" size={12} class="shrink-0" />
                   {linkReason}
-            {:else if linkOk}
-              <Icon name="check" size={12} class="shrink-0" />
-              Platform {linkPlatform} terdeteksi
+                {:else if linkOk}
+                  <Icon name="check" size={12} class="shrink-0" />
+                  Platform {linkPlatform} terdeteksi
                 {:else}
                   <Icon name="info" size={12} class="shrink-0" />
                   {copy.order.linkHelper}

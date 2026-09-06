@@ -76,6 +76,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     orders: rows.map((r) => ({ ...r, isRefill: refillMap.get(Number(r.serviceId)) ?? 0 })),
     filter,
     counts: tabCounts,
+    // UX4.3 — lastUpdate untuk LiveDot timestamp (initial dari server = now)
+    lastUpdate: new Date().toISOString(),
   };
 };
 

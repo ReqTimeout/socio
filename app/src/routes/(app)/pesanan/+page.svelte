@@ -1,5 +1,15 @@
 <script lang="ts">
-  import { StatusBadge, Sheet, Button, Icon, toast, revealDelay, EmptyOrdersArt } from "@socio/ui";
+  import {
+    StatusBadge,
+    Sheet,
+    Button,
+    Icon,
+    SwipeRow,
+    toast,
+    revealDelay,
+    EmptyOrdersArt,
+    LiveDot,
+  } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { formatRupiah, serviceDisplayName, formatDateShort } from "$lib/format";
@@ -24,11 +34,15 @@
   let selectMode = $state(false);
   let checked = $state<Set<number>>(new Set());
 
-  // Init langsung dari server payload — SSR merender list penuh (hindari CLS:
+  // Init langsung dari server payload — SSR merender list penuh (avoid CLS:
   // empty-state flash saat hydration mendorong footer turun).
   let orders = $state(data.orders);
   // Order yang barusan berubah via SSE — dapat highlight sweep (1x, bukan loop)
   let sweptIds = $state<Set<number>>(new Set());
+
+  // UX4.3 — SSE live banner: LiveDot timestamp refresh tiap order_update event
+  let lastUpdate = $state<Date | null>(data.lastUpdate ? new Date(data.lastUpdate) : null);
+  let sseConnected = $state(false);
   $effect(() => {
     orders = data.orders;
   });
@@ -57,6 +71,12 @@
 
   if (typeof window !== "undefined") {
     const es = new EventSource("/api/sse");
+    es.onopen = () => {
+      sseConnected = true;
+    };
+    es.onerror = () => {
+      sseConnected = false;
+    };
     es.addEventListener("order_update", (e) => {
       const { id, status, remains } = JSON.parse((e as MessageEvent).data);
       // StatusBadge flip: status baru render + highlight sweep sekali lalu fade
@@ -65,6 +85,8 @@
       );
       sweptIds = new Set(sweptIds).add(id);
       if (selected === id) haptic(12);
+      // UX4.3: update lastUpdate untuk LiveDot timestamp
+      lastUpdate = new Date();
       setTimeout(() => {
         sweptIds = new Set([...sweptIds].filter((x) => x !== id));
       }, 1600);
@@ -138,44 +160,33 @@
     </a>
   </div>
 
-  <!-- Mini summary — cepat scan tanpa scroll -->
+  <!-- UX4.1 + UX4.3 — inline-stat narrative replaces 4-col strip + SSE live banner -->
   {#if counts.all > 0}
-    <p class="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-400 lg:hidden">
-      Ringkasan pesanan
-    </p>
-    <div class="grid grid-cols-4 gap-2 lg:gap-3">
-      <div
-        class="rounded-xl border border-ink-100 bg-surface px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
-      >
-        <div class="text-[10px] font-bold uppercase tracking-wide text-ink-500">Total</div>
-        <div class="font-display text-sm font-extrabold tabular-nums lg:text-base">
-          {counts.all}
-        </div>
-      </div>
-      <div
-        class="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
-      >
-        <div class="text-[10px] font-bold uppercase tracking-wide text-amber-700">Pending</div>
-        <div class="font-display text-sm font-extrabold tabular-nums text-amber-700 lg:text-base">
-          {counts.pending}
-        </div>
-      </div>
-      <div
-        class="rounded-xl border border-blue-200 bg-blue-50 px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
-      >
-        <div class="text-[10px] font-bold uppercase tracking-wide text-blue-700">Proses</div>
-        <div class="font-display text-sm font-extrabold tabular-nums text-blue-700 lg:text-base">
-          {counts.proses}
-        </div>
-      </div>
-      <div
-        class="rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-2.5 text-center lg:px-4 lg:py-3"
-      >
-        <div class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Selesai</div>
-        <div class="font-display text-sm font-extrabold tabular-nums text-emerald-700 lg:text-base">
-          {counts.selesai}
-        </div>
-      </div>
+    <div
+      class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-ink-100 bg-surface px-4 py-3 reveal"
+    >
+      <p class="text-sm leading-snug text-ink-700">
+        <span class="font-display text-2xl font-extrabold tabular-nums text-ink-900"
+          >{counts.all.toLocaleString("id-ID")}</span
+        >
+        pesanan
+        {#if counts.pending > 0}
+          · <span class="font-semibold text-amber-700">{counts.pending} pending</span>
+        {/if}
+        {#if counts.selesai > 0}
+          · <span class="font-semibold text-emerald-700"
+            >{counts.selesai.toLocaleString("id-ID")} selesai</span
+          >
+          {#if counts.all > 0}
+            <span class="text-xs text-ink-400"
+              >({Math.round((counts.selesai / counts.all) * 100)}% success rate)</span
+            >
+          {/if}
+        {/if}
+      </p>
+      {#if lastUpdate}
+        <LiveDot {lastUpdate} label={sseConnected ? "Live" : "Reconnect"} />
+      {/if}
     </div>
   {/if}
 
@@ -253,98 +264,159 @@
     <ul class="grid grid-cols-1 gap-3 sm:gap-3.5 lg:grid-cols-2">
       {#each orders as o, i (o.id)}
         {@const swept = sweptIds.has(o.id)}
-        <li
-          class="group relative flex flex-col overflow-hidden rounded-2xl border bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-12px_rgba(15,23,42,0.14)] sm:p-5
-            {checked.has(o.id)
-            ? 'border-primary ring-1 ring-primary bg-primary/[0.03]'
-            : 'border-ink-100'}
-            {swept ? 'sweep-highlight' : ''} reveal"
-          style={revealDelay(i, 0, 35)}
-        >
-          <!-- Top row: layanan + status -->
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-extrabold leading-tight sm:text-[15px]">
-                {serviceDisplayName(o.serviceName)}
-              </p>
-              <p class="mt-1 flex items-center gap-1 truncate text-xs text-ink-500">
-                <Icon name="link" size={12} class="shrink-0 text-ink-300" />
-                <span class="truncate" title={o.data}>{o.data}</span>
-              </p>
-            </div>
-            <span class="shrink-0 badge-flip">
-              {#key o.status}
-                <StatusBadge status={o.status} />
-              {/key}
-            </span>
-          </div>
-
-          {#if o.status === "Partial"}
-            <!-- Partial = sebagian sukses, sisanya otomatis direfund proporsional (cron refund.ts) -->
-            <p
-              class="mt-2 flex items-center gap-1.5 rounded-lg bg-status-partial/10 px-2.5 py-1.5 text-[11px] font-semibold text-status-partial"
+        <li>
+          <!-- UX4.4 — SwipeRow wrapper di mobile only; desktop langsung card dengan 3-dot menu -->
+          <div class="lg:hidden">
+            <SwipeRow
+              threshold={80}
+              actionLabel="Pesan lagi"
+              actionIcon="refresh"
+              onAction={() => repeatOrder(o)}
             >
-              <Icon name="info" size={12} class="shrink-0" />
-              Sebagian selesai — sisa {Number(o.remains ?? 0).toLocaleString("id-ID")} otomatis direfund
-              ke saldo.
-            </p>
-          {/if}
-
-          <!-- Meta pills -->
-          <div class="mt-3 flex flex-wrap items-center gap-2">
-            <span
-              class="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2.5 py-1 text-xs font-bold tabular-nums text-ink-700"
-            >
-              {o.quantity.toLocaleString("id-ID")} qty
-            </span>
-            <span
-              class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-extrabold tabular-nums text-primary"
-            >
-              {formatRupiah(o.price)}
-            </span>
-            <span class="ml-auto flex items-center gap-1 text-xs text-ink-500">
-              <Icon name="clock" size={12} />
-              {timeAgo(o.createdAt)}
-            </span>
-            <span class="hidden text-xs font-medium text-ink-300 lg:inline">#{o.id}</span>
-          </div>
-
-          <!-- Actions -->
-          <div class="mt-3 flex items-center gap-2 border-t border-ink-100 pt-3">
-            {#if selectMode}
-              <button
-                type="button"
-                onclick={() => toggleCheck(o.id)}
-                class="inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition active:scale-95
+              <div
+                class="flex flex-col overflow-hidden rounded-2xl border bg-surface p-4 shadow-sm sm:p-5
                   {checked.has(o.id)
-                  ? 'border-primary bg-primary text-white'
-                  : 'border-ink-200 text-ink-600 hover:border-ink-300'}"
+                  ? 'border-primary ring-1 ring-primary bg-primary/[0.03]'
+                  : 'border-ink-100'}
+                  {swept ? 'sweep-highlight' : ''} reveal"
+                style={revealDelay(i, 0, 35)}
               >
-                <span
-                  class="grid h-4 w-4 place-items-center rounded-full {checked.has(o.id)
-                    ? 'bg-white text-primary'
-                    : 'bg-ink-100'}"
-                >
-                  <Icon name="check" size={10} stroke={3} />
-                </span>
-                {checked.has(o.id) ? "Terpilih" : "Pilih"}
-              </button>
-            {:else}
-              <button
-                onclick={() => openDetail(o.id)}
-                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-ink-800 active:scale-95"
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-extrabold leading-tight sm:text-[15px]">
+                      {serviceDisplayName(o.serviceName)}
+                    </p>
+                    <p class="mt-1 flex items-center gap-1 truncate text-xs text-ink-500">
+                      <Icon name="link" size={12} class="shrink-0 text-ink-300" />
+                      <span class="truncate" title={o.data}>{o.data}</span>
+                    </p>
+                  </div>
+                  <span class="shrink-0 badge-flip">
+                    {#key o.status}
+                      <StatusBadge status={o.status} />
+                    {/key}
+                  </span>
+                </div>
+                {#if o.status === "Partial"}
+                  <p
+                    class="mt-2 flex items-center gap-1.5 rounded-lg bg-status-partial/10 px-2.5 py-1.5 text-[11px] font-semibold text-status-partial"
+                  >
+                    <Icon name="info" size={12} class="shrink-0" />
+                    Sebagian selesai — sisa {Number(o.remains ?? 0).toLocaleString("id-ID")} otomatis
+                    direfund ke saldo.
+                  </p>
+                {/if}
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2.5 py-1 text-xs font-bold tabular-nums text-ink-700"
+                  >
+                    {o.quantity.toLocaleString("id-ID")} qty
+                  </span>
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-extrabold tabular-nums text-primary"
+                  >
+                    {formatRupiah(o.price)}
+                  </span>
+                  <span class="ml-auto flex items-center gap-1 text-xs text-ink-500">
+                    <Icon name="clock" size={12} />
+                    {timeAgo(o.createdAt)}
+                  </span>
+                  <span class="hidden text-xs font-medium text-ink-300 lg:inline">#{o.id}</span>
+                </div>
+              </div>
+            </SwipeRow>
+          </div>
+
+          <!-- Desktop: full card with status badge + actions -->
+          <div
+            class="hidden lg:flex group relative flex-col overflow-hidden rounded-2xl border bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-12px_rgba(15,23,42,0.14)] sm:p-5
+              {checked.has(o.id)
+              ? 'border-primary ring-1 ring-primary bg-primary/[0.03]'
+              : 'border-ink-100'}
+              {swept ? 'sweep-highlight' : ''} reveal"
+            style={revealDelay(i, 0, 35)}
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-extrabold leading-tight sm:text-[15px]">
+                  {serviceDisplayName(o.serviceName)}
+                </p>
+                <p class="mt-1 flex items-center gap-1 truncate text-xs text-ink-500">
+                  <Icon name="link" size={12} class="shrink-0 text-ink-300" />
+                  <span class="truncate" title={o.data}>{o.data}</span>
+                </p>
+              </div>
+              <span class="shrink-0 badge-flip">
+                {#key o.status}
+                  <StatusBadge status={o.status} />
+                {/key}
+              </span>
+            </div>
+
+            {#if o.status === "Partial"}
+              <p
+                class="mt-2 flex items-center gap-1.5 rounded-lg bg-status-partial/10 px-2.5 py-1.5 text-[11px] font-semibold text-status-partial"
               >
-                <Icon name="eye" size={14} />
-                Detail
-              </button>
-              <button
-                onclick={() => repeatOrder(o)}
-                class="inline-flex items-center justify-center gap-1.5 rounded-full border border-ink-200 bg-surface px-4 py-2 text-xs font-bold text-ink-700 transition hover:bg-ink-50 active:scale-95"
-              >
-                <Icon name="refresh" size={14} stroke={2} />
-                Pesan lagi
-              </button>
+                <Icon name="info" size={12} class="shrink-0" />
+                Sebagian selesai — sisa {Number(o.remains ?? 0).toLocaleString("id-ID")} otomatis direfund
+                ke saldo.
+              </p>
             {/if}
+
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <span
+                class="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2.5 py-1 text-xs font-bold tabular-nums text-ink-700"
+              >
+                {o.quantity.toLocaleString("id-ID")} qty
+              </span>
+              <span
+                class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-extrabold tabular-nums text-primary"
+              >
+                {formatRupiah(o.price)}
+              </span>
+              <span class="ml-auto flex items-center gap-1 text-xs text-ink-500">
+                <Icon name="clock" size={12} />
+                {timeAgo(o.createdAt)}
+              </span>
+              <span class="hidden text-xs font-medium text-ink-300 lg:inline">#{o.id}</span>
+            </div>
+
+            <div class="mt-3 flex items-center gap-2 border-t border-ink-100 pt-3">
+              {#if selectMode}
+                <button
+                  type="button"
+                  onclick={() => toggleCheck(o.id)}
+                  class="inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition active:scale-95
+                    {checked.has(o.id)
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-ink-200 text-ink-600 hover:border-ink-300'}"
+                >
+                  <span
+                    class="grid h-4 w-4 place-items-center rounded-full {checked.has(o.id)
+                      ? 'bg-white text-primary'
+                      : 'bg-ink-100'}"
+                  >
+                    <Icon name="check" size={10} stroke={3} />
+                  </span>
+                  {checked.has(o.id) ? "Terpilih" : "Pilih"}
+                </button>
+              {:else}
+                <button
+                  onclick={() => openDetail(o.id)}
+                  class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-ink-800 active:scale-95"
+                >
+                  <Icon name="eye" size={14} />
+                  Detail
+                </button>
+                <button
+                  onclick={() => repeatOrder(o)}
+                  class="inline-flex items-center justify-center gap-1.5 rounded-full border border-ink-200 bg-surface px-4 py-2 text-xs font-bold text-ink-700 transition hover:bg-ink-50 active:scale-95"
+                >
+                  <Icon name="refresh" size={14} stroke={2} />
+                  Pesan lagi
+                </button>
+              {/if}
+            </div>
           </div>
         </li>
       {/each}
