@@ -108,6 +108,21 @@ export const actions: Actions = {
     // 4. Rehash legacy non-bcrypt hash if needed
     await maybeRehashPassword(user.id, password);
 
+    // 4b. 2FA check for admin (P3-02): if TOTP enabled, require second factor
+    // We check raw DB flag (users.totp_enabled) — if true, don't create session yet.
+    const totpEnabled = !!(user as any).totpEnabled;
+    if (user.level === "Admin" && totpEnabled) {
+      // Set short-lived pending cookie (5 min) with userId, redirect to verify
+      cookies.set("totp_pending", String(user.id), {
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        maxAge: 300,
+      });
+      throw redirect(303, "/admin/2fa/verify");
+    }
+
     // 5. Create session row in DB
     const token = randomBytes(24).toString("hex");
     const sessionId = randomBytes(16).toString("hex");

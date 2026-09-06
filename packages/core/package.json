@@ -6,7 +6,8 @@
     "./pricing": "./src/pricing.ts",
     "./smmturk": "./src/smmturk.ts",
     "./copy": "./src/copy.ts",
-    "./rbac": "./src/rbac.ts"
+    "./rbac": "./src/rbac.ts",
+    "./totp": "./src/totp.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
