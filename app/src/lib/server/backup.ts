@@ -24,10 +24,15 @@ function parseDbUrl(url: string) {
 
 function escape(v: any): string {
   if (v === null || v === undefined) return "NULL";
-  if (v instanceof Date) return `'${v.toISOString().slice(0, 19).replace("T", " ")}'`;
+  if (v instanceof Date) {
+    const t = v.getTime();
+    if (Number.isNaN(t)) return `'0000-00-00 00:00:00'`;
+    return `'${v.toISOString().slice(0, 19).replace("T", " ")}'`;
+  }
   if (typeof v === "boolean") return v ? "1" : "0";
   if (typeof v === "number") return String(v);
   if (typeof v === "bigint") return String(v);
+  if (Buffer.isBuffer(v)) return `'${v.toString("binary").replace(/'/g, "''")}'`;
   const s = Buffer.from(String(v), "utf8").toString("binary").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\0/g, "\\0");
   return `'${s}'`;
 }
@@ -40,8 +45,7 @@ export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id:
   await mkdir(BACKUP_DIR, { recursive: true });
   const stamp = new Date()
     .toISOString()
-    .replace(/[-:T]/g, "")
-    .slice(0, 15)
+    .replace(/[-:T.]/g, "")
     .replace(/(\d{8})(\d{6})/, "$1-$2");
   const filename = `${process.env.SOCIO_DB_NAME ?? "socio_smm"}-${stamp}.sql.gz`;
   const filepath = path.join(BACKUP_DIR, filename);
