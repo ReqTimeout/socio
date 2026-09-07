@@ -43,10 +43,9 @@ export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id:
   if (!url) throw new Error("SOCIO_DB_URL not set");
 
   await mkdir(BACKUP_DIR, { recursive: true });
-  const stamp = new Date()
-    .toISOString()
-    .replace(/[-:T.]/g, "")
-    .replace(/(\d{8})(\d{6})/, "$1-$2");
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const stamp = `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}-${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}`;
   const filename = `${process.env.SOCIO_DB_NAME ?? "socio_smm"}-${stamp}.sql.gz`;
   const filepath = path.join(BACKUP_DIR, filename);
 
