@@ -6,6 +6,7 @@ import { runEmailQueue } from "./email-queue";
 import { runLightCron } from "./light";
 import { db } from "@socio/db";
 import { sql } from "drizzle-orm";
+import { runBackup } from "../lib/server/backup";
 
 let started = false;
 
@@ -19,6 +20,7 @@ let started = false;
  *  - auto-refund    : every 15 minutes (port cron/refund.php)
  *  - email-queue    : every 5 minutes (drain email_queue)
  *  - light          : every 15 minutes (expire deposits, seed poll)
+ *  - backup         : daily 03:00 server time
  */
 export function startCron(): void {
   if (started) return;
@@ -54,7 +56,12 @@ export function startCron(): void {
     runLightCron().catch((e) => console.error("[cron] light-cron failed:", e));
   });
 
-  console.log("[cron] schedules registered (sync, status, refill, refund, email, light)");
+  // Daily backup — 03:00 server time
+  cron.schedule("0 3 * * *", () => {
+    runBackup(0).catch((e) => console.error("[cron] backup failed:", e));
+  });
+
+  console.log("[cron] schedules registered (sync, status, refill, refund, email, light, backup)");
 }
 
 /** Manual trigger for provider sync (admin button). */
@@ -72,4 +79,9 @@ export async function triggerStatusPoll(): Promise<number> {
       sql`status IN ('Pending','In progress') AND (next_poll_at IS NULL OR next_poll_at <= NOW())`,
     )
     .then((r) => Number(r[0]?.c ?? 0));
+}
+
+/** Manual trigger for backup (admin button). */
+export async function triggerBackup(): Promise<void> {
+  await runBackup(0);
 }

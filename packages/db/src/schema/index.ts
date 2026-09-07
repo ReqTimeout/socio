@@ -18,3 +18,4 @@ export * from "./admin.js";
 export * from "./cron.js";
 export * from "./refundRequests.js";
 export * from "./broadcasts.js";
+export * from "./backups.js";

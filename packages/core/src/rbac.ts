@@ -55,6 +55,7 @@ export const ROUTE_PERMISSION: Record<string, string | null> = {
   "/admin/news": "news:read",
   "/admin/email": "email:read",
   "/admin/broadcast": "broadcast:send",
+  "/admin/backup": "backup:manage",
   "/admin/tickets": "tickets:read",
   "/admin/settings": "settings:read",
   "/admin/coupons": "coupons:read",
@@ -102,6 +103,7 @@ const PERMISSIONS: Record<AdminRole, Set<string>> = {
     "refund:request",
     "refund:approve",
     "refund:reject",
+    "backup:manage",
   ]),
   operator: new Set([
     "orders:read",
