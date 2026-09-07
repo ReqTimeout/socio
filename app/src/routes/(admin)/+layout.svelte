@@ -82,6 +82,7 @@
     { href: "/admin/banners", label: "Banner", icon: "image", group: "Konten & Sistem" },
     { href: "/admin/news", label: "Berita", icon: "megaphone", group: "Konten & Sistem" },
     { href: "/admin/email", label: "Email", icon: "mail", group: "Konten & Sistem" },
+    { href: "/admin/broadcast", label: "Broadcast", icon: "megaphone", group: "Konten & Sistem" },
     { href: "/admin/audit", label: "Audit Log", icon: "shield", group: "Konten & Sistem" },
     {
       href: "/admin/settings",
