@@ -211,7 +211,7 @@
     <span
       class="shrink-0 rounded-full bg-accent-50 px-2.5 py-1 text-xs font-bold tabular-nums text-accent-700"
     >
-      {fmt(pricePer1k)}<span class="font-medium text-accent-700">/1k</span>
+      {fmt(pricePer1k)}
     </span>
   </div>
 </svelte:element>

@@ -17,7 +17,7 @@
  * di-enable ulang otomatis — dilacak via kolom `note` tag [manual-off].
  */
 import { db } from "@socio/db";
-import { provider, providerServices, services, categories } from "@socio/db/schema";
+import { provider, providerServices, services, categories, adminNotifications } from "@socio/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { logSync } from "./provider-sync";
 import { getPricingRules } from "$lib/server/pricing";
@@ -161,6 +161,28 @@ export async function runServiceSync(providerId: number): Promise<void> {
       created,
       `updated=${updated} enabled=${enabled} disabled=${toDisable.length}`,
     );
+
+    // Notif admin kalau ada perubahan katalog (created/disabled/enabled).
+    // Update harga rutin tidak dinotif (spam) — hanya perubahan struktur katalog.
+    const hasChanges = created > 0 || toDisable.length > 0 || enabled > 0;
+    if (hasChanges) {
+      try {
+        const parts: string[] = [];
+        if (created > 0) parts.push(`${created} layanan baru`);
+        if (enabled > 0) parts.push(`${enabled} layanan kembali aktif`);
+        if (toDisable.length > 0) parts.push(`${toDisable.length} layanan nonaktif (hilang dari provider)`);
+        await db.insert(adminNotifications).values({
+          adminId: 0,
+          type: "system",
+          title: "Katalog layanan diperbarui",
+          message: `Sync otomatis: ${parts.join(" · ")}.`,
+          actionUrl: "/admin/services",
+          priority: created > 50 || toDisable.length > 50 ? "high" : "low",
+          createdAt: new Date(),
+        } as any);
+      } catch {}
+    }
+
     console.log(
       `[cron] service-sync: fetched=${psRows.length} created=${created} updated=${updated} enabled=${enabled} disabled=${toDisable.length}`,
     );

@@ -191,7 +191,7 @@
     serviceList.map((s) => ({
       value: s.id,
       label: s.serviceName,
-      hint: `${formatRupiah(pickPrice(s))}/1k`,
+      hint: formatRupiah(pickPrice(s)),
     })),
   );
 
@@ -336,9 +336,7 @@
             {#if selectedService}
               <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                 <span class="font-display font-bold text-accent-ink"
-                  >{formatRupiah(pickPrice(selectedService))}<span class="font-medium text-ink-500"
-                    >/1k</span
-                  ></span
+                  >{formatRupiah(pickPrice(selectedService))}</span
                 >
                 <span class="text-ink-500">·</span>
                 <span class="text-ink-500"
