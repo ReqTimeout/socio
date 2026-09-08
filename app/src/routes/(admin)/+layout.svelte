@@ -85,6 +85,7 @@
     { href: "/admin/broadcast", label: "Broadcast", icon: "megaphone", group: "Konten & Sistem" },
     { href: "/admin/audit", label: "Audit Log", icon: "shield", group: "Konten & Sistem" },
     { href: "/admin/backup", label: "Backup", icon: "database", group: "Konten & Sistem" },
+    { href: "/admin/health", label: "System Health", icon: "activity", group: "Konten & Sistem" },
     {
       href: "/admin/settings",
       keywords: ["pengaturan", "setelan", "konfigurasi"],
