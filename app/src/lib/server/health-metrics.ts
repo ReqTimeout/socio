@@ -87,6 +87,8 @@ export async function collectHealth() {
   // provider-sync dapat extra fetched/changed dari provider_sync_log.
   const cronStatus = await getCronStatus().catch(() => [] as any[]);
   const byKey = new Map((cronStatus as any[]).map((c: any) => [c.key, c]));
+  // Hati-hati: JANGAN spread `def` mentah — CRON_JOBS.run adalah fungsi (tidak serializable ke client).
+  const pub = (def: any) => ({ key: def.key, label: def.label, scheduleLabel: def.scheduleLabel, intervalMin: def.intervalMin, note: def.note, expr: def.expr });
   const cronHealth = CRON_JOBS.map((def) => {
     const live: any = byKey.get(def.key);
     if (!live?.last) {
@@ -95,7 +97,7 @@ export async function collectHealth() {
         const lastAt = new Date(syncLast.createdAt as any);
         const elapsed = (now - lastAt.getTime()) / 1000;
         return {
-          ...def,
+          ...pub(def),
           lastAt: lastAt.toISOString(),
           nextInSec: Math.max(0, Math.round(def.intervalMin * 60 - elapsed)),
           status: syncLast.status,
@@ -111,7 +113,7 @@ export async function collectHealth() {
           const lastAt = new Date((b.finishedAt ?? b.startedAt) as any);
           const elapsed = (now - lastAt.getTime()) / 1000;
           return {
-            ...def,
+            ...pub(def),
             lastAt: lastAt.toISOString(),
             nextInSec: Math.max(0, Math.round(86400 - elapsed)),
             status: b.status === "success" ? "ok" : b.status === "failed" ? "error" : b.status,
@@ -122,10 +124,10 @@ export async function collectHealth() {
           };
         }
       }
-      return { ...def, lastAt: null, nextInSec: def.intervalMin * 60, status: "never" as const, durationMs: null, fetched: null, changed: null, error24h: 0 };
+      return { ...pub(def), lastAt: null, nextInSec: def.intervalMin * 60, status: "never" as const, durationMs: null, fetched: null, changed: null, error24h: 0 };
     }
     const row: any = {
-      ...def,
+      ...pub(def),
       lastAt: live.last.at,
       nextInSec: live.nextInSec,
       status: live.running ? "running" : live.last.status,
