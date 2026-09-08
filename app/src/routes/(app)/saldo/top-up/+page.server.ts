@@ -1,9 +1,10 @@
 import { db } from "@socio/db";
-import { deposits } from "@socio/db/schema";
+import { deposits, users } from "@socio/db/schema";
 import { eq, desc, and, sql, gte, inArray } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { createHmac, randomInt } from "node:crypto";
 import { uploadToR2 } from "$lib/server/r2";
+import { depositInstructionMail, enqueueEmail } from "$lib/server/deposit-emails";
 import type { PageServerLoad, Actions } from "./$types";
 
 /** Bonus deposit (0.10 = 10%). Dikredit saat admin konfirmasi — port PHP lama `add-action.php:35`. */
@@ -162,7 +163,36 @@ export const actions: Actions = {
       img: "",
     });
 
-    // Manual BCA → return instruksi
+    // Manual BCA → return instruksi + email instruksi (async via queue)
+    const expireAt = new Date(Date.now() + 24 * 3600 * 1000);
+    try {
+      const [u] = await db
+        .select({ email: users.email, fullName: users.fullName })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (u?.email) {
+        const m = depositInstructionMail({
+          name: u.fullName || "Pengguna Socio.id",
+          amount: credited,
+          invoiceId,
+          expireAt,
+        });
+        await enqueueEmail({
+          to: u.email,
+          userId,
+          templateName: "deposit-instruction",
+          subject: m.subject,
+          body: m.text,
+          ctaText: "Lihat status deposit",
+          ctaUrl: "https://app.socio.id/saldo",
+          html: m.html,
+          priority: "high",
+        });
+      }
+    } catch {
+      // email best-effort — deposit tetap dibuat
+    }
     return { success: true, method: "manual", postAmount, credited, bonus, invoiceId };
   },
 

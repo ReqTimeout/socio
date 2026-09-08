@@ -65,3 +65,8 @@ CREATE TABLE IF NOT EXISTS cron_runs (
   finished_at DATETIME NULL,
   INDEX cr_job_idx (job, created_at)
 ) ENGINE=InnoDB;
+
+-- 5) deposits.reminder_sent (email reminder T-2h deposit Pending)
+SET @col_rs = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='deposits' AND COLUMN_NAME='reminder_sent');
+SET @sql_rs = IF(@col_rs=0, 'ALTER TABLE deposits ADD COLUMN reminder_sent TINYINT(1) NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE stmt_rs FROM @sql_rs; EXECUTE stmt_rs; DEALLOCATE PREPARE stmt_rs;

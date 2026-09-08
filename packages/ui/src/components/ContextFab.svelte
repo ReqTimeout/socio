@@ -96,7 +96,7 @@
   class="cfab-root pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-{position === 'bl' ? 'start' : 'end'} {posClass} {visibilityClass}"
   aria-hidden={false}
 >
-  <div class="cfab-stack pointer-events-auto relative mb-20 flex flex-col items-end gap-2 lg:mb-7">
+  <div class="cfab-stack pointer-events-auto relative mb-28 flex flex-col items-end gap-2 lg:mb-7">
     <!-- Secondary actions (slide up, stagger) -->
     {#if hasSecondary && open}
       <div
@@ -119,7 +119,7 @@
             style="--cfab-d: {60 + i * 40}ms"
           >
             <span
-              class="cfab-pill pointer-events-none hidden whitespace-nowrap rounded-full bg-ink-900/90 px-2.5 py-1 text-[11px] font-bold text-ink-50 shadow-md backdrop-blur sm:inline-block"
+              class="cfab-pill pointer-events-none whitespace-nowrap rounded-full bg-ink-900/90 px-2.5 py-1 text-[11px] font-bold text-ink-50 shadow-md backdrop-blur"
             >
               {a.label}
             </span>

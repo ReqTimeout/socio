@@ -2,7 +2,6 @@
   import {
     Button,
     ConfirmDialog,
-    ContextFab,
     CsvExportButton,
     EmptyState,
     Icon,
@@ -661,17 +660,8 @@
   </form>
 </ConfirmDialog>
 
-<!-- P1-01/02: ContextFab — quick action -->
-<ContextFab
-  primary={{ label: "Aksi Cepat", icon: "plus" }}
-  lgLabel="Aksi Cepat Deposit"
-  actions={[
-    { label: "Cari deposit", icon: "search", href: "?q=", tone: "neutral" },
-    { label: "Pending", icon: "clock", href: "?status=Pending", tone: "warning" },
-    { label: "Sukses", icon: "check", href: "?status=Success", tone: "success" },
-    { label: "Batal", icon: "x-circle", href: "?status=Batal", tone: "danger" },
-  ]}
-/>
+<!-- ContextFab dihapus: aksinya duplikat chips filter (Semua/Pending/Selesai/Batal)
+     + search bar; FAB hanya menutupi konten di mobile. -->
 
 <style>
   /* Reveal animation — transform + opacity only (GPU-friendly) */

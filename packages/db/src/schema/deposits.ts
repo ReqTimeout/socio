@@ -5,6 +5,7 @@ import {
   mysqlEnum,
   mysqlTable,
   text,
+  tinyint,
   varchar,
   index,
 } from "drizzle-orm/mysql-core";
@@ -33,6 +34,7 @@ export const deposits = mysqlTable(
     verifiedBy: int("verified_by"),
     verifiedAt: datetime("verified_at"),
     verificationNotes: text("verification_notes"),
+    reminderSent: tinyint("reminder_sent").notNull().default(0),
   },
   (t) => ({
     userIdx: index("user_id_idx").on(t.userId),

@@ -4,6 +4,7 @@ import { sql, desc, eq, and, ne } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import { creditAffiliateCommission } from "$lib/server/affiliate";
+import { depositSuccessMail, depositCanceledMail, enqueueEmail } from "$lib/server/deposit-emails";
 import { can, normalizeRole } from "@socio/core/rbac";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -183,6 +184,34 @@ export const actions: Actions = {
       detail: { amount: Number(d.amount), method: d.methodName, untukApa: d.untukApa },
       ip: (locals as any).ip,
     });
+
+    // Email sukses ke user (async via queue)
+    try {
+      const [u] = await db
+        .select({ email: users.email, fullName: users.fullName })
+        .from(users)
+        .where(eq(users.id, d.userId))
+        .limit(1);
+      if (u?.email) {
+        const m = depositSuccessMail({
+          name: u.fullName || "Pengguna Socio.id",
+          amount: Number(d.amount),
+          isReseller: isResellerActivation,
+        });
+        await enqueueEmail({
+          to: u.email,
+          userId: d.userId,
+          templateName: "deposit-success",
+          subject: m.subject,
+          body: m.text,
+          ctaText: isResellerActivation ? "Mulai order" : "Buat pesanan",
+          ctaUrl: "https://app.socio.id/pesan",
+          html: m.html,
+        });
+      }
+    } catch {
+      // email best-effort
+    }
     return {
       success:
         d.untukApa === "reseller"
@@ -221,6 +250,41 @@ export const actions: Actions = {
       entityId: id,
       ip: (locals as any).ip,
     });
+
+    // Email batal ke user (async via queue)
+    try {
+      const [dd] = await db
+        .select({ userId: deposits.userId, amount: deposits.amount })
+        .from(deposits)
+        .where(eq(deposits.id, id))
+        .limit(1);
+      if (dd?.userId) {
+        const [u] = await db
+          .select({ email: users.email, fullName: users.fullName })
+          .from(users)
+          .where(eq(users.id, dd.userId))
+          .limit(1);
+        if (u?.email) {
+          const m = depositCanceledMail({
+            name: u.fullName || "Pengguna Socio.id",
+            amount: Number(dd.amount),
+            reason: "ditolak admin — hubungi support jika keberatan",
+          });
+          await enqueueEmail({
+            to: u.email,
+            userId: dd.userId,
+            templateName: "deposit-canceled",
+            subject: m.subject,
+            body: m.text,
+            ctaText: "Top up lagi",
+            ctaUrl: "https://app.socio.id/saldo/topup",
+            html: m.html,
+          });
+        }
+      }
+    } catch {
+      // email best-effort
+    }
     return { success: `Deposit #${id} ditolak.` };
   },
 };

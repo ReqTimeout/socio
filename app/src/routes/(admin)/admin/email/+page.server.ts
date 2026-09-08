@@ -68,6 +68,24 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     db.select({ c: count() }).from(emailQueue).where(eq(emailQueue.status, "failed")),
   ]);
 
+  // Email transaksional (non-campaign): 20 terbaru untuk visibilitas admin
+  const txRows = await db
+    .select({
+      id: emailQueue.id,
+      to: emailQueue.recipientEmail,
+      template: emailQueue.templateName,
+      status: emailQueue.status,
+      attempts: emailQueue.attempts,
+      error: emailQueue.errorMessage,
+      sentAt: emailQueue.sentAt,
+      createdAt: emailQueue.createdAt,
+    })
+    .from(emailQueue)
+    .where(sql`${emailQueue.templateName} NOT LIKE 'campaign-%'`)
+    .orderBy(desc(emailQueue.id))
+    .limit(20)
+    .catch(() => [] as any[]);
+
   return {
     campaigns: campaigns.map((c) => {
       const t = trackById.get(Number(c.id));
@@ -99,6 +117,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     filterStatuses: [""].concat(STATUSES),
     queuePending: Number(pendingQ[0]?.c ?? 0),
     queueFailed: Number(failedQ[0]?.c ?? 0),
+    txRecent: (txRows as any[]).map((r) => ({
+      id: Number(r.id),
+      to: String(r.to ?? ""),
+      template: String(r.template ?? ""),
+      status: String(r.status ?? ""),
+      attempts: Number(r.attempts ?? 0),
+      error: r.error ? String(r.error).slice(0, 120) : null,
+      at: r.sentAt
+        ? (r.sentAt instanceof Date ? r.sentAt.toISOString() : String(r.sentAt))
+        : r.createdAt
+          ? (r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt))
+          : null,
+    })),
     templateTypes: TEMPLATE_TYPES,
     audiences: AUDIENCES.map((a) => ({
       value: a,

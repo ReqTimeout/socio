@@ -184,6 +184,53 @@
     </Button>
   </header>
 
+  <!-- Email transaksional (deposit, dsb) — 20 terbaru, biar admin tahu sudah terkirim -->
+  <details class="rounded-2xl border border-ink-100 bg-surface">
+    <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3">
+      <span class="flex items-center gap-2 text-sm font-bold">
+        <Icon name="send" size={15} />
+        Email Transaksional
+        <span class="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-bold text-ink-600"
+          >{data.txRecent.length} terbaru</span
+        >
+      </span>
+      <span class="text-xs text-ink-400">instruksi · reminder · sukses · batal deposit</span>
+    </summary>
+    <div class="border-t border-ink-100">
+      {#if data.txRecent.length === 0}
+        <p class="px-4 py-6 text-center text-sm text-ink-400">Belum ada email transaksional.</p>
+      {:else}
+        <ul class="divide-y divide-ink-50">
+          {#each data.txRecent as t (t.id)}
+            <li class="flex items-center justify-between gap-3 px-4 py-2.5">
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold">{t.template}</p>
+                <p class="truncate text-xs text-ink-500">ke {t.to}</p>
+                {#if t.error}
+                  <p class="truncate font-mono text-[11px] text-danger">{t.error}</p>
+                {/if}
+              </div>
+              <div class="shrink-0 text-right">
+                <span
+                  class="rounded-full px-2 py-0.5 text-[11px] font-bold {t.status === 'sent'
+                    ? 'bg-success/10 text-success'
+                    : t.status === 'failed'
+                      ? 'bg-danger/10 text-danger'
+                      : 'bg-amber-100 text-amber-700'}">{t.status}</span
+                >
+                {#if t.at}
+                  <p class="mt-0.5 text-[11px] tabular-nums text-ink-400">
+                    {new Date(t.at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                  </p>
+                {/if}
+              </div>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+  </details>
+
   <div class="flex flex-wrap items-center justify-between gap-2">
     <div class="flex flex-wrap gap-1.5">
       {#each data.filterStatuses as s (s || "all")}
