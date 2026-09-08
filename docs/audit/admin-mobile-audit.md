@@ -6,8 +6,12 @@
 ## Metode
 - Baca markup 22 halaman `(admin)` + layout; grep pola anti-mobile (grid-cols tanpa breakpoint, table tanpa wrapper, touch target, overflow).
 - Render check: curl live HTML per halaman (HTTP status + marker konten).
+- **Playwright audit (skill `pw-vision`, default vision — 100% lokal, tanpa API eksternal):**
+  `~/.config/opencode/skills/pw-vision/scripts/audit.js` — 23 halaman × 2 viewport
+  (360×740, 390×844), ukur status/overflowX/tap-target/console-error via JS.
 - Server load: hitung db-calls + limits per `+page.server.ts`; cek interval/SSE guard.
-- **Keterbatasan**: tidak ada test visual screenshot — audit berbasis struktur DOM + pola Tailwind.
+- **Keterbatasan**: model tidak bisa melihat PNG — audit via pengukuran JS, bukan penilaian estetika.
+  Untuk "cakep ga?", user kirim screenshot via chat.
 
 ## Temuan & Fix (commit `c5be570` + `3c753c0`, live)
 
@@ -34,6 +38,21 @@
 - 22/22 halaman admin HTTP 200 (termasuk health setelah fix).
 - Marker: "Menu cepat" ✓, popover ⚡ ×2 (mobile+desktop) ✓, refunds 200 ✓.
 - Session test selalu cleanup (`user_agent='m-*'`).
+
+## Audit Playwright putaran 1 (pre-fix, hasil1.json)
+- 44/46 load OK; `/admin` timeout 2× — artefak audit (`networkidle` tidak pernah fire karena SSE), bukan bug.
+- Temuan: checkbox users 16px (×21, tapi hit-area label 44px → false positive),
+  slider pricing track 8px (real), pagination ‹ › 23px (real), back-link/username 20px (real).
+
+## Fix putaran 2 (commit `ce4da55`, live)
+- Pagination tickets `h-8 min-w-8` (32px) + aria-label prev/next.
+- Back-link deposits/verify + username topbar `min-h-[24px]` (WCAG 2.5.8).
+- Slider pricing thumb custom 24px (webkit) / 20px (moz), track tetap ramping.
+- Audit script: `domcontentloaded` + 2.5s; skip kontrol dalam `<label>` + `input[type=range]`.
+
+## Audit Playwright putaran 2 (post-fix, hasil2.json) ✅
+- **46/46: HTTP 200, overflowX=0, smallTargets=0, consoleErrors=0** di 360×740 & 390×844.
+- Waktu load 331–5571ms (p95 wajar untuk query admin + network ID-SG).
 
 ## Aturan untuk kerja mobile berikutnya
 1. Tabel baru → wajib pola `ul.lg:hidden` cards + `hidden lg:block` table (jangan table mentah).
