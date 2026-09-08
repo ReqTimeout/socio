@@ -28,7 +28,7 @@
         {/if}
       </p>
     </div>
-    <a href="/admin/deposits" class="text-sm font-bold text-primary hover:underline">← Semua deposit</a>
+    <a href="/admin/deposits" class="inline-flex min-h-[24px] items-center text-sm font-bold text-primary hover:underline">← Semua deposit</a>
   </div>
 
   {#if form?.error}

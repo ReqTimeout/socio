@@ -416,7 +416,8 @@
         >
           <a
             href={pageHref(Math.max(1, data.page - 1))}
-            class="inline-flex h-7 items-center justify-center rounded-full border border-ink-200 bg-surface px-2 text-xs font-bold text-ink-600 {data.page ===
+            aria-label="Halaman sebelumnya"
+            class="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-ink-200 bg-surface px-2 text-xs font-bold text-ink-600 {data.page ===
             1
               ? 'pointer-events-none opacity-40'
               : 'hover:bg-ink-50'}">‹</a
@@ -436,7 +437,8 @@
           {/each}
           <a
             href={pageHref(Math.min(data.pages, data.page + 1))}
-            class="inline-flex h-7 items-center justify-center rounded-full border border-ink-200 bg-surface px-2 text-xs font-bold text-ink-600 {data.page ===
+            aria-label="Halaman berikutnya"
+            class="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-ink-200 bg-surface px-2 text-xs font-bold text-ink-600 {data.page ===
             data.pages
               ? 'pointer-events-none opacity-40'
               : 'hover:bg-ink-50'}">›</a

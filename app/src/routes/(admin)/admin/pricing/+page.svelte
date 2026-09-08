@@ -382,7 +382,7 @@
               </button>
             </div>
 
-            <!-- Slider -->
+            <!-- Slider (thumb 24px via CSS agar mudah digeser di mobile) -->
             <input
               type="range"
               min={SLIDER_MIN}
@@ -390,7 +390,7 @@
               step="5"
               bind:value={markup[lv]}
               disabled={!active[lv]}
-              class="h-2 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r from-ink-200 via-primary-200 to-accent-200 accent-primary disabled:opacity-40"
+              class="markup-slider h-2 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r from-ink-200 via-primary-200 to-accent-200 accent-primary disabled:opacity-40"
               style="accent-color: var(--color-{lv === 'Member'
                 ? 'ink'
                 : lv === 'Agen'
@@ -672,3 +672,32 @@
     </div>
   </div>
 </section>
+
+<style>
+  /* Thumb 24px agar slider mudah digeser di layar sentuh (track tetap ramping) */
+  .markup-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    background: #fff;
+    border: 2px solid var(--color-primary-500);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+    cursor: pointer;
+  }
+  .markup-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 9999px;
+    background: #fff;
+    border: 2px solid var(--color-primary-500);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+    cursor: pointer;
+  }
+  .markup-slider:disabled::-webkit-slider-thumb,
+  .markup-slider:disabled::-moz-range-thumb {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+</style>

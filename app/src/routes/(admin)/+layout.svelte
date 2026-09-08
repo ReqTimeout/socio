@@ -494,7 +494,7 @@
           {/if}
         </div>
         <NotifBell count={data.unreadCount ?? 0} href="/notif" />
-        <a href="/akun" class="max-w-[90px] truncate text-sm font-medium text-ink-500">@{data.admin.username}</a>
+        <a href="/akun" class="inline-flex min-h-[24px] max-w-[90px] items-center truncate text-sm font-medium text-ink-500">@{data.admin.username}</a>
       </div>
     </header>
 
