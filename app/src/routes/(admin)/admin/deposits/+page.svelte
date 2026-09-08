@@ -163,6 +163,8 @@
           Reset
         </a>
       {/if}
+      <CsvExportButton href="/admin/deposits/export" label="CSV" size="sm" />
+      <CsvExportButton href="/admin/deposits/export-pdf" label="PDF" size="sm" />
     </form>
   </header>
 

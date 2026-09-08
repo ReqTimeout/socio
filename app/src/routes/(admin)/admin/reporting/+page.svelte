@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Chart, StatCard, Icon, toast } from "@socio/ui";
+  import { Chart, StatCard, Icon, toast, CsvExportButton } from "@socio/ui";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
@@ -128,6 +128,7 @@
         </a>
       {/each}
     </div>
+    <CsvExportButton href="/admin/reporting/export-pdf" label="Export PDF" size="sm" />
   </div>
 
   {#if data.overview.totalOrders === 0}

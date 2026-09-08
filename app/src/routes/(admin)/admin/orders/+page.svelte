@@ -198,6 +198,8 @@
       <Icon name="plus" size={12} stroke={2.5} />
       Manual
     </a>
+    <CsvExportButton href="/admin/orders/export" label="CSV" size="sm" />
+    <CsvExportButton href="/admin/orders/export-pdf" label="PDF" size="sm" />
     <form method="GET" class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
       {#if data.status}<input type="hidden" name="status" value={data.status} />{/if}
       <div class="relative w-full min-w-0 flex-1 sm:w-80">
