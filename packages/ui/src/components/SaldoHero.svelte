@@ -83,7 +83,7 @@
       </p>
       <a
         href={historyHref}
-        class="text-white/60 hover:text-white transition"
+        class="-m-2 rounded-full p-2 text-white/60 transition hover:text-white"
         aria-label="Riwayat"
       >
         <Icon name="list" size={18} />
