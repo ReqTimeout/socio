@@ -165,7 +165,7 @@
               ? 'bg-emerald-500'
               : 'bg-amber-500'}"
           ></span>
-          SMMturk {data.hasSmmturkKey
+          Provider {data.hasSmmturkKey
             ? data.hasSmmturkProvider
               ? "terhubung"
               : "key ada — belum connect"
@@ -191,7 +191,7 @@
               const r = result as any;
               const ok = result.type !== "failure";
               toast(
-                extractActionMsg(r.data) ?? (ok ? "Provider SMMturk ditambahkan." : "Gagal"),
+                extractActionMsg(r.data) ?? (ok ? "Provider ditambahkan." : "Gagal"),
                 ok ? "success" : "error",
               );
               if (ok) await applyAction(result);
@@ -199,7 +199,7 @@
         >
           <Button size="md">
             <Icon name="zap" size={16} stroke={2.5} class="-ml-0.5" />
-            Hubungkan SMMturk
+            Hubungkan Provider
           </Button>
         </form>
       {/if}
@@ -257,7 +257,7 @@
       <!-- Mobile: stacked cards -->
       <ul class="divide-y divide-ink-100 lg:hidden">
         {#each data.providers as p, i (p.id)}
-          {@const isPrimary = p.name === "SMMturk" || Number(p.services_count) > 0}
+          {@const isPrimary = p.name === "Provider Utama" || Number(p.services_count) > 0}
           <li class="reveal p-3 {isPrimary ? 'bg-violet-50/30' : ''}" style="--d:{i * 40}ms">
             <div class="flex items-start justify-between gap-3">
               <div class="flex min-w-0 items-center gap-2.5">
@@ -379,7 +379,7 @@
           </thead>
           <tbody class="divide-y divide-ink-100">
             {#each data.providers as p, i (p.id)}
-              {@const isPrimary = p.name === "SMMturk" || Number(p.services_count) > 0}
+              {@const isPrimary = p.name === "Provider Utama" || Number(p.services_count) > 0}
               <tr
                 class="reveal transition-colors hover:bg-ink-50/60 {isPrimary
                   ? 'bg-violet-50/20'
@@ -556,7 +556,7 @@
             type="text"
             name="name"
             required
-            placeholder="cth. SMMturk"
+            placeholder="cth. Provider Utama"
             class="w-full rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
           />
         </label>

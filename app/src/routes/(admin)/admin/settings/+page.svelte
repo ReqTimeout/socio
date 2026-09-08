@@ -70,7 +70,7 @@
   // System status indicators
   const checks = $derived([
     { label: "Database", ok: data.system.hasDbUrl },
-    { label: "SMMturk key", ok: data.system.hasSmmturk },
+    { label: "Provider key", ok: data.system.hasSmmturk },
     { label: "Resend", ok: data.system.hasResend },
     { label: "Job queue", ok: true, detail: `${data.system.queuePending} pending` },
     { label: "ENV", ok: data.system.nodeEnv === "production", detail: data.system.nodeEnv },

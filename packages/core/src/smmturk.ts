@@ -54,7 +54,7 @@ async function postForm(
   } catch {
     throw new Error(`SMMturk non-JSON response: ${text.slice(0, 200)}`);
   }
-  if (json.error) throw new Error(`SMMturk error: ${JSON.stringify(json.error)}`);
+  if (json.error) throw new Error(`Provider error: ${JSON.stringify(json.error)}`);
   return json;
 }
 
