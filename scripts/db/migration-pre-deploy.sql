@@ -51,3 +51,17 @@ PREPARE stmt2 FROM @sql2; EXECUTE stmt2; DEALLOCATE PREPARE stmt2;
 SET @col3 = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='deposits' AND COLUMN_NAME='verification_notes');
 SET @sql3 = IF(@col3=0, 'ALTER TABLE deposits ADD COLUMN verification_notes TEXT NULL', 'SELECT 1');
 PREPARE stmt3 FROM @sql3; EXECUTE stmt3; DEALLOCATE PREPARE stmt3;
+
+-- 4) cron_runs (cron monitoring — /admin/cron, semua 8 job tercatat)
+CREATE TABLE IF NOT EXISTS cron_runs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  job VARCHAR(50) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'running',
+  duration_ms INT NOT NULL DEFAULT 0,
+  detail VARCHAR(500) NULL,
+  error TEXT NULL,
+  triggered_by INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  finished_at DATETIME NULL,
+  INDEX cr_job_idx (job, created_at)
+) ENGINE=InnoDB;

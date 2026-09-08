@@ -91,6 +91,7 @@
     { href: "/admin/audit", label: "Audit Log", icon: "shield", group: "Konten & Sistem" },
     { href: "/admin/backup", label: "Backup", icon: "database", group: "Konten & Sistem" },
     { href: "/admin/health", label: "System Health", icon: "activity", group: "Konten & Sistem" },
+    { href: "/admin/cron", label: "Cron Jobs", icon: "clock", group: "Konten & Sistem" },
     {
       href: "/admin/settings",
       keywords: ["pengaturan", "setelan", "konfigurasi"],

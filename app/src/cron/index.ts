@@ -1,72 +1,55 @@
 import cron from "node-cron";
+import { CRON_JOBS } from "./jobs";
+import { runJob } from "../lib/server/cron-runs";
 import { runProviderSync, runAllProviderSync } from "./provider-sync";
-import { runStatusPolling, runRefillPolling } from "./status-polling";
-import { runAutoRefund } from "./refund";
-import { runEmailQueue } from "./email-queue";
-import { runLightCron } from "./light";
+import { runStatusPolling } from "./status-polling";
+import { runBackup } from "../lib/server/backup";
 import { db } from "@socio/db";
 import { sql } from "drizzle-orm";
-import { runBackup } from "../lib/server/backup";
+
+export { runBackup };
 
 let started = false;
 
 /**
- * Start all cron schedules. Idempotent — called once from hooks.server.ts
- * when SOCIO_CRON_ENABLED=1.
- * Schedules:
- *  - provider-sync  : every hour (catalog diff)
- *  - status-polling : every minute (stratified)
- *  - refill-polling : every 5 minutes (status Refilling)
- *  - auto-refund    : every 15 minutes (port cron/refund.php)
- *  - email-queue    : every 5 minutes (drain email_queue)
- *  - light          : every 15 minutes (expire deposits, seed poll)
- *  - backup         : daily 03:00 server time
+ * Start all cron schedules from CRON_JOBS registry. Idempotent — called once
+ * from hooks.server.ts when SOCIO_CRON_ENABLED=1.
+ * Setiap run tercatat ke `cron_runs` (status/durasi/error) via runJob.
+ * Job "chained" (service-catalog) TIDAK dijadwalkan sendiri — jalan otomatis
+ * di dalam runProviderSync setelah mirror katalog selesai.
  */
 export function startCron(): void {
   if (started) return;
   started = true;
 
-  // Provider catalog sync — hourly (semua provider aktif)
-  cron.schedule("0 * * * *", () => {
-    runAllProviderSync().catch((e) => console.error("[cron] provider-sync failed:", e));
-  });
+  for (const def of CRON_JOBS) {
+    if (def.expr === "chained") continue;
+    cron.schedule(def.expr, () => {
+      runJob(def.key, () => def.run(0)).catch((e) =>
+        console.error(`[cron] ${def.key} failed:`, e?.message ?? e),
+      );
+    });
+  }
 
-  // Order status polling — every minute
-  cron.schedule("* * * * *", () => {
-    runStatusPolling().catch((e) => console.error("[cron] status-polling failed:", e));
-  });
-
-  // Refill status polling — every 5 minutes (port status_refill.php)
-  cron.schedule("*/5 * * * *", () => {
-    runRefillPolling().catch((e) => console.error("[cron] refill-polling failed:", e));
-  });
-
-  // Auto refund Error/Partial/Canceled — every 15 minutes (port refund.php)
-  cron.schedule("*/15 * * * *", () => {
-    runAutoRefund().catch((e) => console.error("[cron] auto-refund failed:", e));
-  });
-
-  // Email queue drain — every 5 minutes (campaign, transactional queued)
-  cron.schedule("*/5 * * * *", () => {
-    runEmailQueue().catch((e) => console.error("[cron] email-queue failed:", e));
-  });
-
-  // Light housekeeping — every 15 minutes
-  cron.schedule("*/15 * * * *", () => {
-    runLightCron().catch((e) => console.error("[cron] light-cron failed:", e));
-  });
-
-  // Daily backup — 03:00 server time
-  cron.schedule("0 3 * * *", () => {
-    runBackup(0).catch((e) => console.error("[cron] backup failed:", e));
-  });
-
-  console.log("[cron] schedules registered (sync, status, refill, refund, email, light, backup)");
+  console.log(`[cron] ${CRON_JOBS.length} job terdaftar (1 chained):`, CRON_JOBS.map((j) => j.key).join(", "));
 }
 
-/** Manual trigger for provider sync (admin button). */
+/** Manual trigger for provider sync (admin button / halaman providers). */
 export async function triggerProviderSync(providerId?: number): Promise<void> {
   await (providerId ? runProviderSync(providerId) : runAllProviderSync());
+}
+
+/** Manual trigger cron job by key — dipakai tombol /admin/cron (background). */
+export async function triggerCronJob(key: string, adminId: number): Promise<string> {
+  const { getJobDef } = await import("./jobs");
+  const { isJobRunning } = await import("../lib/server/cron-runs");
+  const def = getJobDef(key);
+  if (!def) throw new Error("Job tidak dikenal.");
+  if (isJobRunning(key)) throw new Error(`Job ${def.label} masih berjalan.`);
+  void runJob(key, () => def.run(adminId), adminId).catch((e) =>
+    console.error(`[cron] manual ${key} failed:`, e?.message ?? e),
+  );
+  return def.label;
 }
 
 /** Manual trigger for a status poll pass. */

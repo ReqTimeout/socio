@@ -6,15 +6,8 @@
 import { db } from "@socio/db";
 import { providerSyncLog, backupLogs, jobQueue } from "@socio/db/schema";
 import { sql, desc, gte, eq, count } from "drizzle-orm";
-
-type CronExpected = { key: string; label: string; intervalMin: number; note: string };
-
-const CRON_DEFS: CronExpected[] = [
-  { key: "provider-sync", label: "Provider Sync", intervalMin: 60, note: "Sync katalog provider (diff hash)" },
-  { key: "status-poll", label: "Status Poll", intervalMin: 1, note: "Poll order Pending/Processing (stratified)" },
-  { key: "auto-refund", label: "Auto Refund", intervalMin: 15, note: "Auto-refund Error/Partial/Canceled" },
-  { key: "backup", label: "Backup", intervalMin: 1440, note: "Daily 03:00 mysqldump + gzip" },
-];
+import { CRON_JOBS } from "../../cron/jobs";
+import { getCronStatus } from "./cron-runs";
 
 async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
@@ -90,47 +83,63 @@ export async function collectHealth() {
 
   const syncLast = syncRows[0] as any | undefined;
 
-  // Cron health: derive dari providerSyncLog + backupLogs + fallback never
-  const cronHealth = CRON_DEFS.map((def) => {
-    if (def.key === "provider-sync") {
-      if (!syncLast)
-        return { ...def, lastAt: null, nextInSec: def.intervalMin * 60, status: "never" as const, durationMs: null, error24h: Number(providerErr24h[0]?.c ?? 0) };
-      const lastAt = new Date(syncLast.createdAt as any);
-      const elapsed = (now - lastAt.getTime()) / 1000;
-      const nextInSec = Math.max(0, def.intervalMin * 60 - elapsed);
-      return {
-        ...def,
-        lastAt: lastAt.toISOString(),
-        nextInSec: Math.round(nextInSec),
-        status: syncLast.status as "ok" | "error" | "partial",
-        durationMs: Number(syncLast.durationMs ?? 0),
-        fetched: Number(syncLast.fetched ?? 0),
-        changed: Number(syncLast.changed ?? 0),
-        error24h: Number(providerErr24h[0]?.c ?? 0),
-      };
+  // Cron health: data REAL dari cron_runs (semua 8 job tercatat sejak deploy).
+  // provider-sync dapat extra fetched/changed dari provider_sync_log.
+  const cronStatus = await getCronStatus().catch(() => [] as any[]);
+  const byKey = new Map((cronStatus as any[]).map((c: any) => [c.key, c]));
+  const cronHealth = CRON_JOBS.map((def) => {
+    const live: any = byKey.get(def.key);
+    if (!live?.last) {
+      // Belum ada run tercatat (fresh deploy) — fallback ke sumber lama
+      if (def.key === "provider-sync" && syncLast) {
+        const lastAt = new Date(syncLast.createdAt as any);
+        const elapsed = (now - lastAt.getTime()) / 1000;
+        return {
+          ...def,
+          lastAt: lastAt.toISOString(),
+          nextInSec: Math.max(0, Math.round(def.intervalMin * 60 - elapsed)),
+          status: syncLast.status,
+          durationMs: Number(syncLast.durationMs ?? 0),
+          fetched: Number(syncLast.fetched ?? 0),
+          changed: Number(syncLast.changed ?? 0),
+          error24h: Number(providerErr24h[0]?.c ?? 0),
+        };
+      }
+      if (def.key === "backup") {
+        const b = (backupRow as any[])[0] as any | undefined;
+        if (b) {
+          const lastAt = new Date((b.finishedAt ?? b.startedAt) as any);
+          const elapsed = (now - lastAt.getTime()) / 1000;
+          return {
+            ...def,
+            lastAt: lastAt.toISOString(),
+            nextInSec: Math.max(0, Math.round(86400 - elapsed)),
+            status: b.status === "success" ? "ok" : b.status === "failed" ? "error" : b.status,
+            durationMs: b.startedAt && b.finishedAt ? new Date(b.finishedAt as any).getTime() - new Date(b.startedAt as any).getTime() : null,
+            fetched: null,
+            changed: null,
+            error24h: 0,
+          };
+        }
+      }
+      return { ...def, lastAt: null, nextInSec: def.intervalMin * 60, status: "never" as const, durationMs: null, fetched: null, changed: null, error24h: 0 };
     }
-    if (def.key === "backup") {
-      const b = (backupRow as any[])[0] as any | undefined;
-      if (!b)
-        return { ...def, lastAt: null, nextInSec: 86400, status: "never" as const, durationMs: null, error24h: 0 };
-      const lastAt = new Date((b.finishedAt ?? b.startedAt) as any);
-      const elapsed = (now - lastAt.getTime()) / 1000;
-      const nextInSec = Math.max(0, 86400 - elapsed);
-      return {
-        ...def,
-        lastAt: lastAt.toISOString(),
-        nextInSec: Math.round(nextInSec),
-        status: (b.status === "success" ? "ok" : b.status === "failed" ? "error" : b.status) as any,
-        durationMs: b.startedAt && b.finishedAt ? new Date(b.finishedAt as any).getTime() - new Date(b.startedAt as any).getTime() : null,
-        fetched: null,
-        changed: null,
-        error24h: 0,
-      };
+    const row: any = {
+      ...def,
+      lastAt: live.last.at,
+      nextInSec: live.nextInSec,
+      status: live.running ? "running" : live.last.status,
+      durationMs: live.last.durationMs,
+      error24h: live.error24h,
+    };
+    if (def.key === "provider-sync" && syncLast) {
+      row.fetched = Number(syncLast.fetched ?? 0);
+      row.changed = Number(syncLast.changed ?? 0);
+    } else {
+      row.fetched = null;
+      row.changed = null;
     }
-    // status-poll & auto-refund — belum ada log terpisah, anggap running bila polling aktif
-    const fallback = now - 5 * 60 * 1000;
-    const lastAt = syncLast ? new Date(syncLast.createdAt as any).toISOString() : new Date(fallback).toISOString();
-    return { ...def, lastAt, nextInSec: 0, status: "ok" as const, durationMs: null, error24h: 0 };
+    return row;
   });
 
   // Queue depth

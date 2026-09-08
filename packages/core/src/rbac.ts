@@ -57,6 +57,7 @@ export const ROUTE_PERMISSION: Record<string, string | null> = {
   "/admin/broadcast": "broadcast:send",
   "/admin/backup": "backup:manage",
   "/admin/health": "health:read",
+  "/admin/cron": "health:read",
   "/admin/tickets": "tickets:read",
   "/admin/settings": "settings:read",
   "/admin/coupons": "coupons:read",
