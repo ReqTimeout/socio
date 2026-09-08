@@ -9,6 +9,8 @@
 
   // M4: admin system notifications (katalog sync, system events) — popover
   let sysNotifOpen = $state(false);
+  // Sheet "Lainnya": search filter biar menu panjang gampang dicari
+  let menuQuery = $state("");
   const sysNotifs = $derived((data as any).adminNotifs ?? []);
   const sysNotifCount = $derived((data as any).adminNotifCount ?? 0);
 
@@ -595,9 +597,9 @@
   </div>
   <!-- /wrapper flex-col -->
 
-  <!-- ===== Mobile: Floating Bottom Dock — iPhone premium glass pill ===== -->
+  <!-- ===== Mobile: Floating Bottom Dock — solid + border animasi ringan ===== -->
   <nav
-    class="glass fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 items-center gap-1 rounded-[28px] p-2 lg:hidden"
+    class="dock-live fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 items-center gap-1 rounded-[28px] border border-ink-200/70 bg-surface p-2 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.25)] lg:hidden"
     style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));"
     aria-label="Menu admin utama"
   >
@@ -727,14 +729,57 @@
         role="dialog"
         aria-modal="true"
         aria-label="Menu lainnya"
-        class="w-full max-w-md rounded-t-2xl bg-surface p-2 shadow-card-hover [animation:slide-up_0.25s_var(--ease-out-soft)]"
+        class="flex max-h-[85dvh] w-full max-w-md flex-col rounded-t-2xl bg-surface shadow-card-hover [animation:slide-up_0.25s_var(--ease-out-soft)]"
         style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));"
       >
-        <div class="mx-auto mb-2 h-1 w-10 rounded-full bg-ink-200"></div>
-        <div class="px-3 py-2 text-xs font-semibold text-ink-400">Menu lainnya</div>
-        <nav class="space-y-3">
+        <div class="mx-auto mb-1 mt-2 h-1 w-10 shrink-0 rounded-full bg-ink-200"></div>
+        <div class="flex shrink-0 items-center gap-2 px-3 pb-2">
+          <div class="relative flex-1">
+            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-400">
+              <Icon name="search" size={14} />
+            </span>
+            <input
+              type="search"
+              bind:value={menuQuery}
+              placeholder="Cari menu…"
+              aria-label="Cari menu"
+              class="h-10 w-full rounded-full border border-ink-200 bg-ink-50/60 pl-9 pr-8 text-sm outline-none transition-colors placeholder:text-ink-400 focus:border-primary-400 focus:bg-surface"
+            />
+            {#if menuQuery}
+              <button
+                type="button"
+                onclick={() => (menuQuery = "")}
+                class="absolute inset-y-0 right-1 grid w-8 place-items-center rounded-full text-ink-400 hover:text-ink-700"
+                aria-label="Hapus pencarian"
+              >
+                <Icon name="x" size={14} />
+              </button>
+            {/if}
+          </div>
+          <button
+            type="button"
+            onclick={() => {
+              sheetOpen = false;
+              menuQuery = "";
+            }}
+            class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-ink-100 text-ink-600 transition-colors hover:bg-ink-200"
+            aria-label="Tutup menu"
+          >
+            <Icon name="x" size={16} stroke={2.5} />
+          </button>
+        </div>
+        <div class="px-3 pb-1 pt-1 text-xs font-semibold text-ink-400">Menu lainnya</div>
+        <nav class="min-h-0 flex-1 space-y-3 overflow-y-auto px-1 pb-2">
           {#each ["Operasional", "Konten & Sistem"] as groupName (groupName)}
-            {@const items = visibleMoreNav.filter((n) => n.group === groupName)}
+            {@const items = visibleMoreNav.filter(
+              (n) =>
+                n.group === groupName &&
+                (menuQuery.trim() === "" ||
+                  n.label.toLowerCase().includes(menuQuery.trim().toLowerCase()) ||
+                  (n.keywords ?? []).some((k: string) =>
+                    k.toLowerCase().includes(menuQuery.trim().toLowerCase()),
+                  )),
+            )}
             {#if items.length > 0}
               <div>
                 <div
@@ -773,6 +818,17 @@
               </div>
             {/if}
           {/each}
+          {#if menuQuery.trim() !== "" && visibleMoreNav.filter(
+            (n) =>
+              n.label.toLowerCase().includes(menuQuery.trim().toLowerCase()) ||
+              (n.keywords ?? []).some((k: string) =>
+                k.toLowerCase().includes(menuQuery.trim().toLowerCase()),
+              ),
+          ).length === 0}
+            <p class="px-3 py-6 text-center text-sm text-ink-400">
+              Tidak ada menu "{menuQuery.trim()}".
+            </p>
+          {/if}
         </nav>
         <div class="my-2 border-t border-ink-100"></div>
         <a
@@ -819,9 +875,39 @@
       transform: translateY(0);
     }
   }
+  /* Border gradient animasi ringan di dock (transform/paint area kecil, GPU-aman) */
+  .dock-live::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 29px;
+    padding: 1.5px;
+    background: linear-gradient(
+      120deg,
+      var(--color-primary-300),
+      var(--color-accent-300),
+      var(--color-primary-300)
+    );
+    background-size: 220% 100%;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: dock-sheen 7s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes dock-sheen {
+    to {
+      background-position: 220% 0;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     [style*="animation"] {
       animation: none !important;
+    }
+    .dock-live::before {
+      animation: none;
     }
   }
 </style>

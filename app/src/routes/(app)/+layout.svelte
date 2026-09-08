@@ -53,7 +53,8 @@
   ];
 
   // Sidebar nav (desktop) — lengkap + 8 item (sesuai audit UI/UX)
-  const sidebarItems = [
+  // Item "Dashboard Admin" hanya untuk level Admin (RBAC di server tetap berlaku).
+  const sidebarBase = [
     { href: "/", label: "Home", icon: "home", section: "Menu" },
     { href: "/pesanan", label: "Pesanan", icon: "receipt", section: "Menu" },
     { href: "/saldo", label: "Saldo", icon: "wallet", section: "Menu" },
@@ -63,6 +64,12 @@
     { href: "/akun", label: "Akun", icon: "user", section: "Lainnya" },
     { href: "/notif", label: "Notifikasi", icon: "bell", section: "Lainnya" },
   ];
+  const isAdminUser = $derived((data.user as any)?.level === "Admin");
+  const sidebarItems = $derived(
+    isAdminUser
+      ? [...sidebarBase, { href: "/admin", label: "Dashboard Admin", icon: "shield", section: "Lainnya" }]
+      : sidebarBase,
+  );
 
   // Judul halaman untuk desktop header (breadcrumb ringan)
   const pageTitles: Record<string, string> = {
@@ -279,6 +286,16 @@
           <span class="flex items-center gap-2"><Icon name="ticket" size={16} /> Tiket bantuan</span
           ><span class="text-ink-500">›</span>
         </a>
+        {#if isAdminUser}
+          <a
+            href="/admin"
+            onclick={() => (showAccountSheet = false)}
+            class="flex items-center justify-between rounded-xl border border-primary-200 bg-primary-50 px-3 py-3 text-sm font-bold text-primary-700 hover:bg-primary-100"
+          >
+            <span class="flex items-center gap-2"><Icon name="shield" size={16} /> Dashboard Admin</span
+            ><span>›</span>
+          </a>
+        {/if}
       </nav>
       <button
         type="button"

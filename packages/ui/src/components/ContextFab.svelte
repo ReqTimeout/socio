@@ -157,12 +157,12 @@
       ></div>
     {/if}
 
-    <!-- Primary button -->
+    <!-- Primary button (brand gradient — bukan hitam) -->
     {#if primary.href && !hasSecondary}
       <a
         href={primary.href}
         onclick={() => primary.onclick?.()}
-        class="cfab-primary group inline-flex h-12 items-center gap-2 rounded-full bg-ink-900 px-5 text-sm font-extrabold text-ink-50 shadow-xl transition-all duration-200 hover:scale-105 hover:bg-ink-800 hover:shadow-2xl active:scale-95"
+        class="cfab-primary group inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-primary-600 to-accent-500 px-5 text-sm font-extrabold text-white shadow-xl transition-all duration-200 hover:scale-105 hover:shadow-2xl active:scale-95"
       >
         <Icon name={primary.icon} size={16} stroke={2.75} />
         <span class="whitespace-nowrap lg:hidden">{primary.label}</span>
@@ -172,7 +172,7 @@
       <button
         type="button"
         onclick={handlePrimary}
-        class="cfab-primary group inline-flex h-12 items-center gap-2 rounded-full bg-ink-900 px-5 text-sm font-extrabold text-ink-50 shadow-xl transition-all duration-200 hover:scale-105 hover:bg-ink-800 hover:shadow-2xl active:scale-95"
+        class="cfab-primary group inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-primary-600 to-accent-500 px-5 text-sm font-extrabold text-white shadow-xl transition-all duration-200 hover:scale-105 hover:shadow-2xl active:scale-95"
         aria-haspopup={hasSecondary ? "menu" : undefined}
         aria-expanded={hasSecondary ? open : undefined}
         aria-label={primary.label}
