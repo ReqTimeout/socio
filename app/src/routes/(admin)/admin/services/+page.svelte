@@ -707,7 +707,7 @@
       <span class="transition-transform group-open:rotate-180" aria-hidden="true">▾</span>
     </summary>
     <div class="overflow-x-auto border-t border-ink-100">
-      <table class="w-full min-w-[800px] text-sm">
+      <table class="w-full text-sm">
         <thead
           class="border-b border-ink-100 bg-ink-50/50 text-left text-xs uppercase tracking-wide text-ink-500"
         >

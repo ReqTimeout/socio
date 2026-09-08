@@ -77,7 +77,58 @@
       </p>
     </div>
   {:else}
-    <div class="overflow-hidden rounded-2xl border border-ink-100 bg-surface">
+    <!-- Mobile: stacked cards -->
+    <ul class="space-y-2 lg:hidden">
+      {#each data.requests as r (r.id)}
+        <li class="rounded-2xl border border-ink-100 bg-surface p-3.5">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <p class="font-mono text-xs font-bold">Order #{r.orderId}</p>
+              <p class="truncate text-xs text-ink-500">{r.orderService ?? "-"} · @{r.username ?? r.userId}</p>
+              <p class="mt-0.5 text-[11px] text-ink-400">{fmtDate(r.createdAt)}</p>
+            </div>
+            <span
+              class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold
+              {r.status === 'pending'
+                ? 'bg-amber-100 text-amber-700'
+                : r.status === 'executed'
+                  ? 'bg-success/10 text-success'
+                  : r.status === 'approved'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-danger/10 text-danger'}"
+            >
+              {r.status}
+            </span>
+          </div>
+          <div class="mt-2 flex items-center justify-between gap-2">
+            <span class="font-mono text-sm font-extrabold tabular-nums">{fmtRp(r.amount)}</span>
+            {#if r.status === "pending"}
+              <div class="flex gap-1.5">
+                <form method="POST" action="?/approve" use:enhance>
+                  <input type="hidden" name="id" value={r.id} />
+                  <Button type="submit" size="sm">Approve</Button>
+                </form>
+                <button
+                  type="button"
+                  onclick={() => {
+                    rejectId = r.id;
+                    rejectReason = "";
+                  }}
+                  class="min-h-[36px] rounded-full border border-ink-200 bg-surface px-3.5 text-xs font-bold text-ink-700 hover:bg-ink-50"
+                >
+                  Reject
+                </button>
+              </div>
+            {/if}
+          </div>
+          {#if r.reason}
+            <p class="mt-1.5 border-t border-ink-50 pt-1.5 text-xs text-ink-500">Alasan: {r.reason}</p>
+          {/if}
+        </li>
+      {/each}
+    </ul>
+    <!-- Desktop table -->
+    <div class="hidden overflow-hidden rounded-2xl border border-ink-100 bg-surface lg:block">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-ink-50 text-left text-xs font-bold uppercase tracking-wide text-ink-500">

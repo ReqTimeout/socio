@@ -430,30 +430,71 @@
       style="view-transition-name: admin-topbar;"
     >
       <span class="font-display font-bold">Admin</span>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1.5">
         <button
           type="button"
           onclick={() => (paletteOpen = true)}
-          class="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100"
+          class="grid h-10 w-10 place-items-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100"
           aria-label="Cari halaman atau aksi"
         >
-          <Icon name="search" size={17} />
+          <Icon name="search" size={18} />
         </button>
-        <a
-          href="/admin/services"
-          class="relative grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100"
-          aria-label="Notifikasi sistem ({sysNotifCount})"
-        >
-          <Icon name="zap" size={16} />
-          {#if sysNotifCount > 0}
-            <span
-              class="absolute -right-0.5 -top-0.5 grid min-w-[15px] place-items-center rounded-full bg-accent-500 px-1 text-[9px] font-bold leading-[15px] text-white"
-              >{sysNotifCount > 99 ? "99+" : sysNotifCount}</span
+        <!-- Notifikasi sistem — popover (dulu link ke /admin/services, membingungkan) -->
+        <div class="relative">
+          <button
+            type="button"
+            onclick={() => (sysNotifOpen = !sysNotifOpen)}
+            class="relative grid h-10 w-10 place-items-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100"
+            aria-label="Notifikasi sistem ({sysNotifCount} belum baca)"
+            aria-expanded={sysNotifOpen}
+          >
+            <Icon name="zap" size={17} />
+            {#if sysNotifCount > 0}
+              <span
+                class="absolute right-0.5 top-0.5 grid min-w-[15px] place-items-center rounded-full bg-accent-500 px-1 text-[9px] font-bold leading-[15px] text-white"
+                >{sysNotifCount > 99 ? "99+" : sysNotifCount}</span
+              >
+            {/if}
+          </button>
+          {#if sysNotifOpen}
+            <div
+              class="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-80 rounded-2xl border border-ink-100 bg-surface shadow-xl"
+              role="menu"
+              aria-label="Notifikasi sistem"
             >
+              <div class="border-b border-ink-100 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-ink-500">
+                Notifikasi Sistem
+              </div>
+              <ul class="max-h-80 divide-y divide-ink-50 overflow-y-auto">
+                {#each sysNotifs.slice(0, 8) as n (n.id)}
+                  <li>
+                    <a
+                      href={n.actionUrl}
+                      class="block px-4 py-3 transition-colors hover:bg-ink-50"
+                      onclick={() => (sysNotifOpen = false)}
+                    >
+                      <p class="flex items-center gap-1.5 text-sm font-semibold text-ink-900">
+                        {#if n.priority === "high" || n.priority === "critical"}
+                          <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-danger"></span>
+                        {:else if n.priority === "medium"}
+                          <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-warning"></span>
+                        {:else}
+                          <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-success"></span>
+                        {/if}
+                        {n.title}
+                      </p>
+                      <p class="mt-0.5 line-clamp-2 text-xs text-ink-500">{n.message}</p>
+                    </a>
+                  </li>
+                {:else}
+                  <li class="px-4 py-6 text-center text-sm text-ink-400">Tidak ada notifikasi.</li>
+                {/each}
+              </ul>
+            </div>
           {/if}
-        </a>
+        </div>
         <NotifBell count={data.unreadCount ?? 0} href="/notif" />
-        <a href="/akun" class="text-sm font-medium text-ink-500">@{data.admin.username}</a>
+        <a href="/akun" class="max-w-[90px] truncate text-sm font-medium text-ink-500">@{data.admin.username}</a>
       </div>
     </header>
 

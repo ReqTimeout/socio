@@ -238,9 +238,9 @@
                 : 'bg-ink-300'}"
           ></span>
         </span>
-        <span>{sseState === "live" ? "LIVE · SSE" : sseState === "connecting" ? "Menghubungkan…" : "Live · auto-refresh 10s"}</span>
+        <span>{sseState === "live" ? "LIVE · SSE" : sseState === "connecting" ? "Menghubungkan…" : "Live · 10s"}</span>
         <span
-          class="rounded-md bg-success/15 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-success-ink"
+          class="hidden rounded-md bg-success/15 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-success-ink sm:block"
         >
           {fmtCountdown(lastRefreshed)}
         </span>
@@ -325,7 +325,7 @@
   <div class="grid grid-cols-3 gap-2 sm:gap-3">
     {#each queue as q, i (q.label)}
       <div
-        class="reveal group relative overflow-hidden rounded-2xl border border-ink-100 bg-surface p-3 pl-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:transition-all before:duration-300 group-hover:before:inset-y-1.5 sm:p-3.5 sm:pl-4 {q.accent}"
+        class="reveal group relative min-w-0 overflow-hidden rounded-2xl border border-ink-100 bg-surface p-2.5 pl-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:transition-all before:duration-300 group-hover:before:inset-y-1.5 sm:p-3.5 sm:pl-4 {q.accent}"
         style="--d:{300 + i * 60}ms"
       >
         <div
@@ -470,33 +470,50 @@
       </div>
 
       <div class="reveal rounded-2xl border border-ink-100 bg-surface p-4" style="--d:540ms">
-        <h3 class="mb-2.5 text-[11px] font-bold uppercase tracking-wide text-ink-400">
-          Aksi cepat
+        <h3 class="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-400">
+          Menu cepat
         </h3>
+        <p class="mb-2.5 text-[11px] text-ink-400">Lompat ke antrian yang butuh tindakan.</p>
         <div class="grid grid-cols-2 gap-2">
           <a
             href="/admin/deposits"
-            class="group flex items-center gap-2 rounded-xl border border-ink-100 px-3 py-2.5 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-warning/40 hover:text-warning"
+            class="group flex min-h-[56px] flex-col justify-center gap-0.5 rounded-xl border border-ink-100 px-3 py-2 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-warning/40 hover:text-warning"
           >
-            <Icon name="wallet" size={16} stroke={2.25} /> Deposit
+            <span class="flex items-center gap-1.5"><Icon name="wallet" size={16} stroke={2.25} /> Deposit</span>
+            <span class="text-[11px] font-medium text-ink-400">
+              {#if m.depositPending.count > 0}
+                <span class="font-bold text-warning">{m.depositPending.count} pending</span>
+              {:else}
+                Tidak ada pending
+              {/if}
+            </span>
           </a>
           <a
             href="/admin/orders"
-            class="group flex items-center gap-2 rounded-xl border border-ink-100 px-3 py-2.5 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-accent-500/40 hover:text-accent-ink"
+            class="group flex min-h-[56px] flex-col justify-center gap-0.5 rounded-xl border border-ink-100 px-3 py-2 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-accent-500/40 hover:text-accent-ink"
           >
-            <Icon name="receipt" size={16} stroke={2.25} /> Order
+            <span class="flex items-center gap-1.5"><Icon name="receipt" size={16} stroke={2.25} /> Order</span>
+            <span class="text-[11px] font-medium text-ink-400">
+              {#if queueSrc.polling > 0}
+                <span class="font-bold text-accent-ink">{queueSrc.polling} aktif</span>
+              {:else}
+                Tidak ada aktif
+              {/if}
+            </span>
           </a>
           <a
             href="/admin/users"
-            class="group flex items-center gap-2 rounded-xl border border-ink-100 px-3 py-2.5 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-primary-500/40 hover:text-primary-ink"
+            class="group flex min-h-[56px] flex-col justify-center gap-0.5 rounded-xl border border-ink-100 px-3 py-2 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-primary-500/40 hover:text-primary-ink"
           >
-            <Icon name="users" size={16} stroke={2.25} /> Users
+            <span class="flex items-center gap-1.5"><Icon name="users" size={16} stroke={2.25} /> Users</span>
+            <span class="text-[11px] font-medium text-ink-400">{m.users.today} baru hari ini</span>
           </a>
           <a
-            href="/admin/audit"
-            class="group flex items-center gap-2 rounded-xl border border-ink-100 px-3 py-2.5 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-ink-300 hover:text-ink-900"
+            href="/admin/tickets"
+            class="group flex min-h-[56px] flex-col justify-center gap-0.5 rounded-xl border border-ink-100 px-3 py-2 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-ink-300 hover:text-ink-900"
           >
-            <Icon name="shield" size={16} stroke={2.25} /> Audit
+            <span class="flex items-center gap-1.5"><Icon name="message" size={16} stroke={2.25} /> Tiket</span>
+            <span class="text-[11px] font-medium text-ink-400">Support user</span>
           </a>
         </div>
       </div>
