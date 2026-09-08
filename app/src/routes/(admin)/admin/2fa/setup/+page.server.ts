@@ -2,7 +2,7 @@ import { redirect, fail, error } from "@sveltejs/kit";
 import { db } from "@socio/db";
 import { users } from "@socio/db/schema";
 import { eq } from "drizzle-orm";
-import { assertAdmin } from "$lib/server/admin";
+import { assertAdmin, logAudit } from "$lib/server/admin";
 import { setupTotpForUser, getTotpInfo, verifyAndEnable, getBackupCodesPlain, disableTotp } from "$lib/server/2fa";
 import { decryptTotpSecret } from "$lib/server/2fa";
 import { generateSecret, otpauthURL } from "@socio/core/totp";
@@ -57,6 +57,13 @@ export const actions: Actions = {
     const ok = await verifyAndEnable(Number(locals.user!.id), code);
     if (!ok) return fail(400, { error: "Kode salah atau kadaluarsa. Coba lagi." });
     const codes = await getBackupCodesPlain(Number(locals.user!.id));
+    await logAudit({
+      adminId: Number(locals.user!.id),
+      action: "2fa_enable",
+      entity: "user",
+      entityId: Number(locals.user!.id),
+      ip: (locals as any).ip,
+    });
     return { success: "2FA diaktifkan. Simpan backup code di bawah — hanya tampil sekali.", codes };
   },
   disable: async ({ request, locals }) => {
@@ -82,6 +89,13 @@ export const actions: Actions = {
       if (info?.enabled) return fail(400, { error: "Butuh kode 2FA untuk disable." });
     }
     await disableTotp(Number(locals.user!.id));
+    await logAudit({
+      adminId: Number(locals.user!.id),
+      action: "2fa_disable",
+      entity: "user",
+      entityId: Number(locals.user!.id),
+      ip: (locals as any).ip,
+    });
     return { success: "2FA dimatikan." };
   },
   regenerate: async ({ locals }) => {
