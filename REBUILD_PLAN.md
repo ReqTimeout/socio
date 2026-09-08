@@ -816,8 +816,8 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 > Status: **SEBAGIAN (cutover app SUDAH dilakukan di luar urutan)** — app.socio.id sudah LIVE di Coolify (menggantikan Caddy+systemd), DB=`socio-db` (bukan TiDB). Landing `socio.id` belum cutover ke Pages. Folder lama `app.socio.id/`, `socio.id/` masih ada (belum dihapus).
 
-- [~] Backup dump final dari VPS lama.
-- [ ] Import final ke TiDB production.
+- [x] Backup dump final dari VPS lama (user confirm: sudah move, VPS lama terminate).
+- [x] Import final ke TiDB production — DIBATALKAN user 2026-09-08: tetap VPS MySQL (socio-db), stabil.
 - [ ] **DNS + Cloudflare setup via skill `cloudflare`** (bukan manual):
   - Zone `socio.id` (kalau belum), NS di Cloudflare.
   - `socio.id` → Cloudflare Pages (landing build output `dist/`).
@@ -826,10 +826,10 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
   - SSL Full (strict), always HTTPS, Brotli, auto-minify.
   - WAF + DDoS + rate-limit per-IP + security headers (HSTS, X-Frame, X-Content-Type, Referrer-Policy, Permissions-Policy, CSP).
   - Kalau perlu Zero Trust `/admin/*` → skill `cloudflare-one`.
-- [ ] **Paralel run 1 minggu**: old PHP (alias `old-app.socio.id`) + new app. User bisa akses keduanya. Monitor error log.
-- [ ] Migrate cron: disable cron PHP lama, enable node-cron di VPS baru.
-- [ ] Sunset VPS lama: backup final, archive code, terminate.
-- [ ] Post-cutover monitoring: Axiom dashboard, error alert, uptime monitoring (UptimeRobot free).
+- [x] **Paralel run 1 minggu** — DIBATALKAN user 2026-09-08: VPS lama sudah terminate, tidak ada paralel.
+- [x] Migrate cron: cron PHP lama off (VPS terminate), node-cron VPS baru jalan 8 job (verified /admin/cron).
+- [x] Sunset VPS lama: terminate confirmed user 2026-09-08.
+- [ ] Post-cutover monitoring: UptimeRobot free — DITUNDA user 2026-09-08 (menyusul).
 
 ---
 
