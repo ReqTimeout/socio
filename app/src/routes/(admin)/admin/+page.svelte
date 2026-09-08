@@ -20,7 +20,7 @@
     if (es) { try { es.close(); } catch {} }
     sseState = "connecting";
     try {
-      es = new EventSource("/admin/api/events");
+      es = new EventSource("/api/admin/events");
       es.addEventListener("ready", () => { sseState = "live"; });
       es.addEventListener("dashboard", (ev: MessageEvent) => {
         try {
