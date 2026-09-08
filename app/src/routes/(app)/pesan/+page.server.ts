@@ -224,6 +224,26 @@ export const actions: Actions = {
     }
     const payable = Math.max(finalPrice - discount, 0);
 
+    // Pre-check saldo provider (cached hourly di provider.balance_provider)
+    // supaya tidak deduct user lalu gagal di provider ( manufactured 500 ).
+    // Estimasi modal USD = (priceApi - profitAgen) / USD_TO_IDR.
+    if (s.providerId !== 1) {
+      try {
+        const [pv] = await db.select().from(provider).where(eq(provider.id, s.providerId)).limit(1);
+        const modalIdr = Math.max(Number(s.priceApi) - Number((s as any).profitAgen ?? 0), 0);
+        const usdRate = Number(process.env.SOCIO_USD_TO_IDR ?? "16000") || 16000;
+        const needUsd = (modalIdr / usdRate) * (finalQty / 1000);
+        const haveUsd = pv ? Number((pv as any).balanceProvider ?? 0) : 0;
+        if (pv && modalIdr > 0 && haveUsd > 0 && needUsd > haveUsd) {
+          return fail(400, {
+            error: `Stok provider tidak cukup untuk ${finalQty.toLocaleString("id-ID")} (butuh ~$${needUsd.toFixed(2)}). Kecilkan jumlah atau coba lagi nanti.`,
+          });
+        }
+      } catch {
+        // Pre-check best-effort — jangan blokir order kalau cek gagal.
+      }
+    }
+
     // Deduct saldo SECARA ATOMIK sebelum kontak provider — anti double-spend.
     const affected = await deductBalance(userId, payable);
     if (affected === 0) {
@@ -242,74 +262,94 @@ export const actions: Actions = {
       }
     }
 
-    // Kirim order ke provider (per-provider key + URL, custom comments supported)
+    // Kirim order ke provider + tulis order row + log — SEMUA dalam try/catch.
+    // Alasan: saldo user SUDAH ter-deduct di atas. Throw tak terduga di sini
+    // (DB hiccup, insert gagal, dsb) WAJIB refund, kalau tidak user kehilangan
+    // uang + dapat halaman 500. Redirect sukses tetap di luar try.
     let providerOrderId = "0";
-    const sent = await sendToProvider(
-      {
+    let oid = "";
+    try {
+      // Kirim order ke provider (per-provider key + URL, custom comments supported)
+      const sent = await sendToProvider(
+        {
+          providerId: s.providerId,
+          providerServiceId: s.providerServiceId,
+          type: s.type,
+          isRefill: s.isRefill,
+        },
+        link,
+        finalQty,
+        komen,
+      );
+      if ("error" in sent) {
+        throw new Error(`PROVIDER: ${sent.error}`);
+      }
+      providerOrderId = sent.providerOrderId;
+
+      oid = `SOC-${Date.now()}`;
+      await db.insert(orders).values({
+        userId,
+        oid,
+        sid: String(s.providerServiceId),
+        providerOrderId,
+        user: link.slice(0, 100),
+        serviceName: s.serviceName,
+        serviceId: s.id,
+        data: link,
+        komen: isCustomComments ? komen : "",
+        quantity: finalQty,
+        remains: finalQty,
+        startCount: 0,
+        price: payable,
+        profit: 0,
+        status: "Pending",
+        date: new Date().toISOString().slice(0, 10),
+        time: new Date().toISOString().slice(11, 19),
+        createdAt: new Date(),
+        updatedAt: new Date(),
         providerId: s.providerId,
-        providerServiceId: s.providerServiceId,
-        type: s.type,
-        isRefill: s.isRefill,
-      },
-      link,
-      finalQty,
-      komen,
-    );
-    if ("error" in sent) {
-      // Refund atomik kalau provider gagal (+ lepas kuota kupon)
-      await db
-        .update(users)
-        .set({ balance: sql`${users.balance} + ${payable}` })
-        .where(eq(users.id, userId));
-      if (couponId !== undefined) await releaseCoupon(couponId);
-      return fail(500, { error: `Gagal mengirim order ke provider: ${sent.error}` });
-    }
-    providerOrderId = sent.providerOrderId;
+        isApi: 0,
+        isRefund: 0,
+        couponCode: applyCode,
+        discount,
+        nextPollAt: new Date(Date.now() + 60_000),
+      });
 
-    const oid = `SOC-${Date.now()}`;
-    await db.insert(orders).values({
-      userId,
-      oid,
-      sid: String(s.providerServiceId),
-      providerOrderId,
-      user: link,
-      serviceName: s.serviceName,
-      serviceId: s.id,
-      data: link,
-      komen: isCustomComments ? komen : "",
-      quantity: finalQty,
-      remains: finalQty,
-      startCount: 0,
-      price: payable,
-      profit: 0,
-      status: "Pending",
-      date: new Date().toISOString().slice(0, 10),
-      time: new Date().toISOString().slice(11, 19),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      providerId: s.providerId,
-      isApi: 0,
-      isRefund: 0,
-      couponCode: applyCode,
-      discount,
-      nextPollAt: new Date(Date.now() + 60_000),
-    });
+      // Saldo sudah dideduct atomik di awal (sebelum kontak provider).
+      await db.insert(balanceLogs).values({
+        userId,
+        type: "order",
+        amount: -payable,
+        note: applyCode
+          ? `Pesan ${s.serviceName} (${oid}) — kupon ${applyCode}`
+          : `Pesan ${s.serviceName} (${oid})`,
+        createdAt: new Date(),
+      });
 
-    // Saldo sudah dideduct atomik di awal (sebelum kontak provider).
-    await db.insert(balanceLogs).values({
-      userId,
-      type: "order",
-      amount: -payable,
-      note: applyCode
-        ? `Pesan ${s.serviceName} (${oid}) — kupon ${applyCode}`
-        : `Pesan ${s.serviceName} (${oid})`,
-      createdAt: new Date(),
-    });
-
-    if (saveLink) {
-      await db
-        .insert(savedLinks)
-        .values({ userId, label: s.serviceName.slice(0, 100), link, serviceId: s.id });
+      if (saveLink) {
+        await db
+          .insert(savedLinks)
+          .values({ userId, label: s.serviceName.slice(0, 100), link, serviceId: s.id });
+      }
+    } catch (e: any) {
+      // Refund best-effort atas deduct di awal (jangan sampai uang hilang).
+      try {
+        await db
+          .update(users)
+          .set({ balance: sql`${users.balance} + ${payable}` })
+          .where(eq(users.id, userId));
+      } catch {}
+      if (couponId !== undefined) {
+        try {
+          await releaseCoupon(couponId);
+        } catch {}
+      }
+      const msg = String(e?.message ?? e);
+      if (msg.startsWith("PROVIDER:")) {
+        return fail(502, { error: `Gagal mengirim order ke provider: ${msg.slice(9)}. Saldo dikembalikan.` });
+      }
+      console.error("[order] unexpected failure (refunded):", msg);
+      return fail(500, { error: "Terjadi kesalahan saat memproses order. Saldo dikembalikan — coba lagi." });
     }
 
     throw redirect(303, "/pesanan");

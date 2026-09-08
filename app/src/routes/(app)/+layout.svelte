@@ -110,7 +110,7 @@
     style="view-transition-name: app-header;"
   >
     <div class="flex h-14 items-center justify-between gap-3 px-4">
-      <a href="/" class="inline-flex items-center shrink-0" aria-label="Socio.id — Beranda">
+      <a href="/" class="inline-flex min-h-[24px] shrink-0 items-center" aria-label="Socio.id — Beranda">
         <Wordmark size="sm" />
       </a>
       <div class="flex items-center gap-2">

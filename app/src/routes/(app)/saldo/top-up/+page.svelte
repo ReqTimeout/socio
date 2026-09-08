@@ -299,7 +299,7 @@
     <div>
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-sm font-bold">Riwayat Top Up</h2>
-        <a href="/saldo/riwayat" class="flex items-center gap-0.5 text-xs font-bold text-primary">
+        <a href="/saldo/riwayat" class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-primary">
           Semua <Icon name="chevron_right" size={14} />
         </a>
       </div>

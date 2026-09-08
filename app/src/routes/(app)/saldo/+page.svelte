@@ -154,7 +154,7 @@
     <div class="min-w-0">
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-sm font-bold lg:text-[15px]">Top Up Terakhir</h2>
-        <a href="/saldo/top-up" class="flex items-center gap-0.5 text-xs font-bold text-primary">
+        <a href="/saldo/top-up" class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-primary">
           Isi <Icon name="chevron_right" size={14} />
         </a>
       </div>

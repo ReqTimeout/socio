@@ -102,6 +102,8 @@ export const actions: Actions = {
     if (!svc?.isRefill) return fail(400, { error: "Layanan ini tidak mendukung refill" });
     if (order.status !== "Success")
       return fail(400, { error: "Hanya order Berhasil yang bisa di-refill" });
+    if (!order.providerOrderId || order.providerOrderId === "0")
+      return fail(400, { error: "Order ini tidak bisa refill otomatis (manual/legacy)." });
 
     // Cek sudah refill pending
     const [existing] = (await db

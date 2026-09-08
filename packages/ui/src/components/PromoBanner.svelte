@@ -140,10 +140,14 @@
             }}
             aria-label={`Banner ${i + 1}`}
             aria-current={i === idx}
-            class="h-1.5 rounded-full transition-all duration-300 {i === idx
-              ? 'w-6 bg-white'
-              : 'w-1.5 bg-white/50 hover:bg-white/80'}"
-          ></button>
+            class="-m-2 p-2 transition-all duration-300"
+          >
+            <span
+              class="block h-1.5 rounded-full transition-all duration-300 {i === idx
+                ? 'w-6 bg-white'
+                : 'w-1.5 bg-white/50 hover:bg-white/80'}"
+            ></span>
+          </button>
         {/each}
       </div>
     {/if}

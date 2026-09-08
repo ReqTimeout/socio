@@ -111,7 +111,7 @@
       <Icon name="chevron_left" size={14} />
       Ringkasan
     </a>
-    <a href="/saldo" class="shrink-0 text-xs font-bold text-primary sm:hidden">Ringkasan ›</a>
+    <a href="/saldo" class="inline-flex min-h-[24px] shrink-0 items-center text-xs font-bold text-primary sm:hidden">Ringkasan ›</a>
   </div>
 
   <!-- Summary — all-time -->
