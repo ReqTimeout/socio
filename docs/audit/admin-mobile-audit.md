@@ -54,6 +54,14 @@
 - **46/46: HTTP 200, overflowX=0, smallTargets=0, consoleErrors=0** di 360×740 & 390×844.
 - Waktu load 331–5571ms (p95 wajar untuk query admin + network ID-SG).
 
+## Audit visual via screenshot user (2026-09-08 malam, deposits mobile)
+Temuan dari screenshot (bukan tebakan):
+1. **FAB "Aksi Cepat" menutupi kartu + ikon tanpa label di mobile** (`cfab-pill hidden sm:inline-block`)
+   + aksi duplikat chips filter → **dihapus dari deposits** (commit `870c0d7`).
+2. **Backdrop FAB** (pink blur) kepotong di tepi layar — ikut hilang dengan penghapusan.
+3. **Fix global ContextFab** (9 halaman lain): label selalu tampil + `mb-20`→`mb-28`
+   (dock + safe-area ≈100px, FAB lama 80px = nempel/overlap).
+
 ## Aturan untuk kerja mobile berikutnya
 1. Tabel baru → wajib pola `ul.lg:hidden` cards + `hidden lg:block` table (jangan table mentah).
 2. Grid ≥3 kolom di mobile → tambah `min-w-0` tiap child + cek 360px.
