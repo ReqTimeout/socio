@@ -140,7 +140,7 @@
             }}
             aria-label={`Banner ${i + 1}`}
             aria-current={i === idx}
-            class="-m-2 p-2 transition-all duration-300"
+            class="-m-2.5 p-2.5 transition-all duration-300"
           >
             <span
               class="block h-1.5 rounded-full transition-all duration-300 {i === idx

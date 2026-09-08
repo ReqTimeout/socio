@@ -422,7 +422,7 @@
           <button
             type="button"
             onclick={regenKey}
-            class="text-xs font-medium text-ink-500 hover:text-danger"
+            class="inline-flex min-h-[24px] items-center px-1 text-xs font-medium text-ink-500 hover:text-danger"
           >
             Regenerate
           </button>

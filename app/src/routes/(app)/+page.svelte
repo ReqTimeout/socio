@@ -586,7 +586,7 @@
         </div>
         <a
           href="/pesanan"
-          class="flex items-center gap-0.5 text-xs font-bold text-primary hover:text-primary-800"
+          class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-primary hover:text-primary-800"
         >
           Lihat semua
           <Icon name="chevron_right" size={14} />
