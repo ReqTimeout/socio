@@ -136,9 +136,10 @@ export async function sendPdf(doc: TDocumentDefinitions, filename: string): Prom
         bolditalics: "Helvetica-BoldOblique",
       },
     });
-    // restrict external downloads; allow only pdfmake's own bundled standard fonts
+    // restrict external downloads; standard PDF fonts are name-refs (not fs paths),
+    // so allow anything that isn't a filesystem path (no leading / or drive letter)
     pdfmake.setUrlAccessPolicy(() => false);
-    pdfmake.setLocalAccessPolicy((p: string) => p.includes("pdfmake"));
+    pdfmake.setLocalAccessPolicy((p: string) => !/^[\\/]|[a-zA-Z]:[\\/]/.test(p));
     pdfmakeInit = true;
   }
 
