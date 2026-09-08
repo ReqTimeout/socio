@@ -7,7 +7,7 @@ import { decryptSecret, encryptSecret } from "$lib/server/crypto";
 const USD_TO_IDR = Number(process.env.SOCIO_USD_TO_IDR ?? "15000");
 
 /** Record a sync run for monitoring (G10). */
-async function logSync(
+export async function logSync(
   providerId: number,
   action: string,
   status: "ok" | "error" | "partial",
@@ -133,6 +133,15 @@ export async function runProviderSync(providerId = 1): Promise<void> {
     }
 
     await logSync(providerId, "services", "ok", Date.now() - start, remote.length, changed);
+
+    // Setelah mirror katalog, sync service catalog (auto create/update/disable)
+    try {
+      const { runServiceSync } = await import("./service-sync");
+      await runServiceSync(providerId);
+    } catch (e: any) {
+      console.error("[cron] service-sync after provider-sync failed:", e?.message ?? e);
+    }
+
     console.log(`[cron] provider-sync: fetched ${remote.length}, changed ${changed}`);
   } catch (e: any) {
     await logSync(
