@@ -6,9 +6,56 @@
 
   let { data }: { data: PageData } = $props();
 
-  const m = $derived(data.metrics);
+  // P3-09: live overrides from SSE (metrics/feed/queue/chart)
+  let liveFeed = $state<(typeof data.feed) | null>(null);
+  let liveMetrics = $state<typeof data.metrics | null>(null);
+  let liveQueue = $state<typeof data.queue | null>(null);
+  let liveChart = $state<typeof data.chart | null>(null);
+  let sseState = $state<"connecting" | "live" | "offline">("connecting");
+  let sseRetry: ReturnType<typeof setTimeout> | null = null;
+  let es: EventSource | null = null;
+  let flashIds = $state<Set<string>>(new Set());
 
-  // P2-08: Live auto-refresh (10s) — pause saat tab hidden, pause saat user interact 5s
+  function connectSSE() {
+    if (es) { try { es.close(); } catch {} }
+    sseState = "connecting";
+    try {
+      es = new EventSource("/admin/api/events");
+      es.addEventListener("ready", () => { sseState = "live"; });
+      es.addEventListener("dashboard", (ev: MessageEvent) => {
+        try {
+          const p = JSON.parse((ev as any).data);
+          sseState = "live";
+          // Flash new feed items that weren't in previous set
+          const prevIds = new Set((liveFeed ?? data.feed).map((f: any) => f.id));
+          const incoming: any[] = p.feed ?? [];
+          const fresh = incoming.filter((f: any) => !prevIds.has(f.id)).map((f: any) => f.id);
+          if (fresh.length && liveFeed !== null) {
+            flashIds = new Set(fresh);
+            setTimeout(() => { flashIds = new Set(); }, 1600);
+          }
+          liveFeed = incoming;
+          liveMetrics = p.metrics;
+          liveQueue = p.queue;
+          liveChart = p.chart;
+          lastRefreshed = Date.now();
+        } catch {}
+      });
+      es.onerror = () => {
+        sseState = "offline";
+        try { es?.close(); } catch {}
+        if (sseRetry) clearTimeout(sseRetry);
+        sseRetry = setTimeout(connectSSE, 8000);
+      };
+    } catch { sseState = "offline"; }
+  }
+
+  const m = $derived(liveMetrics ?? data.metrics);
+  const feedSrc = $derived(liveFeed ?? data.feed);
+  const queueSrc = $derived(liveQueue ?? data.queue);
+  const chartSrc = $derived(liveChart ?? data.chart);
+
+  // P2-08: Live auto-refresh (10s) — fallback when SSE offline
   let refreshTimer: ReturnType<typeof setInterval> | null = null;
   let userPauseTimer: ReturnType<typeof setTimeout> | null = null;
   let lastRefreshed = $state(Date.now());
@@ -19,6 +66,7 @@
     refreshTimer = setInterval(() => {
       if (document.hidden) return;
       if (isPaused) return;
+      if (sseState === "live") return;
       invalidate("admin:dashboard").finally(() => {
         lastRefreshed = Date.now();
       });
@@ -35,9 +83,12 @@
 
   onMount(() => {
     scheduleRefresh();
+    connectSSE();
     return () => {
       if (refreshTimer) clearInterval(refreshTimer);
       if (userPauseTimer) clearTimeout(userPauseTimer);
+      if (sseRetry) clearTimeout(sseRetry);
+      try { es?.close(); } catch {}
     };
   });
 
@@ -81,17 +132,18 @@
     { key: "audit", label: "Admin", icon: "shield" },
   ];
   const counts = $derived.by(() => {
+    const src = feedSrc as any[];
     const c: Record<string, number> = {
-      all: data.feed.length,
+      all: src.length,
       order: 0,
       deposit: 0,
       user: 0,
       audit: 0,
     };
-    for (const f of data.feed) c[f.kind]++;
+    for (const f of src) c[f.kind]++;
     return c;
   });
-  const shown = $derived(filter === "all" ? data.feed : data.feed.filter((f) => f.kind === filter));
+  const shown = $derived(filter === "all" ? (feedSrc as any[]) : (feedSrc as any[]).filter((f: any) => f.kind === filter));
 
   const queue: {
     icon: string;
@@ -105,15 +157,15 @@
     {
       icon: "refresh",
       label: "Provider sync",
-      value: data.queue.sync ? `${data.queue.sync.changed}` : "—",
-      sub: data.queue.sync ? `/ ${data.queue.sync.fetched}` : "",
-      note: data.queue.sync ? ago(data.queue.sync.at) : "Belum ada sync",
+      value: queueSrc.sync ? `${queueSrc.sync.changed}` : "—",
+      sub: queueSrc.sync ? `/ ${queueSrc.sync.fetched}` : "",
+      note: queueSrc.sync ? ago(queueSrc.sync.at) : "Belum ada sync",
       tone:
-        data.queue.sync?.status === "ok"
+        queueSrc.sync?.status === "ok"
           ? "text-success"
-          : data.queue.sync?.status === "error"
+          : queueSrc.sync?.status === "error"
             ? "text-danger"
-            : data.queue.sync
+            : queueSrc.sync
               ? "text-warning"
               : "text-ink-300",
       accent: "before:bg-primary-500",
@@ -121,7 +173,7 @@
     {
       icon: "activity",
       label: "Polling",
-      value: data.queue.polling.toLocaleString("id-ID"),
+      value: queueSrc.polling.toLocaleString("id-ID"),
       sub: "",
       note: "order aktif",
       tone: "text-ink-900",
@@ -130,11 +182,11 @@
     {
       icon: "list",
       label: "Queue",
-      value: data.queue.depth.toLocaleString("id-ID"),
+      value: queueSrc.depth.toLocaleString("id-ID"),
       sub: "",
       note: "job pending",
-      tone: data.queue.depth > 0 ? "text-warning" : "text-ink-900",
-      accent: data.queue.depth > 0 ? "before:bg-warning" : "before:bg-ink-300",
+      tone: queueSrc.depth > 0 ? "text-warning" : "text-ink-900",
+      accent: queueSrc.depth > 0 ? "before:bg-warning" : "before:bg-ink-300",
     },
   ]);
 
@@ -163,19 +215,30 @@
     <div class="flex items-center gap-2">
       <span
         class="inline-flex cursor-pointer items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-bold text-success transition-colors hover:bg-success/15 motion-safe:animate-[pulse_2.4s_ease-in-out_infinite]"
-        title={isPaused ? "Auto-refresh dijeda sebentar" : "Auto-refresh tiap 10 detik"}
+        title={sseState === "live" ? "Realtime SSE terhubung" : sseState === "connecting" ? "Menyambungkan SSE…" : isPaused ? "Auto-refresh dijeda" : "Polling tiap 10 detik"}
         onclick={pauseRefresh}
         onkeydown={(e) => (e.key === "Enter" || e.key === " ") && pauseRefresh()}
         role="button"
         tabindex="0"
+        aria-live="polite"
       >
         <span class="relative flex h-2 w-2">
           <span
-            class="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60"
+            class="absolute inline-flex h-full w-full rounded-full opacity-60 {sseState === 'live'
+              ? 'animate-ping bg-success'
+              : sseState === 'connecting'
+                ? 'animate-pulse bg-warning'
+                : 'bg-ink-300'}"
           ></span>
-          <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
+          <span
+            class="relative inline-flex h-2 w-2 rounded-full {sseState === 'live'
+              ? 'bg-success'
+              : sseState === 'connecting'
+                ? 'bg-warning'
+                : 'bg-ink-300'}"
+          ></span>
         </span>
-        <span>Live · auto-refresh 10s</span>
+        <span>{sseState === "live" ? "LIVE · SSE" : sseState === "connecting" ? "Menghubungkan…" : "Live · auto-refresh 10s"}</span>
         <span
           class="rounded-md bg-success/15 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-success-ink"
         >
@@ -224,7 +287,7 @@
       <div class="w-full sm:w-64 lg:w-72">
         <Chart
           series={[{ label: "Revenue", data: m.revenue.spark, color: "var(--color-accent-400)" }]}
-          labels={data.chart.labels}
+          labels={chartSrc.labels}
           height={72}
           formatValue={(v) => rp(v)}
         />
@@ -315,6 +378,7 @@
           <button
             type="button"
             onclick={() => (filter = fl.key)}
+            aria-pressed={filter === fl.key}
             class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 active:scale-95
               {filter === fl.key
               ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
@@ -332,15 +396,22 @@
       </div>
 
       <!-- list -->
-      <div class="feed max-h-[70vh] overflow-y-auto overscroll-contain px-2 py-2 lg:max-h-[26rem]">
+      <div
+        class="feed max-h-[70vh] overflow-y-auto overscroll-contain px-2 py-2 lg:max-h-[26rem]"
+        role="log"
+        aria-live="polite"
+      >
         {#if shown.length === 0}
           <p class="px-2 py-8 text-center text-sm text-ink-400">Belum ada aktivitas.</p>
         {:else}
           {#each shown as f, i (f.id)}
             <a
               href={f.href}
-              class="reveal group flex items-start gap-3 rounded-xl px-2.5 py-2.5 transition-colors duration-200 hover:bg-ink-50"
+              class="reveal group flex items-start gap-3 rounded-xl px-2.5 py-2.5 transition-colors duration-200 hover:bg-ink-50 {flashIds.has(f.id)
+                ? 'flash-new'
+                : ''}"
               style="--d:{i < 12 ? 440 + i * 35 : 0}ms"
+              aria-label="{f.title} · {ago(f.at)}"
             >
               <span
                 class="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-transform duration-200 group-hover:scale-110 {feedMeta[
@@ -444,7 +515,7 @@
         <div>
           <h2 class="text-sm font-bold leading-tight">Revenue 7 hari</h2>
           <p class="text-[11px] text-ink-400">
-            Total {rp(revenueTotal7d)} · {data.chart.labels.length} hari
+            Total {rp(revenueTotal7d)} · {chartSrc.labels.length} hari
           </p>
         </div>
       </div>
@@ -454,7 +525,7 @@
             Rata-rata/hari
           </dt>
           <dd class="font-mono text-xs font-bold tabular-nums text-ink-700">
-            {rp(revenueTotal7d / Math.max(1, data.chart.labels.length))}
+            {rp(revenueTotal7d / Math.max(1, chartSrc.labels.length))}
           </dd>
         </dl>
         <a
@@ -467,8 +538,8 @@
     </div>
     <div class="mx-auto w-full max-w-3xl">
       <Chart
-        series={[{ label: "Revenue", data: data.chart.revenue, color: "var(--color-success)" }]}
-        labels={data.chart.labels}
+        series={[{ label: "Revenue", data: chartSrc.revenue, color: "var(--color-success)" }]}
+        labels={chartSrc.labels}
         height={200}
         formatValue={(v) => rp(v)}
       />
@@ -512,6 +583,20 @@
   @media (prefers-reduced-motion: reduce) {
     .reveal {
       animation: none;
+    }
+  }
+
+  .flash-new {
+    animation: flashNew 1.6s ease both;
+  }
+  @keyframes flashNew {
+    0% {
+      background: var(--color-success-soft, #ecfdf5);
+      transform: translateY(-4px);
+    }
+    100% {
+      background: transparent;
+      transform: none;
     }
   }
 </style>
