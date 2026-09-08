@@ -52,7 +52,9 @@ export const load: LayoutServerLoad = async (event) => {
     db
       .select({ c: sql<number>`COUNT(*)` })
       .from(adminNotifications)
-      .where(sql`${adminNotifications.readAt} IS NULL`),
+      .where(
+        and(eq(adminNotifications.adminId, Number(locals.user.id)), sql`${adminNotifications.readAt} IS NULL`),
+      ),
     db
       .select({
         id: adminNotifications.id,
@@ -63,6 +65,7 @@ export const load: LayoutServerLoad = async (event) => {
         createdAt: adminNotifications.createdAt,
       })
       .from(adminNotifications)
+      .where(eq(adminNotifications.adminId, Number(locals.user.id)))
       .orderBy(sql`${adminNotifications.createdAt} DESC`)
       .limit(10),
   ]);
