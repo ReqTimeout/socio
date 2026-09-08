@@ -54,6 +54,17 @@
 - **46/46: HTTP 200, overflowX=0, smallTargets=0, consoleErrors=0** di 360×740 & 390×844.
 - Waktu load 331–5571ms (p95 wajar untuk query admin + network ID-SG).
 
+## Menu/dock pass (2026-09-08 malam, dari screenshot user, commit `04a05b0`)
+1. **Dock transparan (glass) → solid** `bg-surface + border` + border gradient animasi
+   ringan (`dock-sheen` 7s, mask-composite hairline, off saat reduced-motion).
+2. **ContextFab primary hitam → gradient brand** (`from-primary-600 to-accent-500`).
+3. **"Kembali ke App" memang sudah benar** — href `/` = dashboard user. Tidak diubah.
+4. **Dashboard Admin di sisi user, KHUSUS level Admin**: sidebar desktop + sheet Akun
+   mobile (verified: muncul untuk admin, tidak muncul untuk member).
+5. **Sheet "Lainnya" nyaman**: search filter (label+keywords), tombol ✕, empty state,
+   `max-h-[85dvh]` scroll + footer Akun/Kembali/Logout tetap terlihat.
+   Verified Playwright: 17 item → ketik "cron" → hanya "Cron Jobs"; close menutup dialog.
+
 ## Audit visual via screenshot user (2026-09-08 malam, deposits mobile)
 Temuan dari screenshot (bukan tebakan):
 1. **FAB "Aksi Cepat" menutupi kartu + ikon tanpa label di mobile** (`cfab-pill hidden sm:inline-block`)
