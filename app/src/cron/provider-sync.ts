@@ -164,28 +164,39 @@ let syncing = false;
 /**
  * Pastikan row provider SMMturk ada (key dari env, ter-encrypt). Idempotent.
  * Audit P0-3: tanpa row ini sync tidak punya bahan & order guard gagal.
+ *
+ * PENTING: match by apiUrlOrder (identifier stabil), BUKAN by name —
+ * nama boleh di-whitelabel ("Provider Utama") tanpa bikin duplikat row.
  */
+const SMMTURK_URL = "https://smmturk.org/api/v2";
+
 export async function seedSmmturkProvider(): Promise<number | null> {
   const envKey = process.env.SOCIO_SMMTURK_KEY;
   if (!envKey) return null;
-  const [existing] = await db
+  const rows = await db
     .select({ id: provider.id })
     .from(provider)
-    .where(eq(provider.name, "SMMturk"))
-    .limit(1);
-  if (existing) return existing.id;
+    .where(eq(provider.apiUrlOrder, SMMTURK_URL));
+  if (rows.length > 0) {
+    if (rows.length > 1) {
+      console.warn(
+        `[cron] seed: ${rows.length} provider menunjuk ${SMMTURK_URL} (ids: ${rows.map((r) => r.id).join(",")}) — pakai ${rows[0].id}, hapus duplikat manual`,
+      );
+    }
+    return rows[0].id;
+  }
 
   const apiKey = encryptSecret(envKey);
   const [inserted] = await db
     .insert(provider)
     .values({
-      name: "SMMturk",
-      apiUrlOrder: "https://smmturk.org/api/v2",
-      apiUrlStatus: "https://smmturk.org/api/v2",
+      name: "Provider Utama",
+      apiUrlOrder: SMMTURK_URL,
+      apiUrlStatus: SMMTURK_URL,
       apiKey,
     })
     .$returningId();
-  console.log(`[cron] provider SMMturk di-seed (id=${inserted.id})`);
+  console.log(`[cron] provider utama di-seed (id=${inserted.id})`);
   return inserted.id;
 }
 

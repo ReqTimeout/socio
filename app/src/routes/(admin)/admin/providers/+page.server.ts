@@ -48,10 +48,9 @@ export const load: PageServerLoad = async ({ locals }) => {
     providers,
     syncLogs: plain((syncLogs as any)[0] ?? []),
     hasSmmturkKey: !!env.SOCIO_SMMTURK_KEY,
+    // Match by URL (stabil walau nama di-whitelabel), bukan by name
     hasSmmturkProvider: providers.some((p: any) =>
-      String(p.name ?? "")
-        .toLowerCase()
-        .includes("smmturk"),
+      String(p.api_url_order ?? "").includes("smmturk.org"),
     ),
     plainKeyCount: providers.filter((p: any) => Number(p.api_key_len ?? 0) > 0 && !p.encrypted)
       .length,
@@ -60,8 +59,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
   /**
-   * Tambah SMMturk dengan key dari env (SOCIO_SMMTURK_KEY) — provider utama.
-   * Idempotent: skip kalau sudah ada.
+   * Tambah provider utama dengan key dari env (SOCIO_SMMTURK_KEY).
+   * Idempotent: skip kalau sudah ada (match by URL, bukan nama).
    */
   addSmmturk: async ({ locals }) => {
     assertAdmin(locals);
@@ -77,11 +76,11 @@ export const actions: Actions = {
     const [existing] = await db
       .select({ id: provider.id })
       .from(provider)
-      .where(eq(provider.name, "SMMturk"))
+      .where(eq(provider.apiUrlOrder, "https://smmturk.org/api/v2"))
       .limit(1);
-    if (existing) return fail(409, { error: "Provider SMMturk sudah ada." });
+    if (existing) return fail(409, { error: "Provider utama sudah ada." });
     await db.insert(provider).values({
-      name: "SMMturk",
+      name: "Provider Utama",
       apiUrlOrder: "https://smmturk.org/api/v2",
       apiUrlStatus: "https://smmturk.org/api/v2",
       apiKey: encryptSecret(env.SOCIO_SMMTURK_KEY),
@@ -90,10 +89,10 @@ export const actions: Actions = {
       adminId: Number(locals.user!.id),
       action: "add_provider",
       entity: "provider",
-      detail: { name: "SMMturk", source: "env" },
+      detail: { name: "Provider Utama", source: "env" },
       ip: (locals as any).ip,
     });
-    return { success: "Provider SMMturk ditambahkan (key dari env)." };
+    return { success: "Provider utama ditambahkan (key dari env)." };
   },
 
   add: async ({ request, locals }) => {
