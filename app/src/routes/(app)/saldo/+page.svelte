@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { Icon, revealDelay, EmptyBalanceArt, NumberFlow } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -32,6 +33,24 @@
     if (diff < 3600) return `${Math.floor(diff / 60)}m lalu`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}j lalu`;
     return formatDateShort(date);
+  }
+
+  // Countdown live untuk deposit pending (tick 30 detik, berhenti saat tab hidden).
+  let now = $state(Date.now());
+  onMount(() => {
+    const id = setInterval(() => {
+      if (!document.hidden) now = Date.now();
+    }, 30_000);
+    return () => clearInterval(id);
+  });
+  function expireLeft(expire: Date | string | null | undefined): string | null {
+    if (!expire) return null;
+    const dt = typeof expire === "string" ? new Date(expire.replace(" ", "T")) : expire;
+    const s = Math.floor((dt.getTime() - now) / 1000);
+    if (s <= 0) return "Kedaluarsa";
+    if (s < 3600) return `Sisa ${Math.floor(s / 60)} mnt`;
+    if (s < 86400) return `Sisa ${Math.floor(s / 3600)}j ${Math.floor((s % 3600) / 60)}m`;
+    return `Sisa ${Math.floor(s / 86400)} hari`;
   }
 </script>
 
@@ -155,7 +174,7 @@
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-sm font-bold lg:text-[15px]">Top Up Terakhir</h2>
         <a href="/saldo/top-up" class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-primary">
-          Isi <Icon name="chevron_right" size={14} />
+          Top Up <Icon name="chevron_right" size={14} />
         </a>
       </div>
       {#if data.topups.length === 0}
@@ -189,6 +208,12 @@
               <div class="min-w-0 flex-1">
                 <div class="text-sm font-bold tabular-nums">{formatRupiah(Number(t.amount))}</div>
                 <div class="truncate text-xs text-ink-500">{t.methodName}</div>
+                {#if t.status === "Pending"}
+                  {@const left = expireLeft((t as any).expire)}
+                  {#if left}
+                    <div class="mt-0.5 text-[11px] font-bold tabular-nums text-warning">{left}</div>
+                  {/if}
+                {/if}
               </div>
               <span
                 class="rounded-full px-2 py-0.5 text-[10px] font-bold

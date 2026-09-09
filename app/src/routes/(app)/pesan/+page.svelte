@@ -338,6 +338,7 @@
                 <span class="font-display font-bold text-accent-ink"
                   >{formatRupiah(pickPrice(selectedService))}</span
                 >
+                <span class="text-ink-500">· harga dasar per 1000</span>
                 <span class="text-ink-500">·</span>
                 <span class="text-ink-500"
                   >Min {selectedService.min.toLocaleString("id-ID")} – {selectedService.max.toLocaleString(

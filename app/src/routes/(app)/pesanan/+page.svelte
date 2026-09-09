@@ -258,6 +258,28 @@
         <Icon name="plus" size={16} stroke={2.5} />
         {copy.empty.orders.cta}
       </a>
+      {#if data.filter === "all" && data.popular.length > 0}
+        <div class="relative mt-5 border-t border-ink-100 pt-4 text-left">
+          <p class="mb-2 text-xs font-bold uppercase tracking-wide text-ink-400">
+            Paling laris minggu ini
+          </p>
+          <div class="grid gap-2 sm:grid-cols-3">
+            {#each data.popular as p (p.id)}
+              <a
+                href="/pesan?service={p.id}"
+                class="group flex min-h-[56px] flex-col justify-center gap-0.5 rounded-xl border border-ink-100 px-3 py-2 transition-all hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-sm"
+              >
+                <span class="truncate text-xs font-bold text-ink-900 group-hover:text-primary-700"
+                  >{p.serviceName}</span
+                >
+                <span class="text-[11px] font-semibold tabular-nums text-accent-700"
+                  >{formatRupiah(p.price)}</span
+                >
+              </a>
+            {/each}
+          </div>
+        </div>
+      {/if}
     </div>
   {:else}
     <!-- Card grid — playful, premium, mudah scan tanpa scroll horizontal -->

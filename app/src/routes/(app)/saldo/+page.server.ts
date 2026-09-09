@@ -15,6 +15,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       methodName: deposits.methodName,
       status: deposits.status,
       createdAt: deposits.createdAt,
+      expire: deposits.expire,
     })
     .from(deposits)
     .where(eq(deposits.userId, userId))

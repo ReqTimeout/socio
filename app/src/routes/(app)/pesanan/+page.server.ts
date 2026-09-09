@@ -72,10 +72,36 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     partial: countMap["partial"] ?? 0,
   };
 
+  // Layanan populer global (top 3 by order, untuk cross-sell di empty state).
+  // Query ringan: aggregate orders + join 3 services. Hanya saat filter=all & kosong.
+  let popular: { id: number; serviceName: string; price: number }[] = [];
+  if (filter === "all" && rows.length === 0) {
+    try {
+      const top = (await db.execute(sql`
+        SELECT service_id AS sid, COUNT(*) AS c FROM orders
+        WHERE service_id > 0 GROUP BY service_id ORDER BY c DESC LIMIT 3
+      `)) as any;
+      const topRows: any[] = Array.isArray(top?.[0]) ? top[0] : Array.isArray(top) ? top : [];
+      const ids = topRows.map((r: any) => Number(r.sid ?? r.service_id)).filter((n) => n > 0);
+      if (ids.length) {
+        const svc = await db
+          .select({ id: services.id, serviceName: services.serviceName, price: services.price })
+          .from(services)
+          .where(and(sql`${services.id} IN (${ids.join(",")})`, eq(services.status, 1)));
+        const order: Record<number, number> = {};
+        ids.forEach((id, i) => (order[id] = i));
+        popular = svc
+          .sort((a, b) => (order[a.id] ?? 99) - (order[b.id] ?? 99))
+          .map((s) => ({ id: s.id, serviceName: s.serviceName, price: Number(s.price) }));
+      }
+    } catch {}
+  }
+
   return {
     orders: rows.map((r) => ({ ...r, isRefill: refillMap.get(Number(r.serviceId)) ?? 0 })),
     filter,
     counts: tabCounts,
+    popular,
     // UX4.3 — lastUpdate untuk LiveDot timestamp (initial dari server = now)
     lastUpdate: new Date().toISOString(),
   };
