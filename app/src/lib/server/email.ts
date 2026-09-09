@@ -5,8 +5,18 @@ const SMTP_HOST = process.env.SMTP_HOST ?? "";
 const SMTP_PORT = Number(process.env.SMTP_PORT ?? 587);
 const SMTP_USER = process.env.SMTP_USER ?? "";
 const SMTP_PASS = process.env.SMTP_PASS ?? "";
+// FROM boleh polos (noreply@socio.id) atau sudah berformat ("Nama <addr>") —
+// normalisasi di buildFrom() agar header tidak double-wrap (pernah kejadian:
+// "Socio ID <Socio ID <noreply@socio.id>>" → penalti spam + risiko DMARC).
 const FROM = process.env.SOCIO_MAIL_FROM ?? "noreply@socio.id";
 const FROM_NAME = process.env.SOCIO_MAIL_FROM_NAME ?? "Socio ID";
+const SUPPORT = process.env.SOCIO_MAIL_SUPPORT ?? "support@socio.id";
+
+function buildFrom(): string {
+  const raw = FROM.trim();
+  if (/<[^<>]+@[^<>]+>/.test(raw)) return raw; // sudah berformat → pakai apa adanya
+  return `${FROM_NAME} <${raw}>`;
+}
 
 interface SendArgs {
   to: string;
@@ -65,11 +75,16 @@ async function sendViaSmtp(args: SendArgs): Promise<boolean> {
   });
   try {
     const info = await transporter.sendMail({
-      from: `${FROM_NAME} <${FROM}>`,
+      from: buildFrom(),
       to: args.to,
       subject: args.subject,
       html: args.html,
       text: args.text,
+      // Wajib untuk bulk-sender reputation (aturan Gmail) + memberi jalan keluar user.
+      headers: {
+        "List-Unsubscribe": `<mailto:${SUPPORT}?subject=unsubscribe>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
     });
     if (dev) console.info(`[email:smtp] queued id=${info.messageId}`);
     return true;
@@ -85,11 +100,14 @@ async function sendViaResend(args: SendArgs): Promise<boolean> {
   const { Resend } = await import("resend");
   const resend = new Resend(RESEND_API_KEY);
   const { error } = await resend.emails.send({
-    from: `${FROM_NAME} <${FROM}>`,
+    from: buildFrom(),
     to: args.to,
     subject: args.subject,
     html: args.html,
     text: args.text,
+    headers: {
+      "List-Unsubscribe": `<mailto:${SUPPORT}?subject=unsubscribe>`,
+    },
   });
   if (error) {
     console.error("[email:resend] send failed", error);

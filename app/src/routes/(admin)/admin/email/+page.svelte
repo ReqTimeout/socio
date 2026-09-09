@@ -231,6 +231,42 @@
     </div>
   </details>
 
+  <!-- Template email sistem (read-only preview) -->
+  <details class="rounded-2xl border border-ink-100 bg-surface">
+    <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3">
+      <span class="flex items-center gap-2 text-sm font-bold">
+        <Icon name="mail" size={15} />
+        Template Sistem
+        <span class="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-bold text-ink-600"
+          >{data.sysTemplates.length} template</span
+        >
+      </span>
+      <span class="text-xs text-ink-400">preview saja — ubah via kode</span>
+    </summary>
+    <div class="space-y-2 border-t border-ink-100 p-3">
+      {#each data.sysTemplates as t (t.key)}
+        <details class="overflow-hidden rounded-xl border border-ink-100">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 hover:bg-ink-50">
+            <span class="min-w-0">
+              <span class="block truncate text-sm font-bold">{t.label}</span>
+              <span class="block truncate text-[11px] text-ink-500">{t.description}</span>
+            </span>
+            <span class="shrink-0 font-mono text-[10px] text-ink-400">{t.key}</span>
+          </summary>
+          <div class="border-t border-ink-100 bg-ink-50/50 p-3">
+            <p class="mb-2 truncate text-xs"><span class="font-bold">Subjek:</span> {t.subject}</p>
+            <iframe
+              title="Preview {t.label}"
+              srcdoc={t.html}
+              sandbox=""
+              class="h-96 w-full rounded-xl border border-ink-200 bg-white"
+            ></iframe>
+          </div>
+        </details>
+      {/each}
+    </div>
+  </details>
+
   <div class="flex flex-wrap items-center justify-between gap-2">
     <div class="flex flex-wrap gap-1.5">
       {#each data.filterStatuses as s (s || "all")}

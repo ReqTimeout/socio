@@ -77,6 +77,19 @@ export async function requestRefund(params: {
     ip,
   });
 
+  // Alert admin: refund ≥ threshold butuh approval kedua.
+  try {
+    const { notifyAdmins } = await import("./email-templates");
+    const rupiah = "Rp" + Math.round(amount).toLocaleString("id-ID");
+    await notifyAdmins({
+      subject: `Refund ${rupiah} butuh approval — order #${orderId}`,
+      body: `Refund ${rupiah} untuk order #${orderId} menunggu approval admin kedua.\nAlasan: ${reason}`,
+      ctaText: "Buka approval",
+      ctaUrl: "https://app.socio.id/admin/refunds",
+      templateName: "admin-refund-request",
+    });
+  } catch {}
+
   return { pending: true as const, requestId: insertedId, amount };
 }
 

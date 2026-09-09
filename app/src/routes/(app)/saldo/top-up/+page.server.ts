@@ -190,6 +190,16 @@ export const actions: Actions = {
           priority: "high",
         });
       }
+      // Alert admin: ada deposit pending baru (uang masuk potensial).
+      const { notifyAdmins } = await import("$lib/server/email-templates");
+      const amtRp = "Rp" + Math.round(credited).toLocaleString("id-ID");
+      await notifyAdmins({
+        subject: `Deposit pending ${amtRp} — ${u?.fullName ?? "user #" + userId}`,
+        body: `Deposit manual ${amtRp} (${invoiceId}) menunggu konfirmasi.\nUser: ${u?.fullName ?? userId} <${u?.email ?? "-"}>`,
+        ctaText: "Buka deposits",
+        ctaUrl: "https://app.socio.id/admin/deposits",
+        templateName: "admin-deposit-pending",
+      });
     } catch {
       // email best-effort — deposit tetap dibuat
     }

@@ -8,6 +8,7 @@ import {
 import { desc, eq, sql, count } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { listSystemTemplates } from "$lib/server/email-templates";
 import type { Actions, PageServerLoad } from "./$types";
 import type { RowDataPacket } from "mysql2";
 
@@ -117,6 +118,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     filterStatuses: [""].concat(STATUSES),
     queuePending: Number(pendingQ[0]?.c ?? 0),
     queueFailed: Number(failedQ[0]?.c ?? 0),
+    sysTemplates: listSystemTemplates().map((t) => ({
+      key: t.key,
+      label: t.label,
+      description: t.description,
+      subject: t.subject,
+      html: t.html,
+    })),
     txRecent: (txRows as any[]).map((r) => ({
       id: Number(r.id),
       to: String(r.to ?? ""),
