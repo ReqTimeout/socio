@@ -5,11 +5,14 @@
 - [x] Banner dots hit-area, pagination tickets, back-link/username/logo min-24px
 - [x] Refill guard `providerOrderId="0"` → 400 jelas (ringan, ikut commit ini bila disetujui)
 
-## P1 — Stabilitas uang (disarankan berikutnya)
-- [ ] Job rekonsiliasi harian: `users.balance` vs Σ(`balance_logs`) vs Σ(`orders.price` belum refund)
-  → alert ke `admin_notifications` bila selisih. Menutup sisa risiko Phase 1.
-- [ ] Kolom `user` varchar(100) → TEXT (link panjang tidak terpotong diam-diam).
-- [ ] Refill: tombol hanya render bila `providerOrderId` valid (hindari klik sia-sia).
+## P1 — Stabilitas uang (SELESAI 2026-09-09, commit `decdfe6`)
+- [x] Job rekonsiliasi harian (`cron/reconcile.ts`, 04:30, alert-only ke admin_notifications
+      critical): unrefunded Error/Canceled/Partial >1 jam + saldo negatif. Verified: ok 132ms, 0 temuan.
+- [x] Kolom `user` varchar(100) → TEXT (ALTER prod OK, 26030 row utuh; zero-date legacy
+      butuh `SET SESSION sql_mode='ALLOW_INVALID_DATES'` saat ALTER). Verified insert 204 char.
+      Bonus: ketemu + perbaiki API v1 yang tidak kirim field `user` (akan 500).
+- [x] Refill guard server sudah ada; tambah UI gate (tombol hanya bila Success + refillable +
+      providerOrderId valid).
 
 ## P2 — UX order (butuh persetujuan wording)
 - [ ] Hero-kan TOTAL bayar di form pesan; harga satuan + caption "dasar per 1000".
