@@ -231,7 +231,7 @@
     </button>
   </div>
 
-  {#if navigating.to?.url.pathname === "/pesanan"}
+  {#if navigating.current?.to?.url.pathname === "/pesanan"}
     <!-- Skeleton saat pindah filter (hindari flash empty-state) -->
     <ul class="grid grid-cols-1 gap-3 sm:gap-3.5 lg:grid-cols-2" aria-hidden="true">
       {#each [0, 1, 2, 3] as i (i)}
