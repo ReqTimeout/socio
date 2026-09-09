@@ -9,11 +9,13 @@
     revealDelay,
     EmptyOrdersArt,
     LiveDot,
+    Skeleton,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { formatRupiah, serviceDisplayName, formatDateShort } from "$lib/format";
   import { goto } from "$app/navigation";
+  import { navigating } from "$app/state";
   import { applyAction, enhance } from "$app/forms";
   import { page } from "$app/stores";
 
@@ -229,7 +231,27 @@
     </button>
   </div>
 
-  {#if orders.length === 0}
+  {#if navigating.to?.url.pathname === "/pesanan"}
+    <!-- Skeleton saat pindah filter (hindari flash empty-state) -->
+    <ul class="grid grid-cols-1 gap-3 sm:gap-3.5 lg:grid-cols-2" aria-hidden="true">
+      {#each [0, 1, 2, 3] as i (i)}
+        <li class="rounded-2xl border border-ink-100 bg-surface p-4">
+          <div class="flex items-center gap-3">
+            <Skeleton width="2.25rem" height="2.25rem" rounded="rounded-xl" />
+            <div class="min-w-0 flex-1 space-y-2">
+              <Skeleton width="60%" height="0.9rem" />
+              <Skeleton width="40%" height="0.75rem" />
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2">
+            <Skeleton height="2rem" />
+            <Skeleton height="2rem" />
+            <Skeleton height="2rem" />
+          </div>
+        </li>
+      {/each}
+    </ul>
+  {:else if orders.length === 0}
     <div
       class="relative overflow-hidden rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center lg:p-10 lg:rounded-3xl"
     >
