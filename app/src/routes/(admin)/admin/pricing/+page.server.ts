@@ -126,32 +126,33 @@ export const actions: Actions = {
     const updates: {
       level: Level;
       markupPercent: number;
-      flatPer1k: number;
-      minProfitPer1k: number;
       isActive: number;
     }[] = [];
 
     for (const level of LEVELS) {
-      const markupPercent = Number(form.get(`markup_${level}`) ?? 0);
-      const flatPer1k = Number(form.get(`flat_${level}`) ?? 0);
-      const minProfitPer1k = Number(form.get(`min_${level}`) ?? 0);
+      // Field kosong ("") = user menghapus isi (bukan 0). Tolak supaya tidak silent-reset ke 0.
+      // Checkbox unchecked / field tidak ada (level nonaktif) = null → pakai 0 + isActive 0.
+      const rawMarkup = form.get(`markup_${level}`);
+      if (rawMarkup === "") return fail(400, { error: `Markup ${level} wajib diisi (0 untuk gratis).` });
+      const markupPercent = Number(rawMarkup ?? 0);
       const isActive = form.get(`active_${level}`) === "1" ? 1 : 0;
 
       if (!Number.isFinite(markupPercent) || markupPercent < 0 || markupPercent > 1000)
         return fail(400, { error: `Markup ${level} harus 0-1000.` });
-      if (!Number.isFinite(flatPer1k) || flatPer1k < 0)
-        return fail(400, { error: `Flat ${level} tidak valid.` });
-      if (!Number.isFinite(minProfitPer1k) || minProfitPer1k < 0)
-        return fail(400, { error: `Min profit ${level} tidak valid.` });
 
-      updates.push({ level, markupPercent, flatPer1k, minProfitPer1k, isActive });
+      updates.push({ level, markupPercent, isActive });
     }
 
+    // flat_/min_ TIDAK ada di form — pertahankan nilai DB (jangan timpa jadi 0).
+    const current = await db.select().from(pricingRules);
+    const curBy = new Map(current.map((r) => [r.level, r]));
+
     for (const u of updates) {
+      const cur = curBy.get(u.level);
       await upsertPricingRule(u.level, {
         markupPercent: u.markupPercent,
-        flatPer1k: u.flatPer1k,
-        minProfitPer1k: u.minProfitPer1k,
+        flatPer1k: Number(cur?.flatPer1k ?? 0),
+        minProfitPer1k: Number(cur?.minProfitPer1k ?? 0),
         isActive: u.isActive,
       });
     }

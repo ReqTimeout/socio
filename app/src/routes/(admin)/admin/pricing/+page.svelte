@@ -58,7 +58,9 @@
     Admin: Number(data.rules.find((r) => r.level === "Admin")?.isActive ?? 1) === 1,
   });
 
-  // Working state — prefill dari snapshot saat init & setelah Simpan; edit user tidak tertimpa invalidate
+  // Working state — prefill dari snapshot saat init & setelah Simpan; edit user tidak tertimpa invalidate.
+  // PENTING: jangan pakai `isDirty` sebagai guard prefill. State awal {0,0,0,0} ≠ snapshot
+  // sehingga isDirty langsung true dan prefill tidak pernah jalan (bug: form tampil 0 terus).
   let markup: Record<Level, number> = $state({ Member: 0, Agen: 0, Reseller: 0, Admin: 0 });
   let active: Record<Level, boolean> = $state({
     Member: true,
@@ -66,10 +68,17 @@
     Reseller: true,
     Admin: true,
   });
+  let hydrated = $state(false);
   $effect(() => {
-    if (!isDirty) {
+    // Track snapshot agar effect jalan saat data server tiba.
+    void initialMarkup.Member;
+    void initialMarkup.Agen;
+    void initialMarkup.Reseller;
+    void initialMarkup.Admin;
+    if (!hydrated) {
       markup = { ...initialMarkup };
       active = { ...initialActive };
+      hydrated = true;
     }
   });
 
