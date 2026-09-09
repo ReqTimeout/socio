@@ -70,6 +70,17 @@
 - **Refund**: <Rp50rb auto, ≥Rp50rb approval admin kedua (self-approve diblokir).
 - **Member**: wajib klik link verifikasi email (gate login). **Reseller**: exempt — aktivasinya = confirm pembayaran admin.
 - **Email**: semua transaksional via `email_queue` (async ≤5 mnt, retry 3). Template di `lib/server/deposit-emails.ts` + `lib/server/email.ts` (`wrapEmail`). SMTP primary. Visibilitas: section Transaksional di `/admin/email`.
+- **Email deliverability (audit 2026-09-08, JANGAN diulang kesalahannya)**:
+  - From header PERNAH double-wrap (`Socio ID <Socio ID <...>>`) karena env sudah berformat +
+    kode wrap lagi → fix `buildFrom()` di email.ts. Selalu verifikasi header via mailbox lokal.
+  - DKIM: mailserver TIDAK signing (KeyTable/SigningTable kosong, milters off) → app sign
+    sendiri via nodemailer (selector `mail`, key env `SOCIO_DKIM_PRIVATE_KEY`, d=socio.id).
+    DNS `mail._domainkey` cocok. Jangan sentuh mailserver tanpa backup.
+  - DMARC `p=reject` strict — header harus valid, kalau tidak Gmail tolak mentah-mentah.
+  - Gmail 421-4.7.28 = rate-limit domain (bukan auth). Penyebab: blast massal. Jangan blast
+    >100/jam ke Gmail; antrean basi Sep-2026 menumpuk 2945 + bounce 12k file (113M).
+  - Test deliverability: enqueue ke noreply@socio.id → trigger email-queue → baca .eml di
+    `/opt/mailu/scripts/mail-server/mail-data/socio.id/noreply/new/` (cek From/DKIM/List-Unsub).
 - **Broadcast**: 6 segmen, rate-limit 5/menit. **Jangan test kirim ke user asli.**
 - **Backup**: mysqldump via mysql2 + gzip, 03:00, keep 10, `backup_logs`. Zero-date MySQL (`0000-00-00`) → handle Invalid Date.
 
