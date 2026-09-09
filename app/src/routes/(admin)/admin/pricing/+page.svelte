@@ -219,6 +219,52 @@
     </div>
   {/if}
 
+  <!-- Kurs USD→IDR: efektif = max(live, floor) anti-rugi -->
+  <div class="rounded-2xl border border-ink-100 bg-surface p-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-success-soft text-success">
+          <Icon name="banknote" size={16} stroke={2.5} />
+        </span>
+        <div>
+          <p class="text-sm font-bold leading-tight">
+            $1 = Rp{data.fx.effective.toLocaleString("id-ID")}
+          </p>
+          <p class="text-[11px] text-ink-500">
+            Live {data.fx.live ? `Rp${data.fx.live.rate.toLocaleString("id-ID")}` : "—"} ·
+            Floor Rp{data.fx.floor.toLocaleString("id-ID")} ·
+            {data.fx.live && data.fx.live.at
+              ? `update ${new Date(data.fx.live.at as string).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+              : "belum pernah fetch"}
+          </p>
+        </div>
+      </div>
+      <form
+        method="POST"
+        action="?/setFloor"
+        use:enhance
+        class="flex items-center gap-2"
+      >
+        <label for="fx-floor" class="text-xs font-bold text-ink-500">Floor</label>
+        <input
+          id="fx-floor"
+          name="floor"
+          type="number"
+          min="1000"
+          max="100000"
+          step="100"
+          value={data.fx.floor}
+          class="h-9 w-28 rounded-xl border border-ink-200 px-2.5 text-sm font-bold tabular-nums"
+        />
+        <Button type="submit" size="sm">Simpan</Button>
+      </form>
+    </div>
+    <p class="mt-2 text-[11px] text-ink-400">
+      Efektif = nilai terbesar (live vs floor) — harga modal tidak pernah di bawah floor.
+      Live di-fetch otomatis tiap hari 00:05. Berlaku di sync katalog berikutnya.
+    </p>
+  </div>
+
   <!-- Catalog stats: distribution + samples -->
   <div class="rounded-2xl border border-ink-100 bg-surface p-4">
     <div class="mb-3 flex items-center gap-2">

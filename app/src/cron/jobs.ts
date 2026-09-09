@@ -13,6 +13,7 @@ import { runAutoRefund } from "./refund";
 import { runEmailQueue } from "./email-queue";
 import { runLightCron } from "./light";
 import { runBackup } from "../lib/server/backup";
+import { refreshFxRate } from "../lib/server/fx";
 
 export interface CronJobDef {
   key: string;
@@ -99,6 +100,15 @@ export const CRON_JOBS: CronJobDef[] = [
     intervalMin: 1440,
     note: "mysqldump + gzip ke /app/storage/backups",
     run: (triggeredBy: number) => runBackup(triggeredBy),
+  },
+  {
+    key: "fx-rate",
+    label: "Kurs USD→IDR",
+    expr: "5 0 * * *",
+    scheduleLabel: "Tiap hari 00:05",
+    intervalMin: 1440,
+    note: "Fetch kurs live (efektif = max(live, floor))",
+    run: () => refreshFxRate(),
   },
 ];
 

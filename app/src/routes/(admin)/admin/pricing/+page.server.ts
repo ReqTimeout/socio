@@ -5,6 +5,7 @@ import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import { DEFAULT_PRICING_RULES } from "$lib/server/pricing-defaults";
 import { getPricingRules, invalidatePricingCache, upsertPricingRule } from "$lib/server/pricing";
+import { getFxInfo, setFxFloor } from "$lib/server/fx";
 import type { Actions, PageServerLoad } from "./$types";
 
 async function seedIfEmpty(): Promise<void> {
@@ -110,7 +111,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     console.error("[pricing] load services stats gagal:", e);
   }
 
-  return { rules, stats };
+  return { rules, stats, fx: await getFxInfo() };
 };
 
 const LEVELS = ["Member", "Agen", "Reseller", "Admin"] as const;
@@ -167,6 +168,34 @@ export const actions: Actions = {
     });
 
     return { success: "Aturan harga per level disimpan." };
+  },
+
+  /**
+   * Set floor kurs USD→IDR manual (anti-rugi). Tidak tersentuh auto-refresh harian.
+   * Perubahan floor berlaku di sync katalog berikutnya (maks 1 jam).
+   */
+  setFloor: async ({ request, locals }) => {
+    assertAdmin(locals);
+    const _rate = await assertAdminRate("pricing-floor", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
+    const form = await request.formData();
+    const floor = Number(form.get("floor"));
+    if (!Number.isFinite(floor) || floor < 1000 || floor > 100000) {
+      return fail(400, { error: "Floor harus angka 1.000–100.000." });
+    }
+    try {
+      await setFxFloor(floor);
+    } catch (e: any) {
+      return fail(400, { error: e?.message ?? "Gagal simpan floor." });
+    }
+    await logAudit({
+      adminId: Number(locals.user.id),
+      action: "set_fx_floor",
+      entity: "fx_rates",
+      detail: { floor: Math.round(floor) },
+      ip: (locals as any).ip,
+    });
+    return { success: `Floor kurs disimpan: Rp${Math.round(floor).toLocaleString("id-ID")} per $1.` };
   },
 
   /**

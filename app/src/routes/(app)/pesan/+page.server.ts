@@ -225,13 +225,14 @@ export const actions: Actions = {
     const payable = Math.max(finalPrice - discount, 0);
 
     // Pre-check saldo provider (cached hourly di provider.balance_provider)
-    // supaya tidak deduct user lalu gagal di provider ( manufactured 500 ).
-    // Estimasi modal USD = (priceApi - profitAgen) / USD_TO_IDR.
+    // supaya tidak deduct user lalu gagal di provider.
+    // Estimasi modal USD = (priceApi - profitAgen) / kurs_efektif.
     if (s.providerId !== 1) {
       try {
         const [pv] = await db.select().from(provider).where(eq(provider.id, s.providerId)).limit(1);
         const modalIdr = Math.max(Number(s.priceApi) - Number((s as any).profitAgen ?? 0), 0);
-        const usdRate = Number(process.env.SOCIO_USD_TO_IDR ?? "16000") || 16000;
+        const { getUsdToIdr } = await import("$lib/server/fx");
+        const usdRate = await getUsdToIdr();
         const needUsd = (modalIdr / usdRate) * (finalQty / 1000);
         const haveUsd = pv ? Number((pv as any).balanceProvider ?? 0) : 0;
         if (pv && modalIdr > 0 && haveUsd > 0 && needUsd > haveUsd) {

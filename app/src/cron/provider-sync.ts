@@ -3,8 +3,7 @@ import { provider, providerServices } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { smmturkBalanceFor, smmturkServicesFor, withConcurrency } from "@socio/core/smmturk";
 import { decryptSecret, encryptSecret } from "$lib/server/crypto";
-
-const USD_TO_IDR = Number(process.env.SOCIO_USD_TO_IDR ?? "15000");
+import { getUsdToIdr } from "$lib/server/fx";
 
 /** Record a sync run for monitoring (G10). */
 export async function logSync(
@@ -67,6 +66,8 @@ export async function runProviderSync(providerId = 1): Promise<void> {
 
     const balance = await smmturkBalanceFor(endpoint, key);
     const remote = await smmturkServicesFor(endpoint, key);
+    // Kurs terpusat (efektif = max(live, floor)) — bukan env statis.
+    const USD_TO_IDR = await getUsdToIdr();
     let changed = 0;
 
     // index existing by provider_service_id

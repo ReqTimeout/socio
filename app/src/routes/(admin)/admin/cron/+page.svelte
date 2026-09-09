@@ -50,7 +50,7 @@
       Cron Jobs
     </h1>
     <p class="mt-1 text-sm text-ink-500">
-      Semua 8 job + jadwal + run terakhir + tombol jalankan manual. Auto-refresh 15 detik.
+      Semua {data.jobs.length} job + jadwal + run terakhir + tombol jalankan manual. Auto-refresh 15 detik.
     </p>
   </header>
 

@@ -22,7 +22,8 @@ import { eq, and, sql, inArray } from "drizzle-orm";
 import { logSync } from "./provider-sync";
 import { getPricingRules } from "$lib/server/pricing";
 
-const USD_TO_IDR = Number(process.env.SOCIO_USD_TO_IDR ?? "15000");
+// NOTE: konversi USD→IDR terjadi di provider-sync via getUsdToIdr() (kurs terpusat).
+// File ini membaca ps.rate yang SUDAH IDR — tidak pakai rate langsung.
 const MANUAL_OFF_TAG = "[manual-off]";
 
 export async function runServiceSync(providerId: number): Promise<void> {
