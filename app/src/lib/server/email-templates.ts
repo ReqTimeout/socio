@@ -1,5 +1,5 @@
 import { db } from "@socio/db";
-import { emailQueue, users } from "@socio/db/schema";
+import { emailQueue, users, adminNotifications } from "@socio/db/schema";
 import { eq } from "drizzle-orm";
 import {
   depositInstructionMail,
@@ -93,6 +93,8 @@ export function listSystemTemplates(): SystemTemplate[] {
 /**
  * Alert email ke SEMUA user level Admin (deposit pending, refund request, dsb).
  * Volume kecil (bisnis ini <20 event/hari) — aman tanpa digest.
+ * Backup in-app: selalu tulis admin_notifications juga (email ke Gmail bisa
+ * ter-throttle; notif in-app tampil di topbar admin via SSE/polling).
  */
 export async function notifyAdmins(opts: {
   subject: string;
@@ -109,17 +111,29 @@ export async function notifyAdmins(opts: {
       .limit(20);
     let n = 0;
     for (const a of admins) {
-      if (!a.email || !a.email.includes("@")) continue;
-      await enqueueEmail({
-        to: a.email,
-        userId: Number(a.id),
-        templateName: opts.templateName ?? "admin-alert",
-        subject: opts.subject,
-        body: opts.body,
-        ctaText: opts.ctaText,
-        ctaUrl: opts.ctaUrl,
-        priority: "high",
-      });
+      if (a.email && a.email.includes("@")) {
+        await enqueueEmail({
+          to: a.email,
+          userId: Number(a.id),
+          templateName: opts.templateName ?? "admin-alert",
+          subject: opts.subject,
+          body: opts.body,
+          ctaText: opts.ctaText,
+          ctaUrl: opts.ctaUrl,
+          priority: "high",
+        });
+      }
+      try {
+        await db.insert(adminNotifications).values({
+          adminId: Number(a.id),
+          type: "system",
+          title: opts.subject.slice(0, 255),
+          message: opts.body.slice(0, 2000),
+          actionUrl: opts.ctaUrl ?? "/admin",
+          priority: "high",
+          createdAt: new Date(),
+        } as any);
+      } catch {}
       n++;
     }
     return n;
