@@ -11,6 +11,9 @@ const SMTP_PASS = process.env.SMTP_PASS ?? "";
 const FROM = process.env.SOCIO_MAIL_FROM ?? "noreply@socio.id";
 const FROM_NAME = process.env.SOCIO_MAIL_FROM_NAME ?? "Socio ID";
 const SUPPORT = process.env.SOCIO_MAIL_SUPPORT ?? "support@socio.id";
+// DKIM private key (selector `mail`, d=socio.id — cocok DNS mail._domainkey).
+// Disimpan di env dengan newline asli. Kalau kosong → kirim tanpa DKIM.
+const DKIM_KEY = (process.env.SOCIO_DKIM_PRIVATE_KEY ?? "").replace(/\\n/g, "\n");
 
 function buildFrom(): string {
   const raw = FROM.trim();
@@ -72,6 +75,10 @@ async function sendViaSmtp(args: SendArgs): Promise<boolean> {
     },
     connectionTimeout: 10_000,
     greetingTimeout: 5_000,
+    // DKIM-sign di app (mailserver tidak signing: KeyTable/SigningTable kosong).
+    ...(DKIM_KEY.includes("BEGIN PRIVATE KEY")
+      ? { dkim: { domainName: "socio.id", keySelector: "mail", privateKey: DKIM_KEY } }
+      : {}),
   });
   try {
     const info = await transporter.sendMail({
