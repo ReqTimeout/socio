@@ -58,6 +58,9 @@
 | light (expire deposit + reminder T-2h) | tiap 15 mnt | `cron_runs` |
 | backup | 03:00 | `backup_logs` |
 - Semua run tercatat di `cron_runs` via `runJob()` (overlap dicegah, prune 200/job). Monitor: `/admin/cron`.
+- Deploy saat sync jalan → row `running` yatim. Boot `startCron()` me-reap yang >30 mnt
+  jadi error. Jangan bersihkan manual tanpa batas waktu (pernah salah tandai job yang
+  sedang jalan). service-catalog tercatat via chained `runJob` (bukan hanya sync_log).
 - Tambah job = 1 entry di `jobs.ts` (otomatis terjadwal + muncul di UI).
 - **seedSmmturkProvider match by `apiUrlOrder`, BUKAN by name** (pelajaran: rename whitelabel pernah bikin provider duplikat tiap jam).
 
