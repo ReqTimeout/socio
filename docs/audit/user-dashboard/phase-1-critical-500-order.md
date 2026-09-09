@@ -24,10 +24,13 @@ Audit kode `pesan/+page.server.ts` (action `default`):
   - `user: link.slice(0, 100)` (strict-mode guard).
 
 ## Verifikasi (tanpa order real — uang asli)
-- [ ] build + check lolos
-- [ ] POST serviceId fiktif → 400 "Layanan tidak ditemukan" (action live)
-- [ ] POST qty 0 → 400 min (validasi hidup)
-- [ ] Hitung `orders` + balance user test SEBELUM/Sesudah probe → tidak berubah
+- [x] build + check lolos
+- [x] POST serviceId fiktif → 400 "Layanan tidak ditemukan" (action live)
+- [x] POST qty 0 → 400 "Jumlah minimal 10" (validasi hidup, min dari service real)
+- [x] POST service real + saldo 0 → 400 "Saldo tidak cukup" (rantai validasi→pricing→deduct hidup)
+- [x] POST refill id fiktif → 404 (action live)
+- [x] `orders` 26030→26030, balance 0→0 (NOL efek samping)
+- [x] Catatan probe: action default dipanggil via POST path polos (bukan `?/default` — reserved name → 500; bukan `?/` → Not Found)
 - [ ] Skenario deduct-lalu-throw tidak mungkin lagi tanpa refund (review kode)
 
 ## Sisa risiko yang diterima

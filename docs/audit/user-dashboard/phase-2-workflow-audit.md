@@ -2,6 +2,8 @@
 
 Metode: baca `+page.server.ts` (action, ownership, query) + Playwright 11 halaman × 2 viewport
 (m360/m390): semua HTTP 200, overflowX=0, console error=0.
+Putaran final (hasil-user4.json): **22/22 hijau** — smallTargets=0 di semua halaman
+(setelah fix banner dots, icon-link, min-24 links).
 
 ## `/` Beranda
 - Load 5 query. Banner dots 6px → FIXED hit-area 38px (`-m-2 p-2`).
