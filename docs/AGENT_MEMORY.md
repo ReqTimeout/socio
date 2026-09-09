@@ -87,6 +87,11 @@
     marketing-upsell, ~24k) — BUKAN transaksional. Jangan blast massal; antrean basi
     di-flush via postsuper (satu-per-satu, batch postsuper -d multi-ID gagal), mailbox
     bounce dibersihkan via `doveadm expunge` (jangan grep 12k file manual — lambat).
+  - Guard processor (email-queue.ts): ORDER BY priority DESC (transaksional dulu),
+    marketing max 10/run, Gmail max 5/run. Jangan naikkan tanpa Postmaster spam <0.1%.
+  - Import XLS: tabel `mailing_list` + action `importXls` (xlsx/csv, max 5MB/5000 baris,
+    dedupe, validasi) + audience `xls_list` (userId=0 di tracking). Enum DB perlu ALTER
+    manual bila tambah audience. Tidak ada sistem import lama (legacy tidak punya).
 - **Broadcast**: 6 segmen, rate-limit 5/menit. **Jangan test kirim ke user asli.**
 - **Backup**: mysqldump via mysql2 + gzip, 03:00, keep 10, `backup_logs`. Zero-date MySQL (`0000-00-00`) → handle Invalid Date.
 
