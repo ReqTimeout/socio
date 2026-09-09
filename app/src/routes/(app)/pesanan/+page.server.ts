@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
 import { orders, services, users, balanceLogs } from "@socio/db/schema";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import { smmturkRefill, smmturkCancel } from "@socio/core/smmturk";
 import type { PageServerLoad, Actions } from "./$types";
@@ -36,13 +36,14 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     .orderBy(desc(orders.createdAt))
     .limit(30);
 
-  // Get isRefill flag per service
+  // Get isRefill flag per service (inArray — JANGAN string-join ke sql``:
+  // bound parameter '1,2,3' hanya match ID pertama!)
   const svcIds = [...new Set(rows.map((r) => Number(r.serviceId)))];
   const svcRows = svcIds.length
     ? await db
         .select({ id: services.id, isRefill: services.isRefill })
         .from(services)
-        .where(sql`${services.id} IN (${svcIds.join(",")})`)
+        .where(inArray(services.id, svcIds))
     : [];
   const refillMap = new Map(svcRows.map((s) => [s.id, s.isRefill]));
 
@@ -91,7 +92,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
         const svc = await db
           .select({ id: services.id, serviceName: services.serviceName, price: services.price, providerServiceId: services.providerServiceId })
           .from(services)
-          .where(and(eq(services.providerId, 2), eq(services.status, 1), sql`${services.providerServiceId} IN (${pids.join(",")})`));
+          .where(and(eq(services.providerId, 2), eq(services.status, 1), inArray(services.providerServiceId, pids)));
         const order: Record<number, number> = {};
         pids.forEach((id, i) => (order[id] = i));
         const byPid = new Map(svc.map((s) => [Number((s as any).providerServiceId ?? 0), s]));
@@ -224,7 +225,7 @@ export const actions: Actions = {
     const targets = await db
       .select()
       .from(orders)
-      .where(and(eq(orders.userId, userId), sql`${orders.id} IN (${ids.join(",")})`));
+      .where(and(eq(orders.userId, userId), inArray(orders.id, ids)));
 
     const pending = targets.filter((o) => o.status === "Pending");
     if (!pending.length)
