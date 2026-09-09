@@ -70,3 +70,19 @@ CREATE TABLE IF NOT EXISTS cron_runs (
 SET @col_rs = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='deposits' AND COLUMN_NAME='reminder_sent');
 SET @sql_rs = IF(@col_rs=0, 'ALTER TABLE deposits ADD COLUMN reminder_sent TINYINT(1) NOT NULL DEFAULT 0', 'SELECT 1');
 PREPARE stmt_rs FROM @sql_rs; EXECUTE stmt_rs; DEALLOCATE PREPARE stmt_rs;
+
+-- 6) mailing_list (import XLS email) + xls_list audience
+CREATE TABLE IF NOT EXISTS mailing_list (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(150) NOT NULL DEFAULT '',
+  source VARCHAR(50) NOT NULL DEFAULT 'xls-import',
+  subscribed TINYINT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX ml_email_idx (email),
+  INDEX ml_sub_idx (subscribed)
+) ENGINE=InnoDB;
+-- enum tambah xls_list (idempotent via information_schema check sederhana: coba alter, abaikan bila sudah ada)
+SET @hasxls = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='email_campaigns' AND COLUMN_NAME='target_audience' AND COLUMN_TYPE LIKE '%xls_list%');
+SET @sqlxls = IF(@hasxls=0, 'ALTER TABLE email_campaigns MODIFY COLUMN target_audience ENUM(''all'',''active'',''inactive'',''high_spender'',''new_user'',''churn_risk'',''xls_list'') DEFAULT ''all''', 'SELECT 1');
+PREPARE stmtxls FROM @sqlxls; EXECUTE stmtxls; DEALLOCATE PREPARE stmtxls;

@@ -1,17 +1,26 @@
 import { db } from "@socio/db";
 import { emailQueue, emailCampaignTracking, emailCampaignLog } from "@socio/db/schema";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, sql } from "drizzle-orm";
 import { sendEmail } from "$lib/server/email";
 
 /**
- * Drain antrian `email_queue` → kirim via Resend.
+ * Drain antrian `email_queue` → kirim via SMTP/Resend.
  * Port `app.socio.id/cron/send-email-queue.php`: batch kecil, retry ≤3
  * (exponential gap), cleanup failed >7 hari. Dipanggil tiap 5 menit.
  *
- * Admin email campaign (admin/email) hanya MENAMBAHKAN ke queue — tanpa
- * processor ini email campaign TIDAK pernah terkirim.
+ * GUARD anti-throttle (insiden Gmail 421-4.7.28, Sep-2026):
+ *  - Transaksional (non campaign-/marketing-) selalu duluan (priority DESC).
+ *  - Marketing max 10 kirim/run; penerima Gmail max 5/run (≈60/jam).
+ *  - Sisanya tetap pending untuk run berikutnya (tidak di-drop).
+ * Angka ini konservatif selama reputasi domain pulih; naikkan bertahap
+ * setelah Postmaster Tools menunjukkan spam rate <0.1%.
  */
 const BATCH = 30;
+const MAX_MARKETING_PER_RUN = 10;
+const MAX_GMAIL_PER_RUN = 5;
+const GMAIL_RE = /@(gmail|googlemail)\.com$/i;
+const isMarketing = (t: string | null | undefined) =>
+  !!t && (/^campaign-/i.test(t) || /^marketing-/i.test(t));
 
 export async function runEmailQueue(): Promise<void> {
   // Hapus queueue gagal > 7 hari
@@ -32,12 +41,27 @@ export async function runEmailQueue(): Promise<void> {
     .select()
     .from(emailQueue)
     .where(eq(emailQueue.status, "pending"))
-    .limit(BATCH);
+    .orderBy(sql`${emailQueue.priority} DESC, ${emailQueue.id} ASC`)
+    .limit(100);
   if (pending.length === 0) return;
 
   let sent = 0;
   let failed = 0;
+  let skippedCap = 0;
+  let sentMarketing = 0;
+  let sentGmail = 0;
   for (const q of pending) {
+    if (sent + failed >= BATCH) break;
+    const mk = isMarketing(q.templateName);
+    const gm = GMAIL_RE.test(q.recipientEmail ?? "");
+    if (mk && sentMarketing >= MAX_MARKETING_PER_RUN) {
+      skippedCap++;
+      continue;
+    }
+    if (gm && sentGmail >= MAX_GMAIL_PER_RUN) {
+      skippedCap++;
+      continue;
+    }
     try {
       let subject = `Socio.id`;
       let html = "";
@@ -106,6 +130,8 @@ export async function runEmailQueue(): Promise<void> {
           .set({ emailSent: "sent", sentAt: new Date() })
           .where(eq(emailCampaignLog.queueId, q.id));
         sent++;
+        if (mk) sentMarketing++;
+        if (gm) sentGmail++;
       } else {
         // No key env / gagal kirim → tambah attempts, coba lagi nanti
         await db
@@ -130,5 +156,5 @@ export async function runEmailQueue(): Promise<void> {
       failed++;
     }
   }
-  console.log(`[cron] email-queue: sent=${sent} failed=${failed}`);
+  console.log(`[cron] email-queue: sent=${sent} failed=${failed} skippedCap=${skippedCap} (mkt=${sentMarketing} gmail=${sentGmail})`);
 }

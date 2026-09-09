@@ -4,6 +4,7 @@ import {
   emailCampaignLog,
   emailCampaignTracking,
   emailQueue,
+  mailingList,
 } from "@socio/db/schema";
 import { desc, eq, sql, count } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
@@ -19,7 +20,7 @@ const TEMPLATE_TYPES = [
   "engagement",
   "transactional",
 ] as const;
-const AUDIENCES = ["all", "active", "inactive", "high_spender", "new_user", "churn_risk"] as const;
+const AUDIENCES = ["all", "active", "inactive", "high_spender", "new_user", "churn_risk", "xls_list"] as const;
 const STATUSES = ["draft", "scheduled", "sent", "paused", "cancelled"] as const;
 
 type TemplateType = (typeof TEMPLATE_TYPES)[number];
@@ -118,6 +119,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     filterStatuses: [""].concat(STATUSES),
     queuePending: Number(pendingQ[0]?.c ?? 0),
     queueFailed: Number(failedQ[0]?.c ?? 0),
+    mailingCount: Number(
+      (
+        await db
+          .select({ c: count() })
+          .from(mailingList)
+          .where(eq(mailingList.subscribed, 1))
+          .catch(() => [{ c: 0 }])
+      )[0]?.c ?? 0,
+    ),
     sysTemplates: listSystemTemplates().map((t) => ({
       key: t.key,
       label: t.label,
@@ -152,7 +162,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
                 ? "Depositor 30 hr"
                 : a === "new_user"
                   ? "User baru (7 hr)"
-                  : "Churn risk (30 hr)",
+                  : a === "xls_list"
+                    ? "List XLS import"
+                    : "Churn risk (30 hr)",
     })),
   };
 };
@@ -270,14 +282,26 @@ export const actions: Actions = {
                 ? sql`u.created_at <= DATE_SUB(NOW(), INTERVAL 30 DAY) AND u.id NOT IN (SELECT user_id FROM orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY))`
                 : sql`1=1`;
 
-    const recipients = await db.execute(
-      sql`SELECT u.id, u.email FROM users u
-          WHERE u.verify = 'Yes' AND u.email <> ''
-            AND ${group === "all" ? sql`1=1` : sql`u.level = ${group}`}
-            AND ${audienceFilter}
-          LIMIT 5000`,
-    );
-    const rows = recipients[0] as unknown as (RowDataPacket & { id: number; email: string })[];
+    // Audience XLS: daftar eksternal (subscribed saja), userId=0 (bukan user terdaftar).
+    // Skip query users — mailing list tidak punya level/verify.
+    let rows: (RowDataPacket & { id: number; email: string })[];
+    if (audience === "xls_list") {
+      const xlsRows = await db
+        .select({ id: mailingList.id, email: mailingList.email })
+        .from(mailingList)
+        .where(eq(mailingList.subscribed, 1))
+        .limit(5000);
+      rows = xlsRows.map((x) => ({ id: 0, email: x.email }) as RowDataPacket & { id: number; email: string });
+    } else {
+      const recipients = await db.execute(
+        sql`SELECT u.id, u.email FROM users u
+            WHERE u.verify = 'Yes' AND u.email <> ''
+              AND ${group === "all" ? sql`1=1` : sql`u.level = ${group}`}
+              AND ${audienceFilter}
+            LIMIT 5000`,
+      );
+      rows = recipients[0] as unknown as (RowDataPacket & { id: number; email: string })[];
+    }
     if (!rows || rows.length === 0)
       return fail(400, { error: "Tidak ada penerima untuk segment ini." });
 
@@ -389,5 +413,102 @@ export const actions: Actions = {
       ip: (locals as any).ip,
     });
     return { success: `Campaign "${c.title}" dihapus.` };
+  },
+
+  /**
+   * Import daftar email dari XLS/XLSX/CSV → mailing_list (audience "xls_list").
+   * Kolom email dikenali dari header (email/e-mail/mail) atau kolom pertama.
+   * Duplikat (di file & di DB) di-skip. Max 5000 baris/file 5MB.
+   */
+  importXls: async ({ request, locals }) => {
+    assertAdmin(locals);
+    const _rate = await assertAdminRate("email-import", (locals as any).ip ?? "0.0.0.0", 10, 60);
+    if (_rate) return _rate;
+    const form = await request.formData();
+    const file = form.get("file") as File | null;
+    const source = String(form.get("source") ?? "xls-import").trim().slice(0, 50) || "xls-import";
+    if (!file || file.size === 0) return fail(400, { error: "File XLS/CSV wajib diupload." });
+    if (file.size > 5_000_000) return fail(400, { error: "Max ukuran file 5MB." });
+    if (!/\.(xlsx?|csv)$/i.test(file.name)) return fail(400, { error: "Format harus .xlsx/.xls/.csv." });
+
+    const buf = Buffer.from(await file.arrayBuffer());
+    let rows: any[][];
+    try {
+      const { default: XLSX } = await import("xlsx");
+      const wb = XLSX.read(buf, { type: "buffer" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      if (!ws) return fail(400, { error: "Sheet kosong." });
+      rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as any[][];
+    } catch (e: any) {
+      return fail(400, { error: `Gagal baca file: ${e?.message ?? e}` });
+    }
+    if (rows.length > 5001) return fail(400, { error: "Max 5000 baris per file." });
+
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    // Deteksi kolom email: header mengandung email/e-mail/mail, else kolom pertama.
+    let emailCol = 0;
+    let nameCol = 1;
+    let startRow = 0;
+    const head = (rows[0] ?? []).map((c) => String(c ?? "").toLowerCase());
+    const hi = head.findIndex((h) => h.includes("email") || h === "e-mail" || h === "mail");
+    if (hi >= 0) {
+      emailCol = hi;
+      startRow = 1;
+      const ni = head.findIndex((h) => h.includes("nama") || h.includes("name"));
+      if (ni >= 0) nameCol = ni;
+    }
+    const seen = new Set<string>();
+    const valid: { email: string; name: string }[] = [];
+    let invalid = 0;
+    for (let i = startRow; i < rows.length; i++) {
+      const email = String(rows[i]?.[emailCol] ?? "").trim().toLowerCase();
+      if (!email) continue;
+      if (!EMAIL_RE.test(email)) {
+        invalid++;
+        continue;
+      }
+      if (seen.has(email)) continue;
+      seen.add(email);
+      valid.push({ email, name: String(rows[i]?.[nameCol] ?? "").trim().slice(0, 150) });
+    }
+    if (valid.length === 0) return fail(400, { error: `Tidak ada email valid (baris tidak valid: ${invalid}).` });
+
+    // Insert batch 500 (ignore duplikat via unique email).
+    let inserted = 0;
+    for (let i = 0; i < valid.length; i += 500) {
+      const chunk = valid.slice(i, i + 500);
+      try {
+        await db
+          .insert(mailingList)
+          .values(chunk.map((v) => ({ email: v.email, name: v.name, source })))
+          .onDuplicateKeyUpdate({ set: { subscribed: 1 } });
+        inserted += chunk.length;
+      } catch {
+        // fallback per-row bila batch gagal (race/edge)
+        for (const v of chunk) {
+          try {
+            await db
+              .insert(mailingList)
+              .values({ email: v.email, name: v.name, source })
+              .onDuplicateKeyUpdate({ set: { subscribed: 1 } });
+            inserted++;
+          } catch {}
+        }
+      }
+    }
+    const [totalRow] = await db
+      .select({ c: count() })
+      .from(mailingList)
+      .where(eq(mailingList.subscribed, 1));
+    await logAudit({
+      adminId: Number(locals.user!.id),
+      action: "import_mailing_list",
+      entity: "mailing_list",
+      detail: { file: file.name, source, valid: valid.length, invalid, inserted },
+      ip: (locals as any).ip,
+    });
+    return {
+      success: `Import selesai: ${inserted} baru/diperbarui dari ${valid.length} valid (${invalid} baris tidak valid). Total list aktif: ${Number(totalRow?.c ?? 0)}.`,
+    };
   },
 };

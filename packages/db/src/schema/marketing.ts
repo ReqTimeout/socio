@@ -33,6 +33,7 @@ export const emailCampaigns = mysqlTable("email_campaigns", {
     "high_spender",
     "new_user",
     "churn_risk",
+    "xls_list",
   ]).default("all"),
   targetGroup: varchar("target_group", { length: 50 }).notNull().default("all"),
   scheduledAt: datetime("scheduled_at"),

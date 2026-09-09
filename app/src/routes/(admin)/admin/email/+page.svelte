@@ -268,6 +268,21 @@
   </details>
 
   <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-2.5 py-1 text-[11px] font-bold text-ink-600">
+        <Icon name="users" size={12} />
+        List XLS: {data.mailingCount.toLocaleString("id-ID")} aktif
+      </span>
+      <form method="POST" action="?/importXls" enctype="multipart/form-data" use:enhance class="flex items-center gap-1.5">
+        <label
+          class="inline-flex min-h-[36px] cursor-pointer items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-3 text-xs font-bold text-ink-600 hover:bg-ink-50"
+        >
+          <Icon name="upload" size={13} />
+          Import XLS/CSV
+          <input type="file" name="file" accept=".xlsx,.xls,.csv" class="hidden" onchange={(e) => (e.currentTarget.form as HTMLFormElement)?.requestSubmit()} />
+        </label>
+      </form>
+    </div>
     <div class="flex flex-wrap gap-1.5">
       {#each data.filterStatuses as s (s || "all")}
         <button

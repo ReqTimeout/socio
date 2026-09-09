@@ -22,3 +22,4 @@ export * from "./backups.js";
 export * from "./adminNotifications.js";
 export * from "./cronRuns.js";
 export * from "./fxRates.js";
+export * from "./mailingList.js";
