@@ -85,6 +85,17 @@
   yang match `/^[sa]:[0-9]+[:;{]/` → `unserialize` → save ulang. Lalu REDEPLOY
   (restart saja tidak cukup — env baked saat container create). Pernah kejadian 2026-09-08
   (semua vars kena, app crash-loop, fix + redeploy pulih).
+- **Kurs USD→IDR terpusat** (`lib/server/fx.ts`, tabel `fx_rates`): efektif =
+  `max(live, floor)`. Live di-fetch harian (cron `fx-rate` 00:05, API gratis tanpa key);
+  floor manual (default 20000, via `/admin/pricing`, audit `set_fx_floor`). SEMUA pemakaian
+  rate WAJIB via `getUsdToIdr()` (pernah 3 default beda: 15000/15000/16000).
+- **FX ikut di-hash diff provider-sync**: kurs berubah → semua modal IDR ditulis ulang.
+  Tanpa ini, hash sama → row di-skip → modal pakai kurs lama selamanya (bug 2026-09-08).
+  env vars tersimpan DOUBLE-serialized (`decrypt()` → `s:N:"...";`). Scan+fix via tinker:
+  loop `EnvironmentVariable::where('resourceable_id',1)`, `decrypt(attributes[value])`,
+  yang match `/^[sa]:[0-9]+[:;{]/` → `unserialize` → save ulang. Lalu REDEPLOY
+  (restart saja tidak cukup — env baked saat container create). Pernah kejadian 2026-09-08
+  (semua vars kena, app crash-loop, fix + redeploy pulih).
 
 ## 8. Status & sisa (2026-09-08)
 - Selesai: UX1–UX6, P3-01–P3-10, M4 (cron/provider/email-deposit), M7 cutover (DB tetap VPS MySQL, VPS lama terminate, monitoring ditunda).
