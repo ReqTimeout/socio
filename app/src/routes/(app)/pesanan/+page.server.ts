@@ -73,14 +73,15 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   };
 
   // Layanan populer global (top 3 by order, untuk cross-sell di empty state).
-  // Join via provider_service_id + provider_id=2 (SMMturk aktif). Orders legacy
-  // menyimpan provider ID lama di service_id — tanpa filter provider bisa salah map.
+  // JOIN dulu ke katalog aktif: top mentah dikuasai ID legacy yang tidak ada
+  // di katalog (390099 dkk) sehingga tanpa join hasilnya selalu kosong.
   // Query ringan: aggregate + join 3 services. Hanya saat filter=all & kosong.
   let popular: { id: number; serviceName: string; price: number }[] = [];
   if (filter === "all" && rows.length === 0) {
     try {
       const top = (await db.execute(sql`
         SELECT o.service_id AS sid, COUNT(*) AS c FROM orders o
+        JOIN services s ON s.provider_id = 2 AND s.provider_service_id = o.service_id AND s.status = 1
         WHERE o.provider_id = 2 AND o.service_id > 0
         GROUP BY o.service_id ORDER BY c DESC LIMIT 3
       `)) as any;
