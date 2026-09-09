@@ -25,16 +25,22 @@ export async function logSync(
   }
 }
 
-function hashService(s: {
-  name: string;
-  category: string;
-  rate: string;
-  min: string;
-  max: string;
-  refill: any;
-  cancel: any;
-}): string {
-  const raw = `${s.name}|${s.category}|${s.rate}|${s.min}|${s.max}|${s.refill}|${s.cancel}`;
+function hashService(
+  s: {
+    name: string;
+    category: string;
+    rate: string;
+    min: string;
+    max: string;
+    refill: any;
+    cancel: any;
+  },
+  fx: number,
+): string {
+  // FX ikut di-hash: kalau kurs berubah, semua row dianggap berubah sehingga
+  // rateIdr (USD × kurs) ditulis ulang. Tanpa ini, diff-hash skip semua row
+  // dan modal IDR tetap pakai kurs lama selamanya.
+  const raw = `${s.name}|${s.category}|${s.rate}|${s.min}|${s.max}|${s.refill}|${s.cancel}|fx:${fx}`;
   // lightweight hash (no crypto dep needed for diffing)
   let h = 0;
   for (let i = 0; i < raw.length; i++) {
@@ -80,7 +86,7 @@ export async function runProviderSync(providerId = 1): Promise<void> {
     const toUpsert = remote
       .map((r) => {
         const pid = String(r.service);
-        const h = hashService(r);
+        const h = hashService(r, USD_TO_IDR);
         const prev = existingMap.get(pid);
         return { r, pid, h, prev };
       })
