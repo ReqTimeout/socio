@@ -22,6 +22,20 @@ export function startCron(): void {
   if (started) return;
   started = true;
 
+  // Reap: row 'running' yang yatim (proses mati/deploy saat sync jalan)
+  // ditandai error agar dashboard tidak tampil "sedang jalan" selamanya.
+  void (async () => {
+    try {
+      const { db } = await import("@socio/db");
+      const { cronRuns } = await import("@socio/db/schema");
+      const { sql } = await import("drizzle-orm");
+      await db.execute(sql`
+        UPDATE ${cronRuns} SET status = 'error', error = 'Proses restart saat job berjalan', finished_at = NOW()
+        WHERE ${cronRuns.status} = 'running' AND ${cronRuns.createdAt} < DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+      `);
+    } catch {}
+  })();
+
   for (const def of CRON_JOBS) {
     if (def.expr === "chained") continue;
     cron.schedule(def.expr, () => {

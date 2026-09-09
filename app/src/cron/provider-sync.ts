@@ -141,10 +141,12 @@ export async function runProviderSync(providerId = 1): Promise<void> {
 
     await logSync(providerId, "services", "ok", Date.now() - start, remote.length, changed);
 
-    // Setelah mirror katalog, sync service catalog (auto create/update/disable)
+    // Setelah mirror katalog, sync service catalog (auto create/update/disable).
+    // Dibungkus runJob agar tercatat di cron_runs (bukan cuma provider_sync_log).
     try {
       const { runServiceSync } = await import("./service-sync");
-      await runServiceSync(providerId);
+      const { runJob } = await import("../lib/server/cron-runs");
+      await runJob("service-catalog", () => runServiceSync(providerId));
     } catch (e: any) {
       console.error("[cron] service-sync after provider-sync failed:", e?.message ?? e);
     }
