@@ -21,7 +21,8 @@ export const orders = mysqlTable(
     oid: varchar("oid", { length: 50 }).notNull(),
     sid: varchar("sid", { length: 128 }).notNull(),
     providerOrderId: varchar("provider_order_id", { length: 50 }).notNull(),
-    user: varchar("user", { length: 100 }).notNull().default(""),
+    // TEXT (bukan varchar 100): link/username panjang tidak boleh gagal diam-diam (strict mode 500).
+    user: text("user").notNull(),
     serviceName: varchar("service_name", { length: 255 }).notNull(),
     serviceId: double("service_id").notNull().default(0),
     data: text("data").notNull(),

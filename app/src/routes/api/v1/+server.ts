@@ -222,6 +222,7 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
     oid,
     sid: String(svc.providerServiceId),
     providerOrderId,
+    user: link,
     serviceName: svc.serviceName,
     serviceId: svc.id,
     data: link,

@@ -521,7 +521,7 @@
           <Icon name="refresh" size={16} />
           Pesan Ulang
         </Button>
-        {#if detail.isRefill && detail.status === "Success"}
+        {#if detail.isRefill && detail.status === "Success" && detail.providerOrderId && detail.providerOrderId !== "0"}
           <form
             method="POST"
             action="?/refill"

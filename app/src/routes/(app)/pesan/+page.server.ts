@@ -293,7 +293,7 @@ export const actions: Actions = {
         oid,
         sid: String(s.providerServiceId),
         providerOrderId,
-        user: link.slice(0, 100),
+        user: link,
         serviceName: s.serviceName,
         serviceId: s.id,
         data: link,

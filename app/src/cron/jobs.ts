@@ -14,6 +14,7 @@ import { runEmailQueue } from "./email-queue";
 import { runLightCron } from "./light";
 import { runBackup } from "../lib/server/backup";
 import { refreshFxRate } from "../lib/server/fx";
+import { runReconcile } from "./reconcile";
 
 export interface CronJobDef {
   key: string;
@@ -109,6 +110,15 @@ export const CRON_JOBS: CronJobDef[] = [
     intervalMin: 1440,
     note: "Fetch kurs live (efektif = max(live, floor))",
     run: () => refreshFxRate(),
+  },
+  {
+    key: "reconcile",
+    label: "Rekonsiliasi Uang",
+    expr: "30 4 * * *",
+    scheduleLabel: "Tiap hari 04:30",
+    intervalMin: 1440,
+    note: "Cek unrefunded + saldo negatif (alert only)",
+    run: () => runReconcile(),
   },
 ];
 

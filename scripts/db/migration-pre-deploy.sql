@@ -86,3 +86,10 @@ CREATE TABLE IF NOT EXISTS mailing_list (
 SET @hasxls = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='email_campaigns' AND COLUMN_NAME='target_audience' AND COLUMN_TYPE LIKE '%xls_list%');
 SET @sqlxls = IF(@hasxls=0, 'ALTER TABLE email_campaigns MODIFY COLUMN target_audience ENUM(''all'',''active'',''inactive'',''high_spender'',''new_user'',''churn_risk'',''xls_list'') DEFAULT ''all''', 'SELECT 1');
 PREPARE stmtxls FROM @sqlxls; EXECUTE stmtxls; DEALLOCATE PREPARE stmtxls;
+
+-- 7) orders.user varchar(100) -> TEXT (link panjang tidak boleh 500 strict-mode)
+-- NOTE: dump legacy mengandung zero-date ('0000-00-00') di kolom date -> longgarkan sesi dulu
+SET SESSION sql_mode='ALLOW_INVALID_DATES';
+SET @hasuser = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='orders' AND COLUMN_NAME='user' AND DATA_TYPE='text');
+SET @sqluser = IF(@hasuser=0, 'ALTER TABLE orders MODIFY COLUMN user TEXT NOT NULL', 'SELECT 1');
+PREPARE stmtuser FROM @sqluser; EXECUTE stmtuser; DEALLOCATE PREPARE stmtuser;
