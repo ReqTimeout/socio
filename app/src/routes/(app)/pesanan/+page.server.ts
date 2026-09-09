@@ -73,25 +73,31 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   };
 
   // Layanan populer global (top 3 by order, untuk cross-sell di empty state).
-  // Query ringan: aggregate orders + join 3 services. Hanya saat filter=all & kosong.
+  // Join via provider_service_id + provider_id=2 (SMMturk aktif). Orders legacy
+  // menyimpan provider ID lama di service_id — tanpa filter provider bisa salah map.
+  // Query ringan: aggregate + join 3 services. Hanya saat filter=all & kosong.
   let popular: { id: number; serviceName: string; price: number }[] = [];
   if (filter === "all" && rows.length === 0) {
     try {
       const top = (await db.execute(sql`
-        SELECT service_id AS sid, COUNT(*) AS c FROM orders
-        WHERE service_id > 0 GROUP BY service_id ORDER BY c DESC LIMIT 3
+        SELECT o.service_id AS sid, COUNT(*) AS c FROM orders o
+        WHERE o.provider_id = 2 AND o.service_id > 0
+        GROUP BY o.service_id ORDER BY c DESC LIMIT 3
       `)) as any;
       const topRows: any[] = Array.isArray(top?.[0]) ? top[0] : Array.isArray(top) ? top : [];
-      const ids = topRows.map((r: any) => Number(r.sid ?? r.service_id)).filter((n) => n > 0);
-      if (ids.length) {
+      const pids = topRows.map((r: any) => Number(r.sid)).filter((n) => n > 0);
+      if (pids.length) {
         const svc = await db
-          .select({ id: services.id, serviceName: services.serviceName, price: services.price })
+          .select({ id: services.id, serviceName: services.serviceName, price: services.price, providerServiceId: services.providerServiceId })
           .from(services)
-          .where(and(sql`${services.id} IN (${ids.join(",")})`, eq(services.status, 1)));
+          .where(and(eq(services.providerId, 2), eq(services.status, 1), sql`${services.providerServiceId} IN (${pids.join(",")})`));
         const order: Record<number, number> = {};
-        ids.forEach((id, i) => (order[id] = i));
-        popular = svc
-          .sort((a, b) => (order[a.id] ?? 99) - (order[b.id] ?? 99))
+        pids.forEach((id, i) => (order[id] = i));
+        const byPid = new Map(svc.map((s) => [Number((s as any).providerServiceId ?? 0), s]));
+        popular = pids
+          .map((pid) => byPid.get(pid))
+          .filter((s): s is NonNullable<typeof s> => !!s)
+          .slice(0, 3)
           .map((s) => ({ id: s.id, serviceName: s.serviceName, price: Number(s.price) }));
       }
     } catch {}
