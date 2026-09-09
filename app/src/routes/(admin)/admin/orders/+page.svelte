@@ -26,6 +26,7 @@
       const u = new URLSearchParams();
       if (q) u.set("q", q);
       if (data.status) u.set("status", data.status);
+      if (data.hideAdmin) u.set("hideAdmin", "1");
       goto(`/admin/orders?${u.toString()}`, { keepFocus: true, noScroll: true });
     }, 350);
   }
@@ -129,6 +130,7 @@
     const s = new URLSearchParams();
     if (data.q) s.set("q", data.q);
     if (data.status) s.set("status", data.status);
+    if (data.hideAdmin) s.set("hideAdmin", "1");
     s.set("p", String(p));
     return `/admin/orders?${s.toString()}`;
   }
@@ -141,6 +143,15 @@
     const s = new URLSearchParams();
     if (data.q) s.set("q", data.q);
     if (f) s.set("status", f);
+    if (data.hideAdmin) s.set("hideAdmin", "1");
+    const qs = s.toString();
+    return qs ? `/admin/orders?${qs}` : "/admin/orders";
+  }
+  function hideAdminHref() {
+    const s = new URLSearchParams();
+    if (data.q) s.set("q", data.q);
+    if (data.status) s.set("status", data.status);
+    if (!data.hideAdmin) s.set("hideAdmin", "1");
     const qs = s.toString();
     return qs ? `/admin/orders?${qs}` : "/admin/orders";
   }
@@ -303,6 +314,14 @@
   </div>
   <p class="-mt-0.5 text-[10px] text-ink-400 sm:text-[11px]">
     Statistik mengexclude akun Admin (order internal admin tidak dihitung).
+    <a
+      href={hideAdminHref()}
+      class="ml-1 inline-flex min-h-[24px] items-center gap-1 rounded-full border border-ink-200 bg-surface px-2 py-0.5 text-[10px] font-bold text-ink-600 hover:border-ink-300"
+      aria-pressed={data.hideAdmin}
+    >
+      <Icon name="eye" size={11} />
+      {data.hideAdmin ? "Tampilkan order internal" : "Sembunyikan order internal"}
+    </a>
   </p>
 
   <!-- Filter chips — status (semantic per status, 36px tap target) -->
@@ -412,7 +431,11 @@
               style="--d:{300 + i * 30}ms"
             >
               <td class="px-3 py-3 font-semibold tabular-nums text-ink-900">#{o.id}</td>
-              <td class="px-3 py-3 text-ink-700">{o.username ?? "—"}</td>
+              <td class="px-3 py-3 text-ink-700">{o.username ?? "—"}{#if (o as any).userLevel === "Admin"}
+                  <span
+                    class="ml-1 rounded-full bg-violet-100 px-1.5 py-px text-[10px] font-bold text-violet-700"
+                    >Internal</span
+                  >{/if}</td>
               <td class="max-w-xs px-3 py-3 text-ink-700">
                 <div class="flex items-center gap-2">
                   <span
@@ -476,7 +499,10 @@
                     <span class="truncate font-semibold text-ink-900">{o.serviceName}</span>
                   </div>
                   <p class="truncate text-xs text-ink-500">
-                    {o.username ?? "—"} · {orderBy(o.isApi)}
+                    {o.username ?? "—"} · {orderBy(o.isApi)}{#if (o as any).userLevel === "Admin"} · <span
+                        class="rounded-full bg-violet-100 px-1.5 py-px text-[10px] font-bold text-violet-700"
+                        >Internal</span
+                      >{/if}
                   </p>
                 </div>
               </div>

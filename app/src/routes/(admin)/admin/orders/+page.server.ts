@@ -16,6 +16,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (locals.user.level !== "Admin") throw redirect(303, "/"); // A-02
   const status = String(url.searchParams.get("status") ?? "");
   const q = String(url.searchParams.get("q") ?? "");
+  // hideAdmin=1 → sembunyikan order internal (akun level Admin). Default 0 = tampil semua
+  // agar admin bisa kontrol penuh termasuk order test sendiri.
+  const hideAdmin = url.searchParams.get("hideAdmin") === "1";
   const rawP = Number(url.searchParams.get("p") ?? 1);
   const page = Number.isFinite(rawP) && rawP >= 1 && rawP <= 1000 ? rawP : 1; // A-15
   const limit = 25;
@@ -24,7 +27,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   // exclude order milik user level Admin (samakan logika lama: user_id != admin)
   const notAdmin = sql`(${users.level} IS NULL OR ${users.level} <> 'Admin')`;
 
-  const conds = [notAdmin];
+  const conds = hideAdmin ? [notAdmin] : [];
   if (status) conds.push(eq(orders.status, status as never));
   if (q)
     conds.push(
@@ -38,6 +41,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         id: orders.id,
         userId: orders.userId,
         username: users.username,
+        userLevel: users.level,
         serviceName: orders.serviceName,
         link: orders.data,
         quantity: orders.quantity,
@@ -90,6 +94,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     orders: rows,
     status,
     q,
+    hideAdmin,
     page,
     total,
     pages: Math.ceil(total / limit),
