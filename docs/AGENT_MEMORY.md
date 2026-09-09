@@ -81,6 +81,12 @@
     >100/jam ke Gmail; antrean basi Sep-2026 menumpuk 2945 + bounce 12k file (113M).
   - Test deliverability: enqueue ke noreply@socio.id → trigger email-queue → baca .eml di
     `/opt/mailu/scripts/mail-server/mail-data/socio.id/noreply/new/` (cek From/DKIM/List-Unsub).
+  - Admin alerts (notifyAdmins) → email ke semua user level Admin + backup in-app
+    `admin_notifications` (wajib — email admin semuanya Gmail yang bisa ter-throttle).
+  - Gmail 421-4.7.28 throttle Sep-2026 penyebab: marketing automation (marketing-acquisition_*,
+    marketing-upsell, ~24k) — BUKAN transaksional. Jangan blast massal; antrean basi
+    di-flush via postsuper (satu-per-satu, batch postsuper -d multi-ID gagal), mailbox
+    bounce dibersihkan via `doveadm expunge` (jangan grep 12k file manual — lambat).
 - **Broadcast**: 6 segmen, rate-limit 5/menit. **Jangan test kirim ke user asli.**
 - **Backup**: mysqldump via mysql2 + gzip, 03:00, keep 10, `backup_logs`. Zero-date MySQL (`0000-00-00`) → handle Invalid Date.
 
