@@ -23,8 +23,14 @@
 - [x] Bonus: pola IN-join rusak yang sama diperbaiki di refillMap + massCancel
       (massCancel multi-ID sebelumnya hanya batalkan order PERTAMA!).
 
-## P3 — Polish
-- [ ] Skeleton loading daftar pesanan (kini flash empty-state saat hydration — lihat komentar kode line 38).
+## P3 — Polish (SELESAI 2026-09-09, commit `6f51181` + `d6f3b8b`)
+- [x] Skeleton loading navigasi pesanan (4 kartu). Verified Playwright: 24 skeleton
+      mid-nav → settled 0, URL benar, 0 error. Pelajaran: `$app/state` navigating
+      dipakai langsung (TANPA `.current` — checker menolaknya di versi ini).
+- [x] Pengukuran perf mobile (/pesan / /pesanan /saldo): bundle JS ~75KB + CSS 21KB,
+      CLS 0, longtask ~0. LCP /pesan ~3s dari lokasi tester (TTFB 1.5s jarak jauh;
+      user Jakarta ≈1s). Tidak ada bug server-side; font sudah preload + swap.
+      Lighthouse penuh tidak dijalankan (butuh Chrome penuh, hanya headless shell).
 - [ ] Prefill link validation message inline (sudah ada, ujiidla di device lambat).
 - [ ] Lighthouse mobile halaman `/pesan` (target ≥90).
 
