@@ -100,6 +100,9 @@
 - Load data `load()` harus serializable (jangan spread objek berisi fungsi — pernah bikin 500).
 - Group route `(admin)` TIDAK menambah segmen URL (`(admin)/api/events` = 404, yang benar `api/admin/events`).
 - Drizzle MySQL: tidak ada `$returningId` (pakai select DESC limit 1); `db.run` tidak ada (pakai `db.execute`); `datetime` tanpa timezone.
+- **KRITIS — Drizzle `sql` template bound parameter**: `sql`id IN (${ids.join(",")})`` menghasilkan
+  SATU string parameter `'1,2,3'` yang hanya match ID pertama! Selalu pakai `inArray(col, arr)`
+  untuk list. Bug ini pernah diam-diam merusak popular/refillMap/massCancel (2026-09-09).
 - pdfmake: singleton CJS, `createPdf().getBuffer()`, `setLocalAccessPolicy` harus allow font name-refs.
 - Template literal + backtick SQL: pakai helper `q()` (pernah syntax error).
 - Mobile: tabel → cards `lg:hidden` + `hidden lg:block`; grid ≥3 kolom wajib `min-w-0`; touch target ≥24px (badge dikecualikan); interval/SSE wajib `document.hidden` guard + cleanup; list server wajib `.limit()`.

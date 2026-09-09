@@ -14,11 +14,14 @@
 - [x] Refill guard server sudah ada; tambah UI gate (tombol hanya bila Success + refillable +
       providerOrderId valid).
 
-## P2 — UX order (butuh persetujuan wording)
-- [ ] Hero-kan TOTAL bayar di form pesan; harga satuan + caption "dasar per 1000".
-- [ ] Countdown expire deposit live di halaman saldo.
-- [ ] Empty pesanan + 3 layanan populer (cross-sell).
-- [ ] Seragamkan "Top Up" (sekarang campur "Top up"/"Isi").
+## P2 — UX order (SELESAI 2026-09-09, commit `26b9ee2` + `4f1a205` + `eddd43a`)
+- [x] Caption "harga dasar per 1000" di form pesan (total tetap hero di CTA).
+- [x] Countdown expire deposit live di halaman saldo (tick 30s, skip saat hidden).
+- [x] Empty pesanan + 3 layanan populer (cross-sell). Bug found: top mentah dikuasai
+      ID legacy → join katalog dulu; lalu bug Drizzle IN-join (hanya match pertama) → inArray.
+- [x] Seragamkan "Top Up" (link "Isi" → "Top Up").
+- [x] Bonus: pola IN-join rusak yang sama diperbaiki di refillMap + massCancel
+      (massCancel multi-ID sebelumnya hanya batalkan order PERTAMA!).
 
 ## P3 — Polish
 - [ ] Skeleton loading daftar pesanan (kini flash empty-state saat hydration — lihat komentar kode line 38).
