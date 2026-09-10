@@ -22,8 +22,8 @@
       ticking = true;
       requestAnimationFrame(() => {
         const y = window.scrollY;
-        if (y > lastY + 8 && y > 140) dockHidden = true;
-        else if (y < lastY - 8 || y <= 140) dockHidden = false;
+        if (y > lastY + 12 && y > 160) dockHidden = true;
+        else if (y < lastY - 12 || y <= 80) dockHidden = false;
         lastY = y;
         ticking = false;
       });
@@ -619,10 +619,10 @@
 
   <!-- ===== Mobile: Floating Bottom Dock — solid + border animasi ringan ===== -->
   <nav
-    class="dock-live fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 items-center gap-1 rounded-[28px] border border-ink-200/70 bg-surface p-2 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.25)] transition-transform duration-300 ease-out will-change-transform lg:hidden {dockHidden
-      ? 'translate-y-[calc(100%+1.5rem)]'
-      : 'translate-y-0'}"
-    style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));"
+    class="dock-live fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 items-center gap-1 rounded-[28px] border border-ink-200/70 bg-surface p-2 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.25)] transition-[transform,opacity] duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform lg:hidden {dockHidden
+      ? 'translate-y-[calc(100%+1.75rem)] opacity-0 pointer-events-none'
+      : 'translate-y-0 opacity-100'}"
+    style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)); transform: translateZ(0);"
     aria-label="Menu admin utama"
     aria-hidden={dockHidden}
     inert={dockHidden}
@@ -925,6 +925,12 @@
     to {
       background-position: 220% 0;
     }
+  }
+  /* Pause sheen saat dock hidden — hemat GPU & tidak ganggu animasi hide */
+  .dock-live[aria-hidden="true"]::before {
+    opacity: 0;
+    animation-play-state: paused;
+    transition: opacity 0.35s ease;
   }
   @media (prefers-reduced-motion: reduce) {
     [style*="animation"] {
