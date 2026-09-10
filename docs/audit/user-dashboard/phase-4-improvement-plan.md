@@ -14,7 +14,7 @@
 - [x] Refill guard server sudah ada; tambah UI gate (tombol hanya bila Success + refillable +
       providerOrderId valid).
 
-## P2 — UX order (SELESAI 2026-09-09, commit `26b9ee2` + `4f1a205` + `eddd43a`)
+## P2 — UX order (SELESAI 2026-09-09, commit `26b9ee2` + `4f1a205` + `eddd43a` + `b3a363b`)
 - [x] Caption "harga dasar per 1000" di form pesan (total tetap hero di CTA).
 - [x] Countdown expire deposit live di halaman saldo (tick 30s, skip saat hidden).
 - [x] Empty pesanan + 3 layanan populer (cross-sell). Bug found: top mentah dikuasai
@@ -22,6 +22,9 @@
 - [x] Seragamkan "Top Up" (link "Isi" → "Top Up").
 - [x] Bonus: pola IN-join rusak yang sama diperbaiki di refillMap + massCancel
       (massCancel multi-ID sebelumnya hanya batalkan order PERTAMA!).
+- [x] Follow-up pesan (user lapor teks kepotong di mobile): opsi dropdown wrap 3 baris
+      (prop `multiline` baru di Select) + nama penuh layanan tampil setelah dipilih.
+      Verified Playwright: opsi 129 char tampil 3 baris, nama terpilih full 129 char.
 
 ## P3 — Polish (SELESAI 2026-09-09, commit `6f51181` + `d6f3b8b`)
 - [x] Skeleton loading navigasi pesanan (4 kartu). Verified Playwright: 24 skeleton
