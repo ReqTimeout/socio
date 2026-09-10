@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import { onMount } from "svelte";
   import { haptic } from "../haptic.js";
   import Icon from "./Icon.svelte";
 
@@ -7,6 +8,28 @@
 
   let { items, ticketBadge = 0 }: { items: Item[]; ticketBadge?: number } =
     $props();
+
+  // Auto-hide saat scroll ke bawah (muncul lagi saat scroll ke atas / dekat atas).
+  // Smooth: transform-only + rAF throttle. Tetap di-mount agar tidak reflow;
+  // `inert` mematikan fokus keyboard saat tersembunyi.
+  let dockHidden = $state(false);
+  onMount(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        if (y > lastY + 8 && y > 140) dockHidden = true;
+        else if (y < lastY - 8 || y <= 140) dockHidden = false;
+        lastY = y;
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  });
 
   function isActive(href: string): boolean {
     if (href === "/") return $page.url.pathname === "/";
@@ -28,9 +51,14 @@
      hairline gradient animasi = "hidup". -->
 <nav
   class="dock-live-user lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px] border border-ink-200/70 bg-surface
-    p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_18px_45px_-12px_rgba(15,23,42,0.35),0_4px_12px_rgba(15,23,42,0.12)] dark:shadow-[0_18px_45px_-12px_rgba(0,0,0,0.6),0_4px_12px_rgba(0,0,0,0.4)]"
+    p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_18px_45px_-12px_rgba(15,23,42,0.35),0_4px_12px_rgba(15,23,42,0.12)] dark:shadow-[0_18px_45px_-12px_rgba(0,0,0,0.6),0_4px_12px_rgba(0,0,0,0.4)]
+    transition-transform duration-300 ease-out will-change-transform {dockHidden
+    ? 'translate-y-[calc(100%+1.5rem)]'
+    : 'translate-y-0'}"
   style="grid-template-columns: repeat({items.length}, 1fr); view-transition-name: bottom-nav;"
   aria-label="Navigasi utama"
+  aria-hidden={dockHidden}
+  inert={dockHidden}
 >
   {#each items as item (item.href)}
     {@const active = isActive(item.href)}
@@ -38,7 +66,7 @@
       href={item.href}
       aria-current={active ? "page" : undefined}
       onclick={() => haptic(active ? 6 : 10)}
-      class="group relative flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-full px-1 py-2 transition-all duration-300
+      class="group relative flex h-[52px] flex-col items-center justify-center gap-1 overflow-hidden rounded-full px-1 py-2 transition-all duration-300
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-ink-900
         active:scale-[0.96]
         {active
@@ -65,7 +93,7 @@
       </span>
       <!-- Label: full opacity — AA contrast (opacity dim membuat ink-500 turun ke 2.71) -->
       <span
-        class="text-[9px] font-bold tracking-wide leading-none transition-colors
+        class="whitespace-nowrap text-[9px] font-bold tracking-wide leading-none transition-colors
           {active ? '' : 'group-hover:text-ink-700'}"
       >
         {item.label}

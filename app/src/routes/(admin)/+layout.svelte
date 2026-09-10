@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
   import { haptic, Icon, NotifBell } from "@socio/ui";
   import { can, requiredPermissionForPath, ROLE_BADGE } from "@socio/core/rbac";
   import CommandPalette from "$lib/components/CommandPalette.svelte";
@@ -11,6 +12,25 @@
   let sysNotifOpen = $state(false);
   // Sheet "Lainnya": search filter biar menu panjang gampang dicari
   let menuQuery = $state("");
+  // Dock auto-hide saat scroll ke bawah (smooth transform-only, rAF throttle)
+  let dockHidden = $state(false);
+  onMount(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        if (y > lastY + 8 && y > 140) dockHidden = true;
+        else if (y < lastY - 8 || y <= 140) dockHidden = false;
+        lastY = y;
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  });
   const sysNotifs = $derived((data as any).adminNotifs ?? []);
   const sysNotifCount = $derived((data as any).adminNotifCount ?? 0);
 
@@ -599,9 +619,13 @@
 
   <!-- ===== Mobile: Floating Bottom Dock — solid + border animasi ringan ===== -->
   <nav
-    class="dock-live fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 items-center gap-1 rounded-[28px] border border-ink-200/70 bg-surface p-2 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.25)] lg:hidden"
+    class="dock-live fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 items-center gap-1 rounded-[28px] border border-ink-200/70 bg-surface p-2 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.25)] transition-transform duration-300 ease-out will-change-transform lg:hidden {dockHidden
+      ? 'translate-y-[calc(100%+1.5rem)]'
+      : 'translate-y-0'}"
     style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));"
     aria-label="Menu admin utama"
+    aria-hidden={dockHidden}
+    inert={dockHidden}
   >
     {#each visiblePrimaryNav as n (n.href)}
       {@const badgeCount = n.badge ? Number((data as any)[n.badge] ?? 0) : 0}
@@ -610,7 +634,7 @@
         onclick={() => haptic(isActive(n.href) ? 6 : 10)}
         aria-current={isActive(n.href) ? "page" : undefined}
         aria-label={badgeCount > 0 ? `${n.label} (${badgeCount} pending)` : n.label}
-        class="relative flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[9px] font-bold tracking-wide leading-none transition-all duration-300 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-ink-900 {isActive(
+        class="relative flex h-[52px] flex-col items-center justify-center overflow-hidden gap-1 rounded-full px-1 py-2 text-[9px] font-bold tracking-wide leading-none transition-all duration-300 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-ink-900 {isActive(
           n.href,
         )
           ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-800 dark:text-ink-100 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
@@ -627,7 +651,7 @@
             </span>
           {/if}
         </span>
-        <span class="leading-none">{n.label}</span>
+        <span class="whitespace-nowrap leading-none">{n.label}</span>
       </a>
     {/each}
     <button
@@ -638,12 +662,12 @@
       }}
       aria-current={inMoreActive ? "true" : undefined}
       aria-label="Menu lainnya"
-      class="flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[9px] font-bold tracking-wide leading-none transition-all duration-300 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 {inMoreActive
+      class="flex h-[52px] flex-col items-center justify-center overflow-hidden gap-1 rounded-full px-1 py-2 text-[9px] font-bold tracking-wide leading-none transition-all duration-300 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 {inMoreActive
         ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-800 dark:text-ink-100 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
         : 'text-ink-500 hover:text-ink-700 dark:hover:text-ink-300'}"
     >
       <Icon name="more_horizontal" size={18} stroke={inMoreActive ? 2.4 : 1.9} />
-      <span class="leading-none">Lainnya</span>
+      <span class="whitespace-nowrap leading-none">Lainnya</span>
     </button>
   </nav>
 
