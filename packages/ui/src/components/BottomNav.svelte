@@ -23,11 +23,12 @@
   }
 </script>
 
-<!-- iPhone premium dock: floating glass pill, superellipse 28px, blur-2xl, safe-area.
-     Glass chrome token-driven (P7-02) — tidak ada literal `bg-white/75`. -->
+<!-- Dock user: solid + 3D + border hidup (ganti glass transparan).
+     Solid bg-surface (tidak tembus konten), shadow berlapis = efek 3D mengambang,
+     hairline gradient animasi = "hidup". -->
 <nav
-  class="glass lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px]
-    p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
+  class="dock-live-user lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px] border border-ink-200/70 bg-surface
+    p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_18px_45px_-12px_rgba(15,23,42,0.35),0_4px_12px_rgba(15,23,42,0.12)] dark:shadow-[0_18px_45px_-12px_rgba(0,0,0,0.6),0_4px_12px_rgba(0,0,0,0.4)]"
   style="grid-template-columns: repeat({items.length}, 1fr); view-transition-name: bottom-nav;"
   aria-label="Navigasi utama"
 >
@@ -92,6 +93,37 @@
   @media (prefers-reduced-motion: reduce) {
     .dock-bounce {
       animation: none !important;
+    }
+    .dock-live-user::before {
+      animation: none;
+    }
+  }
+
+  /* Hairline gradient animasi di sekeliling dock — border "hidup" */
+  .dock-live-user::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 29px;
+    padding: 1.5px;
+    background: linear-gradient(
+      120deg,
+      var(--color-accent-300),
+      var(--color-primary-300),
+      var(--color-accent-300)
+    );
+    background-size: 220% 100%;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: dock-sheen 7s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes dock-sheen {
+    to {
+      background-position: 220% 0;
     }
   }
 </style>
