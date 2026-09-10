@@ -55,6 +55,17 @@
 - Waktu load 331–5571ms (p95 wajar untuk query admin + network ID-SG).
 
 ## Menu/dock pass (2026-09-08 malam, dari screenshot user, commit `04a05b0`)
+- (isi sebelumnya tidak berubah)
+
+## Dock auto-hide + anti-stretch (2026-09-09, commit `841b6e9`)
+- Laporan: dock "stretch" saat scroll di HP asli (tidak terreproduksi di headless —
+  kemungkinan wrap label beda metrik font device).
+- Fix ganda: (1) kunci tinggi item `h-[52px]` + `overflow-hidden` + label nowrap,
+  (2) auto-hide smooth saat scroll bawah (transform-only, rAF throttle, `inert`
+  saat sembunyi, muncul lagi saat scroll atas/dekat atas). Berlaku dock user
+  (BottomNav) + admin.
+- Verified Playwright: tinggi konstan 70px, y 762→856 saat scroll (keluar viewport),
+  kembali + inert lepas saat ke atas, 0 error.
 1. **Dock transparan (glass) → solid** `bg-surface + border` + border gradient animasi
    ringan (`dock-sheen` 7s, mask-composite hairline, off saat reduced-motion).
 2. **ContextFab primary hitam → gradient brand** (`from-primary-600 to-accent-500`).
