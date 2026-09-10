@@ -18,6 +18,9 @@
     disabled = false,
     size = "md",
     onChange,
+    /** multiline: opsi wrap 3 baris (untuk label panjang mis. nama layanan SMM).
+     *  Default truncate 1 baris. Trigger tetap 1 baris. */
+    multiline = false,
   }: {
     value?: string | number;
     options: SelectOption[];
@@ -27,6 +30,7 @@
     disabled?: boolean;
     size?: "sm" | "md";
     onChange?: (v: string | number) => void;
+    multiline?: boolean;
   } = $props();
 
   let open = $state(false);
@@ -135,13 +139,14 @@
                 role="option"
                 aria-selected={active}
                 onclick={() => choose(o)}
-                class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition
+                class="flex w-full gap-2.5 px-3 text-left text-sm transition
+                  {multiline ? 'items-start py-3' : 'items-center py-2.5'}
                   {active ? 'bg-primary/8 font-semibold text-primary' : 'text-ink-700 hover:bg-ink-50'}"
               >
                 {#if o.icon}
-                  <Icon name={o.icon} size={16} stroke={2} class="shrink-0 {active ? 'text-primary' : 'text-ink-500'}" />
+                  <Icon name={o.icon} size={16} stroke={2} class="shrink-0 {multiline ? 'mt-0.5' : ''} {active ? 'text-primary' : 'text-ink-500'}" />
                 {/if}
-                <span class="min-w-0 flex-1 truncate">{o.label}</span>
+                <span class="min-w-0 flex-1 {multiline ? 'line-clamp-3 text-[13px] leading-snug' : 'truncate'}">{o.label}</span>
                 {#if o.hint}
                   <span class="shrink-0 text-xs tabular-nums {active ? 'text-primary/70' : 'text-ink-500'}">{o.hint}</span>
                 {/if}

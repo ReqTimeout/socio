@@ -330,11 +330,15 @@
               placeholder={selectedCat ? "Pilih layanan…" : "Pilih kategori dulu"}
               searchPlaceholder="Cari layanan…"
               searchable
+              multiline
               disabled={!selectedCat || loadingServices}
               onChange={pickServiceById}
             />
             {#if selectedService}
-              <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+              <p class="mt-2 text-sm font-bold leading-snug text-ink-900">
+                {selectedService.serviceName}
+              </p>
+              <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                 <span class="font-display font-bold text-accent-ink"
                   >{formatRupiah(pickPrice(selectedService))}</span
                 >
