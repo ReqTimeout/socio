@@ -46,7 +46,7 @@ import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
     <p class="reveal text-center text-[14px] font-semibold text-[oklch(0.97_0.004_220)] md:text-[16px]">
       <span class="num font-extrabold text-[oklch(0.97_0.004_220)]">{totalLayanan}</span> layanan SMM aktif
       <span aria-hidden="true" class="mx-2 opacity-40">·</span>
-      <span class="num font-extrabold text-[oklch(0.97_0.004_220)]">882</span> kategori
+      <span class="num font-extrabold text-[oklch(0.97_0.004_220)]">{totalKategori}</span> kategori
       <span aria-hidden="true" class="mx-2 opacity-40">·</span>
       <span class="text-[oklch(0.78_0.01_220)]">panel online 24/7</span>
     </p>
