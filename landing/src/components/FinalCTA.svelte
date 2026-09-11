@@ -1,4 +1,5 @@
 <script>
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
   import { onMount } from 'svelte';
 
   let container;
@@ -90,7 +91,7 @@
         Daftar reseller <strong class="text-[oklch(0.97_0.004_220)]">Rp50.000</strong> — saldo
         <strong class="text-[oklch(0.97_0.004_220)]">Rp20.000</strong> langsung jalan, harga layanan
         <strong class="text-[oklch(0.97_0.004_220)] border-b border-[var(--accent)]">khusus reseller</strong>
-        di 8.270 layanan Instagram, TikTok, YouTube &amp; semua platform.
+        di {totalLayanan} layanan Instagram, TikTok, YouTube &amp; semua platform.
       </p>
 
       <div class="pt-10 flex flex-col md:flex-row items-center justify-center gap-6">
@@ -112,7 +113,7 @@
       <p class="mt-12 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[13px] font-semibold text-[oklch(0.78_0.01_220)]">
         <span class="text-[oklch(0.97_0.004_220)]">Rp20rb</span><span>saldo langsung jalan</span>
         <span aria-hidden="true" class="opacity-40">·</span>
-        <span class="text-[oklch(0.97_0.004_220)]">8.270</span><span>layanan reseller</span>
+        <span class="text-[oklch(0.97_0.004_220)]">{totalLayanan}</span><span>layanan reseller</span>
         <span aria-hidden="true" class="opacity-40">·</span>
         <span class="text-[oklch(0.97_0.004_220)]">24/7</span><span>panel online</span>
         <span aria-hidden="true" class="opacity-40">·</span>

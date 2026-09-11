@@ -1,3 +1,4 @@
+import { totalLayanan, totalKategori, hargaMulai } from './siteStats';
 // D8: Konfigurasi 10 money pages /beli-* + /smm-panel-* (SEO system §2).
 // Harga real dari prices.json (jangan hardcode harga di sini) — hanya mapping
 // keyword, FAQ, copy spesifik per halaman. Anti-pattern: jangan buat
@@ -81,7 +82,7 @@ export const beliPages: BeliPageData[] = [
     reasons: [
       "Likes masuk dalam menit — sempat nge-hook di jam emas distribusi algoritma konten baru.",
       "Cukup link post — bukan akun. Bisa untuk post mana pun, termasuk Reels dan carousel.",
-      "Harga reseller Rp1.106/1k — naik level sekali, murah di semua 8.270 layanan.",
+`Harga reseller Rp1.106/1k — naik level sekali, murah di semua ${totalLayanan} layanan.`,
     ],
     faq: [
       {
@@ -374,13 +375,13 @@ export const beliPages: BeliPageData[] = [
     keyword: "SMM Panel Reseller — Jadi Reseller SMM Modal Rp50 Ribu",
     title: "SMM Panel Reseller: Jadi Reseller SMM Modal Rp50.000 | Socio.id",
     description:
-      "SMM panel reseller terpercaya: daftar Rp50.000 → saldo Rp20.000 + harga grosir di 8.270 layanan. API ready, tanpa biaya bulanan.",
+`SMM panel reseller terpercaya: daftar Rp50.000 → saldo Rp20.000 + harga grosir di ${totalLayanan} layanan. API ready, tanpa biaya bulanan.`,
     heroSub:
       "Modal Rp50.000 sekali bayar — saldo Rp20.000 langsung bisa order + harga reseller lebih murah di semua layanan.",
     serviceMatch: "TikTok Video Views",
     platform: "TikTok",
     reasons: [
-      "Harga grosir: selisih member→reseller di seluruh 8.270 layanan, menumpuk besar di volume tinggi.",
+`Harga grosir: selisih member→reseller di seluruh ${totalLayanan} layanan, menumpuk besar di volume tinggi.`,
       "API ready — order bisa diotomasi dari sistem kamu sendiri (kios, bot, web toko sendiri).",
       "Tanpa biaya bulanan, tanpa kontrak — sekali daftar, harga reseller selamanya.",
     ],
@@ -403,7 +404,7 @@ export const beliPages: BeliPageData[] = [
       },
       {
         q: "Reseller bisa jual semua layanan?",
-        a: "Ya — semua 8.270 layanan semua platform, dari Instagram sampai Spotify, dengan harga reseller seragam lebih murah.",
+        a: `Ya — semua ${totalLayanan} layanan semua platform, dari Instagram sampai Spotify, dengan harga reseller seragam lebih murah.`,
       },
     ],
     crossSell: [
@@ -417,9 +418,9 @@ export const beliPages: BeliPageData[] = [
     keyword: "SMM Panel API — Dokumentasi & Integrasi Gratis",
     title: "SMM Panel API: Dokumentasi & Integrasi Order Otomatis | Socio.id",
     description:
-      "API SMM panel Socio.id: order, cek status, saldo, dan katalog 8.270 layanan via REST. Daftar gratis, dokumentasi lengkap, rate-limit wajar.",
+`API SMM panel Socio.id: order, cek status, saldo, dan katalog ${totalLayanan} layanan via REST. Daftar gratis, dokumentasi lengkap, rate-limit wajar.`,
     heroSub:
-      "REST API untuk semua proses: order, status, saldo, katalog 8.270 layanan — daftar gratis, langsung dapat API key.",
+`REST API untuk semua proses: order, status, saldo, katalog ${totalLayanan} layanan — daftar gratis, langsung dapat API key.`,
     serviceMatch: "Instagram Likes",
     platform: "Instagram",
     reasons: [

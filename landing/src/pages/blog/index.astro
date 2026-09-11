@@ -1,4 +1,5 @@
 ---
+import { totalLayanan, totalKategori, hargaMulai } from '../../data/siteStats';
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.svelte';
@@ -49,7 +50,7 @@ const breadcrumbSchema = {
 
 <Layout
   title="Blog Socio.id — Tips SMM, Harga Real & Panduan Reseller"
-  description="Artikel SMM terbaru: cara aman beli followers, harga TikTok/IG/YouTube terkini dari katalog 8.270 layanan, dan panduan bisnis reseller modal Rp50 ribu."
+  description={`Artikel SMM terbaru: cara aman beli followers, harga TikTok/IG/YouTube terkini dari katalog ${totalLayanan} layanan, dan panduan bisnis reseller modal Rp50 ribu.`}
 >
   <Navbar client:load />
 

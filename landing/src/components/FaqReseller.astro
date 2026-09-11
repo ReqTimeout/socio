@@ -1,10 +1,11 @@
 ---
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
 // D5: FaqReseller — accordion ledger 6 item (details/summary native, pattern FAQ home).
 // Isi: biaya, saldo, aktivasi, API, harga, top-up. Paper bg.
 const items = [
   {
     q: 'Daftar reseller Rp50.000 itu dapat apa saja?',
-    a: 'Sekali bayar Rp50.000: akun reseller aktif, saldo Rp20.000 langsung masuk dan bisa dipakai order, plus harga khusus reseller yang lebih murah dari harga member — berlaku di semua 8.270 layanan, selamanya. Tanpa iuran bulanan.',
+    a: `Sekali bayar Rp50.000: akun reseller aktif, saldo Rp20.000 langsung masuk dan bisa dipakai order, plus harga khusus reseller yang lebih murah dari harga member — berlaku di semua ${totalLayanan} layanan, selamanya. Tanpa iuran bulanan.`,
   },
   {
     q: 'Kapan akun reseller saya aktif?',

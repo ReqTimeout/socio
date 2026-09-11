@@ -1,4 +1,5 @@
 ---
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.svelte';
 import Footer from '../components/Footer.astro';
@@ -10,7 +11,7 @@ import FloatingTabDock from '../components/FloatingTabDock.svelte';
 const daftar = 'https://app.socio.id/daftar?mode=reseller';
 const popularLinks = [
   { href: '/beli-followers-instagram', label: 'Beli followers Instagram', sub: 'Mulai Rp7.395/1k · refill' },
-  { href: '/layanan', label: 'Layanan SMM lengkap', sub: '8.270 layanan · 882 kategori' },
+  { href: '/layanan', label: 'Layanan SMM lengkap', sub: `${totalLayanan} layanan · ${totalKategori} kategori` },
   { href: '/reseller', label: 'Program reseller', sub: 'Modal Rp50rb · saldo Rp20rb' },
 ];
 
@@ -27,7 +28,7 @@ const notFoundSchema = {
 
 <Layout
   title="Halaman tidak ditemukan · Socio.id"
-  description="Halaman ini nggak ada. Cari layanan di katalog 8.270 layanan, atau kembali ke beranda Socio.id."
+  description={`Halaman ini nggak ada. Cari layanan di katalog ${totalLayanan} layanan, atau kembali ke beranda Socio.id.`}
   dockCta="Kembali ke Beranda|/"
 >
   <Navbar client:load />

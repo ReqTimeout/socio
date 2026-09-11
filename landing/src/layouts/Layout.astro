@@ -1,4 +1,5 @@
 ---
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
 import '../styles/global.css';
 // D0: import font aset → Astro kasih hashed URL stabil untuk preload
 import soraWoff2 from '../fonts/sora-latin.woff2';
@@ -6,7 +7,7 @@ import jakartaWoff2 from '../fonts/plus-jakarta-latin.woff2';
 
 const {
   title = 'Socio.id — Panel SMM Termurah & Tercepat di Indonesia',
-  description = 'Panel SMM reseller terpercaya: daftar Rp50.000, saldo Rp20.000 langsung jalan + harga reseller lebih murah di 8.270 layanan Instagram, TikTok, YouTube. Proses otomatis 24 jam, garansi refill.',
+  description = `Panel SMM reseller terpercaya: daftar Rp50.000, saldo Rp20.000 langsung jalan + harga reseller lebih murah di ${totalLayanan} layanan Instagram, TikTok, YouTube. Proses otomatis 24 jam, garansi refill.`,
   dockCta = '',
 } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://socio.id').href;
@@ -72,7 +73,7 @@ const ogImage = new URL('/og-image.png', Astro.site ?? 'https://socio.id').href;
           "width": 512,
           "height": 512
         },
-        "description": "Panel SMM reseller termurah dan tercepat di Indonesia. 8.270 layanan Instagram, TikTok, YouTube, Telegram, Spotify & SEO.",
+        "description": `Panel SMM reseller termurah dan tercepat di Indonesia. ${totalLayanan} layanan Instagram, TikTok, YouTube, Telegram, Spotify & SEO.`,
         "sameAs": [
           "https://socio.id"
         ],

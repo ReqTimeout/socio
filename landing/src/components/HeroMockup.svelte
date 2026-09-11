@@ -1,4 +1,5 @@
 <script lang="ts">
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
   // D2: HeroMockup — live dashboard mockup §3g.0 (pola haloka, di-level-up)
   // CSS murni, no chrome dots, no emoji, no external image. Reduced-motion → state final.
   import { onMount } from 'svelte';
@@ -179,7 +180,7 @@
     </span>
     <div>
       <p class="text-[9px] font-bold uppercase tracking-widest text-ink-3">Mulai</p>
-      <p class="num text-[13px] font-extrabold text-ink">Rp42/1k</p>
+      <p class="num text-[13px] font-extrabold text-ink">Rp{hargaMulai}/1k</p>
     </div>
   </div>
 </div>

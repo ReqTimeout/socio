@@ -1,4 +1,5 @@
 ---
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
 // D8: BeliPage — template tunggal untuk 10 money pages /beli-* + /smm-panel-*.
 // Spec LANDING_DESIGN_PLAN §4.4: 7 section + schema Product/Offer + BreadcrumbList.
 // Harga SELALU dari prices.json — tidak ada angka hardcode di template.
@@ -270,7 +271,7 @@ const breadcrumbSchema = {
           href="/layanan"
           class="inline-flex min-h-[44px] items-center rounded-full border border-dashed border-[var(--hairline-strong)] px-5 text-[13px] font-semibold text-ink-2 transition-colors hover:border-[var(--accent-ink)]"
         >
-          Semua 8.270 layanan
+          Semua {totalLayanan} layanan
         </a>
       </div>
     </div>

@@ -1,4 +1,5 @@
 ---
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
 // D3: ProblemLedger — 3 pain → solusi dalam ledger row (hairline, no card).
 // Containment: ledger (§3b #4). Bg paper-2. Reveal per-row +60ms.
 const rows = [
@@ -11,7 +12,7 @@ const rows = [
   {
     pain: 'Harga reseller lain mahal?',
     solution: 'Harga pabrik, langsung dari provider',
-    detail: 'Member mulai Rp42/1k. Daftar reseller Rp50.000 — saldo Rp20.000 langsung masuk, harga khusus reseller di semua layanan.',
+    detail: `Member mulai Rp${hargaMulai}/1k. Daftar reseller Rp50.000 — saldo Rp20.000 langsung masuk, harga khusus reseller di semua layanan.`,
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4h9l8.6 8.6a2 2 0 0 1 0 .8Z"/><circle cx="7.5" cy="7.5" r="0.5" fill="currentColor"/></svg>',
   },
   {

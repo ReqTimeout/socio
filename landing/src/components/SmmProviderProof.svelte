@@ -1,4 +1,5 @@
 <script lang="ts">
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
   import { onMount } from 'svelte';
 
   let visible = $state(false);
@@ -41,9 +42,9 @@
     </div>
 
     <!-- L2 #5: inline narrative stat (anti-pattern 4-col stat strip).
-         Hanya 8.270 (katalog real) + 882 (kategori real). -->
+         Hanya {totalLayanan} (katalog real) + {totalKategori} (kategori real). -->
     <p class="reveal text-center text-[14px] font-semibold text-[oklch(0.97_0.004_220)] md:text-[16px]">
-      <span class="num font-extrabold text-[oklch(0.97_0.004_220)]">8.270</span> layanan SMM aktif
+      <span class="num font-extrabold text-[oklch(0.97_0.004_220)]">{totalLayanan}</span> layanan SMM aktif
       <span aria-hidden="true" class="mx-2 opacity-40">·</span>
       <span class="num font-extrabold text-[oklch(0.97_0.004_220)]">882</span> kategori
       <span aria-hidden="true" class="mx-2 opacity-40">·</span>

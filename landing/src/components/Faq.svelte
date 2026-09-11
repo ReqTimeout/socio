@@ -1,4 +1,5 @@
 <script>
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
   import { slide } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
 
@@ -11,7 +12,7 @@
     },
     {
       q: 'Daftar reseller Rp50.000 itu dapat apa saja?',
-      a: '<strong>Saldo Rp20.000 langsung masuk</strong> — bisa langsung dipakai order — plus akses <strong>harga reseller</strong>: lebih murah dari harga member di semua 8.270 layanan, berlaku selamanya.',
+      a: `<strong>Saldo Rp20.000 langsung masuk</strong> — bisa langsung dipakai order — plus akses <strong>harga reseller</strong>: lebih murah dari harga member di semua ${totalLayanan} layanan, berlaku selamanya.`,
     },
     {
       q: 'Berapa minimal top up?',

@@ -1,4 +1,5 @@
 <script lang="ts">
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
   // D6: TopLayananTable — real table 14 layanan dari prices.json: search live filter
   // + sort klik header (180ms) + highlight match + count hasil.
   // Plan §4.2 #3 + micro. Data di-inject dari Astro frontmatter (satu island, client:visible).
@@ -130,7 +131,7 @@
             {#if filtered.length === 0}
               <tr>
                 <td colspan="4" class="px-4 py-10 text-center text-[14px] text-ink-3">
-                  Tidak ketemu “{query}” — coba kata lain, atau lihat semua 8.270 layanan setelah daftar.
+                  Tidak ketemu “{query}” — coba kata lain, atau lihat semua {totalLayanan} layanan setelah daftar.
                 </td>
               </tr>
             {/if}
@@ -138,7 +139,7 @@
         </table>
       </div>
       <p class="mt-3 text-[12px] text-ink-3">
-        Harga per 1.000, dapat berubah. Daftar untuk lihat harga reseller live di 8.270 layanan.
+        Harga per 1.000, dapat berubah. Daftar untuk lihat harga reseller live di {totalLayanan} layanan.
       </p>
     </div>
   </div>

@@ -1,4 +1,5 @@
 ---
+import { totalLayanan, totalKategori, hargaMulai } from '../../data/siteStats';
 import { getCollection, render } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.svelte';
@@ -182,7 +183,7 @@ const breadcrumbSchema = {
         <aside class="reveal mx-auto mt-10 max-w-[65ch] rounded-2xl border border-[var(--hairline)] bg-[var(--accent-tint)] p-6 md:p-8">
           <p class="font-display text-lg font-bold text-ink">Mau langsung cek harganya?</p>
           <p class="mt-2 text-[14px] leading-relaxed text-ink-2">
-            Katalog 8.270 layanan terbuka untuk semua — daftar reseller Rp50.000 untuk harga
+            Katalog {totalLayanan} layanan terbuka untuk semua — daftar reseller Rp50.000 untuk harga
             lebih murah di setiap layanan.
           </p>
           <div class="mt-5 flex flex-col gap-3 sm:flex-row">

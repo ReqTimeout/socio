@@ -1,4 +1,5 @@
 <script lang="ts">
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
   import { fade, fly } from 'svelte/transition';
   import { onMount } from 'svelte';
 
@@ -16,7 +17,7 @@
   const steps = [
     { id: 1, title: 'Daftar Reseller', desc: 'Rp50.000 sekali — saldo Rp20.000 langsung masuk, harga layanan turun otomatis.' },
     { id: 2, title: 'Top Up Saldo', desc: 'Isi saldo mulai Rp10.000 via QRIS, transfer bank, atau e-wallet. Langsung masuk otomatis.' },
-    { id: 3, title: 'Pilih Layanan', desc: 'Cari dari 8.270 layanan katalog: followers, likes, views, member, hingga SEO.' },
+    { id: 3, title: 'Pilih Layanan', desc: `Cari dari ${totalLayanan} layanan katalog: followers, likes, views, member, hingga SEO.` },
     { id: 4, title: 'Order & Bayar', desc: 'Tempel link, tentukan quantity, klik pesan. Potong saldo otomatis, status live.' },
     { id: 5, title: 'Pantau Status', desc: 'Lihat order dari Pending → Proses → Selesai di dashboard, plus notifikasi real-time.' },
   ];
@@ -169,7 +170,7 @@
               <div in:panelTrans={panelIntro} class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-[var(--hairline)] overflow-hidden">
                 <div class="p-4 border-b border-[var(--hairline)] flex justify-between items-center bg-[var(--paper-2)]">
                   <span class="text-xs font-bold text-ink">Katalog Layanan</span>
-                  <span class="text-[10px] bg-[var(--accent-tint)] text-[var(--accent-ink)] px-2 py-0.5 rounded font-bold">8.270</span>
+                  <span class="text-[10px] bg-[var(--accent-tint)] text-[var(--accent-ink)] px-2 py-0.5 rounded font-bold">{totalLayanan}</span>
                 </div>
                 <div class="p-4 space-y-2">
                   {#each catalogRow as r}
@@ -183,7 +184,7 @@
               <div class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-[var(--hairline)] overflow-hidden">
                 <div class="p-4 border-b border-[var(--hairline)] flex justify-between items-center bg-[var(--paper-2)]">
                   <span class="text-xs font-bold text-ink">Katalog Layanan</span>
-                  <span class="text-[10px] bg-[var(--accent-tint)] text-[var(--accent-ink)] px-2 py-0.5 rounded font-bold">8.270</span>
+                  <span class="text-[10px] bg-[var(--accent-tint)] text-[var(--accent-ink)] px-2 py-0.5 rounded font-bold">{totalLayanan}</span>
                 </div>
                 <div class="p-4 space-y-2">
                   {#each catalogRow as r}

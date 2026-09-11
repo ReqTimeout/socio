@@ -1,4 +1,5 @@
 ---
+import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.svelte';
 import FloatingTabDock from '../components/FloatingTabDock.svelte';
@@ -34,7 +35,7 @@ const regBase = 'https://app.socio.id/daftar?mode=reseller';
       <div class="min-w-0 text-center lg:col-span-5 lg:text-left">
         <p class="hero-seq-0 inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-white/60 px-3.5 py-1.5 text-[11px] font-bold tracking-widest text-ink-2 uppercase">
           <span class="live-dot" aria-hidden="true"></span>
-          8.270 layanan aktif · semua platform
+          {totalLayanan} layanan aktif · semua platform
         </p>
 
         <h1 class="hero-seq-1 font-display mt-5 text-[length:var(--text-hero)] leading-[1.05] font-bold tracking-tight text-ink">
@@ -43,7 +44,7 @@ const regBase = 'https://app.socio.id/daftar?mode=reseller';
         </h1>
 
         <p class="hero-seq-2 mx-auto mt-5 max-w-lg text-[length:var(--text-lead)] leading-relaxed text-ink-2 lg:mx-0">
-          Biaya daftar sudah termasuk saldo awal — langsung bisa order di 8.270 layanan Instagram,
+          Biaya daftar sudah termasuk saldo awal — langsung bisa order di {totalLayanan} layanan Instagram,
           TikTok, YouTube, Telegram &amp; SEO. Plus harga reseller: lebih murah dari harga member
           di semua layanan. Proses otomatis 24 jam, garansi refill.
         </p>
@@ -64,7 +65,7 @@ const regBase = 'https://app.socio.id/daftar?mode=reseller';
           </div>
           <div class="flex items-baseline justify-between gap-4 py-2.5">
             <dt class="text-[13px] font-semibold text-ink-2">Katalog</dt>
-            <dd class="num text-[15px] font-bold text-ink">8.270 layanan · 882 kategori</dd>
+            <dd class="num text-[15px] font-bold text-ink">{totalLayanan} layanan · {totalKategori} kategori</dd>
           </div>
           <div class="flex items-baseline justify-between gap-4 py-2.5">
             <dt class="text-[13px] font-semibold text-ink-2">Proses</dt>
@@ -84,7 +85,7 @@ const regBase = 'https://app.socio.id/daftar?mode=reseller';
             href="/layanan"
             class="inline-flex min-h-[52px] items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-white px-7 text-[15px] font-bold text-ink transition-colors hover:bg-[var(--paper-2)]"
           >
-            Lihat 8.270 layanan
+            Lihat {totalLayanan} layanan
           </a>
         </div>
         <p class="hero-seq-5 mt-4 text-[13px] text-ink-3">
@@ -110,7 +111,7 @@ const regBase = 'https://app.socio.id/daftar?mode=reseller';
     <div class="mx-auto max-w-6xl px-5 md:px-8">
       <p class="reveal text-center text-[15px] leading-relaxed text-ink-2 md:text-[17px]">
         Sekarang ada <strong class="num text-ink">1.240 order aktif</strong> sedang diproses,
-        <strong class="num text-ink">8.270 layanan</strong> di <strong class="num text-ink">882 kategori</strong>,
+        <strong class="num text-ink">{totalLayanan} layanan</strong> di <strong class="num text-ink">{totalKategori} kategori</strong>,
         rata-rata mulai proses <strong class="num text-ink">42 detik</strong> setelah order —
         dipercaya <strong class="num text-ink">50.000+</strong> reseller &amp; UMKM se-Indonesia.
       </p>
