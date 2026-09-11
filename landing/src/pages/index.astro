@@ -7,6 +7,7 @@ import Footer from '../components/Footer.astro';
 import HeroMockup from '../components/HeroMockup.svelte';
 import SmmProviderProof from '../components/SmmProviderProof.svelte';
 import ProblemLedger from '../components/ProblemLedger.astro';
+import Ticker from '../components/Ticker.astro';
 import OrderSimulator from '../components/OrderSimulator.svelte';
 import OrderBoard from '../components/OrderBoard.astro';
 import KapabilitasBento from '../components/KapabilitasBento.astro';
@@ -105,6 +106,9 @@ const regBase = 'https://app.socio.id/daftar?mode=reseller';
 
   <main>
   <SmmProviderProof client:visible />
+
+  <!-- Ticker aktivitas order (plan §3 #3) -->
+  <Ticker />
 
   <!-- Trust inline-stat prose (bukan 4-col strip — anti-pattern gate) -->
   <section class="border-y border-[var(--hairline)] bg-[var(--paper-2)] py-8 md:py-10" aria-label="Statistik socio.id">

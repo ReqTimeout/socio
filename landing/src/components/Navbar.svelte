@@ -19,7 +19,7 @@
 
 <nav
   class="fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter,padding] duration-300
-    {isScrolled ? 'bg-[color-mix(in_oklab,var(--paper)_82%,transparent)] backdrop-blur-xl' : 'bg-transparent'}"
+    {isScrolled ? 'bg-[color-mix(in_oklab,var(--paper)_92%,transparent)] backdrop-blur-xl' : 'bg-transparent'}"
   style="border-bottom: 1px solid {isScrolled ? 'var(--hairline)' : 'transparent'}"
   aria-label="Navigasi utama"
 >

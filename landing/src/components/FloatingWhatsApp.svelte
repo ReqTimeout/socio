@@ -8,13 +8,30 @@
 
   let visible = false;
   let labelExpanded = true;
+  let scrolling = false;
 
   onMount(() => {
     const t = setTimeout(() => (visible = true), 1200);
     const collapse = setTimeout(() => (labelExpanded = false), 4500);
+    // Sembunyi halus saat scroll (biar tidak menutupi konten), muncul lagi saat diam.
+    let idle;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        scrolling = true;
+        clearTimeout(idle);
+        idle = setTimeout(() => (scrolling = false), 900);
+        ticking = false;
+      });
+    };
+    addEventListener('scroll', onScroll, { passive: true });
     return () => {
       clearTimeout(t);
       clearTimeout(collapse);
+      clearTimeout(idle);
+      removeEventListener('scroll', onScroll);
     };
   });
 </script>
@@ -26,6 +43,7 @@
   aria-label="Chat WhatsApp Socio.id"
   class="wa-float group"
   class:visible
+  class:scrolling
 >
   {#if labelExpanded}
     <span class="wa-label" in:fade={{ duration: 250 }} out:fade={{ duration: 150 }}> Chat dengan Kami </span>
@@ -65,6 +83,13 @@
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0) scale(1);
+  }
+
+  /* Mengecil + pudar saat scroll agar tidak menutupi konten */
+  .wa-float.scrolling {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px) scale(0.85);
   }
 
   @media (max-width: 768px) {

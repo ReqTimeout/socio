@@ -66,11 +66,11 @@
   <div class="mx-auto max-w-6xl px-5 md:px-8">
     <div class="reveal mx-auto max-w-2xl text-center">
       <h2 id="sim-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
-        Coba dulu, bayar belakangan.
+        Hitung hargamu sendiri.
       </h2>
       <p class="mt-3 text-[length:var(--text-body)] leading-relaxed text-ink-2">
-        Hitung sendiri harganya — tanpa daftar, tanpa login. Ini harga member;
-        sebagai <strong class="text-ink">reseller kamu bayar lebih murah dari ini</strong>,
+        Pilih layanan, tempel link, geser jumlah — harga member langsung keluar,
+        tanpa daftar. Sebagai <strong class="text-ink">reseller kamu bayar lebih murah</strong>,
         di semua layanan.
       </p>
     </div>

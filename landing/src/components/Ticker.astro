@@ -1,0 +1,56 @@
+---
+// Ticker strip aktivitas order (plan §3 #3 + A3/A6b/A10b).
+// Marquee CSS murni 40s linear infinite, pause on hover/tap/focus.
+// Reduced-motion → tampil statis. Konten snapshot anonim.
+const items = [
+  { user: '@tokokue_enak', detail: '5.000 TikTok Views', time: '2 mnt lalu' },
+  { user: '@rmdaa', detail: '1.000 IG Followers', time: '5 mnt lalu' },
+  { user: '@berkahcell', detail: '10.000 YT Views', time: '9 mnt lalu' },
+  { user: '@sari_olshop', detail: '500 Telegram Members', time: '14 mnt lalu' },
+  { user: '@dimasstore', detail: '2.500 Spotify Plays', time: '21 mnt lalu' },
+  { user: '@klinikkia', detail: '300 FB Likes', time: '27 mnt lalu' },
+];
+// Gandakan agar loop mulus (translateX -50%).
+const loop = [...items, ...items];
+---
+
+<div
+  class="overflow-hidden border-y border-white/10 bg-[var(--dark-panel)] py-2.5"
+  role="marquee"
+  aria-label="Aktivitas order terbaru"
+>
+  <div class="ticker-track flex w-max items-center gap-8 pr-8">
+    {loop.map((t) => (
+      <span class="inline-flex shrink-0 items-center gap-2 text-[12px] whitespace-nowrap">
+        <span class="relative flex h-1.5 w-1.5" aria-hidden="true">
+          <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none"></span>
+          <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+        </span>
+        <span class="font-bold text-white">{t.user}</span>
+        <span class="text-white/60">{t.detail}</span>
+        <span class="num tabular-nums text-white/40">{t.time}</span>
+      </span>
+    ))}
+  </div>
+</div>
+
+<style>
+  .ticker-track {
+    animation: ticker-scroll 40s linear infinite;
+  }
+  div[role="marquee"]:hover .ticker-track,
+  div[role="marquee"]:focus-within .ticker-track,
+  div[role="marquee"]:active .ticker-track {
+    animation-play-state: paused;
+  }
+  @keyframes ticker-scroll {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-track {
+      animation: none;
+    }
+  }
+</style>
