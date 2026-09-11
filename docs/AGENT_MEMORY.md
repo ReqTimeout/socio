@@ -109,6 +109,8 @@
 - Template literal + backtick SQL: pakai helper `q()` (pernah syntax error).
 - Mobile: tabel → cards `lg:hidden` + `hidden lg:block`; grid ≥3 kolom wajib `min-w-0`; touch target ≥24px (badge dikecualikan); interval/SSE wajib `document.hidden` guard + cleanup; list server wajib `.limit()`.
 - `pnpm-lock.yaml` drift → `pnpm install --no-frozen-lockfile` lalu commit.
+- **Model TIDAK buta gambar**: `Read` pada PNG mengembalikan image yang terlihat.
+  Skill `pw-vision` untuk screenshot + ukur layout (jangan klaim buta lagi).
 - Coolify unserialize bug: bila `ERR_SOCKET_BAD_PORT` + crash-loop setelah deploy,
   env vars tersimpan DOUBLE-serialized (`decrypt()` → `s:N:"...";`). Scan+fix via tinker:
   loop `EnvironmentVariable::where('resourceable_id',1)`, `decrypt(attributes[value])`,
