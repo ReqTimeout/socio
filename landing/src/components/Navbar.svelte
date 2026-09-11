@@ -4,7 +4,7 @@
   let isScrolled = false;
 
   const loginLink = 'https://app.socio.id/login';
-  const regLink = 'https://app.socio.id/daftar?mode=reseller';
+  const regLink = 'https://app.socio.id/daftar';
 
   // D1: scroll-state — blur + hairline pas threshold 24px (plan §3 navbar)
   onMount(() => {
@@ -44,7 +44,7 @@
           transition-transform duration-150 hover:bg-[var(--accent-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-focus-ring)]
           active:scale-[0.97]"
       >
-        Daftar Rp50rb
+        Daftar Gratis
       </a>
     </div>
 

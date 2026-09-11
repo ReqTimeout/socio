@@ -3,7 +3,7 @@ import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
   import { onMount } from 'svelte';
 
   let container;
-  const regBase = 'https://app.socio.id/daftar?mode=reseller';
+  const regBase = 'https://app.socio.id/daftar';
 
   // L2: spotlight decorative — gate by IntersectionObserver + reduced-motion,
   // throttle mousemove via rAF (review-animations: avoid style recalc storm).
@@ -100,7 +100,7 @@ import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
           class="group relative inline-flex items-center justify-center gap-3 bg-[var(--accent-ink)] text-white px-10 py-5 rounded-full font-bold text-xl shadow-[0_8px_28px_-8px_rgba(14,116,144,0.45)] hover:shadow-[0_10px_36px_-8px_rgba(14,116,144,0.6)] hover:bg-[var(--accent-hover)] transition-all duration-200 active:scale-[0.98] z-20 overflow-hidden"
         >
           <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shine pointer-events-none"></div>
-          <span class="relative">Daftar Reseller — Rp50rb</span>
+          <span class="relative">Daftar Gratis</span>
         </a>
 
         <a href="#cara-kerja" class="text-[oklch(0.78_0.01_220)] hover:text-[oklch(0.97_0.004_220)] font-medium transition-colors flex items-center gap-2 group/link">

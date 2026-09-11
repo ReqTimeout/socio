@@ -19,7 +19,7 @@ import StickyCTA from '../components/StickyCTA.svelte';
 import FinalCTA from '../components/FinalCTA.svelte';
 import FloatingWhatsApp from '../components/FloatingWhatsApp.svelte';
 
-const regBase = 'https://app.socio.id/daftar?mode=reseller';
+const regBase = 'https://app.socio.id/daftar';
 ---
 
 <Layout>
@@ -40,29 +40,21 @@ const regBase = 'https://app.socio.id/daftar?mode=reseller';
         </p>
 
         <h1 class="hero-seq-1 font-display mt-5 text-[length:var(--text-hero)] leading-[1.05] font-bold tracking-tight text-ink">
-          Daftar reseller Rp50 ribu,<br />
-          <span class="text-[var(--accent-ink)]">saldo Rp20 ribu langsung jalan.</span>
+          Semua platform.<br />
+          <span class="text-[var(--accent-ink)]">Satu panel. Mulai Rp42.</span>
         </h1>
 
         <p class="hero-seq-2 mx-auto mt-5 max-w-lg text-[length:var(--text-lead)] leading-relaxed text-ink-2 lg:mx-0">
-          Biaya daftar sudah termasuk saldo awal — langsung bisa order di {totalLayanan} layanan Instagram,
-          TikTok, YouTube, Telegram &amp; SEO. Plus harga reseller: lebih murah dari harga member
-          di semua layanan. Proses otomatis 24 jam, garansi refill.
+          {totalLayanan} layanan SMM untuk Instagram, TikTok, YouTube, Telegram, Spotify, SEO &amp;
+          {totalKategori} kategori lainnya — dari views Rp42/1k sampai paket organic growth. Proses
+          otomatis 24 jam, garansi refill. Daftar gratis, top-up mulai Rp10 ribu.
         </p>
 
-        <!-- USP ledger (bukan card) — promo offer di atas -->
+        <!-- USP ledger — generic free tier (bukan reseller promo) -->
         <dl class="hero-seq-3 mx-auto mt-7 max-w-md divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] lg:mx-0">
           <div class="flex items-baseline justify-between gap-4 py-2.5">
-            <dt class="text-[13px] font-semibold text-ink-2">Daftar reseller</dt>
-            <dd class="num text-[15px] font-bold text-ink">Rp50.000 sekali</dd>
-          </div>
-          <div class="flex items-baseline justify-between gap-4 py-2.5">
-            <dt class="text-[13px] font-semibold text-ink-2">Saldo langsung masuk</dt>
-            <dd class="num text-[15px] font-bold text-[var(--accent-ink)]">Rp20.000</dd>
-          </div>
-          <div class="flex items-baseline justify-between gap-4 py-2.5">
-            <dt class="text-[13px] font-semibold text-ink-2">Harga layanan</dt>
-            <dd class="text-[15px] font-bold text-ink">Khusus reseller, lebih murah</dd>
+            <dt class="text-[13px] font-semibold text-ink-2">Termurah</dt>
+            <dd class="num text-[15px] font-bold text-ink">Rp{hargaMulai}/1k</dd>
           </div>
           <div class="flex items-baseline justify-between gap-4 py-2.5">
             <dt class="text-[13px] font-semibold text-ink-2">Katalog</dt>
@@ -72,6 +64,10 @@ const regBase = 'https://app.socio.id/daftar?mode=reseller';
             <dt class="text-[13px] font-semibold text-ink-2">Proses</dt>
             <dd class="text-[15px] font-bold text-ink">Otomatis 24 jam</dd>
           </div>
+          <div class="flex items-baseline justify-between gap-4 py-2.5">
+            <dt class="text-[13px] font-semibold text-ink-2">Garansi</dt>
+            <dd class="text-[15px] font-bold text-ink">Refill 30 hari</dd>
+          </div>
         </dl>
 
         <!-- CTA -->
@@ -80,7 +76,7 @@ const regBase = 'https://app.socio.id/daftar?mode=reseller';
             href={regBase}
             class="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[var(--accent-ink)] px-8 text-[15px] font-bold text-white shadow-[0_8px_24px_-8px_var(--accent-ink)] transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]"
           >
-            Daftar Reseller Rp50rb →
+            Daftar Gratis →
           </a>
           <a
             href="/layanan"
@@ -90,7 +86,7 @@ const regBase = 'https://app.socio.id/daftar?mode=reseller';
           </a>
         </div>
         <p class="hero-seq-5 mt-4 text-[13px] text-ink-3">
-          Termasuk saldo Rp20.000 — langsung bisa order · garansi refill 30 hari
+          Gratis daftar · top-up mulai Rp10 ribu · garansi refill 30 hari
         </p>
       </div>
 

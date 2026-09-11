@@ -19,8 +19,8 @@
   // CTA label kontekstual per halaman (§3h spec: page-tuned CTA slot).
   // Exact match dulu, lalu prefix match (beli-* / smm-panel-*), terakhir default.
   const ctaExact = {
-    '/': { label: 'Daftar Rp50rb', href: 'https://app.socio.id/daftar?mode=reseller' },
-    '/layanan': { label: 'Daftar Rp50rb', href: 'https://app.socio.id/daftar?mode=reseller' },
+    '/': { label: 'Daftar Gratis', href: 'https://app.socio.id/daftar' },
+    '/layanan': { label: 'Daftar Gratis', href: 'https://app.socio.id/daftar' },
     '/reseller': { label: 'Daftar Rp50rb', href: 'https://app.socio.id/daftar?mode=reseller' },
     '/blog': { label: 'Masuk', href: loginLink },
   };
