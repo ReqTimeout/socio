@@ -70,7 +70,7 @@
   @media (max-width: 768px) {
     .wa-float {
       right: 1rem;
-      bottom: 5.75rem;
+      bottom: 7rem;
     }
   }
 

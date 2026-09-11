@@ -60,7 +60,7 @@
 </script>
 
 <nav
-  class="md:hidden fixed inset-x-3 bottom-3 z-50
+  class="md:hidden fixed inset-x-3 bottom-3 z-50 grid
     rounded-[28px] border border-white/40 bg-white/75 backdrop-blur-2xl
     shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18),0_4px_16px_rgba(15,23,42,0.08)]
     p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]
