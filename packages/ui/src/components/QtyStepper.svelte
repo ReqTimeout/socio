@@ -30,6 +30,7 @@
   </button>
   <input
     type="number"
+    inputmode="numeric"
     bind:value
     {min}
     {max}

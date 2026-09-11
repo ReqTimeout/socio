@@ -176,6 +176,7 @@
           <input
             id="custom"
             type="number"
+            inputmode="numeric"
             bind:value={custom}
             oninput={() => custom && Number(custom) >= 20000 && (amount = Number(custom))}
             placeholder="50000"
@@ -400,9 +401,7 @@
       {#if instructionOpen && instrPostAmount > 0}
         <div class="mt-3 flex flex-col items-center rounded-xl bg-white p-3 reveal">
           <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=0&data={encodeURIComponent(
-              `BCA ${data.bcaNumber} ${instrPostAmount}`,
-            )}"
+            src="/saldo/qr?data={encodeURIComponent(`BCA ${data.bcaNumber} ${instrPostAmount}`)}"
             alt="QR pembayaran BCA"
             width="180"
             height="180"

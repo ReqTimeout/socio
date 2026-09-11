@@ -14,9 +14,9 @@
     return s;
   }
   function displayName(v: string): string {
-    const f = fixMojibake(v);
-    const h = (f.split("[")[0] ?? f).trim();
-    return h.replace(/\s{2,}/g, " ").trim() || f.trim();
+    // Hanya perbaiki mojibake — JANGAN potong "[...]" (spesifikasi Max/Refill/Speed
+    // adalah pembeda utama antar layanan; tampil via line-clamp-2 di markup).
+    return fixMojibake(v).replace(/\s{2,}/g, " ").trim();
   }
 
   let {
@@ -191,7 +191,7 @@
       <Icon name={plat.icon} size={21} stroke={2} />
     </span>
     <div class="min-w-0 flex-1 pr-8">
-      <p class="truncate text-sm font-bold leading-snug text-ink-900">
+      <p class="line-clamp-2 text-sm font-bold leading-snug text-ink-900">
         {displayName(name)}
       </p>
       <p class="mt-0.5 truncate text-xs text-ink-500">{subtitle}</p>

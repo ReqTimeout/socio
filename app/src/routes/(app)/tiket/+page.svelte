@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, tick } from "svelte";
   import { Input, Button, toast, revealDelay, hoverLift, EmptyTicketsArt } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -13,6 +14,20 @@
   let reply = $state("");
   let sending = $state(false);
   let sendingReply = $state(false);
+  let replyForm = $state<HTMLFormElement | null>(null);
+
+  // Chat UX: buka di pesan terbaru + Ctrl+Enter untuk kirim.
+  onMount(() => {
+    if (data.activeId && data.messages.length > 3) {
+      tick().then(() => replyForm?.scrollIntoView({ block: "end" }));
+    }
+  });
+  function replyKeydown(e: KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      replyForm?.requestSubmit();
+    }
+  }
 
   function openTicket(id: number) {
     haptic();
@@ -91,6 +106,7 @@
       <form
         method="POST"
         action="?/reply"
+        bind:this={replyForm}
         class="surface-pop space-y-3 rounded-2xl border border-ink-100 bg-surface p-4"
         use:enhance={() => {
           sendingReply = true;
@@ -111,9 +127,11 @@
           bind:value={reply}
           rows="3"
           placeholder="Tulis balasan…"
+          onkeydown={replyKeydown}
           class="w-full rounded-xl border border-ink-200 bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
           required
         ></textarea>
+        <p class="-mt-1 text-[11px] text-ink-400">Ctrl+Enter untuk kirim cepat</p>
         <div class="flex gap-2">
           <Button type="submit" size="sm" disabled={sendingReply}>
             {sendingReply ? "Mengirim…" : "Kirim balasan"}
