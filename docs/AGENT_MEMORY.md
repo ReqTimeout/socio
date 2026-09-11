@@ -20,6 +20,8 @@
 - Secret lain (API key dsb): hanya via env/Coolify, tidak pernah di kode.
 
 ## 2. Alur deploy standar (Wajib urut)
+1. `git pull --rebase origin main` DULU (multi-sesi paralel di repo ini — push tanpa
+   fetch = rejected; JANGAN force-push, JANGAN merge blind; cek `git log origin/main`).
 1. `pnpm --filter app check` (0 error) + `pnpm --filter app build` sukses.
 2. `git add -A && git commit --no-verify -m "feat(M{X}): ..."` (`--no-verify` karena pre-existing lint errors, bukan dari kerjaan ini) + `git push origin main`.
 3. SSH VPS → generate token Coolify: `docker exec coolify php artisan tinker --execute="session(['currentTeam' => App\Models\Team::find(1)]); echo App\Models\User::find(1)->createToken('<nama-unik>', ['*'])->plainTextToken;"` → ambil baris terakhir.
