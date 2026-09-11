@@ -1,20 +1,28 @@
 ---
-import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
+import { totalLayanan, totalKategori } from '../data/siteStats';
 // D4: PricingTable — inline pricing prose + real table harga (bukan 3-tier card).
-// Harga REAL dari DB dev 1 Sep (services.price = per-1k Member, price_reseller = per-1k Reseller).
-// Retail normal = estimasi harga jual umum di pasar (untuk perbandingan margin).
+// Harga REAL dari prices.json (sync katalog, bukan hardcode 1 Sep).
+// Retail umum = estimasi harga jual pasar per platform (untuk perbandingan margin).
+import prices from '../data/prices.json';
 const fmt = (n: number) => 'Rp' + n.toLocaleString('id-ID');
 
-const rows = [
-  { layanan: 'TikTok Views', min: 100, kamu: 165, retail: 1000, refill: false },
-  { layanan: 'IG Likes', min: 10, kamu: 1542, retail: 4000, refill: false },
-  { layanan: 'Telegram Members', min: 25, kamu: 801, retail: 2500, refill: false },
-  { layanan: 'YouTube Subscribers', min: 100, kamu: 3081, retail: 8000, refill: true },
-  { layanan: 'YouTube Views', min: 100, kamu: 6162, retail: 12000, refill: false },
-  { layanan: 'X Followers', min: 10, kamu: 4740, retail: 12000, refill: false },
-  { layanan: 'Spotify Plays', min: 100, kamu: 5688, retail: 15000, refill: false },
-  { layanan: 'IG Followers', min: 100, kamu: 7395, retail: 20000, refill: true },
-];
+const RETAIL_BY_PLATFORM: Record<string, number> = {
+  'X/Twitter': 1000,
+  Telegram: 2500,
+  Instagram: 20000,
+  TikTok: 4000,
+  YouTube: 12000,
+  Facebook: 12000,
+  Spotify: 15000,
+};
+interface PriceRow { layanan: string; min: number; kamu: number; retail: number; refill: boolean }
+const rows: PriceRow[] = ((prices as any).top ?? []).slice(0, 8).map((t: any) => ({
+  layanan: t.name,
+  min: t.min,
+  kamu: Math.round(t.price),
+  retail: RETAIL_BY_PLATFORM[t.platform] ?? Math.round(t.price * 2),
+  refill: !!t.refill,
+}));
 ---
 
 <section class="bg-[var(--paper)] py-16 md:py-24" aria-labelledby="harga-title">

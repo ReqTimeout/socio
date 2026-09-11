@@ -5,13 +5,25 @@
   import { onMount } from 'svelte';
   import { tweened } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
+  import prices from '../data/prices.json';
 
-  const services = [
-    { name: 'Instagram Followers', ratePerK: 4200, min: 100 },
-    { name: 'TikTok Views', ratePerK: 42, min: 100 },
-    { name: 'YouTube Likes', ratePerK: 1350, min: 50 },
-    { name: 'Telegram Members', ratePerK: 8900, min: 100 },
-  ];
+  // Layanan contoh dari katalog real (bukan hardcode) — 4 platform berbeda.
+  function pickSample(): Array<{ name: string; ratePerK: number; min: number }> {
+    const top = (prices.top ?? []) as Array<{ platform: string; name: string; price: number; min: number }>;
+    const want = ['Instagram Followers', 'TikTok Views', 'Youtube Subscriber', 'Telegram Members'];
+    const out: Array<{ name: string; ratePerK: number; min: number }> = [];
+    for (const w of want) {
+      const hit = top.find((t) => t.name.startsWith(w));
+      if (hit) out.push({ name: hit.name, ratePerK: Math.round(hit.price), min: hit.min || 100 });
+    }
+    return out.length >= 2
+      ? out
+      : [
+          { name: 'Instagram Followers', ratePerK: 4200, min: 100 },
+          { name: 'TikTok Views', ratePerK: 42, min: 100 },
+        ];
+  }
+  const services = pickSample();
 
   let serviceIdx = $state(1);
   let link = $state('');
