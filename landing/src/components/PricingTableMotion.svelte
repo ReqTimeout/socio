@@ -12,8 +12,10 @@
   const item = { hidden:{opacity: reduced ? 1 : 0, y: reduced ? 0 : 12}, visible:{opacity:1,y:0, transition:{duration: reduced ? 0 : 0.45, ease:[0.16,1,0.3,1]}} };
 </script>
 
-<section class="bg-[var(--paper)] py-16 md:py-24" aria-labelledby="harga-title">
-  <div class="mx-auto max-w-6xl px-5 md:px-8">
+<section class="relative overflow-hidden bg-[var(--paper)] py-16 md:py-24" aria-labelledby="harga-title">
+  <!-- V2-3 dotGrid playful — opacity 0.035 terlalu pucat, naik 0.06 -->
+  <div class="dot-grid pointer-events-none absolute inset-0 opacity-[0.06] hidden md:block" aria-hidden="true"></div>
+  <div class="relative mx-auto max-w-6xl px-5 md:px-8">
     <motion.div initial="hidden" whileInView="visible" viewport={{ once:true, amount:0.2 }} variants={container} class="mx-auto max-w-2xl text-center">
       <motion.h2 variants={item} id="harga-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">Daftar Rp50 ribu. Harga grosir selamanya.</motion.h2>
       <motion.p variants={item} class="mt-3 text-[length:var(--text-body)] leading-relaxed text-ink-2">Sekali daftar reseller <strong class="text-ink">Rp50.000</strong>, saldo awal <strong class="text-ink">Rp20.000</strong> langsung masuk — dan semua layanan di bawah ini kamu dapat <strong class="text-ink">lebih murah dari harga member</strong>. Potongan berlaku permanen di {totalLayanan} layanan.</motion.p>
@@ -53,3 +55,19 @@
     <motion.p initial={{opacity:0,y:8}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{duration:0.5, delay:0.1}} class="mx-auto mt-6 max-w-2xl text-center text-[14px] leading-relaxed text-ink-2">Daftar reseller Rp50.000 &rarr; saldo Rp20.000 + <strong class="text-ink">potongan harga di semua layanan</strong> — berlaku selamanya, bukan sekali pakai. <a href="/reseller" class="font-semibold text-[var(--accent-ink)] underline decoration-[var(--accent)]/40 underline-offset-2 hover:decoration-[var(--accent-ink)]">Lihat program reseller →</a></motion.p>
   </div>
 </section>
+
+<style>
+  .dot-grid {
+    background-image: radial-gradient(circle, var(--ink) 1px, transparent 1px);
+    background-size: 20px 20px;
+    will-change: transform;
+    animation: dot-drift 24s linear infinite;
+  }
+  @keyframes dot-drift {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-20px, -20px, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dot-grid { animation: none; }
+  }
+</style>

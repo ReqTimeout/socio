@@ -32,8 +32,11 @@
   };
 </script>
 
-<section class="bg-[var(--paper-2)] py-16 md:py-24" aria-labelledby="problem-title">
-  <div class="mx-auto max-w-6xl px-5 md:px-8">
+<section class="relative overflow-hidden bg-[var(--paper-2)] py-16 md:py-24" aria-labelledby="problem-title">
+  <!-- V2-3 blob parallax playful — self-heal iter2: naik chroma + opacity biar keliatan di paper-2 -->
+  <div class="blob blob-a pointer-events-none absolute -top-12 -right-12 h-[460px] w-[460px] rounded-full blur-[64px] opacity-100 hidden md:block" style="background: radial-gradient(circle at center, oklch(0.72 0.16 220 / 0.18) 0%, oklch(0.72 0.16 220 / 0) 70%)" aria-hidden="true"></div>
+  <div class="blob blob-b pointer-events-none absolute -bottom-12 -left-12 h-[460px] w-[460px] rounded-full blur-[64px] opacity-100 hidden md:block" style="background: radial-gradient(circle at center, oklch(0.65 0.18 285 / 0.14) 0%, oklch(0.65 0.18 285 / 0) 70%)" aria-hidden="true"></div>
+  <div class="relative mx-auto max-w-6xl px-5 md:px-8">
     <motion.div
       initial="hidden"
       whileInView="visible"
@@ -82,3 +85,20 @@
     </motion.div>
   </div>
 </section>
+
+<style>
+  .blob { will-change: transform; }
+  .blob-a { animation: blob-drift-a 18s ease-in-out infinite alternate; }
+  .blob-b { animation: blob-drift-b 22s ease-in-out infinite alternate; }
+  @keyframes blob-drift-a {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(-10px, 12px, 0) scale(1.05); }
+  }
+  @keyframes blob-drift-b {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(12px, -8px, 0) scale(1.04); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blob-a, .blob-b { animation: none; }
+  }
+</style>
