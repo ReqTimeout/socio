@@ -29,9 +29,14 @@ const regBase = 'https://app.socio.id/daftar';
   <StickyCTA client:idle />
   <FloatingWhatsApp client:idle />
 
-  <header class="relative overflow-hidden bg-[var(--paper)] pt-28 pb-16 md:pt-40 md:pb-24">
+  <header class="hero relative overflow-hidden bg-[var(--paper)] pt-28 pb-16 md:pt-40 md:pb-24">
+    <!-- V2-1 hero mesh: 5 radial oklch nodes + grain, pure CSS 0kb JS (codefronts bga-14 teknik) -->
+    <div class="hero-mesh" aria-hidden="true">
+      <div class="hero-mesh-inner"></div>
+      <div class="hero-grain"></div>
+    </div>
     <!-- Eyebrow hero — load-sequence (bukan scroll) -->
-    <div class="mx-auto grid max-w-6xl items-center gap-12 px-5 md:px-8 lg:grid-cols-12">
+    <div class="relative z-10 mx-auto grid max-w-6xl items-center gap-12 px-5 md:px-8 lg:grid-cols-12">
       <!-- Copy 5/12 mobile-first -->
       <div class="min-w-0 text-center lg:col-span-5 lg:text-left">
         <p class="hero-seq-0 inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-white/60 px-3.5 py-1.5 text-[11px] font-bold tracking-widest text-ink-2 uppercase">
@@ -191,6 +196,65 @@ const regBase = 'https://app.socio.id/daftar';
   }
   .rotate-x-\[5deg\] {
     transform: rotateX(5deg);
+  }
+
+  /* V2-1 hero mesh playful — 5 nodes oklch pastel, 26s alternate, grain overlay.
+     Teknik codefronts bga-14: 5 radial di satu background, blur 52px, scale 1.15 anti-vignette.
+     Warna: cyan (accent) + violet (accent-2) + 3 intermediate, lightness within 0.12.
+     0kb JS, 1 paint layer, pointer lean via --mx/--my (JS kecil di Layout, opsional). */
+  .hero {
+    --hero-c1: oklch(0.88 0.08 220);
+    --hero-c2: oklch(0.86 0.07 285);
+    --hero-c3: oklch(0.90 0.06 195);
+    --hero-c4: oklch(0.87 0.07 250);
+    --hero-c5: oklch(0.89 0.05 320);
+  }
+  .hero-mesh {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .hero-mesh-inner {
+    position: absolute;
+    inset: -20%;
+    filter: blur(52px) saturate(1.28);
+    scale: 1.15;
+    background:
+      radial-gradient(42% 52% at 22% 28%, var(--hero-c1), transparent 62%),
+      radial-gradient(46% 44% at 72% 18%, var(--hero-c2), transparent 60%),
+      radial-gradient(52% 50% at 48% 42%, var(--hero-c3), transparent 62%),
+      radial-gradient(38% 42% at 78% 68%, var(--hero-c4), transparent 58%),
+      radial-gradient(44% 46% at 18% 78%, var(--hero-c5), transparent 60%),
+      var(--paper);
+    opacity: 0.55;
+    animation: hero-mesh-drift 26s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+  }
+  .hero-grain {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.18;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+  }
+  @keyframes hero-mesh-drift {
+    0% {
+      transform: translate3d(0, 0, 0) scale(1.15);
+    }
+    50% {
+      transform: translate3d(-1.2%, 1%, 0) scale(1.18);
+    }
+    100% {
+      transform: translate3d(1%, -0.8%, 0) scale(1.15);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-mesh-inner {
+      animation: none;
+      opacity: 0.4;
+    }
   }
 </style>
 
