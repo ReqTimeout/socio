@@ -12,7 +12,7 @@ import OrderSimulator from '../components/OrderSimulator.svelte';
 import OrderBoard from '../components/OrderBoardMotion.svelte';
 import KapabilitasBento from '../components/KapabilitasBentoMotion.svelte';
 import PricingTable from '../components/PricingTableMotion.svelte';
-import TestiLedger from '../components/TestiLedger.astro';
+import TestiLedger from '../components/TestiLedgerMotion.svelte';
 import HowItWorks from '../components/HowItWorks.svelte';
 import Faq from '../components/Faq.svelte';
 import StickyCTA from '../components/StickyCTA.svelte';
@@ -136,8 +136,8 @@ const regBase = 'https://app.socio.id/daftar';
 
   <HowItWorks client:visible />
 
-  <!-- D4: testi ledger row (bukan card grid) -->
-  <TestiLedger />
+  <!-- D4: testi ledger — stagger 80ms + avatar hover -->
+  <TestiLedger client:visible />
 
   <!-- D4: pricing prose + real table harga — V2-2 stagger 40ms + hover -->
   <PricingTable client:visible />
