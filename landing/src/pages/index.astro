@@ -6,12 +6,12 @@ import FloatingTabDock from '../components/FloatingTabDock.svelte';
 import Footer from '../components/Footer.astro';
 import HeroMockup from '../components/HeroMockup.svelte';
 import SmmProviderProof from '../components/SmmProviderProof.svelte';
-import ProblemLedger from '../components/ProblemLedger.astro';
+import ProblemLedger from '../components/ProblemLedgerMotion.svelte';
 import Ticker from '../components/Ticker.astro';
 import OrderSimulator from '../components/OrderSimulator.svelte';
 import OrderBoard from '../components/OrderBoard.astro';
-import KapabilitasBento from '../components/KapabilitasBento.astro';
-import PricingTable from '../components/PricingTable.astro';
+import KapabilitasBento from '../components/KapabilitasBentoMotion.svelte';
+import PricingTable from '../components/PricingTableMotion.svelte';
 import TestiLedger from '../components/TestiLedger.astro';
 import HowItWorks from '../components/HowItWorks.svelte';
 import Faq from '../components/Faq.svelte';
@@ -123,7 +123,7 @@ const regBase = 'https://app.socio.id/daftar';
     </div>
   </section>
 
-  <ProblemLedger />
+  <ProblemLedger client:visible />
 
   <!-- D3: domain centerpiece — simulator interaktif (kartu #1) -->
   <OrderSimulator client:visible />
@@ -131,16 +131,16 @@ const regBase = 'https://app.socio.id/daftar';
   <!-- D3: live order board (kartu #2 — chrome terakhir landing) -->
   <OrderBoard />
 
-  <!-- D4: bento kapabilitas (kartu ke-2) -->
-  <KapabilitasBento />
+  <!-- D4: bento kapabilitas — V2-2 svelte-motion stagger (ganti Astro reveal) -->
+  <KapabilitasBento client:visible />
 
   <HowItWorks client:visible />
 
   <!-- D4: testi ledger row (bukan card grid) -->
   <TestiLedger />
 
-  <!-- D4: pricing prose + real table harga (bukan 3-tier card) -->
-  <PricingTable />
+  <!-- D4: pricing prose + real table harga — V2-2 stagger 40ms + hover -->
+  <PricingTable client:visible />
 
   <FinalCTA client:visible />
 
