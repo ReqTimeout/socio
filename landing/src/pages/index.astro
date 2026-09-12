@@ -9,7 +9,7 @@ import SmmProviderProof from '../components/SmmProviderProof.svelte';
 import ProblemLedger from '../components/ProblemLedgerMotion.svelte';
 import Ticker from '../components/Ticker.astro';
 import OrderSimulator from '../components/OrderSimulator.svelte';
-import OrderBoard from '../components/OrderBoard.astro';
+import OrderBoard from '../components/OrderBoardMotion.svelte';
 import KapabilitasBento from '../components/KapabilitasBentoMotion.svelte';
 import PricingTable from '../components/PricingTableMotion.svelte';
 import TestiLedger from '../components/TestiLedger.astro';
@@ -128,8 +128,8 @@ const regBase = 'https://app.socio.id/daftar';
   <!-- D3: domain centerpiece — simulator interaktif (kartu #1) -->
   <OrderSimulator client:visible />
 
-  <!-- D3: live order board (kartu #2 — chrome terakhir landing) -->
-  <OrderBoard />
+  <!-- D3: live order board — V2-4 stagger 35ms + hover + live-dot pulse -->
+  <OrderBoard client:visible />
 
   <!-- D4: bento kapabilitas — V2-2 svelte-motion stagger (ganti Astro reveal) -->
   <KapabilitasBento client:visible />
