@@ -152,47 +152,126 @@ Checklist `AGENTS.md §7` + `DESIGN.md §8`:
 
 ---
 
-## 10. Strategi Clone Haloka Langsung — Jawab "Kenapa Ga Ambil Code Haloka Aja?"
+## 10. Strategi — Pakai POLA Anim Haloka, Bukan Copy Semua Section (Revisi User 12 Sep)
 
 > **Bisa visual: ya.** Pakai skill `pw-vision` lokal (Playwright `headless-shell 1228` di `~/.config/opencode/skills/pw-vision/scripts/`), screenshot `fullPage + mid-nav + mobile` 100% lokal tanpa upload. Kita sudah pakai untuk `admin-mobile-audit.md` dan `landing/desktop/*`. Nanti V2 tiap fase di-screenshot sebelum/sesudah untuk bukti.
+> **Revisi sesuai instruksi user 12 Sep:** "ga minta copy semua section — pikirkan sendiri section yang pantas untuk socio, tapi ikutin pola animnya enak itu". Jadi **tidak 1:1 copy 15 komponen Haloka**, tapi **ambil pola motion-nya** untuk section yang memang pantas SMM panel. C1 `KapabilitasBento` tadi sudah pantas (order lifecycle Pending→Selesai — keep), sisanya selektif.
 
-**Kenapa clone Haloka adalah ide bagus (dan kenapa tidak dari nol):**
-- Haloka sudah **15 komponen Svelte jadi + koreografi `animate-on-scroll + tweened + fly/fade + blob/shimmer` hidup** (`Features.svelte:15-27`, `PainPoints.svelte:38-277`, `SocialProof.svelte:51-129`). Socio dari nol = ulang 60 jam.
-- Stack **identik** (`astro 5.17 + svelte 5.49`, no gsap/framer) jadi copy-paste jalan — tinggal **re-skin token + ganti copy SMM + inject angka dinamis `prices.json`**.
-- Haloka visual sudah premium terbukti (gradient, phone frame `hover:scale-105`, interval `3s CRM`), Socio cukup ganti hijau → cyan-teal + copy ledger.
+**Yang diambil dari Haloka = POLA, bukan section:**
+- `animate-on-scroll opacity-0 translate-y-10 → opacity-100 1000ms delay-200 + --d stagger` (`Features.svelte:15-27`)
+- `tweened cubicOut 500ms` untuk angka (`PainPoints.svelte:38`)
+- `interval 3s` rotasi card + `in:fade 300ms / in:fly y:20` (`Features.svelte:30`)
+- `animate-blob 7s` + `shimmer` + `scroll-up 120s infinite` (`PainPoints:277`, `SocialProof:128`)
+- `group hover:-translate-y-1 shadow-xl scale-105`, `live-dot pulse 1.6s`
+- Stack **identik** (`astro 5.17 + svelte 5.49`) jadi pola ini jalan tanpa lib baru — tinggal re-skin `accent-ink` Socio + inject `prices.json`.
 
-**Pemetaan clone 1:1 `haloka/src → landing/src` (yang diambil & modif):**
+**Section Socio yang PANTAS (kurasi, bukan copy Haloka semua):**
 
 | Haloka source `haloka/src/components/` | Socio target `landing/src/components/` | Modif wajib (tanpa hijau, SMM) | Motion keep |
 |---|---|---|---|
 | `Navbar.svelte:10 Intersection` | `Navbar.svelte` | logo `socio.id`, link `Layanan/Reseller/Blog`, CTA `Daftar Gratis` `eeda59e`, scroll blur threshold sama | `onMount scroll → hairline` keep |
 | `Hero: ChatSimulator.svelte + Welcome.astro` | `HeroMockup.svelte` (sudah ada, polish) | Ganti copy WA → `IG Followers 1.000 → @rmdaa`, saldo `Rp247.500`, platform pills `IG/TikTok/YT` | `fly y:10 400ms`, `tweened saldo 1.8s`, `setInterval 2.5s stream` keep |
 | `PainPoints.svelte:38 tweened hours/daily` | `ProblemLedger.astro` + `RealityCheck.svelte` (baru, clone slider) | Slider `Volume Chat 100/500/1000` → `Volume Order 10/100/1000`, biaya admin `Rp4.5jt` → `Rp4.5jt` keep, emoji `💸` jadi `📦` SMM | `tweened cubicOut 500ms`, `animate-blob 7s`, `shake-hard` saat critical keep |
-| `Features.svelte:15 observer + crmState 3s` | `KapabilitasBento.astro` (bento 5 cell) | CRM `COLD/WARM/HOT` → `Pending/Diproses/Selesai`, chat `"Harganya berapa?"` → `"Followers turun?"`, warna `blue/orange/red` → `accent-ink/success/warning` Socio | `animate-on-scroll opacity-0 translate-y-10 → 100% 1000ms`, `interval 3s`, `fade 300ms` keep |
-| `SocialProof.svelte:51 animate-scroll-up 120s` | `TestiLedger.astro` / `OrderBoard.astro` | Card `bg-white/80` → `var(--paper-2)` Socio, konten `Haloka Brain Engine` → `Socio order stream` | `scroll-up/down 120s linear infinite hover:pause` keep |
-| `PricingInteractive.svelte:137 fly` | `PricingTable.astro` + `ProfitCalculator.svelte` | Harga `Rp20rb/Hari` → `Rp42/1k` dinamis `siteStats.ts`, toggle `Grosir/Retail` | `fly y:20 300ms`, `NumberFlow` keep |
-| `HowItWorks.svelte:21` | `HowItWorks.svelte` | Step Haloka WA → `Cara Pesan SMM 3 langkah` Socio | `slide`, `fly y:20` keep |
-| `FinalCTA.svelte:23 observer` | `FinalCTA.svelte` | Gradient hijau `bg-green-400` → `var(--accent-ink)`, CTA `Daftar Gratis` (sudah) | `IntersectionObserver + reduced gate` keep |
-| `Faq.svelte:74 slide cubicOut` | `Faq.svelte` | Copy FAQ Haloka → FAQ SMM garansi/refill/API | `slide 300ms cubicOut`, `chevron rotate` keep |
-| `FloatingWhatsApp.svelte:42 fly` + `StickyCTA.svelte:20 fly y:100` | `FloatingWhatsApp.svelte` + `StickyCTA.svelte` + `FloatingTabDock.svelte` | Warna `#25d366` → `var(--accent-ink)`, label `Coba 7 hari` → `Daftar Gratis` | `fly y:30 500ms`, `pulse scale 1→1.06 3s` keep |
-| `TrustBadges.svelte:14` | `SmmProviderProof.svelte` | Badge Haloka → badge Socio `8.270 layanan / 882 kategori / 42 detik` | `observer + fade` keep |
+**Kurasi — section Socio yang pantas (pakai pola, bukan copy mentah):**
 
-**Token re-skin (1 tempat saja):** `haloka/tailwind.config.mjs` hijau → `landing/src/styles/tokens.css` Socio: `--accent-ink oklch(0.44)`, `--paper`, `--ink`, `--hairline`. Grep `#25d366|from-green|bg-green` → ganti `var(--accent-ink)`. Font tetap `Sora + Plus Jakarta Sans` (sudah sama).
+| Socio section `landing/src` | Pantas? | Pola Haloka yang dipakai | Tidak diambil dari Haloka |
+|---|---|---|---|
+| `HeroMockup.svelte` | ✅ keep | `fly y:10 + tweened 1.8s + interval 2.5s stream` | Chat WA simulator Haloka |
+| `Ticker.astro` | ✅ keep | `marquee 40s pause hover` | — |
+| `SmmProviderProof` (trust) | ✅ | `fade + count-up` (bukan 4-col strip) | SOP upload mockup Haloka |
+| `ProblemLedger.astro` | ✅ | `animate-on-scroll stagger 60ms + blob` | Slider Volume Chat Haloka (tidak relevan) |
+| `OrderSimulator.svelte` | ✅ core SMM | `tweened + gauge spring + fly` | CRM COLD/WARM/HOT Haloka |
+| `OrderBoard.astro` | ✅ social proof | `row stagger 35ms + live-dot pulse` | `animate-scroll-up 120s` Haloka (terlalu sibuk) |
+| `KapabilitasBento.astro` | ✅ **C1 DONE** | `interval 3s rotator Pending→Selesai + blob + group hover` | Copy chat Haloka |
+| `HowItWorks.svelte` | ✅ | `slide + fly y:20` | Timeline WA Haloka |
+| `TestiLedger.astro` | ✅ | `ledger row stagger 80ms` | — |
+| `PricingTable.astro` | ✅ | `table row stagger 40ms` | Pricing Rp20rb/Hari Haloka (beda model) |
+| `Faq.svelte` | ✅ | `slide cubicOut + chevron rotate` | — |
+| Haloka `PainPoints` slider 1000 chat | ❌ skip | — | Tidak pantas untuk SMM panel (overkill) |
+| Haloka `InteractiveTutorial` 4 langkah click | ❌ skip | — | Socio sudah `OrderSimulator` |
+| Haloka `ChatSimulator` phone WA | ❌ skip | — | Socio phone = order SMM, bukan WA |
 
-**Angka dinamis (jangan hardcode Haloka):** `haloka` hardcode `Rp20rb`, Socio inject `totalLayanan/totalKategori/hargaMulai` dari `landing/src/data/siteStats.ts` (sync `seo/sync-prices.mjs` 8.295 layanan) — ini yang bikin Socio tetap truthful.
+**Token re-skin (1 tempat):** hijau Haloka `#25d366` → `var(--accent-ink) oklch(0.44)` Socio di `tokens.css` + `FloatingWhatsApp`. Angka tetap dinamis `siteStats.ts` (8.295 layanan).
 
-**Plan eksekusi clone (detail, setelah approve):**
+**Roadmap selektif (pakai pola, kurasi Socio):**
 
-| Fase | Clone dari Haloka | Modif Socio | File hasil | Visual check |
+| Fase | Pola Haloka dipakai | Socio pantas | File | Visual check |
 |---|---|---|---|---|
-| **C1** | Copy `Features.svelte` observer+interval | Re-skin + inject `prices.json` | `KapabilitasBento.astro` v2 | pw-vision `shot-full` vs `haloka/02-features.png` |
-| **C2** | Copy `PainPoints.svelte` slider+tweened | Ganti copy SMM + chip `ink/accent` | `ProblemLedger.astro` + `RealityCheck.svelte` | mobile 360 + desktop 1280 |
-| **C3** | Copy `SocialProof` scroll | Ledger rows Socio order | `OrderBoard.astro` | marquee pause hover test |
-| **C4** | Copy `Navbar+Sticky+Floating` | CTA Daftar Gratis + dock glass `WIREFRAME §3` | `Navbar/Sticky/FloatingTabDock` | safe-area + haptic 10 |
-| **C5** | Build + lint + daftar gratis check + no-green grep | `pnpm check 0` + `grep -r #25d366` 0 | `dist/` | `curl socio.id` 20 page |
+| **C1 DONE** | `Features observer+interval 3s + blob` | `KapabilitasBento` rotator order | `StatusRotator.svelte` | pw-vision vs haloka features — done `f92bb12` |
+| **C2 NEXT** | `stagger reveal + tweened` | `ProblemLedger` 4 row + `OrderSimulator` gauge polish (tanpa slider Haloka) | `ProblemLedger.astro`, `OrderSimulator.svelte` | reveal 60ms per row, gauge spring |
+| **C3** | `row stagger + hover lift` | `OrderBoard` + `PricingTable` | `OrderBoard.astro`, `PricingTable.astro` | table row 35ms, hover accent |
+| **C4** | `scroll trigger + reduced gate` | `HowItWorks + Faq + FinalCTA` | `HowItWorks.svelte`, `Faq.svelte` | slide/fly gated |
+| **C5** | Build + no-green + Daftar Gratis + Lighthouse | — | `dist/` | `pnpm check 0 + pw-vision fullPage` |
 
-Estimasi clone **~10 jam** (bukan 60 jam dari nol). Tetap `AGENTS.md §7` verification: `pnpm lint/check/build + pw-vision + Lighthouse ≥90 + AA contrast`.
+Estimasi selektif **~8 jam**. Tetap `AGENTS.md §7` verification.
 
-> Keputusan: **ya, ambil code Haloka yang udah jadi, moddif — itu jalan tercepat ke premium**. Plan ini adalah kontrak lengkapnya. Approve → langsung C1.
+> Keputusan revisi: **tidak copy semua Haloka — kurasi SMM, pakai pola animnya yang enak**. Approve C2?
+
+---
+
+## 11. Accent Fix + Background Playful Interaktif + Library Pendukung (User Request 12 Sep)
+
+### 11.1 Accent warna diperbaiki
+
+**Masalah kini** `landing/src/styles/tokens.css:19-23`: hanya 1 accent cyan-teal `accent oklch(0.68 0.13 220)` + `accent-ink 0.44`. Terasa datar, tidak ada `accent-2` untuk bento/blob playful. Haloka pakai 3 hue (blue 220 + purple 300 + green 145) jadi terasa kaya. `DESIGN.md #1` sebenarnya sudah ada `primary indigo #4f46e5 + accent cyan #06b6d4` (beda dari landing).
+
+**Fix V2 — palette 2-accent playful tapi tetap premium (tanpa hijau Haloka):**
+
+```css
+/* landing/src/styles/tokens.css — tambah */
+--accent-2: oklch(0.62 0.16 285); /* indigo-violet — untuk blob kedua, SHIMMER */
+--accent-2-tint: oklch(0.62 0.16 285 / 0.08);
+--accent-soft: oklch(0.72 0.10 220 / 0.14); /* untuk mesh wash */
+--paper-lift: oklch(0.99 0.004 220); /* highlight card */
+```
+
+Aturan: `accent` (cyan 220) untuk CTA/primary, `accent-2` (violet 285) untuk aksen sekunder/blob/gradient mesh saja — **jangan pakai untuk teks di atas putih** (contrast check). Semua blob baru pakai `color-mix(accent 40%, accent-2 30%) blur 52px saturate 1.28` seperti `codefronts mesh gradient` (5 nodes oklch, anim 26s alternate, grain overlay 0.22). AA tetap: button fill hanya `accent-ink` (bukan accent-2).
+
+### 11.2 Background anim semuanya interaktif playful
+
+**Sekarang:** hanya 1 blob statis di `KapabilitasBento` (`blur 80px opacity 60` — sudah C1). Hero, problem, pricing masih flat `paper/paper-2` solid.
+
+**Target V2:** tiap 2 section, background punya gerak halus yang **merespon pointer/scroll, tapi tidak ganggu baca** :
+
+| Section | Background playful | Interaksi |
+|---|---|---|
+| Hero `pt-28` | mesh 5 radial `blur 52px` (teknik codefronts `bga-14` — 5 `oklch` nodes anim 26s alternate) + grain `0.22 overlay` | `pointerSource: fine` — mesh condong ke cursor ±6% (JS update `--p1x/--p1y`), pause `prefers-reduced-motion` |
+| ProblemLedger | 2 blob `accent/ accent-2` 420px `blur 80px` 60% (sudah ada) | follow scroll `translateY` ±8px parallax ringan (transform only) |
+| KapabilitasBento | mesh + rotator `C1 DONE` | rotator interval 3s sudah interaktif |
+| PricingTable | dotGrid `16px` + `hover: accent-2` tint | rows hover lift already, plus subtle dot parallax on scroll |
+
+Semua `pointer-events-none`, `opacity 0.5-0.6`, `filter blur() scale 1.15` (hindari vignette), `animation: mesh 26s ease-in-out alternate infinite` — cost 1 paint layer, 60fps (codefronts), no WebGL, no 400KB JPEG.
+
+### 11.3 Library pendukung — riset 12 Sep 2026
+
+**Stack tetap `astro 5 + svelte 5 + tailwind 4` (jangan ganti). Tambah max 2 lib, tree-shakeable, MIT:**
+
+| Library | Untuk playful apa | Size | Kapan pakai | Svelte 5 ready |
+|---|---|---|---|---|
+| **`@humanspeak/svelte-motion` 0.9.4** (Framer Motion untuk Svelte 5, MIT, 8.9k weekly) — `motion.svelte.page` | `whileHover/whileTap/whileInView + variants + AnimatePresence + useScroll/useTransform` ganti manual `IntersectionObserver` + `fly/fade` — untuk bento/ledger stagger deklaratif | ~18kb gz | **WAJIB V2-2** — untuk `motion.div whileInView + staggerChildren` di bento/ledger, `whileHover scale 1.05` | ✅ Svelte 5 runes native |
+| **Pure CSS mesh** (no npm, codefronts `bga-14`) — 5 radial `oclch` + `@property --p1x` + `blur 52px` + grain SVG | hero mesh drift 26s + pointer lean | 0kb js (CSS only) | **WAJIB V2-1** hero bg — copy `bga-14__mesh` teknik, 5 tokens oklch dalam lightness 0.12 | ✅ universal |
+| `@tummycrypt/tinyvectors` (Svelte 5 blobs physics + scroll/deviceMotion) | blobs follow pointer/scroll dengan spring physics (opsional pengganti CSS mesh jika mau lebih hidup) | ~12kb | **OPSIONAL V2.1** — hanya jika CSS mesh terasa kurang, ganti blob di `ProblemLedger` | ✅ Svelte 5 |
+| `@anarkisti/igyb` (generative backgrounds interactive, WebGL/Canvas) | `aurora/plasma/particles` `interactive:true` | ~20kb | **TIDAK V2** — overkill WebGL untuk SMM panel, simpan untuk kampanye khusus | ✅ wrapper Svelte |
+
+**Keputusan library V2:** `svelte-motion` + `CSS mesh` saja (0+18kb, tidak ada WebGL/Canvas berat). `tinyvectors/igyb` dicatat tapi tidak di-install V2 — jika user mau extra playful setelah V2 live, tinggal `npx` add.
+
+Instal: `pnpm add @humanspeak/svelte-motion motion` (peer `motion 13.1.1`). Tidak tambah `gsap` (timeline berat, imperative) — `svelte-motion` sudah cover spring/scroll declaratively.
+
+### 11.4 Checklist per-phase berurutan — verif visual, kalau jelek benerin sendiri
+
+> User: "kita kerja berurutan dulu per phase, kamu susun checklist kalau sudah verif visual, kalau jelek km benerin sendiri"
+
+**Workflow per fase (WAJIB urut, tidak paralel):**
+
+| Fase | Scope (kurasi Socio) | DoD — visual self-heal loop |
+|---|---|---|
+| **V2-1** | **Accent + hero mesh**: tambah `--accent-2` di `tokens.css` + hero mesh 5 nodes `26s alternate` + grain (CSS only) | `pnpm check 0` + `build 20 page` → `pw-vision shot fullPage 1440 + mobile 360` → **cek**: mesh tidak nutup teks, lightness oklch ≤0.12 beda, AA `accent-ink` masih 4.5:1 → **kalau jelek (muddy/banding)**: ubah chroma <0.08 atau blur 52→80, **ulangi shot** sampai enak |
+| **V2-2** | **Motion deklaratif**: ganti manual `reveal` di `ProblemLedger/CapabilitasBento/PricingTable` jadi `svelte-motion` `whileInView + variants stagger 60ms` + `whileHover` lift | `pnpm add svelte-motion` → `pw-vision shot sections` → **cek**: stagger tidak lebay (>1s), reduced-motion instant → **kalau jelek**: kurangi durasi 1000→600ms, **benerin sendiri** + re-shot |
+| **V2-3** | **Background playful scroll**: blob parallax `translateY ±8px` di `ProblemLedger/PricingTable` (transform only) + dotGrid parallax | `pw-vision scroll 50%` → **cek**: background `pointer-events-none`, tidak bikin jank, 60fps → **kalau jelek**: turun opacity 0.6→0.4 atau hapus 1 blob |
+| **V2-4** | **Polish + QA**: `Ticker marquee 40s`, `Faq chevron rotate 180ms`, `Footer ink` + `Lighthouse ≥90 + AA contrast + grep no-green` | `pnpm lint/check + wrangler deploy + curl headers` → `pw-vision final` → **kalau Lighthouse <90 atau jelek**: audit `web-vision` trace, benerin CLS/bundle |
+
+**Self-heal rule (tertulis di plan):** setiap fase **wajib screenshot `pw-vision` sebelum claim selesai**. Jika `looks cheap / banding / muddy / jank / contrast fail` → **jangan lanjut fase berikutnya**, benerin di fase sama (max 2 iterasi) — tulis di commit message `fix(V2-X): ...` .
+
+**Estimasi baru dengan accent+motion:** V2-1 3j + V2-2 3j + V2-3 2j + V2-4 2j = **~10 jam**. Approval V2-1 → mulai accent+mesh. 
 
 > Jika ada kontradiksi antar dokumen → `REBUILD_PLAN.md` menang. Tanya user sebelum invent fitur (`AGENTS.md §0 #10`).
