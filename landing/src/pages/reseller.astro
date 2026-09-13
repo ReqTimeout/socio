@@ -5,6 +5,8 @@ import Navbar from '../components/Navbar.svelte';
 import FloatingTabDock from '../components/FloatingTabDock.svelte';
 import Footer from '../components/Footer.astro';
 import FloatingWhatsApp from '../components/FloatingWhatsApp.svelte';
+import Doodle from '../components/Doodle.astro';
+import SocioMascot from '../components/SocioMascot.svelte';
 import ProgramLedger from '../components/ProgramLedger.astro';
 import ProfitCalculator from '../components/ProfitCalculator.svelte';
 import GrosirTable from '../components/GrosirTable.astro';
@@ -32,9 +34,14 @@ const breadcrumbSchema = {
   <FloatingTabDock client:load />
   <FloatingWhatsApp client:load />
 
-  <!-- #1 HERO: copy-hero no split (§4.1) -->
-  <header class="bg-[var(--paper)] pb-16 pt-32 md:pb-24 md:pt-40">
-    <div class="mx-auto max-w-6xl px-5 md:px-8">
+  <!-- #1 HERO: copy-hero no split (§4.1) + mesh playful -->
+  <header class="hero relative overflow-hidden bg-[var(--paper)] pb-16 pt-32 md:pb-24 md:pt-40">
+    <div class="hero-mesh" aria-hidden="true">
+      <div class="hero-mesh-inner"></div>
+      <div class="hero-mesh-inner-2"></div>
+      <div class="hero-grain"></div>
+    </div>
+    <div class="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
       <nav aria-label="Breadcrumb" class="reveal mb-6 text-[12px] font-medium text-ink-3">
         <a href="/" class="hover:text-ink underline-offset-2 hover:underline">Beranda</a>
         <span aria-hidden="true"> / </span>
@@ -43,7 +50,7 @@ const breadcrumbSchema = {
       <div class="reveal max-w-3xl">
         <p class="text-[12px] font-bold uppercase tracking-widest text-[var(--accent-ink)]">Program Reseller</p>
         <h1 class="mt-3 font-display text-[length:var(--text-hero)] font-bold leading-[1.05] tracking-tight text-ink">
-          Jualan followers. Modal Rp50 ribu.
+          Reseller SMM Panel — modal Rp50 ribu, <span class="marker-swipe">cuan</span> mulai hari pertama.
         </h1>
         <p class="mt-5 max-w-xl text-[length:var(--text-body)] leading-relaxed text-ink-2 md:text-[17px]">
           Daftar reseller <strong class="text-ink">Rp50.000 sekali bayar</strong> — saldo
@@ -52,15 +59,17 @@ const breadcrumbSchema = {
           Kamu pasang margin, socio urus stok, proses &amp; refill.
         </p>
         <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-          <a href={daftarReseller} class="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[var(--accent-ink)] px-8 text-[15px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]">
+          <a href={daftarReseller} class="magnetic inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[var(--accent-ink)] px-8 text-[15px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]">
             Daftar Reseller Rp50rb →
           </a>
           <a href="#kalkulator" class="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-white px-8 text-[15px] font-bold text-ink transition-colors hover:border-[var(--accent-ink)] hover:text-[var(--accent-ink)]">
             Coba kalkulator profit ↓
           </a>
         </div>
-        <p class="mt-4 text-[12px] text-ink-3">
+        <p class="mt-4 flex items-center gap-2 text-[12px] text-ink-3">
           Sekali bayar, aktif selamanya. Tanpa iuran bulanan.
+          <span class="font-hand -rotate-3 text-[19px] text-ink-2" aria-hidden="true">margin kamu yang atur!</span>
+          <Doodle name="sparkle" class="float-idle h-4 w-4" />
         </p>
       </div>
     </div>
@@ -90,21 +99,24 @@ const breadcrumbSchema = {
   <FaqReseller />
 
   <!-- #9 CTA final dark -->
-  <section class="relative overflow-hidden bg-ink-900 py-20 text-white isolate md:py-28" aria-labelledby="cta-r-title">
+  <section class="relative overflow-hidden bg-[var(--dark-panel)] py-20 text-[var(--on-dark)] isolate md:py-28" aria-labelledby="cta-r-title">
     <div class="mx-auto max-w-3xl px-5 space-y-6 text-center md:px-8">
-      <h2 id="cta-r-title" class="font-display text-3xl font-bold leading-tight tracking-tight md:text-5xl">
+      <p class="reveal flex justify-center" aria-hidden="true">
+        <SocioMascot pose="wave" class="float-idle h-14 w-14" />
+      </p>
+      <h2 id="cta-r-title" class="reveal font-display text-3xl font-bold leading-tight tracking-tight md:text-5xl">
         Besok client kamu udah order.
       </h2>
-      <p class="mx-auto max-w-xl text-[16px] leading-relaxed text-ink-300">
+      <p class="reveal mx-auto max-w-xl text-[16px] leading-relaxed text-[var(--on-dark-2)]" style="--d:80ms">
         Daftar malam ini, besok saldo Rp20.000 sudah bisa jalan. Harga reseller langsung
         aktif di {totalLayanan} layanan.
       </p>
-      <div class="pt-2">
-        <a href={daftarReseller} class="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-full bg-[var(--accent-ink)] px-10 text-[16px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]">
+      <div class="reveal pt-2" style="--d:140ms">
+        <a href={daftarReseller} class="magnetic inline-flex min-h-[56px] items-center justify-center gap-2 rounded-full bg-[var(--accent-ink)] px-10 text-[16px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]">
           Daftar Reseller — Rp50rb
         </a>
       </div>
-      <p class="text-[11px] text-ink-400">Dengan mendaftar kamu menyetujui Syarat &amp; Ketentuan Socio.id.</p>
+      <p class="reveal text-[11px] text-[var(--on-dark-2)]" style="--d:180ms">Dengan mendaftar kamu menyetujui Syarat &amp; Ketentuan Socio.id.</p>
     </div>
   </section>
 

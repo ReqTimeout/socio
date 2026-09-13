@@ -78,7 +78,9 @@
     <div class="space-y-3">
       {#each data.messages as m, i (m.id)}
         <div
-          class="rounded-2xl border p-4 reveal {m.type === 'admin'
+          class="msg-in {m.type === 'admin'
+            ? 'msg-in-l'
+            : 'msg-in-r'} rounded-2xl border p-4 {m.type === 'admin'
             ? 'border-amber-200 bg-amber-50 shadow-[0_4px_16px_-10px_rgba(245,158,11,0.25)]'
             : 'surface-pop border-ink-100 bg-surface'}"
           style={revealDelay(i, 0, 45)}
@@ -131,7 +133,16 @@
           class="w-full rounded-xl border border-ink-200 bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
           required
         ></textarea>
-        <p class="-mt-1 text-[11px] text-ink-400">Ctrl+Enter untuk kirim cepat</p>
+        <p class="-mt-1 flex items-center gap-1.5 text-[11px] text-ink-400">
+          {#if sendingReply}
+            <span class="typing-dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+            Mengirim…
+          {:else}
+            Ctrl+Enter untuk kirim cepat
+          {/if}
+        </p>
         <div class="flex gap-2">
           <Button type="submit" size="sm" disabled={sendingReply}>
             {sendingReply ? "Mengirim…" : "Kirim balasan"}
@@ -218,7 +229,7 @@
                 class="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold {t.status === 'Closed'
                   ? 'bg-ink-100 text-ink-500'
                   : t.status === 'Answered'
-                    ? 'bg-success/10 text-success'
+                    ? 'answered-pulse bg-success/10 text-success'
                     : 'bg-amber-100 text-amber-700'}">{t.status}</span
               >
             </button>
@@ -279,3 +290,78 @@
     </form>
   {/if}
 </section>
+
+<style>
+  /* F5 playful: bubble slide-in kiri (admin) / kanan (user), delay via --d */
+  .msg-in {
+    animation: msg-in 450ms var(--ease-out-soft) both;
+    animation-delay: var(--d, 0ms);
+  }
+  .msg-in-l {
+    --msg-from: -16px;
+  }
+  .msg-in-r {
+    --msg-from: 16px;
+  }
+  @keyframes msg-in {
+    from {
+      opacity: 0;
+      transform: translateX(var(--msg-from, 0px));
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  /* Typing dots saat balasan dikirim */
+  .typing-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .typing-dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    background: var(--color-ink-400);
+    animation: typing-bounce 900ms ease-in-out infinite;
+  }
+  .typing-dots span:nth-child(2) {
+    animation-delay: 150ms;
+  }
+  .typing-dots span:nth-child(3) {
+    animation-delay: 300ms;
+  }
+  @keyframes typing-bounce {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.5;
+    }
+    30% {
+      transform: translateY(-3px);
+      opacity: 1;
+    }
+  }
+  /* Pill Answered pulse halus */
+  .answered-pulse {
+    animation: answered-pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes answered-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .msg-in,
+    .typing-dots span,
+    .answered-pulse {
+      animation: none;
+    }
+  }
+</style>

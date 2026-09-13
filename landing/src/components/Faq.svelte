@@ -1,104 +1,70 @@
 <script>
-import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
-  import { slide } from 'svelte/transition';
-  import { cubicOut } from 'svelte/easing';
-
-  let activeIndex = 0;
-
+  import { totalLayanan } from '../data/siteStats';
+  // V2 §5.11 FAQ — objection handling + FAQPage schema. Accordion A13 CSS-only
+  // (grid-rows, satu-satunya exception layout-anim). Satu terbuka default:
+  // pertanyaan keamanan. Jawaban = AEO block 40-60 kata, JUJUR (§3.1).
+  let open = $state(0);
   const faqs = [
     {
-      q: 'Apakah follower/like yang diberikan aman dari banned?',
-      a: 'Kami hanya menggunakan layanan <strong>real & gradual</strong> dari provider terpercaya. Risiko banned sangat rendah selama pemakaian wajar. Hindari bot spam massal agar akun tetap aman.',
+      q: 'Aman gak sih beli followers?',
+      a: 'Aman selama caranya benar: kami <strong>tidak pernah minta password</strong> — cukup link publik. Order jalan gradual (bertahap) bukan sekaligus, jadi terlihat natural. Risiko drop tetap ada di platform mana pun — makanya layanan bergaransi dapat <strong>refill 30 hari</strong> otomatis.',
     },
     {
-      q: 'Daftar reseller Rp50.000 itu dapat apa saja?',
-      a: `<strong>Saldo Rp20.000 langsung masuk</strong> — bisa langsung dipakai order — plus akses <strong>harga reseller</strong>: lebih murah dari harga member di semua ${totalLayanan} layanan, berlaku selamanya.`,
+      q: 'Berapa lama prosesnya?',
+      a: 'Rata-rata order <strong>mulai jalan &lt; 1 menit</strong> setelah saldo masuk, karena sistem otomatis 24 jam — bukan admin manusia. Kecepatan selesai tergantung antrean provider & jumlah order; progress-nya bisa dipantau live dari dashboard.',
     },
     {
-      q: 'Berapa minimal top up?',
-      a: 'Setelah daftar, top up mulai <strong>Rp10.000</strong> via QRIS, Transfer Bank, atau e-wallet. Saldo masuk otomatis setelah pembayaran dikonfirmasi.',
+      q: 'Followers bisa drop?',
+      a: 'Bisa — di panel mana pun, karena platform rutin bersih-bersih akun. Bedanya di socio.id: pilih layanan bertanda <strong>refill</strong>, drop dalam 30 hari <strong>diisi ulang otomatis</strong> tanpa perlu lapor. Kalau order gagal total, saldo dikembalikan.',
     },
     {
-      q: 'Saya gaptek, apakah susah pakainya?',
-      a: 'Justru Socio.id dibuat semudah mungkin. Cukup <strong>tempel link, pilih quantity, klik pesan</strong>. Dashboardnya simpel, gak perlu teknis sama sekali.',
+      q: 'Bedanya member & reseller?',
+      a: `Member daftar gratis dan langsung bisa order. Reseller bayar <strong>Rp50.000 sekali</strong> — dapat <strong>saldo Rp20.000</strong> langsung pakai plus <strong>harga lebih murah di semua ${totalLayanan} layanan</strong>, permanen. Buat kamu yang jualan jasa sosmed ke klien, selisihnya = margin.`,
     },
     {
-      q: 'Bagaimana kalau order gagal atau drop?',
-      a: 'Tenang. Layanan ber-garansi akan <strong>refill otomatis</strong>. Kalau gagal total, saldo dikembalikan ke akun kamu. Transparan, gak hangus.',
+      q: 'Bayarnya pakai apa?',
+      a: 'Saat ini via <strong>transfer bank (BCA) manual</strong> — admin konfirmasi ±5 menit di jam kerja. <strong>QRIS & e-wallet otomatis segera hadir</strong>; ikut antrean info-nya biar gak ketinggalan.',
     },
     {
-      q: 'Platform apa saja yang dilayani?',
-      a: 'Instagram, TikTok, YouTube, Facebook, X/Twitter, hingga <strong>SEO & Google Maps</strong>. Total lebih dari 8.000 layanan dari satu dashboard.',
+      q: 'Bisa pakai API untuk klien?',
+      a: 'Bisa. Reseller dapat <strong>API key self-service</strong> dari dashboard: cek layanan, buat order, cek status, refill — semua via <strong>API v1</strong>. Dokumentasinya ada, dan support bantu kalau kamu nyangkut integrasi.',
     },
     {
-      q: 'Bisa jadi reseller / agen?',
-      a: '<strong>Bisa!</strong> Daftar reseller Rp50.000 sekali bayar — saldo awal Rp20.000 include, harga layanan turun otomatis. Banyak member jadiin ini side-income dengan jualan ke client sendiri.',
-    },
-    {
-      q: 'Apakah ada kontrak atau biaya tersembunyi?',
-      a: 'Tidak ada kontrak. Kamu cuma bayar saldo yang dipakai. <strong>Gak ada biaya bulanan</strong> atau charge tersembunyi.',
+      q: 'Kalau ada masalah, lapor ke siapa?',
+      a: 'Buka <strong>tiket dari dashboard</strong> — tercatat & terpantau — atau chat <strong>WhatsApp support</strong>. Manusia beneran yang balas, bukan bot. Tiket garansi refill bahkan sering selesai otomatis sebelum kamu sempat nanya.',
     },
   ];
-
-  const toggle = (i) => {
-    activeIndex = activeIndex === i ? null : i;
-  };
 </script>
 
-<div class="relative w-full max-w-4xl mx-auto z-10">
-  <div class="space-y-4">
+<div class="mx-auto w-full max-w-3xl">
+  <div class="space-y-3">
     {#each faqs as faq, i}
       <div
-        class="group relative bg-white/80 backdrop-blur-sm rounded-2xl border transition-all duration-300 overflow-hidden
-          {activeIndex === i
-          ? 'border-[var(--accent-ink)] shadow-lg shadow-[var(--accent-tint)] scale-[1.01]'
-          : 'border-[var(--hairline-strong)] hover:border-[var(--accent-ink)]/50 hover:shadow-md'}"
+        class="faq-item rounded-2xl border bg-white transition-colors duration-200 {open === i ? 'border-[var(--ink)] shadow-[2px_2px_0_var(--ink)]' : 'border-[var(--hairline-strong)]'}"
+        data-open={open === i}
       >
         <button
-          class="w-full flex justify-between items-center p-6 text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-focus-ring)]"
-          onclick={() => toggle(i)}
-          aria-expanded={activeIndex === i}
+          type="button"
+          class="flex min-h-[56px] w-full items-center justify-between gap-4 p-5 text-left"
+          onclick={() => (open = open === i ? -1 : i)}
+          aria-expanded={open === i}
         >
-          <span
-            class="font-display font-bold text-lg transition-colors duration-300 {activeIndex === i
-              ? 'text-[var(--accent-ink)]'
-              : 'text-ink group-hover:text-[var(--accent-ink)]'}"
-          >
-            {faq.q}
-          </span>
-          <span
-            class="flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300
-              {activeIndex === i ? 'bg-[var(--accent-ink)] text-white rotate-180' : 'bg-[var(--paper-2)] text-ink-3 group-hover:bg-[var(--accent-tint)] group-hover:text-[var(--accent-ink)]'}"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </span>
+          <span class="font-display text-[16px] font-bold {open === i ? 'text-ink' : 'text-ink-2'}">{faq.q}</span>
+          <svg class="faq-chevron h-5 w-5 shrink-0 text-ink-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 9l-7 7-7-7" />
+          </svg>
         </button>
-
-        {#if activeIndex === i}
-          <div transition:slide={{ duration: 300, easing: cubicOut }} class="px-6 pb-6">
-            <div class="pt-4 border-t border-dashed border-[var(--accent-tint)] text-ink-2 leading-relaxed text-base">
-              {@html faq.a}
-            </div>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            <p class="px-5 pb-5 text-[15px] leading-relaxed text-ink-2">{@html faq.a}</p>
           </div>
-        {/if}
-
-        <div
-          class="absolute left-0 top-0 bottom-0 w-1 bg-[var(--accent-ink)] transition-opacity duration-300 {activeIndex === i
-            ? 'opacity-100'
-            : 'opacity-0'}"
-        >
         </div>
       </div>
     {/each}
   </div>
-
-  <div class="mt-12 text-center">
-    <p class="text-ink-3 mb-4">Masih ada pertanyaan?</p>
-    <a href="https://wa.me/62811919328" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-[var(--accent-ink)] font-bold hover:text-[var(--accent-hover)] transition-colors">
-      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-      Chat Tim Support Kami
-    </a>
-  </div>
+  <p class="mt-8 text-center text-[14px] text-ink-2">
+    Masih ada yang mengganjal? Chat manusia beneran via
+    <a href="https://wa.me/6281221272016" target="_blank" rel="noopener" class="font-bold text-[var(--accent-ink)] underline decoration-2 underline-offset-2">WhatsApp</a>
+    — dibalas, bukan bot.
+  </p>
 </div>

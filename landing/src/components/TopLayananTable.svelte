@@ -3,8 +3,11 @@ import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
   // D6: TopLayananTable — real table 14 layanan dari prices.json: search live filter
   // + sort klik header (180ms) + highlight match + count hasil.
   // Plan §4.2 #3 + micro. Data di-inject dari Astro frontmatter (satu island, client:visible).
+  // V2 §6.1: filter platform chips (A2 squishy) + kolom reseller + prefill ?platform
+  // (dari bento home) & ?q= (dari 404 search) + empty state maskot.
   import { onMount } from 'svelte';
   import prices from '../data/prices.json';
+  import SocioMascot from './SocioMascot.svelte';
 
   interface Row {
     platform: string;
@@ -16,21 +19,27 @@ import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
   }
 
   const rows: Row[] = (prices as any).top;
+  const platforms: string[] = Object.keys((prices as any).platforms ?? {});
 
   let query = $state('');
+  let platform = $state('Semua');
   let sortKey = $state<'price' | 'name'>('price');
   let sortAsc = $state(true);
 
-  // 404 search prefill via ?q= param (L1: search layanan → /layanan?q=followers)
+  // Prefill via ?q= (404 search) & ?platform= (bento home) — L1/V2 §6.1
   onMount(() => {
-    const q = new URLSearchParams(location.search).get('q');
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q');
     if (q && !query) query = q;
+    const p = params.get('platform');
+    if (p && (p === 'Semua' || platforms.includes(p))) platform = p;
   });
 
   const fmt = (n: number) => 'Rp' + Math.round(n).toLocaleString('id-ID');
 
   const filtered = $derived(
     rows
+      .filter((r) => platform === 'Semua' || r.platform === platform)
       .filter((r) => (r.name + ' ' + r.platform).toLowerCase().includes(query.trim().toLowerCase()))
       .toSorted((a, b) => {
         const mul = sortAsc ? 1 : -1;
@@ -85,6 +94,25 @@ import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
         <span class="num font-bold text-ink-2">{filtered.length}</span> layanan
       </p>
 
+      <!-- filter platform chips (A2 squishy, scroll-x mobile) -->
+      <div class="-mx-5 overflow-x-auto px-5 pb-1 md:mx-0 md:px-0" role="group" aria-label="Filter platform">
+        <div class="flex w-max gap-2 md:w-auto md:flex-wrap">
+          {#each ['Semua', ...platforms] as p}
+            <button
+              type="button"
+              aria-pressed={platform === p}
+              onclick={() => (platform = p)}
+              class="min-h-[40px] shrink-0 rounded-full border-2 px-4 text-[13px] font-bold transition-all duration-150 active:scale-95
+                {platform === p
+                  ? 'border-[var(--ink)] bg-[var(--ink)] text-white shadow-[var(--sticker-shadow-sm)]'
+                  : 'border-[var(--hairline-strong)] bg-white text-ink-2 hover:border-[var(--ink)] hover:text-ink'}"
+            >
+              {p}
+            </button>
+          {/each}
+        </div>
+      </div>
+
       <!-- table -->
       <div class="overflow-x-auto rounded-[var(--radius-md)] border border-[var(--hairline)] bg-white shadow-[var(--n)]">
         <table class="w-full min-w-[560px] text-left">
@@ -104,6 +132,7 @@ import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
                   <svg class={`h-3 w-3 transition-transform duration-200 ${sortKey === 'price' ? 'opacity-100' : 'opacity-0'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d={sortAsc ? 'm6 15 6-6 6 9' : 'm6 9 6 6 6-9'} /></svg>
                 </button>
               </th>
+              <th scope="col" class="bg-[var(--pop-mango-soft)] px-4 py-3 text-right text-[11px] font-bold uppercase tracking-widest text-ink">Reseller /1k</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-[var(--hairline)]">
@@ -126,12 +155,28 @@ import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
                 </td>
                 <td class="num px-4 py-3 text-right font-mono text-[13px] text-ink-3">{r.min.toLocaleString('id-ID')}</td>
                 <td class="num px-4 py-3 text-right font-mono text-[13px] font-bold text-ink">{fmt(r.price)}</td>
+                <td class="num bg-[var(--pop-mango-soft)] px-4 py-3 text-right font-mono text-[13px] font-bold text-ink">{fmt(r.priceReseller)}</td>
               </tr>
             {/each}
             {#if filtered.length === 0}
               <tr>
-                <td colspan="4" class="px-4 py-10 text-center text-[14px] text-ink-3">
-                  Tidak ketemu “{query}” — coba kata lain, atau lihat semua {totalLayanan} layanan setelah daftar.
+                <td colspan="5" class="px-4 py-10 text-center">
+                  <span class="flex justify-center" aria-hidden="true"><SocioMascot pose="fall" class="float-idle h-16 w-16" /></span>
+                  <p class="mx-auto mt-3 max-w-xs text-[14px] leading-relaxed text-ink-2">
+                    Gak ketemu{query ? ` “${query}”` : ''}? {totalKategori} kategori kadang bikin pusing sendiri.
+                  </p>
+                  <p class="mt-3 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onclick={() => { query = ''; platform = 'Semua'; }}
+                      class="min-h-[44px] rounded-full border-2 border-[var(--ink)] bg-white px-5 text-[13px] font-bold text-ink transition-transform active:scale-95"
+                    >
+                      Reset filter
+                    </button>
+                    <a href="https://wa.me/6281221272016" target="_blank" rel="noopener" class="inline-flex min-h-[44px] items-center rounded-full bg-[var(--accent-ink)] px-5 text-[13px] font-bold text-white">
+                      Chat kami →
+                    </a>
+                  </p>
                 </td>
               </tr>
             {/if}

@@ -1,0 +1,52 @@
+---
+// Doodle — coretan SVG inline buatan sendiri (PLAN §2.5 + inventory).
+// Stroke --ink, fill pop. Tiap doodle <2KB, aria-hidden (dekoratif murni).
+// Props: name = "arrow" (panah tulisan tangan) | "arrow-curved" | "star"
+//   | "sparkle" | "underline" (garis bawah tangan) | "circle" (lingkaran tangan).
+// Warna via prop tone: "ink" (default) | "mango" | "berry".
+const { name = 'arrow', tone = 'ink', class: cls = '' } = Astro.props;
+const stroke =
+  tone === 'mango'
+    ? 'var(--pop-mango)'
+    : tone === 'berry'
+      ? 'var(--pop-berry)'
+      : 'var(--ink-2)';
+---
+
+{name === 'arrow' && (
+  <svg class={cls} width="96" height="40" viewBox="0 0 96 40" fill="none" aria-hidden="true">
+    <path d="M4 8c22 2 48 8 72 22" stroke={stroke} stroke-width="2.5" stroke-linecap="round" />
+    <path d="M64 22l13 9 3-15" stroke={stroke} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+)}
+
+{name === 'arrow-curved' && (
+  <svg class={cls} width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden="true">
+    <path d="M12 8c2 20 10 36 34 46" stroke={stroke} stroke-width="2.5" stroke-linecap="round" />
+    <path d="M36 46l11 9 5-13" stroke={stroke} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+)}
+
+{name === 'star' && (
+  <svg class={cls} width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+    <path d="M14 2l2.6 7.4L24 12l-7.4 2.6L14 22l-2.6-7.4L4 12l7.4-2.6L14 2Z" fill="var(--pop-mango)" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round" />
+  </svg>
+)}
+
+{name === 'sparkle' && (
+  <svg class={cls} width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <path d="M10 1l1.4 6.1L17.5 8.5l-6.1 1.4L10 16l-1.4-6.1L2.5 8.5l6.1-1.4L10 1Z" fill={stroke} />
+  </svg>
+)}
+
+{name === 'underline' && (
+  <svg class={cls} width="120" height="12" viewBox="0 0 120 12" fill="none" aria-hidden="true" preserveAspectRatio="none">
+    <path d="M3 8c30-4 70-5 114-2" stroke={stroke} stroke-width="4" stroke-linecap="round" />
+  </svg>
+)}
+
+{name === 'circle' && (
+  <svg class={cls} width="140" height="56" viewBox="0 0 140 56" fill="none" aria-hidden="true">
+    <path d="M8 30C10 14 40 6 72 6c32 0 58 10 60 24 2 15-30 22-62 20C38 48 10 42 9 30Z" stroke={stroke} stroke-width="2.5" stroke-linecap="round" />
+  </svg>
+)}

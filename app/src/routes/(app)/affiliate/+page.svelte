@@ -5,6 +5,7 @@
     hoverLift,
     Icon,
     NumberFlow,
+    ConfettiBurst,
     EmptyAffiliateArt,
     revealDelay,
   } from "@socio/ui";
@@ -21,6 +22,7 @@
   // Referral copy: ikon morph copy → check (spring scale), reset setelah 1.6s
   let linkCopied = $state(false);
   let copyTimer: ReturnType<typeof setTimeout> | undefined;
+  let confettiFire = $state(0);
 
   async function submitWithdraw(input: any) {
     busy = true;
@@ -57,6 +59,7 @@
     haptic(8);
     navigator.clipboard?.writeText(data.refLink);
     linkCopied = true;
+    confettiFire += 1; // rayakan 1× (F5, no-op saat reduced-motion)
     clearTimeout(copyTimer);
     copyTimer = setTimeout(() => (linkCopied = false), 1600);
   }
@@ -103,8 +106,43 @@
             >Tarik Komisi</Button
           >
         {:else}
-          <div class="rounded-xl bg-ink-800 px-3 py-2 text-center text-xs text-ink-300">
-            Minimal {formatRupiah(data.minWithdraw)} untuk penarikan
+          {@const ringPct = Math.min(
+            100,
+            Math.round((Number(data.commission) / (Number(data.minWithdraw) || 1)) * 100),
+          )}
+          <div class="flex items-center gap-3 rounded-xl bg-ink-800 px-3 py-2">
+            <svg
+              width="36"
+              height="36"
+              viewBox="0 0 36 36"
+              class="-rotate-90 shrink-0"
+              role="img"
+              aria-label={`${ringPct} persen menuju minimal penarikan`}
+            >
+              <circle
+                cx="18"
+                cy="18"
+                r="15.5"
+                fill="none"
+                stroke="rgba(255,255,255,0.15)"
+                stroke-width="3.5"
+              />
+              <circle
+                cx="18"
+                cy="18"
+                r="15.5"
+                fill="none"
+                stroke="var(--color-mango-400)"
+                stroke-width="3.5"
+                stroke-linecap="round"
+                pathLength="100"
+                stroke-dasharray={`${ringPct} 100`}
+                class="transition-all duration-500"
+              />
+            </svg>
+            <p class="text-xs text-ink-300">
+              Minimal {formatRupiah(data.minWithdraw)} untuk penarikan
+            </p>
           </div>
         {/if}
       </div>
@@ -123,20 +161,23 @@
             value={data.refLink}
             class="h-10 min-w-0 flex-1 rounded-xl border border-ink-200 bg-ink-50 px-3 text-sm"
           />
-          <Button onclick={copyRefLink} size="sm" class="shrink-0">
-            <span class="grid h-4 w-4 place-items-center">
-              {#key linkCopied}
-                {#if linkCopied}
-                  <span class="text-success reveal" style={revealDelay(0)}>
-                    <Icon name="check" size={14} stroke={3} />
-                  </span>
-                {:else}
-                  <Icon name="copy" size={14} />
-                {/if}
-              {/key}
-            </span>
-            <span class="ml-1">{linkCopied ? "Tersalin!" : copy.affiliate.cta}</span>
-          </Button>
+          <span class="relative shrink-0">
+            <ConfettiBurst fire={confettiFire} />
+            <Button onclick={copyRefLink} size="sm" class="shrink-0">
+              <span class="grid h-4 w-4 place-items-center">
+                {#key linkCopied}
+                  {#if linkCopied}
+                    <span class="text-success reveal" style={revealDelay(0)}>
+                      <Icon name="check" size={14} stroke={3} />
+                    </span>
+                  {:else}
+                    <Icon name="copy" size={14} />
+                  {/if}
+                {/key}
+              </span>
+              <span class="ml-1">{linkCopied ? "Tersalin!" : copy.affiliate.cta}</span>
+            </Button>
+          </span>
           <Button onclick={share} size="sm" class="shrink-0">Bagikan</Button>
         </div>
       </div>
@@ -146,12 +187,14 @@
       >
         <span class="mb-2 text-xs font-semibold text-ink-500">Scan untuk daftar</span>
         {#key data.qr}
-          <img
-            src={data.qr}
-            alt="QR referral"
-            class="h-40 w-40 lg:h-44 lg:w-44 rounded-xl reveal"
-            style={revealDelay(0)}
-          />
+          <div class="qr-tilt">
+            <img
+              src={data.qr}
+              alt="QR referral"
+              class="h-40 w-40 lg:h-44 lg:w-44 rounded-xl reveal"
+              style={revealDelay(0)}
+            />
+          </div>
         {/key}
       </div>
     </div>
@@ -236,3 +279,23 @@
     </form>
   </div>
 {/if}
+
+<style>
+  /* QR tilt-on-hover (F5, desktop pointer halus saja) */
+  @media (hover: hover) and (min-width: 1024px) {
+    .qr-tilt {
+      transition: transform 200ms var(--ease-out-soft);
+    }
+    .qr-tilt:hover {
+      transform: rotate(1deg) scale(1.02);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .qr-tilt {
+      transition: none;
+    }
+    .qr-tilt:hover {
+      transform: none;
+    }
+  }
+</style>

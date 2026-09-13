@@ -5,6 +5,8 @@
     Icon,
     Sheet,
     revealDelay,
+    tweenNumber,
+    ConfettiBurst,
     SuccessTopupArt,
     EmptyBalanceArt,
   } from "@socio/ui";
@@ -45,6 +47,18 @@
   const bonusPreview = $derived(Math.round(amount * bonusRate));
   const saldoMasuk = $derived(totalPay + bonusPreview);
 
+  // Total transfer + saldo masuk count-up (F4). Reduced = instan.
+  const reduceMotion =
+    typeof window !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const payFlow = tweenNumber(0);
+  const inFlow = tweenNumber(0);
+  let confettiFire = $state(0);
+  $effect(() => {
+    const d = reduceMotion ? 0 : 350;
+    payFlow.set(totalPay, { duration: d });
+    inFlow.set(saldoMasuk, { duration: d });
+  });
+
   // Handle form result
   $effect(() => {
     if (form && (form as any).success) {
@@ -54,6 +68,7 @@
         instrCredited = r.credited ?? 0;
         instrBonus = r.bonus ?? 0;
         instructionOpen = true;
+        confettiFire += 1; // rayakan invoice berhasil (F4, no-op saat reduced)
       }
     }
   });
@@ -154,7 +169,11 @@
               class="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full transition
                 {active ? 'scale-100 bg-primary opacity-100' : 'scale-50 bg-ink-200 opacity-0'}"
             >
-              <Icon name="check" size={12} stroke={3} class="text-white" />
+              {#key active}
+                <span class="check-pop grid place-items-center" aria-hidden="true">
+                  <Icon name="check" size={12} stroke={3} class="text-white" />
+                </span>
+              {/key}
             </span>
             <div class="font-display text-lg font-extrabold tabular-nums">{formatRupiah(c)}</div>
             {#if isPopular}
@@ -254,14 +273,12 @@
       <div class="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
         <span class="text-sm font-semibold">Total transfer</span>
         <span class="font-display text-lg font-extrabold tabular-nums"
-          >{formatRupiah(totalPay)}</span
+          >{formatRupiah($payFlow)}</span
         >
       </div>
       <div class="mt-1 flex items-center justify-between">
         <span class="text-xs text-ink-300">Saldo yang masuk</span>
-        <span class="text-sm font-bold tabular-nums text-emerald-400"
-          >{formatRupiah(saldoMasuk)}</span
-        >
+        <span class="text-sm font-bold tabular-nums text-emerald-400">{formatRupiah($inFlow)}</span>
       </div>
     </div>
 
@@ -300,7 +317,10 @@
     <div>
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-sm font-bold">Riwayat Top Up</h2>
-        <a href="/saldo/riwayat" class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-primary">
+        <a
+          href="/saldo/riwayat"
+          class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-primary"
+        >
           Semua <Icon name="chevron_right" size={14} />
         </a>
       </div>
@@ -375,7 +395,8 @@
 <!-- Instruksi Manual BCA Sheet -->
 <Sheet bind:open={instructionOpen} title="Instruksi Pembayaran">
   <div class="space-y-4">
-    <div class="rounded-2xl bg-success/10 p-4 text-center">
+    <div class="relative overflow-visible rounded-2xl bg-success/10 p-4 text-center">
+      <ConfettiBurst fire={confettiFire} />
       <SuccessTopupArt size={72} class="mx-auto text-success" />
       <div class="mt-1 text-sm font-bold text-success">Invoice Dibuat</div>
       <div class="text-xs text-ink-600">Transfer dalam 24 jam agar tidak kedaluwarsa</div>
@@ -397,9 +418,9 @@
           <Icon name="copy" size={18} />
         </button>
       </div>
-      <!-- QR scan (manual/QR) — fade-in saat data instr siap -->
+      <!-- QR scan (manual/QR) — pop spring saat data instr siap -->
       {#if instructionOpen && instrPostAmount > 0}
-        <div class="mt-3 flex flex-col items-center rounded-xl bg-white p-3 reveal">
+        <div class="qr-pop mt-3 flex flex-col items-center rounded-xl bg-white p-3">
           <img
             src="/saldo/qr?data={encodeURIComponent(`BCA ${data.bcaNumber} ${instrPostAmount}`)}"
             alt="QR pembayaran BCA"
@@ -496,9 +517,41 @@
     transform: scale(0.96);
     transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1);
   }
+  /* F4 playful: check spring, QR pop */
+  .check-pop {
+    display: grid;
+    place-items: center;
+    animation: check-pop 300ms var(--ease-spring) both;
+  }
+  @keyframes check-pop {
+    from {
+      transform: scale(0.3);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+  .qr-pop {
+    animation: qr-pop 450ms var(--ease-spring) both;
+    transform-origin: top center;
+  }
+  @keyframes qr-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.85) translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .chip-press:active {
       transform: none;
+    }
+    .check-pop,
+    .qr-pop {
+      animation: none;
     }
   }
 </style>

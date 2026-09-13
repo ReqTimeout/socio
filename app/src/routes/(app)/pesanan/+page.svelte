@@ -8,6 +8,7 @@
     toast,
     revealDelay,
     EmptyOrdersArt,
+    Mascot,
     LiveDot,
     Skeleton,
   } from "@socio/ui";
@@ -18,6 +19,7 @@
   import { navigating } from "$app/state";
   import { applyAction, enhance } from "$app/forms";
   import { page } from "$app/stores";
+  import { onMount } from "svelte";
 
   let { data } = $props();
 
@@ -102,6 +104,37 @@
     else p.set("f", f);
     goto(`/pesanan?${p.toString()}`);
   }
+
+  // Sliding indicator di bawah chip filter aktif (F2, presentasi saja).
+  // Diukur dari DOM (offsetLeft/Width) — ikut pindah saat filter berubah/resize.
+  let chipRow: HTMLElement | null = $state(null);
+  let chipInd = $state({ left: 0, width: 0, show: false });
+  function placeChipInd() {
+    if (!chipRow) return;
+    const active = chipRow.querySelector<HTMLElement>('[data-active="true"]');
+    if (!active) {
+      chipInd.show = false;
+      return;
+    }
+    chipInd = { left: active.offsetLeft, width: active.offsetWidth, show: true };
+  }
+  onMount(() => {
+    placeChipInd();
+    // Tunggu font/layout stabil agar ukuran chip akurat
+    const t1 = setTimeout(placeChipInd, 300);
+    const onRs = () => placeChipInd();
+    addEventListener("resize", onRs);
+    return () => {
+      clearTimeout(t1);
+      removeEventListener("resize", onRs);
+    };
+  });
+  $effect(() => {
+    data.filter; // track → reposisi tiap ganti filter
+    // Tunggu DOM update + skeleton selesai sebelum ukur
+    const t = setTimeout(placeChipInd, 60);
+    return () => clearTimeout(t);
+  });
 
   function openDetail(id: number) {
     haptic(10);
@@ -196,26 +229,35 @@
   <div
     class="sticky top-14 z-20 -mx-4 flex items-center gap-2 overflow-x-auto border-b border-ink-100 bg-surface/95 px-4 py-2 backdrop-blur shadow-[0_4px_12px_-8px_rgba(15,23,42,0.08)] [scrollbar-width:none] sm:static sm:border-0 sm:bg-transparent sm:p-0 lg:mx-0 lg:px-0 lg:gap-3 lg:py-1 sm:shadow-none"
   >
-    {#each tabs as t}
-      {@const c = (counts as any)[t.f] ?? 0}
-      <button
-        onclick={() => select(t.f)}
-        class="min-h-[44px] shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all duration-200 active:scale-95
-          {data.filter === t.f
-          ? 'bg-primary text-white shadow-sm'
-          : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
-      >
-        {t.label}
-        {#if c > 0}
-          <span
-            class="ml-1.5 inline-flex min-w-[18px] justify-center rounded-full px-1 py-0.5 text-[10px] font-extrabold tabular-nums {data.filter ===
-            t.f
-              ? 'bg-ink-900/25 text-white'
-              : 'bg-white text-ink-700'}">{c}</span
-          >
-        {/if}
-      </button>
-    {/each}
+    <div class="relative flex shrink-0 items-center gap-2" bind:this={chipRow}>
+      {#each tabs as t}
+        {@const c = (counts as any)[t.f] ?? 0}
+        {@const isActive = data.filter === t.f}
+        <button
+          onclick={() => select(t.f)}
+          data-active={isActive ? "true" : undefined}
+          aria-current={isActive ? "true" : undefined}
+          class="min-h-[44px] shrink-0 rounded-full px-4 py-2 pb-3 text-xs font-bold transition-all duration-200 active:scale-95
+            {isActive
+            ? 'bg-primary text-white shadow-sm'
+            : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
+        >
+          {t.label}
+          {#if c > 0}
+            <span
+              class="ml-1.5 inline-flex min-w-[18px] justify-center rounded-full px-1 py-0.5 text-[10px] font-extrabold tabular-nums {isActive
+                ? 'bg-ink-900/25 text-white'
+                : 'bg-white text-ink-700'}">{c}</span
+            >
+          {/if}
+        </button>
+      {/each}
+      <span
+        class="chip-indicator"
+        style={`transform: translateX(${chipInd.left}px); width: ${chipInd.width}px; opacity: ${chipInd.show ? 1 : 0};`}
+        aria-hidden="true"
+      ></span>
+    </div>
     <button
       onclick={toggleSelectMode}
       aria-label={selectMode
@@ -259,13 +301,16 @@
         class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
       ></div>
       {#if data.filter === "all"}
-        <EmptyOrdersArt size={112} class="relative mx-auto mb-3 text-ink-300" />
+        <div class="relative mx-auto mb-3 flex items-end justify-center">
+          <EmptyOrdersArt size={112} class="text-ink-300" />
+          <Mascot pose="fall" size={52} class="float-slow -ml-6 -rotate-12 text-mango-500" />
+        </div>
         <p class="relative text-sm font-bold text-ink-800">{copy.empty.orders.title}</p>
         <p class="relative mt-1 text-xs leading-relaxed text-ink-500">
           {copy.empty.orders.desc}
         </p>
       {:else}
-        <EmptyOrdersArt size={88} class="relative mx-auto mb-3 text-ink-300" />
+        <Mascot pose="wave" size={64} class="float-slow relative mx-auto mb-3 text-primary" />
         <p class="relative text-sm font-bold text-ink-800">
           Tidak ada pesanan {tabs.find((t) => t.f === data.filter)?.label ?? ""}
         </p>
@@ -341,6 +386,15 @@
                     {/key}
                   </span>
                 </div>
+                {#if o.status === "In progress" || o.status === "Processing"}
+                  <div
+                    class="order-progress mt-2.5"
+                    role="progressbar"
+                    aria-label="Order sedang diproses"
+                  >
+                    <span class="order-progress-bar" aria-hidden="true"></span>
+                  </div>
+                {/if}
                 {#if o.status === "Partial"}
                   <p
                     class="mt-2 flex items-center gap-1.5 rounded-lg bg-status-partial/10 px-2.5 py-1.5 text-[11px] font-semibold text-status-partial"
@@ -396,6 +450,16 @@
                 {/key}
               </span>
             </div>
+
+            {#if o.status === "In progress" || o.status === "Processing"}
+              <div
+                class="order-progress mt-2.5"
+                role="progressbar"
+                aria-label="Order sedang diproses"
+              >
+                <span class="order-progress-bar" aria-hidden="true"></span>
+              </div>
+            {/if}
 
             {#if o.status === "Partial"}
               <p
@@ -657,6 +721,52 @@
     .sweep-highlight :global(.badge-flip) {
       animation: none;
       opacity: 0;
+    }
+    .chip-indicator,
+    .order-progress-bar {
+      animation: none;
+    }
+    .order-progress-bar {
+      transform: none;
+      width: 40%;
+    }
+  }
+
+  /* F2 playful: sliding indicator chip + progress bar order Proses.
+   * Transform/opacity only (GPU). */
+  .chip-indicator {
+    position: absolute;
+    bottom: 1px;
+    left: 0;
+    height: 3px;
+    border-radius: 9999px;
+    background: var(--color-mango-500);
+    transition:
+      transform 260ms var(--ease-out-soft),
+      width 260ms var(--ease-out-soft),
+      opacity 200ms ease;
+    pointer-events: none;
+  }
+  .order-progress {
+    height: 3px;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: var(--color-ink-100);
+  }
+  .order-progress-bar {
+    display: block;
+    height: 100%;
+    width: 35%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-accent-500), var(--color-primary-500));
+    animation: order-slide 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+  @keyframes order-slide {
+    0% {
+      transform: translateX(-110%);
+    }
+    100% {
+      transform: translateX(300%);
     }
   }
 </style>

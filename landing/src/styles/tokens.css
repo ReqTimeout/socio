@@ -50,6 +50,28 @@
   --text-h3: 1.25rem; /* 20px */
   --text-lead: 1.125rem; /* 18px — hero sub */
   --text-body: 1.0625rem; /* 17px — base marketing */
+
+  /* ---- V2 Playful Premium (amendemen kontrak, approved D-1 2026-09-13) ----
+   * Paper hangat: geser hue cool→warm sedikit, tetap near-white.
+   * Pop colors HANYA untuk highlight/doodle/sticker kecil — BUKAN fill CTA
+   * (CTA tetap --accent-ink satu-satunya). Aturan pakai: PLAN §2.3. */
+  --paper-warm: oklch(0.982 0.008 90);
+  --paper-warm-2: oklch(0.96 0.012 90);
+  --pop-mango: oklch(0.84 0.15 85);
+  --pop-mango-soft: oklch(0.84 0.15 85 / 0.25);
+  --pop-berry: oklch(0.62 0.2 15);
+
+  /* ---- Sticker chrome (max 4 elemen besar/halaman — PLAN §2.3#3) ---- */
+  --sticker-border: 2px solid var(--ink);
+  --sticker-shadow: 4px 4px 0 var(--ink);
+  --sticker-shadow-sm: 2px 2px 0 var(--ink);
+  --sticker-shadow-hover: 6px 6px 0 var(--ink);
+  --radius-sticker: 20px;
+  --radius-sticker-lg: 28px;
+
+  /* ---- Motion playful (entrance sticker; UI kalem tetap --ease-out-soft) ---- */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-dramatic: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (min-width: 1024px) {

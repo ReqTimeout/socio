@@ -1,38 +1,44 @@
 ---
-import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
+import { totalLayanan, totalKategori } from '../data/siteStats';
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.svelte';
 import FloatingTabDock from '../components/FloatingTabDock.svelte';
 import Footer from '../components/Footer.astro';
 import HeroMockup from '../components/HeroMockup.svelte';
-import SmmProviderProof from '../components/SmmProviderProof.svelte';
+import LiveTicker from '../components/LiveTicker.astro';
+import LiveOrderToast from '../components/LiveOrderToast.svelte';
+import Doodle from '../components/Doodle.astro';
 import ProblemLedger from '../components/ProblemLedgerMotion.svelte';
-import Ticker from '../components/Ticker.astro';
 import OrderSimulator from '../components/OrderSimulator.svelte';
 import OrderBoard from '../components/OrderBoardMotion.svelte';
 import KapabilitasBento from '../components/KapabilitasBentoMotion.svelte';
 import PricingTable from '../components/PricingTableMotion.svelte';
 import TestiLedger from '../components/TestiLedgerMotion.svelte';
+import ResellerBand from '../components/ResellerBand.svelte';
 import HowItWorks from '../components/HowItWorks.svelte';
 import Faq from '../components/Faq.svelte';
-import StickyCTA from '../components/StickyCTA.svelte';
 import FinalCTA from '../components/FinalCTA.svelte';
 import FloatingWhatsApp from '../components/FloatingWhatsApp.svelte';
 
 const regBase = 'https://app.socio.id/daftar';
+// V2 §3.3: title ≤70 char (keyword + benefit), desc ≤160 char (keyword + harga + CTA).
+const pageTitle = 'SMM Panel Indonesia: Harga Grosir + Garansi Refill | Socio.id';
+const pageDesc = `SMM panel Indonesia: ${totalLayanan} layanan IG, TikTok, YouTube & lainnya. Daftar reseller Rp50rb (saldo Rp20rb), proses otomatis 24 jam, garansi refill 30 hari.`;
 ---
 
-<Layout>
+<Layout title={pageTitle} description={pageDesc}>
   <Navbar client:load />
   <FloatingTabDock client:idle />
 
-  <StickyCTA client:idle />
   <FloatingWhatsApp client:idle />
+  <LiveOrderToast client:load />
 
   <header class="hero relative overflow-hidden bg-[var(--paper)] pt-28 pb-16 md:pt-40 md:pb-24">
-    <!-- V2-1 hero mesh: 5 radial oklch nodes + grain, pure CSS 0kb JS (codefronts bga-14 teknik) -->
+    <!-- V2 hero mesh 2 lapis: cyan + violet/mango, drift berlawanan arah,
+         pure CSS 0kb JS. Reduced-motion → statis. -->
     <div class="hero-mesh" aria-hidden="true">
       <div class="hero-mesh-inner"></div>
+      <div class="hero-mesh-inner-2"></div>
       <div class="hero-grain"></div>
     </div>
     <!-- Eyebrow hero — load-sequence (bukan scroll) -->
@@ -44,34 +50,39 @@ const regBase = 'https://app.socio.id/daftar';
           {totalLayanan} layanan aktif · semua platform
         </p>
 
-        <h1 class="hero-seq-1 font-display mt-5 text-[length:var(--text-hero)] leading-[1.05] font-bold tracking-tight text-ink">
-          Semua platform.<br />
-          <span class="text-[var(--accent-ink)]">Satu panel. Mulai Rp42.</span>
+        <h1 class="hero-seq-1 hero-h1 font-display mt-5 font-bold leading-[1.08] tracking-tight text-ink">
+          SMM Panel Indonesia yang bikin sosmed kamu
+          <span class="marker-swipe"><span class="word-rotate"><span>ramai,</span><span aria-hidden="true">cuan,</span><span aria-hidden="true">viral,</span></span></span>
+          dompet aman.
         </h1>
 
         <p class="hero-seq-2 mx-auto mt-5 max-w-lg text-[length:var(--text-lead)] leading-relaxed text-ink-2 lg:mx-0">
-          {totalLayanan} layanan SMM untuk Instagram, TikTok, YouTube, Telegram, Spotify, SEO &amp;
-          {totalKategori} kategori lainnya — dari views Rp42/1k sampai paket organic growth. Proses
-          otomatis 24 jam, garansi refill. Daftar gratis, top-up mulai Rp10 ribu.
+          {totalLayanan} layanan SMM untuk Instagram, TikTok, YouTube, Telegram &amp;
+          lainnya. Daftar reseller Rp50.000 sudah termasuk saldo Rp20.000 —
+          langsung order, proses otomatis 24 jam, garansi refill 30 hari.
         </p>
 
-        <!-- USP ledger — generic free tier (bukan reseller promo) -->
-        <dl class="hero-seq-3 mx-auto mt-7 max-w-md divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] lg:mx-0">
+        <!-- USP nota-warung (dl existing → sticker style, tilt -1°) -->
+        <dl class="sticker tilt-l hero-seq-3 mx-auto mt-7 max-w-md divide-y divide-[var(--hairline)] px-5 py-1 lg:mx-0">
           <div class="flex items-baseline justify-between gap-4 py-2.5">
-            <dt class="text-[13px] font-semibold text-ink-2">Termurah</dt>
-            <dd class="num text-[15px] font-bold text-ink">Rp{hargaMulai}/1k</dd>
+            <dt class="text-[13px] font-semibold text-ink-2">Daftar reseller</dt>
+            <dd class="num text-[15px] font-bold text-ink">Rp50.000 sekali</dd>
+          </div>
+          <div class="flex items-baseline justify-between gap-4 py-2.5">
+            <dt class="text-[13px] font-semibold text-ink-2">Saldo langsung masuk</dt>
+            <dd class="num text-[15px] font-bold text-ink">Rp20.000</dd>
+          </div>
+          <div class="flex items-baseline justify-between gap-4 py-2.5">
+            <dt class="text-[13px] font-semibold text-ink-2">Harga layanan</dt>
+            <dd class="text-[15px] font-bold text-ink">Grosir reseller</dd>
           </div>
           <div class="flex items-baseline justify-between gap-4 py-2.5">
             <dt class="text-[13px] font-semibold text-ink-2">Katalog</dt>
-            <dd class="num text-[15px] font-bold text-ink">{totalLayanan} layanan · {totalKategori} kategori</dd>
+            <dd class="num text-[15px] font-bold text-ink">{totalLayanan} · {totalKategori} kat</dd>
           </div>
           <div class="flex items-baseline justify-between gap-4 py-2.5">
             <dt class="text-[13px] font-semibold text-ink-2">Proses</dt>
             <dd class="text-[15px] font-bold text-ink">Otomatis 24 jam</dd>
-          </div>
-          <div class="flex items-baseline justify-between gap-4 py-2.5">
-            <dt class="text-[13px] font-semibold text-ink-2">Garansi</dt>
-            <dd class="text-[15px] font-bold text-ink">Refill 30 hari</dd>
           </div>
         </dl>
 
@@ -79,49 +90,53 @@ const regBase = 'https://app.socio.id/daftar';
         <div class="hero-seq-4 mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
           <a
             href={regBase}
-            class="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[var(--accent-ink)] px-8 text-[15px] font-bold text-white shadow-[0_8px_24px_-8px_var(--accent-ink)] transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]"
+            class="magnetic cta-glow inline-flex min-h-[52px] items-center justify-center rounded-full bg-[var(--accent-ink)] px-8 text-[15px] font-bold text-white shadow-[0_8px_24px_-8px_var(--accent-ink)] transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]"
           >
-            Daftar Gratis →
+            Daftar Reseller Rp50rb →
           </a>
           <a
             href="/layanan"
             class="inline-flex min-h-[52px] items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-white px-7 text-[15px] font-bold text-ink transition-colors hover:bg-[var(--paper-2)]"
           >
-            Lihat {totalLayanan} layanan
+            Intip {totalLayanan} Layanan
           </a>
         </div>
-        <p class="hero-seq-5 mt-4 text-[13px] text-ink-3">
-          Gratis daftar · top-up mulai Rp10 ribu · garansi refill 30 hari
+        <!-- Trust line (D-4: "ribuan", bukan 50.000+) + inisial persona (foto asli = TODO owner) -->
+        <div class="hero-seq-5 mt-5 flex items-center justify-center gap-3 lg:justify-start">
+          <span class="flex -space-x-2" aria-hidden="true">
+            <span class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[var(--accent-tint)] text-[12px] font-bold text-[var(--accent-ink)]">R</span>
+            <span class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[var(--pop-mango-soft)] text-[12px] font-bold text-ink">B</span>
+            <span class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[var(--paper-warm-2)] text-[12px] font-bold text-ink-2">A</span>
+          </span>
+          <p class="text-[13px] text-ink-2">Dipakai <strong class="text-ink">ribuan reseller &amp; UMKM</strong></p>
+        </div>
+        <p class="hero-seq-5 mt-2 text-[13px] text-ink-3">
+          Sekali bayar · tanpa password · garansi refill 30 hari
         </p>
       </div>
 
-      <!-- Mockup 7/12 -->
-      <div class="relative mt-4 flex justify-center lg:col-span-7 lg:justify-end lg:mt-0">
-        <!-- client:load (bukan visible): astro-island display:contents + mockup
-             entrance transform bikin island rect 0×0 → IO tak pernah trigger.
-             Hero = above-fold, harus hidup seketika. -->
-        <HeroMockup client:visible />
+      <!-- Mockup 7/12 — frame sticker tilt +2°, doodle tangan, floaters -->
+      <div class="tilt-stage relative mt-4 flex justify-center lg:col-span-7 lg:justify-end lg:mt-0">
+        <div class="tilt-toward sticker relative p-3 sm:p-4" data-tilt>
+          <!-- client:visible: astro-island display:contents + mockup
+               entrance transform bikin island rect 0×0 → IO tak pernah trigger.
+               Hero = above-fold, harus hidup seketika. -->
+          <HeroMockup client:visible />
+          <!-- doodle anotasi tangan (D-2, 1 dari max 2 per halaman) -->
+          <p class="font-hand absolute -bottom-9 left-2 -rotate-3 text-[22px] leading-none text-ink-2" aria-hidden="true">
+            sekali klik, order jalan
+            <Doodle name="arrow-curved" class="absolute -top-12 left-24 h-10 w-10 -scale-x-100" />
+          </p>
+          <!-- sticker kecil float (SVG, bukan emoji) -->
+          <Doodle name="star" class="float-idle absolute -top-4 -right-3 h-7 w-7" />
+          <Doodle name="sparkle" class="float-slow absolute top-1/2 -left-4 h-5 w-5" />
+        </div>
       </div>
     </div>
   </header>
 
   <main>
-  <SmmProviderProof client:visible />
-
-  <!-- Ticker aktivitas order (plan §3 #3) -->
-  <Ticker />
-
-  <!-- Trust inline-stat prose (bukan 4-col strip — anti-pattern gate) -->
-  <section class="border-y border-[var(--hairline)] bg-[var(--paper-2)] py-8 md:py-10" aria-label="Statistik socio.id">
-    <div class="mx-auto max-w-6xl px-5 md:px-8">
-      <p class="reveal text-center text-[15px] leading-relaxed text-ink-2 md:text-[17px]">
-        Sekarang ada <strong class="num text-ink">1.240 order aktif</strong> sedang diproses,
-        <strong class="num text-ink">{totalLayanan} layanan</strong> di <strong class="num text-ink">{totalKategori} kategori</strong>,
-        rata-rata mulai proses <strong class="num text-ink">42 detik</strong> setelah order —
-        dipercaya <strong class="num text-ink">50.000+</strong> reseller &amp; UMKM se-Indonesia.
-      </p>
-    </div>
-  </section>
+  <LiveTicker />
 
   <ProblemLedger client:visible />
 
@@ -142,25 +157,54 @@ const regBase = 'https://app.socio.id/daftar';
   <!-- D4: pricing prose + real table harga — V2-2 stagger 40ms + hover -->
   <PricingTable client:visible />
 
-  <FinalCTA client:visible />
+  <ResellerBand client:visible />
 
   <section id="faq" class="py-16 md:py-20 bg-white">
     <div class="container mx-auto px-5 md:px-6">
       <div class="mb-10 md:mb-12 text-center">
-        <h2 class="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-ink">
-          Pertanyaan yang Sering Ditanyakan
+        <h2 class="reveal font-display text-2xl sm:text-3xl md:text-4xl font-bold text-ink">
+          Masih ragu? Wajar. Nih jawaban jujur.
         </h2>
-        <p class="mt-2 text-sm md:text-base text-ink-2 max-w-2xl mx-auto">
-          Belum menemukan jawabannya? Hubungi tim support kami 24/7 via WhatsApp.
-        </p>
       </div>
       <Faq client:visible />
     </div>
   </section>
 
+  <FinalCTA client:visible />
+
   </main>
 
   <Footer />
+
+  <!-- V2 §3.4: FAQPage (AEO/GEO — jawaban dikutip AI Overview/PAA) -->
+  <script type="application/ld+json" is:inline>
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Aman gak sih beli followers?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Aman selama caranya benar: socio.id tidak pernah minta password, cukup link publik. Order jalan gradual (bertahap). Risiko drop tetap ada di platform mana pun — layanan bergaransi dapat refill 30 hari otomatis." }
+        },
+        {
+          "@type": "Question",
+          "name": "Berapa lama proses order?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Rata-rata order mulai jalan kurang dari 1 menit setelah saldo masuk, karena sistem otomatis 24 jam. Kecepatan selesai tergantung antrean provider dan jumlah order." }
+        },
+        {
+          "@type": "Question",
+          "name": "Bedanya member & reseller?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Member daftar gratis dan langsung bisa order. Reseller bayar Rp50.000 sekali — dapat saldo Rp20.000 plus harga lebih murah di semua layanan, permanen." }
+        },
+        {
+          "@type": "Question",
+          "name": "Bayarnya pakai apa?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Saat ini via transfer bank (BCA) manual dengan konfirmasi admin. QRIS dan e-wallet otomatis segera hadir." }
+        }
+      ]
+    }
+  </script>
 
   <!-- S0: WebSite SearchAction + sitelinks potentialAction untuk homepage (spec SEO §5) -->
   <script type="application/ld+json" is:inline>
@@ -196,65 +240,6 @@ const regBase = 'https://app.socio.id/daftar';
   }
   .rotate-x-\[5deg\] {
     transform: rotateX(5deg);
-  }
-
-  /* V2-1 hero mesh playful — 5 nodes oklch pastel, 26s alternate, grain overlay.
-     Teknik codefronts bga-14: 5 radial di satu background, blur 52px, scale 1.15 anti-vignette.
-     Warna: cyan (accent) + violet (accent-2) + 3 intermediate, lightness within 0.12.
-     0kb JS, 1 paint layer, pointer lean via --mx/--my (JS kecil di Layout, opsional). */
-  .hero {
-    --hero-c1: oklch(0.88 0.08 220);
-    --hero-c2: oklch(0.86 0.07 285);
-    --hero-c3: oklch(0.90 0.06 195);
-    --hero-c4: oklch(0.87 0.07 250);
-    --hero-c5: oklch(0.89 0.05 320);
-  }
-  .hero-mesh {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    overflow: hidden;
-  }
-  .hero-mesh-inner {
-    position: absolute;
-    inset: -20%;
-    filter: blur(52px) saturate(1.28);
-    scale: 1.15;
-    background:
-      radial-gradient(42% 52% at 22% 28%, var(--hero-c1), transparent 62%),
-      radial-gradient(46% 44% at 72% 18%, var(--hero-c2), transparent 60%),
-      radial-gradient(52% 50% at 48% 42%, var(--hero-c3), transparent 62%),
-      radial-gradient(38% 42% at 78% 68%, var(--hero-c4), transparent 58%),
-      radial-gradient(44% 46% at 18% 78%, var(--hero-c5), transparent 60%),
-      var(--paper);
-    opacity: 0.55;
-    animation: hero-mesh-drift 26s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
-  }
-  .hero-grain {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.18;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
-    background-size: 180px 180px;
-  }
-  @keyframes hero-mesh-drift {
-    0% {
-      transform: translate3d(0, 0, 0) scale(1.15);
-    }
-    50% {
-      transform: translate3d(-1.2%, 1%, 0) scale(1.18);
-    }
-    100% {
-      transform: translate3d(1%, -0.8%, 0) scale(1.15);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .hero-mesh-inner {
-      animation: none;
-      opacity: 0.4;
-    }
   }
 </style>
 

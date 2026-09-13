@@ -80,64 +80,148 @@ const ogImage = new URL('/og-image.png', Astro.site ?? 'https://socio.id').href;
         "contactPoint": {
           "@type": "ContactPoint",
           "contactType": "customer support",
-          "telephone": "+62-811-9193-28",
+          "telephone": "+62-812-2127-2016",
           "availableLanguage": ["Indonesian", "English"]
         }
       }
     </script>
 
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="generator" content={Astro.generator} />
 
-    <!-- D3: global reveal observer — trigger .reveal di markup statik Astro
-         (islands Svelte punya observer sendiri). threshold 0.15, sekali saja.
+    <!-- D3: global reveal observer — trigger .reveal/.marker-swipe/.pop-in di
+         markup statik Astro MAUPUN island Svelte yang hydrate belakangan.
+         threshold 0.15, sekali saja. MutationObserver menangkap target baru
+         dari hydration island (client:visible di bawah fold).
          Fallback scroll-handler: IO callback bisa coalesce saat fast-scroll
          (browser skip posisi intermediate) → elemen pendek kelewat → stuck. -->
     <script>
-      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const pending = new Set<Element>();
-      const io = new IntersectionObserver(
-        (entries) => {
-          for (const e of entries) {
-            if (e.isIntersecting) show(e.target as HTMLElement);
+      // Head-parse: body belum ada → tunda init sampai DOMContentLoaded.
+      function initReveal() {
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const pending = new Set<Element>();
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (e.isIntersecting) show(e.target as HTMLElement);
+            }
+          },
+          { threshold: 0.15, rootMargin: '-40px' },
+        );
+
+        function show(el: HTMLElement) {
+          el.style.transitionDelay = el.style.getPropertyValue('--d') || '0ms';
+          el.classList.add('is-visible');
+          pending.delete(el);
+          io.unobserve(el);
+        }
+
+        function collect() {
+          document.querySelectorAll('.reveal:not(.is-visible), .marker-swipe:not(.is-visible), .pop-in:not(.is-visible)').forEach((el) => {
+            if (reduced) {
+              el.classList.add('is-visible');
+              return;
+            }
+            // hero = above-fold → langsung, tanpa nunggu scroll
+            if (el.closest('header.hero')) {
+              el.classList.add('is-visible');
+              return;
+            }
+            if (!pending.has(el)) {
+              pending.add(el);
+              io.observe(el);
+            }
+          });
+        }
+
+        function checkScroll() {
+          if (pending.size === 0) return;
+          const limit = innerHeight - 40;
+          for (const el of pending) {
+            if ((el as HTMLElement).getBoundingClientRect().top < limit) show(el as HTMLElement);
           }
-        },
-        { threshold: 0.15, rootMargin: '-40px' },
-      );
+        }
 
-      function show(el: HTMLElement) {
-        el.style.transitionDelay = el.style.getPropertyValue('--d') || '0ms';
-        el.classList.add('is-visible');
-        pending.delete(el);
-        io.unobserve(el);
-      }
-
-      function collect() {
-        document.querySelectorAll('.reveal:not(.is-visible)').forEach((el) => {
-          pending.add(el);
-          io.observe(el);
-        });
-      }
-
-      function checkScroll() {
-        if (pending.size === 0) return;
-        const limit = innerHeight - 40;
-        for (const el of pending) {
-          if ((el as HTMLElement).getBoundingClientRect().top < limit) show(el as HTMLElement);
+        collect();
+        // island hydrate belakangan → tangkap target baru
+        new MutationObserver(collect).observe(document.body, { childList: true, subtree: true });
+        if (!reduced) {
+          // Fallback — scroll event tidak coalesce posisi
+          addEventListener(
+            'scroll',
+            () => requestAnimationFrame(checkScroll),
+            { passive: true },
+          );
         }
       }
+      if (document.body) initReveal();
+      else document.addEventListener('DOMContentLoaded', initReveal, { once: true });
+    </script>
 
-      if (reduced) {
-        document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-visible'));
-      } else {
-        collect();
-        // Fallback — scroll event tidak coalesce posisi
-        addEventListener(
-          'scroll',
-          () => requestAnimationFrame(checkScroll),
-          { passive: true },
-        );
+    <!-- V2 motion lanjutan (A8 magnetic + mockup tilt): desktop pointer:fine saja,
+         rAF lerp, skip saat reduced-motion. Tanpa JS = tampilan statis normal. -->
+    <script>
+      function initMotion() {
+        if (
+          matchMedia('(prefers-reduced-motion: reduce)').matches ||
+          !matchMedia('(pointer: fine)').matches
+        )
+          return;
+
+        // A8: tombol ketarik max 6px ke arah kursor
+        document.querySelectorAll('.magnetic').forEach((el) => {
+          const btn = el as HTMLElement;
+          let raf = 0;
+          let tx = 0;
+          let ty = 0;
+          let cx = 0;
+          let cy = 0;
+          const loop = () => {
+            cx += (tx - cx) * 0.2;
+            cy += (ty - cy) * 0.2;
+            btn.style.transform = `translate(${cx.toFixed(1)}px, ${cy.toFixed(1)}px)`;
+            if (Math.abs(tx - cx) > 0.1 || Math.abs(ty - cy) > 0.1) raf = requestAnimationFrame(loop);
+            else raf = 0;
+          };
+          const kick = () => {
+            if (!raf) raf = requestAnimationFrame(loop);
+          };
+          btn.addEventListener('mousemove', (e: MouseEvent) => {
+            const r = btn.getBoundingClientRect();
+            const dx = e.clientX - (r.left + r.width / 2);
+            const dy = e.clientY - (r.top + r.height / 2);
+            tx = Math.max(-6, Math.min(6, dx * 0.06));
+            ty = Math.max(-6, Math.min(6, dy * 0.06));
+            kick();
+          });
+          btn.addEventListener('mouseleave', () => {
+            tx = 0;
+            ty = 0;
+            kick();
+          });
+        });
+
+        // Mockup tilt: miring max ±4deg ngikutin cursor di dalam stage
+        document.querySelectorAll('[data-tilt]').forEach((el) => {
+          const card = el as HTMLElement;
+          const stage = card.closest('.tilt-stage') ?? card;
+          stage.addEventListener('mousemove', (e: Event) => {
+            const r = (stage as HTMLElement).getBoundingClientRect();
+            const px = ((e as MouseEvent).clientX - r.left) / r.width - 0.5;
+            const py = ((e as MouseEvent).clientY - r.top) / r.height - 0.5;
+            card.style.setProperty('--ry', `${(px * 8).toFixed(2)}deg`);
+            card.style.setProperty('--rx', `${(-py * 8).toFixed(2)}deg`);
+          });
+          stage.addEventListener('mouseleave', () => {
+            card.style.setProperty('--ry', '0deg');
+            card.style.setProperty('--rx', '0deg');
+          });
+        });
       }
+      if (document.body) initMotion();
+      else document.addEventListener('DOMContentLoaded', initMotion, { once: true });
     </script>
 
     <!-- D0: font self-host — preload hashed woff2 (LCP: H1 Sora, body PJA).

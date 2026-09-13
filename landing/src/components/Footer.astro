@@ -10,7 +10,7 @@ const cols = [
     title: 'Produk',
     links: [
       { label: 'Layanan', href: '/layanan' },
-      { label: 'Harga', href: '/layanan#harga' },
+      { label: 'Harga', href: '/#harga' },
       { label: 'Reseller', href: '/reseller' },
       { label: 'API', href: 'https://app.socio.id/api-docs' },
     ],
@@ -28,7 +28,7 @@ const cols = [
     links: [
       { label: 'Masuk', href: loginLink },
       { label: 'Daftar', href: regLink },
-      { label: 'WhatsApp', href: 'https://wa.me/62811919328' },
+      { label: 'WhatsApp', href: 'https://wa.me/6281221272016' },
     ],
   },
 ];
@@ -69,8 +69,22 @@ const cols = [
       </div>
     </div>
 
-    <div class="mt-10 border-t border-[var(--hairline-dark)] pt-6 text-center text-xs text-[var(--on-dark-2)] md:text-left">
-      &copy; {year} Socio.id — Panel SMM termurah di Indonesia, harga mulai Rp{hargaMulai}/1k.
+    <!-- mesh: money pages populer (internal linking §3.3) -->
+    <nav aria-label="Layanan populer" class="mt-10 border-t border-[var(--hairline-dark)] pt-6">
+      <p class="text-[11px] font-bold uppercase tracking-widest text-[var(--accent)]">Layanan populer</p>
+      <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
+        <li><a href="/beli-followers-instagram" class="text-[var(--on-dark-2)] transition-colors hover:text-[var(--on-dark)]">Beli followers Instagram</a></li>
+        <li><a href="/beli-views-tiktok" class="text-[var(--on-dark-2)] transition-colors hover:text-[var(--on-dark)]">Jasa viewers TikTok</a></li>
+        <li><a href="/beli-followers-tiktok" class="text-[var(--on-dark-2)] transition-colors hover:text-[var(--on-dark)]">Beli followers TikTok</a></li>
+        <li><a href="/beli-subscribers-youtube" class="text-[var(--on-dark-2)] transition-colors hover:text-[var(--on-dark)]">Beli subscribers YouTube</a></li>
+        <li><a href="/beli-members-telegram" class="text-[var(--on-dark-2)] transition-colors hover:text-[var(--on-dark)]">Beli members Telegram</a></li>
+        <li><a href="/layanan" class="font-bold text-[var(--on-dark)]">+ semua layanan →</a></li>
+      </ul>
+    </nav>
+
+    <div class="mt-8 border-t border-[var(--hairline-dark)] pt-6 text-center text-xs text-[var(--on-dark-2)] md:flex md:items-center md:justify-between md:text-left">
+      <p>&copy; {year} Socio.id — Panel SMM Indonesia, harga mulai Rp{hargaMulai}/1k.</p>
+      <p class="mt-2 md:mt-0">Dibuat oleh <a href="https://beriklan.co.id" target="_blank" rel="noopener" class="font-bold text-[var(--on-dark)] underline decoration-2 underline-offset-2">beriklan.co.id</a></p>
     </div>
   </div>
 </footer>

@@ -225,15 +225,22 @@ const breadcrumbSchema = {
   <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
   <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 
-  <!-- Reading progress bar (domain motion) -->
+  <!-- Reading progress bar (transform scaleX, scroll-linked, GPU-safe) -->
   <script>
     const bar = document.createElement('div');
+    bar.setAttribute('aria-hidden', 'true');
     bar.style.cssText =
-      'position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent-ink);z-index:60;transition:width 80ms linear';
+      'position:fixed;top:0;left:0;height:3px;width:100%;background:var(--accent-ink);z-index:60;transform-origin:0 50%;transform:scaleX(0)';
     document.body.appendChild(bar);
+    let ticking = false;
     const onScroll = () => {
-      const max = document.documentElement.scrollHeight - innerHeight;
-      bar.style.width = max > 0 ? `${(scrollY / max) * 100}%` : '0';
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        bar.style.transform = `scaleX(${max > 0 ? Math.min(1, scrollY / max) : 0})`;
+        ticking = false;
+      });
     };
     addEventListener('scroll', onScroll, { passive: true });
     onScroll();

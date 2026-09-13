@@ -6,12 +6,14 @@
   import { onMount } from 'svelte';
   import { tweened } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
+  import Confetti from './Confetti.svelte';
 
   const COST_PER_K = 6902; // IG Followers harga reseller/1k (DB real)
   const AVG_UNITS_PER_CUSTOMER = 2000; // asumsi marketing: 2rb unit/pelanggan/bulan
 
   let customers = $state(30);
   let jualPerK = $state(15000);
+  let confettiFire = $state(0);
 
   // profit = (harga jual - modal) × total unit
   const profit = $derived(Math.max(0, Math.round(((jualPerK - COST_PER_K) * (customers * AVG_UNITS_PER_CUSTOMER)) / 1000)));
@@ -46,8 +48,9 @@
       </p>
     </div>
 
-    <!-- Inset panel — kartu 1 (satu-satunya) di halaman reseller -->
-    <div class="reveal mx-auto mt-10 max-w-3xl rounded-[var(--radius-lg)] border border-[var(--hairline)] bg-white p-5 shadow-[var(--n)] md:mt-12 md:p-8" style="--d: 80ms">
+    <!-- Inset panel — STICKER CARD reseller (border tinta + hard shadow) -->
+    <div class="sticker-lg reveal relative mx-auto mt-10 max-w-3xl p-5 md:mt-12 md:p-8" style="--d: 80ms">
+      <Confetti fire={confettiFire} />
       <form class="grid gap-6" aria-label="Kalkulator profit reseller" onsubmit={noop}>
         <div class="grid gap-6 sm:grid-cols-2">
           <label class="grid gap-2">
@@ -58,6 +61,7 @@
             <input
               bind:value={customers}
               oninput={(e) => (customers = Math.round(Number((e.target as HTMLInputElement).value)))}
+              onchange={() => profit > 0 && (confettiFire += 1)}
               type="range" min="1" max="200" step="1"
               class="calc-range" aria-label="Jumlah pelanggan per bulan"
             />
@@ -71,6 +75,7 @@
             <input
               bind:value={jualPerK}
               oninput={(e) => (jualPerK = Math.round(Number((e.target as HTMLInputElement).value) / 500) * 500)}
+              onchange={() => profit > 0 && (confettiFire += 1)}
               type="range" min={COST_PER_K + 500} max="30000" step="500"
               class="calc-range" aria-label="Harga jual per 1000"
             />
@@ -103,6 +108,7 @@
             <span class="num font-semibold text-ink">Rp{fmt(omzet)}</span>,
             modal <span class="num font-semibold text-ink">Rp{fmt(modal)}</span>.
             Kamu pasang harga sendiri — sisanya socio yang urus stok, proses &amp; refill.
+            <span class="mt-0.5 block text-[12px] text-ink-3">estimasi ya, hasil benerannya tergantung usahamu 🙂</span>
           </p>
         </div>
       </form>

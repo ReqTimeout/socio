@@ -8,6 +8,7 @@ import Navbar from '../components/Navbar.svelte';
 import FloatingTabDock from '../components/FloatingTabDock.svelte';
 import FloatingWhatsApp from '../components/FloatingWhatsApp.svelte';
 import Footer from '../components/Footer.astro';
+import Doodle from '../components/Doodle.astro';
 import prices from '../data/prices.json';
 import { beliBySlug } from '../data/beli-pages';
 import type { BeliPageData } from '../data/beli-pages';
@@ -131,12 +132,15 @@ const breadcrumbSchema = {
             </a>
           </div>
         </div>
-        <!-- Inline-stat harga mulai -->
-        <div class="reveal rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)] p-6 md:justify-self-end" style="--d: 80ms">
+        <!-- Inline-stat harga mulai + doodle anotasi (V2 §6.3: 1/halaman, D-2) -->
+        <div class="reveal relative rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)] p-6 md:justify-self-end" style="--d: 80ms">
           <p class="text-[11px] font-bold uppercase tracking-widest text-ink-3">Harga member mulai</p>
           <p class="num mt-1 font-display text-3xl font-bold text-ink">{fmt(startPrice)}<span class="text-base font-semibold text-ink-2">/1k</span></p>
           <p class="mt-2 text-[13px] leading-relaxed text-ink-2">
             Reseller <strong class="text-ink">{fmt(startRow.priceReseller)}</strong>/1k — daftar Rp50.000, saldo Rp20.000 langsung jalan.
+          </p>
+          <p class="font-hand mt-2 -rotate-2 text-[21px] leading-none text-ink-2" aria-hidden="true">
+            tanpa password, link doang <Doodle name="underline" class="mt-0.5 h-2.5 w-28" />
           </p>
         </div>
       </div>
@@ -218,9 +222,9 @@ const breadcrumbSchema = {
       </h2>
       <ol class="mt-10 grid gap-8 md:grid-cols-3 md:gap-6">
         {[
-          ['Daftar & isi saldo', 'Daftar gratis di app.socio.id, top up mulai Rp10.000 via QRIS, bank, atau e-wallet.'],
+          ['Daftar & isi saldo', 'Daftar gratis di app.socio.id, top up via transfer bank (QRIS & e-wallet segera). Saldo masuk otomatis.'],
           ['Pilih layanan & tempel link', `Cari layanan ${page.platform} di katalog, tempel link post/profil/konten — tanpa password.`],
-          ['Order jalan otomatis', 'Pesanan masuk antrean provider dan mulai berjalan 1-10 menit. Status bisa dilacak live di dashboard.'],
+          ['Order jalan otomatis', 'Pesanan masuk antrean provider dan mulai berjalan < 1 menit. Status bisa dilacak live di dashboard.'],
         ].map(([t, d], i) => (
           <li class="reveal relative" style={`--d: ${i * 80}ms`}>
             <p class="num font-display text-5xl font-bold text-[var(--accent-ink)] opacity-20" aria-hidden="true">0{i + 1}</p>
@@ -262,14 +266,14 @@ const breadcrumbSchema = {
         {crossSell.map((cs) => (
           <a
             href={`/${cs.slug}`}
-            class="inline-flex min-h-[44px] items-center rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-5 text-[13px] font-semibold text-ink transition-colors hover:border-[var(--accent-ink)] hover:bg-[var(--accent-tint)]"
+            class="inline-flex min-h-[44px] items-center rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-5 text-[13px] font-semibold text-ink transition-all duration-150 hover:border-[var(--accent-ink)] hover:bg-[var(--accent-tint)] active:scale-95"
           >
             {cs.keyword.split('—')[0].split(' Murah')[0].trim()}
           </a>
         ))}
         <a
           href="/layanan"
-          class="inline-flex min-h-[44px] items-center rounded-full border border-dashed border-[var(--hairline-strong)] px-5 text-[13px] font-semibold text-ink-2 transition-colors hover:border-[var(--accent-ink)]"
+          class="inline-flex min-h-[44px] items-center rounded-full border border-dashed border-[var(--hairline-strong)] px-5 text-[13px] font-semibold text-ink-2 transition-all duration-150 hover:border-[var(--accent-ink)] active:scale-95"
         >
           Semua {totalLayanan} layanan
         </a>
@@ -278,14 +282,14 @@ const breadcrumbSchema = {
   </section>
 
   <!-- #7 CTA final dark full-bleed -->
-  <section class="bg-ink-900 py-20 text-white isolate md:py-24" aria-labelledby="cta-beli-title">
+  <section class="bg-[var(--dark-panel)] py-20 text-[var(--on-dark)] isolate md:py-24" aria-labelledby="cta-beli-title">
     <div class="mx-auto max-w-3xl px-5 space-y-6 text-center md:px-8">
       <h2 id="cta-beli-title" class="font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">
         {page.keyword.split('—')[0].split(' Murah')[0].trim()} — hari ini juga.
       </h2>
-      <p class="mx-auto max-w-xl text-[16px] leading-relaxed text-ink-300">
-        Daftar reseller <strong class="text-white">Rp50.000</strong> sekali bayar — saldo
-        <strong class="text-white">Rp20.000</strong> langsung bisa order, harga reseller lebih murah di semua layanan.
+      <p class="mx-auto max-w-xl text-[16px] leading-relaxed text-[var(--on-dark-2)]">
+        Daftar reseller <strong class="text-[var(--on-dark)]">Rp50.000</strong> sekali bayar — saldo
+        <strong class="text-[var(--on-dark)]">Rp20.000</strong> langsung bisa order, harga reseller lebih murah di semua layanan.
       </p>
       <div class="flex flex-col justify-center gap-3 pt-2 sm:flex-row">
         <a href={DAFTAR} class="inline-flex min-h-[56px] items-center justify-center rounded-full bg-[var(--accent-ink)] px-10 text-[16px] font-bold text-white transition-transform duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.97]">

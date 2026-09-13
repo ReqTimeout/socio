@@ -75,7 +75,18 @@ export {
   revealDelay,
   tweenNumber,
   hoverLift,
+  popIn,
 } from "./lib/motion.js";
-export type { StaggerInOpts, TweenNumberOpts } from "./lib/motion.js";
+export type {
+  StaggerInOpts,
+  TweenNumberOpts,
+  PopInOpts,
+} from "./lib/motion.js";
 
 export { default as LiveDot } from "./components/LiveDot.svelte";
+
+// Playful polish (F0) — maskot, sticker badge, confetti. Aksen opsional,
+// bukan default chrome (max 1-2 per halaman app).
+export { default as Mascot } from "./components/Mascot.svelte";
+export { default as StickerBadge } from "./components/StickerBadge.svelte";
+export { default as ConfettiBurst } from "./components/ConfettiBurst.svelte";

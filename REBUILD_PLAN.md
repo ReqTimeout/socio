@@ -785,6 +785,46 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 ### M5 — Landing socio.id (3-5 hari)
 
 > Status: **INFRA READY + DEPLOYED (2026-07-17)** — `socio.id` LIVE di Cloudflare Pages (HTTP 200, custom domain `socio.id` + `www.socio.id` proxied). Pages project `socio-id` di account `0298214d...`. Build via `wrangler pages deploy landing/dist`. Konten landing masih perlu percantik (lihat item di bawah) tapi INFRA & DNS BEres.
+>
+> **Update 2026-09-13 — LANDING V2 "Playful Premium" (F1→F6) SELESAI di local, BELUM deploy:**
+> Spec: `docs/LANDING_V2_PLAYFUL_PLAN.md` + `docs/LANDING_V2_PLAYFUL_WIREFRAME.md` (approved D-1..D-5, semua ikut rekomendasi).
+> Yang dikerjakan: token pop-mango/sticker, font Caveat Hand self-host, maskot Si Socio SVG, Confetti/Doodle/StickerCard/LiveTicker/LiveOrderToast;
+> home full rewrite (H1 opsi A, nota warung, chat WA, simulator gamified + toggle reseller, bento platform + ?platform filter, roadmap HowItWorks, TestiWall, pricing toggle member/reseller REAL priceReseller, ResellerBand, FAQ jujur + FAQPage schema, FinalCTA, footer mesh);
+> /layanan (H1 baru, chips platform, kolom reseller, empty-state maskot), /reseller (H1 keyword, GrosirTable REAL + cth-jual jujur, dark-token fix),
+> BeliPage (doodle, QRIS-honest, dark-token fix), blog (H1, featured polaroid, progress scaleX), 404 (maskot fall).
+> Verifikasi: `build` 20 pages OK, `astro check` 0 errors, lint bersih (2 pre-existing warns), overflowX=0 + 0 JS errors di 21 viewport, reduced-motion nihil animasi.
+> Screenshots: `docs/screenshots/landing-v2/` (21 file: home/layanan/reseller/beli/blog/blog-single/404 × 360/768/1280).
+> **BLOCKER sebelum merge→prod: (1) testimoni placeholder (TestiWall + TestiReseller, TODO) ganti data asli owner;
+> (2) foto asli reseller/UMKM (avatar masih inisial); (3) deploy staging Pages preview → verifikasi user dulu (§9).
+> Juga dihapus: 6 file dead code (SmmProviderProof, 4× .astro lama, StatusRotator + klaim "42 detik").
+>
+> **Follow-up 2026-09-13 (feedback user):** H1 dipadatkan ("…sosmed kamu ramai/cuan/viral, dompet aman."
+> + kata berputar A3 CSS-only, CLS 0) — D-5 opsi A tetap intinya, versi ringkas;
+> semua nomor WA → 081221272016 (5 titik: FloatingWhatsApp, Faq, TopLayananTable, Footer, schema tel);
+> animasi: magnetic CTA + mockup mouse-tilt (pointer:fine, rAF) + toast pertama 8-12s;
+> bug ditemukan & fixed: LiveOrderToast `client:visible` di island kosong = tidak pernah hydrate → `client:load`.
+> **StickyCTA playful polish + bug:** bar mobile ternyata tidak pernah tampil (wrapper `fixed` tanpa
+> `bottom-0` → nempel di belakang navbar; bug pre-existing) → tambah `bottom-0`, chrome sticker
+> (border tinta + hard shadow), maskot ngintip, star mango, entrance backOut spring, tombol wiggle 1×.
+> **Follow-up 2026-09-13 (2):** MasalahKamu jadi percakapan hidup (indikator mengetik → bubble pop
+> berurutan, main sekali saat masuk viewport) + persona Rina→Dewi; StickyCTA DIHAPUS total (dobel
+> dengan pill dock mobile) — file + 2 usage dibuang; dock poles sticker (border tinta, indicator
+> mango pop, CTA shine hover); hero mesh 2 lapis (cyan + violet/mango, 18s/24s berlawanan arah,
+> chroma & travel dibesarkan). Audit probe: 8 animasi infinite jalan + chat 1→6 bubble + toast OK.
+> **Follow-up 2026-09-13 (3) — /reseller polish:** hero mesh + marker "cuan" + magnetic + doodle tangan;
+> ProgramLedger harga TikTok LIVE (member/reseller) + baris reseller highlight mango (Agen tampil
+> "otomatis" — price_api tidak ada di snapshot publik, bukan angka karangan); kalkulator sticker +
+> confetti saat slider dilepas + label estimasi jujur; timeline node sticker + maskot; testi sticker cards;
+> FAQ accordion sticker konsisten home; CTA dark maskot + magnetic; mesh CSS pindah ke global (reuse).
+> **Deploy 2026-09-13:** favicon haloka → Si Socio (svg + png 512 + ico 32 + apple-touch 180) + deploy
+> `wrangler pages deploy` project `socio-id` (afa522d8) — live, verifikasi title/CSP/sitemap/llms OK.
+> **Deploy 2026-09-13 (2):** logo.png → wordmark Sora socio.id + og-image.png 1200×630 playful
+> (maskot + badge, sebelumnya file tidak ada) — deploy 8da4bda1, verifikasi live OK.
+> **Deploy 2026-09-13 (3)** (25afc65f): footer credit → beriklan.co.id; failsafe reveal
+> (konten tetap muncul ≤4.6s walau JS mati); CTA glow pulse di 3 titik konversi.
+> Investigasi "animasi ga jalan": server 100% jalan (probe: mesh/rotate/ticker/float/marker/islands OK,
+> 0 error) — suspect kuat setelan reduce-motion di OS/browser user (site taat aksesibilitas:
+> semua animasi memang dimatikan total saat itu ON).
 
 - [x] Cloudflare Pages project `socio-id` dibuat + deploy (wrangler).
 - [x] Custom domain `socio.id` + `www.socio.id` → CNAME `socio-id.pages.dev` (proxied, CF).

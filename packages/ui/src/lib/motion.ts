@@ -2,7 +2,7 @@
 // Token-driven. Pairs with --ease-out-soft / --ease-out-quad in tokens.css.
 
 import { tweened } from "svelte/motion";
-import { cubicOut } from "svelte/easing";
+import { cubicOut, backOut } from "svelte/easing";
 
 export interface StaggerInOpts {
   y?: number;
@@ -66,3 +66,38 @@ export function tweenNumber(initial = 0, opts: TweenNumberOpts = {}) {
  * tactile press. Jangan tambah shadow/hover utility lain di elemen yang sama.
  */
 export const hoverLift = "card-lift";
+
+export interface PopInOpts {
+  /** base delay before the first item in ms */
+  base?: number;
+  /** per-index delay step in ms */
+  step?: number;
+  /** duration in ms (default = --dur-pop 400) */
+  duration?: number;
+}
+
+/**
+ * Build `in:scale` params for sticker/chip/mascot pop entrance (F0).
+ * Pasangan JS dari token --ease-spring (CSS) — pakai backOut (spring 1 overshoot).
+ *   {#each items as item, i (item.id)}<div in:scale={popIn(i)}>...
+ * Hormati reduced-motion di call-site (skip transisi bila reduce).
+ */
+export function popIn(
+  i: number,
+  opts: PopInOpts = {},
+): {
+  delay: number;
+  duration: number;
+  easing: (t: number) => number;
+  start: number;
+  opacity: number;
+} {
+  const { base = 0, step = 60, duration = 400 } = opts;
+  return {
+    delay: base + i * step,
+    duration,
+    easing: backOut,
+    start: 0.8,
+    opacity: 0,
+  };
+}

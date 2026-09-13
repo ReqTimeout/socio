@@ -1,76 +1,108 @@
 <script>
   import { motion } from '@humanspeak/svelte-motion';
-  import StatusRotator from './StatusRotator.svelte';
-  import { hargaMulai } from '../data/siteStats';
+  import { onMount } from 'svelte';
+  import platforms from '../data/prices.json';
+  // V2 §5.6 PlatformBento — keluasan katalog tanpa bullet spam.
+  // H2 keyword + tile asimetris + angka A4 counter + link /layanan?platform=X.
+  // Ikon: stroke SVG buatan sendiri (bukan icon pack generik).
+  const tiles = [
+    { key: 'Instagram', count: platforms.platforms.Instagram.services, big: true, icon: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.2" fill="currentColor" stroke="none"/>' },
+    { key: 'TikTok', count: platforms.platforms.TikTok.services, big: true, icon: '<path d="M9 18a3 3 0 1 0 3-3"/><path d="M12 15V4c.5 2.5 2.5 4 5 4"/>' },
+    { key: 'YouTube', count: platforms.platforms.YouTube.services, icon: '<rect x="2" y="6" width="20" height="12" rx="4"/><path d="M10 9.5v5l4.5-2.5L10 9.5Z" fill="currentColor" stroke="none"/>' },
+    { key: 'Telegram', count: platforms.platforms.Telegram.services, icon: '<path d="M21 4 3 11l7 2 2 7 4-5 5-11Z"/><path d="M10 13l4-4"/>' },
+    { key: 'Facebook', count: platforms.platforms.Facebook.services, icon: '<path d="M15 3h-2.5A3.5 3.5 0 0 0 9 6.5V9H6.5v4H9v8h4v-8h2.7l.6-4H13V6.8c0-.7.3-1 .8-1H15V3Z"/>' },
+    { key: 'X/Twitter', count: platforms.platforms['X/Twitter'].services, icon: '<path d="M4 4l16 16M20 4 4 20"/>' },
+    { key: 'Spotify', count: platforms.platforms.Spotify.services, icon: '<circle cx="12" cy="12" r="9"/><path d="M8 10.5c2.7-.8 5.5-.4 7.5 1M8.5 13.5c2-.6 4-.3 5.5.8"/>' },
+    { key: 'Lainnya', count: platforms.platforms.Lainnya.services, icon: '<circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>' },
+  ];
+  const fmt = (n) => Math.round(n).toLocaleString('id-ID');
   const reduced = typeof window !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const container = { hidden: {}, visible: { transition: { staggerChildren: reduced ? 0 : 0.07 } } };
-  const item = { hidden: { opacity: reduced ? 1 : 0, y: reduced ? 0 : 16 }, visible: { opacity: 1, y: 0, transition: { duration: reduced ? 0 : 0.55, ease: [0.16,1,0.3,1] } } };
+  const container = { hidden: {}, visible: { transition: { staggerChildren: reduced ? 0 : 0.06 } } };
+  const item = { hidden: { opacity: reduced ? 1 : 0, y: reduced ? 0 : 16 }, visible: { opacity: 1, y: 0, transition: { duration: reduced ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] } } };
+
+  // A4 counter roll 900ms saat reveal (sekali). Reduced → angka final langsung.
+  let shown = $state({});
+  onMount(() => {
+    const els = document.querySelectorAll('[data-count]');
+    if (reduced) {
+      const o = {};
+      els.forEach((el) => (o[el.dataset.count] = Number(el.dataset.count)));
+      shown = o;
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const el = e.target;
+          io.unobserve(el);
+          const target = Number(el.dataset.count);
+          const t0 = performance.now();
+          const tick = (t) => {
+            const p = Math.min(1, (t - t0) / 900);
+            shown = { ...shown, [target]: Math.round(target * (1 - (1 - p) * (1 - p))) };
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }
+      },
+      { threshold: 0.4 },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  });
 </script>
 
-<section class="relative overflow-hidden bg-[var(--paper-2)] py-16 md:py-24" aria-labelledby="kap-title">
-  <div class="pointer-events-none absolute -top-20 -right-20 h-[420px] w-[420px] rounded-full bg-[var(--accent-tint)] blur-[80px] opacity-60 hidden md:block" aria-hidden="true"></div>
-  <div class="pointer-events-none absolute -bottom-20 -left-20 h-[420px] w-[420px] rounded-full bg-[var(--paper)] blur-[80px] opacity-80 hidden md:block" aria-hidden="true"></div>
-  <div class="relative mx-auto max-w-6xl px-5 md:px-8">
-    <motion.div initial="hidden" whileInView="visible" viewport={{ once:true, amount:0.2 }} variants={container} class="mx-auto max-w-2xl text-center">
-      <motion.h2 variants={item} id="kap-title" class="font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">Mesinnya lengkap. Kamu tinggal jualan.</motion.h2>
-      <motion.p variants={item} class="mt-3 text-[length:var(--text-body)] leading-relaxed text-ink-2">Bukan cuma daftar harga — sistem di baliknya yang membedakan.</motion.p>
-    </motion.div>
+<section class="bg-[var(--paper)] py-16 md:py-24" aria-labelledby="plat-title">
+  <div class="mx-auto max-w-6xl px-5 md:px-8">
+    <div class="mx-auto max-w-2xl text-center">
+      <h2 id="plat-title" class="reveal font-display text-[length:var(--text-h2)] font-bold tracking-tight text-ink">
+        Satu panel, semua platform yang kamu jualan.
+      </h2>
+      <p class="reveal mt-3 text-[length:var(--text-body)] leading-relaxed text-ink-2" style="--d:120ms">
+        Klik platform apa pun — harga live-nya langsung kebuka.
+      </p>
+    </div>
 
-    <motion.div initial="hidden" whileInView="visible" viewport={{ once:true, amount:0.12 }} variants={container} class="mt-10 grid gap-3 md:mt-14 md:grid-cols-4 md:grid-rows-2 md:gap-4">
-      <motion.div variants={item} class="group rounded-[var(--radius-md)] border border-[var(--hairline)] bg-white p-5 shadow-[var(--shadow-card)] md:col-span-2 md:row-span-2 md:p-7" whileHover={reduced ? {} : { y:-4, transition:{duration:0.2} }}>
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p class="text-[11px] font-bold uppercase tracking-widest text-ink-3">Panel kamu · 30 hari</p>
-            <p class="num mt-2 font-display text-[28px] font-extrabold leading-none tracking-tight text-ink md:text-[34px]">18.204 order</p>
-            <p class="num mt-1.5 text-[13px] font-semibold text-emerald-700">▲ 23% bulan lalu</p>
-          </div>
-          <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-tint)] px-2.5 py-1 text-[11px] font-bold text-[var(--accent-ink)]"><span class="live-dot" aria-hidden="true"></span> Live</span>
-        </div>
-        <div class="mt-5 md:mt-7" aria-hidden="true">
-          <svg viewBox="0 0 400 120" class="h-auto w-full overflow-visible">
-            <path class="chart-area" d="M0,95 C40,88 60,74 100,78 C140,82 160,58 200,62 C240,66 260,44 300,40 C340,36 370,26 400,18 L400,120 L0,120 Z" />
-            <line x1="0" y1="30" x2="400" y2="30" stroke="var(--hairline)" stroke-width="1" />
-            <line x1="0" y1="60" x2="400" y2="60" stroke="var(--hairline)" stroke-width="1" />
-            <line x1="0" y1="90" x2="400" y2="90" stroke="var(--hairline)" stroke-width="1" />
-            <path class="chart-line" d="M0,95 C40,88 60,74 100,78 C140,82 160,58 200,62 C240,66 260,44 300,40 C340,36 370,26 400,18" />
-            <circle class="chart-dot" cx="400" cy="18" r="4" />
-          </svg>
-          <div class="mt-2 flex justify-between text-[10px] font-semibold text-ink-3"><span>30 hari lalu</span><span>Hari ini</span></div>
-        </div>
-        <p class="mt-4 text-[13px] leading-relaxed text-ink-2">Setiap order, refill, dan komisi tercatat otomatis — angka ini dari sistem asli, bukan mockup PowerPoint.</p>
-      </motion.div>
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.1 }}
+      variants={container}
+      class="mt-10 grid grid-cols-2 gap-3 md:mt-14 md:grid-cols-4 md:gap-4"
+    >
+      {#each tiles as t}
+        <motion.a
+          variants={item}
+          href="/layanan?platform={encodeURIComponent(t.key)}"
+          whileHover={reduced ? {} : { rotate: t.big ? -1 : 1, y: -3, transition: { duration: 0.2 } }}
+          class="group min-w-0 rounded-2xl border border-[var(--hairline-strong)] bg-white p-4 shadow-sm transition-shadow hover:shadow-md md:p-5 {t.big ? 'col-span-2' : ''}"
+          aria-label="{t.key}: {fmt(t.count)} layanan — lihat harga"
+        >
+          <span class="grid h-10 w-10 place-items-center rounded-xl bg-[var(--accent-tint)] text-[var(--accent-ink)] transition-transform duration-200 group-hover:scale-110" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{@html t.icon}</svg>
+          </span>
+          <p class="mt-3 truncate text-[15px] font-bold text-ink">{t.key}</p>
+          <p class="num mt-0.5 text-[13px] font-semibold text-ink-2">
+            <span data-count={t.count}>{fmt(shown[t.count] ?? 0)}</span> layanan
+          </p>
+        </motion.a>
+      {/each}
 
-      <motion.div variants={item} class="group rounded-[var(--radius-md)] border border-[var(--hairline)] bg-white p-5 shadow-[var(--shadow-card)]" whileHover={reduced ? {} : { y:-4, transition:{duration:0.2} }}>
-        <span class="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent-tint)] text-[var(--accent-ink)]" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg></span>
-        <h3 class="mt-3 text-[15px] font-bold text-ink">Auto-refill</h3>
-        <p class="mt-1 text-[13px] leading-relaxed text-ink-2">Followers turun? Sistem isi ulang sendiri, garansi 30 hari.</p>
-      </motion.div>
-
-      <motion.div variants={item} class="group rounded-[var(--radius-md)] border border-[var(--hairline)] bg-white p-5 shadow-[var(--shadow-card)]" whileHover={reduced ? {} : { y:-4, transition:{duration:0.2} }}>
-        <span class="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent-tint)] text-[var(--accent-ink)]" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M8 21H3v-5M21 3l-7 7M3 21l7-7"/></svg></span>
-        <h3 class="mt-3 text-[15px] font-bold text-ink">API untuk reseller</h3>
-        <p class="mt-1 text-[13px] leading-relaxed text-ink-2">Pasang langsung di websitemu — order masuk tanpa buka panel.</p>
-      </motion.div>
-
-      <motion.div variants={item} class="group rounded-[var(--radius-md)] border border-[var(--hairline)] bg-white p-5 shadow-[var(--shadow-card)]" whileHover={reduced ? {} : { y:-4, transition:{duration:0.2} }}>
-        <span class="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent-tint)] text-[var(--accent-ink)]" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4h9l8.6 8.6a2 2 0 0 1 0 .8Z"/><circle cx="7.5" cy="7.5" r="0.5" fill="currentColor"/></svg></span>
-        <h3 class="mt-3 text-[15px] font-bold text-ink">Harga grosir</h3>
-        <p class="mt-1 text-[13px] leading-relaxed text-ink-2">Mulai Rp{hargaMulai}/1k — markup kamu yang tentukan, margin tetap aman.</p>
-      </motion.div>
-
-      <motion.div variants={item} class="rounded-[var(--radius-md)] border border-[var(--hairline)] bg-white p-5 shadow-[var(--shadow-card)] md:col-span-2 min-h-[240px]">
-        <StatusRotator />
+      <!-- tile doodle: 882 kategori -->
+      <motion.div
+        variants={item}
+        class="tilt-r-sm col-span-2 flex items-center gap-3 rounded-2xl border-2 border-dashed border-[var(--ink-3)] bg-[var(--paper-warm)] p-4 md:col-span-2 md:p-5"
+      >
+        <svg class="h-10 w-10 shrink-0" width="40" height="40" viewBox="0 0 72 72" fill="none" aria-hidden="true">
+          <path d="M12 8c2 20 10 36 34 46" stroke="var(--ink-2)" stroke-width="3" stroke-linecap="round" />
+          <path d="M36 46l11 9 5-13" stroke="var(--ink-2)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <p class="text-[14px] leading-snug text-ink-2">
+          + layanan SEO & lainnya — <strong class="num text-ink">{platforms.totalCategories} kategori</strong> total.
+          <a href="/layanan" class="font-bold text-[var(--accent-ink)] underline decoration-2 underline-offset-2">Ubek-ubek katalog →</a>
+        </p>
       </motion.div>
     </motion.div>
   </div>
 </section>
-
-<style>
-  .chart-line { fill:none; stroke:var(--accent-ink); stroke-width:3; stroke-linecap:round; stroke-dasharray:560; stroke-dashoffset:560; animation: line-draw 600ms cubic-bezier(0.16,1,0.3,1) 200ms forwards; }
-  .chart-area { fill:var(--accent-tint); opacity:0; animation: area-fade 600ms ease-out 500ms forwards; }
-  .chart-dot { fill:var(--accent-ink); opacity:0; animation: dot-in 300ms ease-out 700ms forwards; }
-  @keyframes line-draw { to { stroke-dashoffset:0; } }
-  @keyframes area-fade { to { opacity:1; } }
-  @keyframes dot-in { to { opacity:1; } }
-  @media (prefers-reduced-motion: reduce) { .chart-line{stroke-dashoffset:0; animation:none;} .chart-area{opacity:1; animation:none;} .chart-dot{opacity:1; animation:none;} }
-</style>

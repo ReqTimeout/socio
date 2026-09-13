@@ -23,6 +23,21 @@
     U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
     U+FFFD;
 }
+/* V2 Playful (D-2 approved 2026-09-13): aksara tangan self-host subset latin,
+ * KHUSUS anotasi/doodle max 2 instance per halaman. DILARANG untuk body/prose.
+ * Variable wght 400-700 single file 75KB, font-display swap, TIDAK di-preload
+ * (bukan LCP path — doodle di bawah fold, hero doodle swap-in). */
+@font-face {
+  font-family: "Caveat Hand";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 700;
+  src: url("../fonts/caveat-hand-latin.woff2") format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+    U+FFFD;
+}
 
 @import "tailwindcss";
 @import "@socio/ui/theme.css";
@@ -115,6 +130,15 @@ p {
   transition:
     opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
     transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Failsafe: kalau observer JS mati total (JS error/diblokir), konten tetap
+   * muncul ≤4.6s. Kalau JS normal, sudah visible jauh sebelum ini (no-op). */
+  animation: reveal-failsafe 0.6s ease 4s forwards;
+}
+@keyframes reveal-failsafe {
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .reveal.is-visible {
   opacity: 1;
@@ -179,5 +203,376 @@ p {
   .reveal {
     opacity: 1;
     transform: none;
+    animation: none;
   }
+  /* V2: infinite animation WAJIB mati — marquee jadi daftar statis,
+   * counter tampil final, float/parallax/float-slow diam di posisi akhir. */
+  .marquee-track,
+  .float-idle,
+  .float-slow,
+  .pop-in.is-visible,
+  .hero-mesh-inner,
+  .hero-mesh-inner-2,
+  .cta-glow {
+    animation: none !important;
+  }
+  .marquee {
+    overflow-x: auto;
+  }
+  .marquee-track {
+    transform: none !important;
+  }
+  .hero-mesh-inner,
+  .hero-mesh-inner-2 {
+    opacity: 0.4 !important;
+  }
+  .float-idle,
+  .float-slow {
+    transform: none !important;
+  }
+  .pop-in {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .marker-swipe {
+    background-size: 100% 82% !important;
+  }
+  /* A3: kata pertama diam terlihat, sisanya sembunyi */
+  .word-rotate > span {
+    animation: none !important;
+    opacity: 0 !important;
+    transform: none !important;
+  }
+  .word-rotate > span:first-child {
+    opacity: 1 !important;
+  }
+  .magnetic,
+  .tilt-toward {
+    transform: none !important;
+  }
+}
+
+/* ============ V2 PLAYFUL utilities (PLAN §4.2, CSS-only, 0kb JS) ============
+ * Semua animasi: transform + opacity saja (GPU). Budget: max 3 infinite
+ * bersamaan per viewport. Tiap utility punya fallback reduced-motion di atas. */
+
+/* Aksara tangan — anotasi/doodle saja, 18-24px, max 2/halaman */
+.font-hand {
+  font-family: "Caveat Hand", "Plus Jakarta Sans Variable", cursive;
+}
+
+/* Sticker chrome — max 4 elemen besar per halaman (PLAN §2.3#3) */
+.sticker {
+  border: var(--sticker-border);
+  border-radius: var(--radius-sticker);
+  box-shadow: var(--sticker-shadow);
+  background: var(--paper-lift);
+}
+.sticker-lg {
+  border: var(--sticker-border);
+  border-radius: var(--radius-sticker-lg);
+  box-shadow: var(--sticker-shadow);
+  background: var(--paper-lift);
+}
+.sticker-hover {
+  transition:
+    transform 250ms var(--ease-spring),
+    box-shadow 250ms var(--ease-spring);
+}
+.sticker-hover:hover {
+  transform: translate(-2px, -2px) rotate(-1deg);
+  box-shadow: var(--sticker-shadow-hover);
+}
+
+/* Tilt aksen — -3°..+3° maksimum, hanya elemen aksen */
+.tilt-l {
+  transform: rotate(-2deg);
+}
+.tilt-r {
+  transform: rotate(2deg);
+}
+.tilt-l-sm {
+  transform: rotate(-1deg);
+}
+.tilt-r-sm {
+  transform: rotate(1deg);
+}
+
+/* A2 pop-in spring — entrance sticker/chip/stat (trigger .is-visible via IO) */
+.pop-in {
+  opacity: 0;
+  transform: scale(0.8);
+  animation: reveal-failsafe 0.6s ease 4s forwards;
+}
+.pop-in.is-visible {
+  animation: pop-in 500ms var(--ease-spring) both;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* A11 marker swipe — stabilo mango di belakang kata (1-2 kata/section).
+ * Teknik background-size (bukan ::after): aman untuk teks yang wrap
+ * multi-baris — highlight ikut tiap baris via box-decoration-break. */
+.marker-swipe {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  background: linear-gradient(var(--pop-mango-soft), var(--pop-mango-soft))
+    no-repeat;
+  background-size: 0% 82%;
+  background-position: 0 62%;
+  border-radius: 0.18em;
+  padding-inline: 0.08em;
+}
+.marker-swipe.is-visible {
+  animation: marker-swipe 450ms var(--ease-dramatic) 150ms both;
+}
+@keyframes marker-swipe {
+  from {
+    background-size: 0% 82%;
+  }
+  to {
+    background-size: 100% 82%;
+  }
+}
+
+/* Hero H1: clamp fluid — 32px di 360px, 64px desktop. Lebih padat dari token
+ * --text-hero (40px) supaya tidak menjulang di mobile. */
+.hero-h1 {
+  font-size: clamp(2rem, 9vw, 4rem);
+}
+
+/* A3 word rotate — 3 frasa bergantian 2.4s, transform + opacity (GPU).
+ * Grid-stack: container selebar frasa terpanjang, tanpa CLS. */
+.word-rotate {
+  display: inline-grid;
+  vertical-align: bottom;
+  text-align: left;
+}
+.word-rotate > span {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+  opacity: 0;
+  animation: word-cycle 7.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  will-change: transform, opacity;
+}
+.word-rotate > span:nth-child(2) {
+  animation-delay: 2.4s;
+}
+.word-rotate > span:nth-child(3) {
+  animation-delay: 4.8s;
+}
+@keyframes word-cycle {
+  0% {
+    opacity: 0;
+    transform: translateY(55%);
+  }
+  4%,
+  29% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  33%,
+  100% {
+    opacity: 0;
+    transform: translateY(-55%);
+  }
+}
+
+/* A8 magnetic button — desktop pointer:fine saja (JS di Layout, rAF lerp).
+ * Tanpa JS = tombol biasa. Max translate 6px. */
+.magnetic {
+  will-change: transform;
+  transition: box-shadow 200ms ease;
+}
+.magnetic:hover {
+  box-shadow: 0 12px 32px -8px var(--accent-ink);
+}
+
+/* Hero mockup mouse-tilt — perspective di stage, rotate via --rx/--ry (JS). */
+.tilt-stage {
+  perspective: 900px;
+}
+.tilt-toward {
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+
+/* Hero mesh playful — 2 lapis radial oklch, drift berlawanan arah (dipakai
+ * home + reseller + money pages). 0kb JS. Reduced-motion → statis. */
+.hero {
+  --hero-c1: oklch(0.86 0.12 220);
+  --hero-c2: oklch(0.84 0.1 285);
+  --hero-c3: oklch(0.89 0.09 195);
+  --hero-c4: oklch(0.85 0.11 250);
+  --hero-c5: oklch(0.88 0.08 320);
+  --hero-d1: oklch(0.82 0.13 285);
+  --hero-d2: oklch(0.86 0.13 85);
+  --hero-d3: oklch(0.84 0.12 220);
+}
+.hero-mesh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.hero-mesh-inner,
+.hero-mesh-inner-2 {
+  position: absolute;
+  inset: -20%;
+  filter: blur(48px) saturate(1.4);
+  scale: 1.2;
+}
+.hero-mesh-inner {
+  background:
+    radial-gradient(42% 52% at 22% 28%, var(--hero-c1), transparent 62%),
+    radial-gradient(46% 44% at 72% 18%, var(--hero-c2), transparent 60%),
+    radial-gradient(52% 50% at 48% 42%, var(--hero-c3), transparent 62%),
+    radial-gradient(38% 42% at 78% 68%, var(--hero-c4), transparent 58%),
+    radial-gradient(44% 46% at 18% 78%, var(--hero-c5), transparent 60%),
+    var(--paper);
+  opacity: 0.65;
+  animation: hero-mesh-drift-a 18s cubic-bezier(0.45, 0, 0.55, 1) infinite
+    alternate;
+}
+.hero-mesh-inner-2 {
+  background:
+    radial-gradient(40% 46% at 68% 62%, var(--hero-d1), transparent 60%),
+    radial-gradient(36% 40% at 30% 70%, var(--hero-d2), transparent 58%),
+    radial-gradient(44% 44% at 82% 30%, var(--hero-d3), transparent 62%);
+  opacity: 0.5;
+  animation: hero-mesh-drift-b 24s cubic-bezier(0.45, 0, 0.55, 1) infinite
+    alternate;
+}
+.hero-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+@keyframes hero-mesh-drift-a {
+  0% {
+    transform: translate3d(-2.5%, -1.5%, 0) scale(1.2);
+  }
+  50% {
+    transform: translate3d(2%, 2%, 0) scale(1.26);
+  }
+  100% {
+    transform: translate3d(2.5%, -2%, 0) scale(1.2);
+  }
+}
+@keyframes hero-mesh-drift-b {
+  0% {
+    transform: translate3d(2%, 1.5%, 0) scale(1.22);
+  }
+  50% {
+    transform: translate3d(-2%, -2%, 0) scale(1.28);
+  }
+  100% {
+    transform: translate3d(-2.5%, 1.5%, 0) scale(1.22);
+  }
+}
+
+/* CTA glow pulse — denyut lembut di tombol konversi utama (hero + final).
+ * Dibuat halus & lambat (2.6s) supaya premium, bukan norak. */
+.cta-glow {
+  animation: cta-glow 2.6s ease-in-out infinite;
+}
+@keyframes cta-glow {
+  0%,
+  100% {
+    box-shadow: 0 8px 24px -8px var(--accent-ink);
+  }
+  50% {
+    box-shadow: 0 8px 34px -4px var(--accent-ink);
+  }
+}
+
+/* A5 marquee ticker — translateX infinite, pause on hover, loop via duplikat */
+.marquee {
+  overflow: hidden;
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee var(--marquee-duration, 40s) linear infinite;
+}
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+/* A5 vertikal — TestiWall kolom (PLAN §5.8) */
+.marquee-y {
+  overflow: hidden;
+}
+.marquee-y-track {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  animation: marquee-y var(--marquee-duration, 45s) linear infinite;
+}
+.marquee-y:hover .marquee-y-track {
+  animation-play-state: paused;
+}
+@keyframes marquee-y {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+/* A10 float idle — doodle/maskot/sticker kecil, 5-7s infinite */
+.float-idle {
+  animation: float-idle 6s ease-in-out infinite;
+}
+.float-slow {
+  animation: float-idle 7s ease-in-out 1.2s infinite;
+}
+@keyframes float-idle {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(1deg);
+  }
+}
+
+/* A13 accordion FAQ — satu-satunya exception layout-anim (CSS murni) */
+.faq-answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms var(--ease-dramatic);
+}
+.faq-item[data-open="true"] .faq-answer {
+  grid-template-rows: 1fr;
+}
+.faq-answer-inner {
+  overflow: hidden;
+}
+.faq-chevron {
+  transition: transform 300ms var(--ease-dramatic);
+}
+.faq-item[data-open="true"] .faq-chevron {
+  transform: rotate(180deg);
 }

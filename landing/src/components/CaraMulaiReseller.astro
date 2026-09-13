@@ -1,6 +1,8 @@
 ---
+import SocioMascot from './SocioMascot.svelte';
 // D5: CaraMulaiReseller — timeline numbered 3 langkah (1-2-3 vertical, bukan 01).
 // Plan §4.1 #6 + wireframe mobile "Cara mulai 1→2→3 vertical". Paper bg.
+// V2: node sticker (border tinta + mango), rail tinta, maskot di ujung.
 const steps = [
   {
     n: 1,
@@ -28,12 +30,12 @@ const steps = [
       </h2>
     </div>
 
-    <!-- Timeline vertical: hairline rail + node angka (bukan card grid) -->
+    <!-- Timeline vertical: rail tinta + node sticker -->
     <ol class="reveal relative mx-auto mt-10 max-w-2xl md:mt-14" style="--d: 60ms">
-      <div class="absolute left-[22px] top-3 bottom-3 w-px bg-[var(--hairline)]" aria-hidden="true"></div>
+      <div class="absolute left-[22px] top-3 bottom-3 w-[3px] rounded-full bg-[var(--ink)] opacity-15" aria-hidden="true"></div>
       {steps.map((s, i) => (
         <li class="reveal relative grid grid-cols-[44px_1fr] gap-4 py-5" style={`--d: ${i * 100}ms`}>
-          <span class="num relative z-10 grid h-11 w-11 place-items-center rounded-full border border-[var(--hairline-strong)] bg-white font-mono text-[15px] font-extrabold text-[var(--accent-ink)]">
+          <span class="num relative z-10 grid h-11 w-11 place-items-center rounded-full border-2 border-[var(--ink)] bg-[var(--pop-mango-soft)] font-mono text-[15px] font-extrabold text-ink shadow-[var(--sticker-shadow-sm)]">
             {s.n}
           </span>
           <div class="min-w-0 pt-1.5">
@@ -43,5 +45,9 @@ const steps = [
         </li>
       ))}
     </ol>
+    <p class="reveal mx-auto mt-4 flex max-w-2xl items-center gap-2.5 text-[14px] text-ink-2" style="--d: 200ms">
+      <SocioMascot pose="wave" class="h-10 w-10" />
+      <span>Udah? Gas order pertama — sistem yang begadang buat kamu.</span>
+    </p>
   </div>
 </section>

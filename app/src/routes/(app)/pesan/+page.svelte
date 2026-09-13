@@ -6,6 +6,7 @@
     toast,
     Icon,
     Select,
+    Skeleton,
     revealDelay,
     NumberFlow,
     hoverLift,
@@ -128,6 +129,19 @@
       ((!isCustomComments && quantity > 0 && quantity < selectedService.min) ||
         quantity > selectedService.max),
   );
+
+  // Step indicator hidup (F2, presentasi saja): mengikuti state form yang ada.
+  const steps = $derived([
+    { label: "Kategori", done: selectedCat > 0 },
+    { label: "Layanan", done: !!selectedService },
+    {
+      label: "Order",
+      done:
+        linkOk &&
+        !qtyOutOfRange &&
+        (isCustomComments ? lineCount > 0 : quantity >= (selectedService?.min ?? 0)),
+    },
+  ]);
 
   // ── Kupon ───────────────────────────────────────────────────
   let couponCode = $state("");
@@ -300,6 +314,36 @@
             </div>
           {/if}
 
+          <!-- Step indicator hidup (F2): Kategori → Layanan → Order, ikut state -->
+          <ol class="flex items-center gap-1.5" aria-label="Langkah pemesanan">
+            {#each steps as s, i (s.label)}
+              <li class="flex min-w-0 flex-1 items-center gap-1.5">
+                <span class="step-dot {s.done ? 'is-done' : ''}" aria-hidden="true">
+                  {#if s.done}
+                    <span class="step-check grid place-items-center">
+                      <Icon name="check" size={11} stroke={3.5} />
+                    </span>
+                  {:else}
+                    <span class="num">{i + 1}</span>
+                  {/if}
+                </span>
+                <span
+                  class="truncate text-[11px] font-bold {s.done ? 'text-ink-800' : 'text-ink-400'}"
+                >
+                  {s.label}
+                </span>
+                {#if i < 2}
+                  <span
+                    class="h-px min-w-2 flex-1 transition-colors duration-200 {s.done
+                      ? 'bg-success'
+                      : 'bg-ink-200'}"
+                    aria-hidden="true"
+                  ></span>
+                {/if}
+              </li>
+            {/each}
+          </ol>
+
           <!-- Kategori -->
           <div>
             <span class="mb-1.5 block text-sm font-bold">Kategori</span>
@@ -334,6 +378,12 @@
               disabled={!selectedCat || loadingServices}
               onChange={pickServiceById}
             />
+            {#if loadingServices}
+              <div class="mt-2 space-y-2" aria-hidden="true">
+                <Skeleton width="80%" height="0.8rem" />
+                <Skeleton width="55%" height="0.8rem" />
+              </div>
+            {/if}
             {#if selectedService}
               <p class="mt-2 text-sm font-bold leading-snug text-ink-900">
                 {selectedService.serviceName}
@@ -422,12 +472,14 @@
                   aria-describedby="link-hint"
                 />
                 {#if linkOk}
-                  <span
-                    class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"
-                    aria-hidden="true"
-                  >
-                    <Icon name="check" size={12} stroke={3} />
-                  </span>
+                  {#key linkPlatform}
+                    <span
+                      class="stamp-pop pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"
+                      aria-hidden="true"
+                    >
+                      <Icon name="check" size={12} stroke={3} />
+                    </span>
+                  {/key}
                 {/if}
               </div>
               <p
@@ -535,7 +587,10 @@
                 </div>
               {/if}
               <div class="flex items-center justify-between">
-                <span class="text-sm text-ink-300">Total bayar</span>
+                <span class="flex items-center gap-1.5 text-sm text-ink-300">
+                  Total bayar
+                  {#key payable}<span class="tick-dot" aria-hidden="true"></span>{/key}
+                </span>
                 <span class="font-display text-2xl font-extrabold tabular-nums text-white">
                   <NumberFlow value={totalFlow} format={formatRupiah} duration={0.6} />
                 </span>
@@ -618,8 +673,11 @@
           >
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0 flex-1">
-                <div class="text-[10px] font-bold uppercase tracking-wide text-ink-300">
+                <div
+                  class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-300"
+                >
                   Total bayar
+                  {#key payable}<span class="tick-dot" aria-hidden="true"></span>{/key}
                 </div>
                 <div class="font-display text-xl font-extrabold tabular-nums">
                   <NumberFlow value={totalFlow} format={formatRupiah} duration={0.6} />
@@ -688,7 +746,10 @@
               </dd>
             </div>
             <div class="flex items-center justify-between pt-1">
-              <dt class="font-bold">Total</dt>
+              <dt class="flex items-center gap-1.5 font-bold">
+                Total
+                {#key payable}<span class="tick-dot" aria-hidden="true"></span>{/key}
+              </dt>
               <dd class="font-display text-lg font-extrabold text-accent-ink tabular-nums">
                 <NumberFlow value={totalFlow} format={formatRupiah} duration={0.6} />
               </dd>
@@ -731,3 +792,80 @@
     <!-- /UX3 desktop 2-col grid -->
   </div>
 </section>
+
+<style>
+  /* F2 playful: step indicator, stamp, tick — transform/opacity only (GPU) */
+  .step-dot {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    border: 1.5px solid var(--color-ink-200);
+    color: var(--color-ink-400);
+    font-size: 11px;
+    font-weight: 800;
+    transition:
+      background-color 200ms var(--ease-out-soft),
+      border-color 200ms var(--ease-out-soft),
+      color 200ms var(--ease-out-soft);
+  }
+  .step-dot.is-done {
+    background: var(--color-success-soft);
+    border-color: var(--color-success-ink);
+    color: var(--color-success-ink);
+  }
+  .step-dot.is-done .step-check {
+    animation: step-pop 300ms var(--ease-spring) both;
+  }
+  @keyframes step-pop {
+    from {
+      transform: scale(0.4);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+  .stamp-pop {
+    animation: stamp-pop 350ms var(--ease-spring) both;
+  }
+  @keyframes stamp-pop {
+    from {
+      transform: scale(0.3);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+  .tick-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--color-mango-500);
+    animation: tick-pop 350ms var(--ease-spring) both;
+  }
+  @keyframes tick-pop {
+    from {
+      transform: scale(0);
+      opacity: 0;
+    }
+    40% {
+      transform: scale(1.4);
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .step-dot {
+      transition: none;
+    }
+    .step-dot.is-done .step-check,
+    .stamp-pop,
+    .tick-dot {
+      animation: none;
+    }
+  }
+</style>

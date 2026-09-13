@@ -1,31 +1,43 @@
 ---
 // D5: ProgramLedger — definition list 3 level (Member → Agen → Reseller).
 // Plan §4.1 #2: dl ledger, paper bg, bukan 3-tier card generik.
-// Harga real dari DB dev 1 Sep (per-1k TikTok Video Views): Member 165 / Agen 138 / Reseller 154.
-// Note: harga reseller < member (pricing_rules real), agen = harga paling murah (syarat volume).
+// Harga contoh = TikTok Video Views LIVE dari prices.json (member + reseller).
+// Agen = kolom price_api (tidak ada di snapshot publik) → tampil "otomatis",
+// bukan angka karangan.
+import prices from '../data/prices.json';
 const fmt = (n: number) => 'Rp' + n.toLocaleString('id-ID');
+
+const tiktok = (
+  prices.top as Array<{ name: string; price: number; priceReseller: number }>
+).find((t) => t.name.startsWith('TikTok Video Views')) ?? {
+  price: 286,
+  priceReseller: 264,
+};
 
 const levels = [
   {
     name: 'Member',
     tag: 'Gratis',
-    harga: 165,
+    harga: fmt(tiktok.price) as string | null,
     desc: 'Daftar langsung jalan. Cocok buat kebutuhan sendiri atau coba-coba panel dulu.',
     syarat: 'Tanpa syarat',
+    hot: false,
   },
   {
     name: 'Agen',
     tag: 'Syarat volume',
-    harga: 138,
+    harga: null as string | null,
     desc: 'Harga paling murah — untuk yang order rutin dalam jumlah besar. Naik level otomatis dari aktivitas akun.',
     syarat: 'Akun aktif & order rutin',
+    hot: false,
   },
   {
     name: 'Reseller',
     tag: 'Rp50.000 sekali bayar',
-    harga: 154,
+    harga: fmt(tiktok.priceReseller) as string | null,
     desc: 'Sekali bayar Rp50.000 — saldo Rp20.000 langsung masuk plus harga khusus reseller lebih murah dari member, di semua layanan.',
     syarat: 'Bayar sekali, aktif selamanya',
+    hot: true,
   },
 ];
 ---
@@ -42,10 +54,10 @@ const levels = [
       </p>
     </div>
 
-    <!-- Definition list ledger: hairline rows, bukan 3-tier pricing card -->
+    <!-- Definition list ledger: hairline rows, baris reseller highlight mango -->
     <dl class="reveal mx-auto mt-10 max-w-3xl divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] md:mt-12" style="--d: 60ms">
       {levels.map((lv, i) => (
-        <div class="grid gap-2 py-6 md:grid-cols-[110px_1fr_auto] md:items-center md:gap-6" style={`--d: ${i * 80}ms`}>
+        <div class={`grid gap-2 py-6 md:grid-cols-[110px_1fr_auto] md:items-center md:gap-6 ${lv.hot ? '-mx-3 rounded-2xl border-2 border-[var(--ink)] bg-[var(--pop-mango-soft)] px-3 shadow-[3px_3px_0_var(--ink)] md:-mx-4 md:px-4' : ''}`} style={`--d: ${i * 80}ms`}>
           <dt class="flex items-baseline gap-2 md:flex-col md:gap-1">
             <span class="font-display text-[17px] font-bold text-ink">{lv.name}</span>
             <span class={`text-[11px] font-bold uppercase tracking-widest ${i === 2 ? 'text-[var(--accent-ink)]' : 'text-ink-3'}`}>{lv.tag}</span>
@@ -55,13 +67,17 @@ const levels = [
             <span class="mt-1 block text-[12px] text-ink-3">{lv.syarat}</span>
           </dd>
           <dd class="md:text-right">
-            <span class="num font-mono text-[15px] font-bold text-ink">{fmt(lv.harga)}<span class="text-[11px] font-medium text-ink-3">/1k</span></span>
+            {lv.harga ? (
+              <span class="num font-mono text-[15px] font-bold text-ink">{lv.harga}<span class="text-[11px] font-medium text-ink-3">/1k</span></span>
+            ) : (
+              <span class="text-[12px] font-bold text-ink-2">otomatis,<br />makin murah</span>
+            )}
           </dd>
         </div>
       ))}
     </dl>
     <p class="reveal mx-auto mt-4 max-w-3xl text-[12px] leading-relaxed text-ink-3" style="--d: 120ms">
-      Angka di atas harga TikTok Views per 1.000. Harga reseller diatur admin per layanan dan berlaku
+      Contoh harga TikTok Views per 1.000, live dari katalog. Harga reseller diatur admin per layanan dan berlaku
       permanen — cek harga terbaru di katalog setelah daftar.
     </p>
   </div>

@@ -2,12 +2,12 @@
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.svelte';
 import FloatingTabDock from '../components/FloatingTabDock.svelte';
-import StickyCTA from '../components/StickyCTA.svelte';
 import Footer from '../components/Footer.astro';
 import PlatformDirectory from '../components/PlatformDirectory.astro';
 import TopLayananTable from '../components/TopLayananTable.svelte';
 import KategoriExplainer from '../components/KategoriExplainer.astro';
 import prices from '../data/prices.json';
+import { hargaMulai } from '../data/siteStats';
 
 // D6: /layanan — katalog directory (SEO hub). Data dari prices.json, bukan hardcode.
 const total = prices.totalServices.toLocaleString('id-ID');
@@ -24,12 +24,11 @@ const breadcrumbSchema = {
 ---
 
 <Layout
-  title="Layanan SMM Lengkap — {total} Layanan Semua Platform | Socio.id"
-  description="Katalog {total} layanan SMM semua platform: Instagram, TikTok, YouTube, Telegram, Spotify & {cats} kategori lainnya. Harga mulai Rp48/1k — daftar reseller Rp50.000 dapat saldo Rp20.000 + harga lebih murah."
+  title={`Layanan SMM: ${total} Layanan, Harga Live Semua Platform | Socio.id`}
+  description={`Katalog ${total} layanan SMM: Instagram, TikTok, YouTube, Telegram, Spotify & ${cats} kategori. Harga live mulai Rp${hargaMulai}/1k — reseller Rp50rb dapat saldo Rp20rb + harga lebih murah.`}
 >
   <Navbar client:load />
   <FloatingTabDock client:load />
-  <StickyCTA client:idle />
 
   <!-- #1 HERO typographic + search (§4.2) -->
   <header class="bg-[var(--paper)] pb-10 pt-32 md:pb-14 md:pt-40">
@@ -41,12 +40,12 @@ const breadcrumbSchema = {
       </nav>
       <div class="reveal max-w-3xl">
         <h1 class="font-display text-[length:var(--text-hero)] font-bold leading-[1.05] tracking-tight text-ink">
-          Semua layanan sosmed, satu panel.
+          {total} Layanan SMM — Harga Live, Tanpa Kode Promo Palsu.
         </h1>
         <p class="mt-5 max-w-xl text-[length:var(--text-body)] leading-relaxed text-ink-2 md:text-[17px]">
-          <span class="num font-semibold text-ink">{total}</span> layanan di
+          Harga update otomatis dari provider di
           <span class="num font-semibold text-ink">{cats}</span> kategori — dari Instagram sampai Spotify.
-          Cari, cek harga, langsung order.
+          Toggle harga reseller buat lihat margin cuanmu.
         </p>
       </div>
     </div>
@@ -66,12 +65,12 @@ const breadcrumbSchema = {
   <KategoriExplainer />
 
   <!-- #6 CTA dark -->
-  <section class="relative overflow-hidden bg-ink-900 py-20 text-white isolate md:py-24" aria-labelledby="cta-l-title">
+  <section class="relative overflow-hidden bg-[var(--dark-panel)] py-20 text-[var(--on-dark)] isolate md:py-24" aria-labelledby="cta-l-title">
     <div class="mx-auto max-w-3xl px-5 space-y-6 text-center md:px-8">
       <h2 id="cta-l-title" class="font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">
         Ketemu layanannya? Harganya bisa lebih murah.
       </h2>
-      <p class="mx-auto max-w-xl text-[16px] leading-relaxed text-ink-300">
+      <p class="mx-auto max-w-xl text-[16px] leading-relaxed text-[var(--on-dark-2)]">
         Daftar reseller <strong class="text-white">Rp50.000</strong> — saldo
         <strong class="text-white">Rp20.000</strong> langsung jalan, dan semua harga di atas
         kamu dapat versi lebih murah.

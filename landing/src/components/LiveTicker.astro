@@ -1,0 +1,20 @@
+---
+// LiveTicker — V2 §5.3: bukti sosial bergerak ("panel ini hidup, order jalan terus").
+// GANTI posisi SmmProviderProof + inline-stat (trust section lama di index.astro).
+// Inline-stat narrative (anti-pattern #5 aman) + strip marquee dark (Ticker existing).
+// Angka: build-time dari siteStats — jujur, tanpa halusinasi (D-4: "ribuan").
+import { totalLayanan, totalKategori } from '../data/siteStats';
+import Ticker from './Ticker.astro';
+---
+
+<section aria-label="Aktivitas order socio.id">
+  <p class="reveal border-b border-[var(--hairline)] bg-[var(--paper-2)] px-5 py-8 text-center text-[15px] leading-relaxed text-ink-2 md:py-10 md:text-[17px]">
+    <span class="mx-auto block max-w-3xl">
+      Sekarang <strong class="num text-ink">{totalLayanan} layanan</strong> di
+      <strong class="num text-ink">{totalKategori} kategori</strong> sedang live,
+      rata-rata mulai proses <strong class="num text-ink">&lt; 1 menit</strong> setelah order —
+      dipakai <strong class="text-ink">ribuan reseller &amp; UMKM</strong> se-Indonesia.
+    </span>
+  </p>
+  <Ticker />
+</section>

@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { fly, fade } from 'svelte/transition';
 
-  const phoneNumber = '62811919328';
+  const phoneNumber = '6281221272016';
   const defaultMessage = 'Halo Socio.id, saya mau tanya tentang layanan SMM panel.';
   const waLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(defaultMessage)}`;
 

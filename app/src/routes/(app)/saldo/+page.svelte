@@ -26,6 +26,16 @@
     return l.type === "minus" || l.type === "wd" || l.type === "order" || amt < 0;
   }
 
+  // Fraksi sisa waktu untuk bar menyusut (F1). Jendela 24 jam (deposit-expire),
+  // clamp 0..1. Update tiap tick `now` (30 dtk) — transisi width 1s, motion-safe.
+  function expireFrac(expire: Date | string | null | undefined): number | null {
+    if (!expire) return null;
+    const dt = typeof expire === "string" ? new Date(expire.replace(" ", "T")) : expire;
+    const s = (dt.getTime() - now) / 1000;
+    if (s <= 0) return 0;
+    return Math.min(1, s / 86400);
+  }
+
   function timeAgo(d: Date | string) {
     const date = typeof d === "string" ? new Date(d) : d;
     const diff = (Date.now() - date.getTime()) / 1000;
@@ -69,7 +79,7 @@
     class="relative overflow-hidden rounded-2xl lg:rounded-3xl bg-gradient-to-br from-ink-900 via-ink-900 to-ink-800 p-5 lg:p-8 text-white lg:grid lg:grid-cols-[1.35fr_auto] lg:items-center lg:gap-8 shadow-[0_16px_40px_-16px_rgba(15,23,42,0.35),0_8px_16px_-8px_rgba(79,70,229,0.20)] hover:shadow-[0_20px_48px_-16px_rgba(15,23,42,0.40),0_10px_20px_-8px_rgba(79,70,229,0.25)] transition-all duration-300 hover:-translate-y-0.5"
   >
     <div
-      class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-2xl pointer-events-none"
+      class="float-slow absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-2xl pointer-events-none"
     ></div>
     <div class="min-w-0">
       <div class="text-xs font-medium text-ink-300 lg:text-[13px]">Saldo Socio</div>
@@ -157,9 +167,10 @@
                 <div class="text-xs text-ink-500">{timeAgo(l.createdAt)}</div>
               </div>
               <span
-                class="font-display text-sm font-extrabold tabular-nums {out
-                  ? 'text-danger'
-                  : 'text-success'}"
+                class="amt-in font-display text-sm font-extrabold tabular-nums {out
+                  ? 'amt-r text-danger'
+                  : 'amt-l text-success'}"
+                style={revealDelay(i, 100, 35)}
               >
                 {out ? "-" : "+"}{formatRupiah(Math.abs(Number(l.amount)))}
               </span>
@@ -173,7 +184,10 @@
     <div class="min-w-0">
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-sm font-bold lg:text-[15px]">Top Up Terakhir</h2>
-        <a href="/saldo/top-up" class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-primary">
+        <a
+          href="/saldo/top-up"
+          class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-primary"
+        >
           Top Up <Icon name="chevron_right" size={14} />
         </a>
       </div>
@@ -210,8 +224,24 @@
                 <div class="truncate text-xs text-ink-500">{t.methodName}</div>
                 {#if t.status === "Pending"}
                   {@const left = expireLeft((t as any).expire)}
+                  {@const frac = expireFrac((t as any).expire)}
                   {#if left}
                     <div class="mt-0.5 text-[11px] font-bold tabular-nums text-warning">{left}</div>
+                    {#if frac !== null}
+                      <div
+                        class="mt-1 h-1 w-24 overflow-hidden rounded-full bg-amber-100 dark:bg-white/10"
+                        role="progressbar"
+                        aria-label="Sisa waktu pembayaran"
+                        aria-valuenow={Math.round(frac * 100)}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      >
+                        <div
+                          class="h-full w-full origin-left rounded-full bg-amber-500 motion-safe:transition-transform motion-safe:duration-1000"
+                          style={`transform: scaleX(${frac})`}
+                        ></div>
+                      </div>
+                    {/if}
                   {/if}
                 {/if}
               </div>
@@ -245,8 +275,33 @@
       opacity: 0.65;
     }
   }
+  /* Nominal mutasi slide-in berwarna (F1): keluar dari kanan, masuk dari kiri */
+  .amt-in {
+    display: inline-block;
+    animation: amt-in 450ms var(--ease-out-soft) both;
+    animation-delay: var(--d, 0ms);
+  }
+  .amt-r {
+    --amt-from: 14px;
+  }
+  .amt-l {
+    --amt-from: -14px;
+  }
+  @keyframes amt-in {
+    from {
+      opacity: 0;
+      transform: translateX(var(--amt-from, 0px));
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .pending-pulse {
+      animation: none;
+    }
+    .amt-in {
       animation: none;
     }
   }

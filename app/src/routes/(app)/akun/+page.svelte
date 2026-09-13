@@ -174,12 +174,14 @@
           .toUpperCase()})`}
       >
         {#if avatarOk && avatarSrc}
-          <img
-            src={avatarSrc}
-            alt={data.user.name}
-            class="h-14 w-14 lg:h-16 lg:w-16 rounded-full object-cover"
-            onerror={() => (avatarOk = false)}
-          />
+          {#key avatarSrc}
+            <img
+              src={avatarSrc}
+              alt={data.user.name}
+              class="avatar-pop h-14 w-14 lg:h-16 lg:w-16 rounded-full object-cover"
+              onerror={() => (avatarOk = false)}
+            />
+          {/key}
         {:else}
           <Avatar name={data.user.name} size="lg" />
         {/if}
@@ -242,7 +244,7 @@
   </header>
 
   <!-- Row 1: Profil (ledger) -->
-  <div class="px-4 py-3 lg:px-5">
+  <div class="row-slide px-4 py-3 lg:px-5" style="--d:0ms">
     <div class="flex items-center gap-3">
       <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
         <Icon name="user" size={16} stroke={2} />
@@ -288,7 +290,7 @@
   </div>
 
   <!-- Row 2: Ganti Password (ledger) -->
-  <div class="px-4 py-3 lg:px-5">
+  <div class="row-slide px-4 py-3 lg:px-5" style="--d:50ms">
     <div class="flex items-center gap-3">
       <span
         class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-500/10 text-amber-700"
@@ -372,7 +374,7 @@
   </div>
 
   <!-- Row 3: API Key (ledger) -->
-  <div class="px-4 py-3 lg:px-5">
+  <div class="row-slide px-4 py-3 lg:px-5" style="--d:100ms">
     <div class="flex items-center gap-3">
       <span
         class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-500/10 text-violet-700"
@@ -432,12 +434,22 @@
   </div>
 
   <!-- Row 4: Tema (ledger + switch) -->
-  <form method="POST" action="?/theme" use:enhance={submit("theme")} class="px-4 py-3 lg:px-5">
+  <form
+    method="POST"
+    action="?/theme"
+    use:enhance={submit("theme")}
+    class="row-slide px-4 py-3 lg:px-5"
+    style="--d:150ms"
+  >
     <div class="flex items-center gap-3">
       <span
         class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-ink-50 text-ink-700 dark:bg-ink-100"
       >
-        <Icon name={data.user.theme === "dark" ? "moon" : "sun"} size={16} stroke={2} />
+        {#key data.user.theme}
+          <span class="theme-morph" aria-hidden="true">
+            <Icon name={data.user.theme === "dark" ? "moon" : "sun"} size={16} stroke={2} />
+          </span>
+        {/key}
       </span>
       <div class="min-w-0 flex-1">
         <p class="text-sm font-semibold text-ink-900">Tema</p>
@@ -594,18 +606,10 @@
       transform: translateX(120%);
     }
   }
-  /* Ledger rows — stagger reveal */
+  /* Ledger rows — stagger reveal (delay via --d per baris) */
   .row-slide {
     animation: row-in 320ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  }
-  .row-slide:nth-child(1) {
-    animation-delay: 60ms;
-  }
-  .row-slide:nth-child(2) {
-    animation-delay: 100ms;
-  }
-  .row-slide:nth-child(3) {
-    animation-delay: 140ms;
+    animation-delay: var(--d, 0ms);
   }
   @keyframes row-in {
     from {
@@ -617,9 +621,42 @@
       transform: translateY(0);
     }
   }
+  /* Avatar pop tiap foto berhasil diganti */
+  .avatar-pop {
+    animation: avatar-pop 400ms var(--ease-spring) both;
+  }
+  @keyframes avatar-pop {
+    0% {
+      transform: scale(0.7);
+    }
+    60% {
+      transform: scale(1.08);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  /* Ikon tema morph tiap ganti mode */
+  .theme-morph {
+    display: grid;
+    place-items: center;
+    animation: theme-morph 350ms var(--ease-spring) both;
+  }
+  @keyframes theme-morph {
+    0% {
+      transform: rotate(-90deg) scale(0.5);
+      opacity: 0;
+    }
+    100% {
+      transform: none;
+      opacity: 1;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .level-shine::after,
-    .row-slide {
+    .row-slide,
+    .avatar-pop,
+    .theme-morph {
       animation: none;
     }
     .row-slide {

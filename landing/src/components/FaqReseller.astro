@@ -38,15 +38,15 @@ const items = [
       </h2>
     </div>
 
-    <!-- Accordion ledger: hairline rows, no card -->
-    <div class="reveal mx-auto mt-10 max-w-3xl divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] md:mt-12" style="--d: 60ms">
-      {items.map((f, i) => (
-        <details class="faq-r" style={`--d: ${i * 60}ms`}>
-          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-left text-[15px] font-bold text-ink">
+    <!-- Accordion: kartu sticker saat terbuka (konsisten FAQ home, CSS-only) -->
+    <div class="reveal mx-auto mt-10 max-w-3xl space-y-3 md:mt-12" style="--d: 60ms">
+      {items.map((f) => (
+        <details class="faq-r rounded-2xl border border-[var(--hairline-strong)] bg-white px-5 transition-all duration-200 open:border-[var(--ink)] open:shadow-[2px_2px_0_var(--ink)]">
+          <summary class="flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-4 py-4 text-left text-[15px] font-bold text-ink">
             {f.q}
-            <svg class="faq-chev h-4 w-4 shrink-0 text-ink-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-9"/></svg>
+            <svg class="faq-chev h-4 w-4 shrink-0 text-ink-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </summary>
-          <p class="pb-5 pr-8 text-[14px] leading-relaxed text-ink-2">{f.a}</p>
+          <p class="pb-5 text-[14px] leading-relaxed text-ink-2">{f.a}</p>
         </details>
       ))}
     </div>

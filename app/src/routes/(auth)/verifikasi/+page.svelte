@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AuthBackdrop, Button, Icon } from "@socio/ui";
+  import { AuthBackdrop, Button, Icon, Mascot } from "@socio/ui";
 
   let { data } = $props();
 </script>
@@ -15,8 +15,11 @@
     class="relative z-10 flex-1 flex flex-col justify-center max-w-sm w-full mx-auto text-center"
   >
     {#if data.ok === true}
+      <div class="flex justify-center">
+        <Mascot pose="fly" size={64} class="float-slow text-primary" />
+      </div>
       <div
-        class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-success-soft text-success animate-[popIn_380ms_var(--ease-out-soft)_both]"
+        class="mx-auto mt-3 mb-4 grid h-16 w-16 place-items-center rounded-full bg-success-soft text-success animate-[popIn_380ms_var(--ease-out-soft)_both]"
       >
         <Icon name="check" size={32} stroke={2.5} />
       </div>

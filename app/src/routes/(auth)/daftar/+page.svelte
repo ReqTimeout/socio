@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { AuthBackdrop, Button, Icon } from "@socio/ui";
+  import { AuthBackdrop, Button, Icon, Mascot } from "@socio/ui";
   import { renderTurnstile } from "$lib/turnstile";
   import { onMount } from "svelte";
 
@@ -82,7 +82,10 @@
   <AuthBackdrop playful variant={mode === "reseller" ? "reseller" : "member"} />
   <div class="relative z-10 flex-1 flex flex-col justify-center max-w-sm w-full mx-auto">
     <div class="mb-6 text-center animate-[authIn_420ms_var(--ease-out-soft)]">
-      <div class="font-display font-extrabold text-3xl text-primary tracking-tight">
+      <div class="flex justify-center">
+        <Mascot pose="wave" size={56} class="float-slow text-primary" />
+      </div>
+      <div class="mt-2 font-display font-extrabold text-3xl text-primary tracking-tight">
         socio<span class="text-accent-700">.id</span>
       </div>
       <p class="text-sm text-ink-500 mt-2">Panel SMM terbesar &amp; termurah se-Indonesia</p>
@@ -102,15 +105,15 @@
         class="mb-4 rounded-2xl bg-danger-soft text-danger text-sm px-4 py-3 font-medium flex items-start gap-2.5"
         role="alert"
       >
-        <span class="error-shake shrink-0 mt-px"><Icon name="alert" size={17} stroke={2} /></span>
+        <span class="error-pop shrink-0 mt-px"><Icon name="alert" size={17} stroke={2} /></span>
         {form.error}
       </div>
     {/if}
 
-    <!-- Segment mode: Member / Reseller -->
+    <!-- Segment mode: Member / Reseller (knob spring F6) -->
     <div class="relative mb-4 grid grid-cols-2 rounded-2xl bg-ink-100 p-1" role="tablist">
       <div
-        class="absolute inset-y-1 w-[calc(50%-4px)] rounded-xl bg-white shadow-sm transition-transform duration-200 ease-out"
+        class="mode-knob absolute inset-y-1 w-[calc(50%-4px)] rounded-xl bg-white shadow-sm"
         style="transform: translateX({mode === 'member' ? '0%' : '100%'});"
         aria-hidden="true"
       ></div>
@@ -137,7 +140,7 @@
     </div>
 
     {#if mode === "reseller"}
-      <div class="mb-4 grid grid-cols-1 gap-2">
+      <div class="mode-pop mb-4 grid grid-cols-1 gap-2">
         <div class="flex items-start gap-2.5 rounded-2xl border border-ink-100 bg-white px-4 py-3">
           <Icon name="tag" size={16} class="mt-0.5 shrink-0 text-primary" />
           <p class="text-xs leading-relaxed text-ink-600">
@@ -239,11 +242,15 @@
               focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <span class="icon-swap" aria-hidden="true">
-              {#if showPassword}
-                <Icon name="eye_off" size={18} />
-              {:else}
-                <Icon name="eye" size={18} />
-              {/if}
+              {#key showPassword}
+                <span class="icon-morph">
+                  {#if showPassword}
+                    <Icon name="eye_off" size={18} />
+                  {:else}
+                    <Icon name="eye" size={18} />
+                  {/if}
+                </span>
+              {/key}
             </span>
           </button>
         </div>
@@ -266,7 +273,7 @@
               {/each}
             </div>
             <span class="text-xs font-semibold {colors[score ?? 0].replace('bg-', 'text-')}"
-              >{strength[score ?? 0]}</span
+              >{#key score}<span class="pw-pop">{strength[score ?? 0]}</span>{/key}</span
             >
           </div>
           {#if crackTime}
@@ -331,27 +338,62 @@
     }
   }
 
-  @keyframes shake {
-    0%,
-    100% {
-      transform: translateX(0);
+  /* F6 playful: knob spring, mode pop, morph, strength pop, error pop */
+  .mode-knob {
+    transition: transform 300ms var(--ease-spring);
+  }
+  .mode-pop {
+    animation: mode-pop 380ms var(--ease-spring) both;
+    transform-origin: top center;
+  }
+  @keyframes mode-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(-6px);
     }
-    20% {
-      transform: translateX(-5px);
-    }
-    40% {
-      transform: translateX(4px);
-    }
-    60% {
-      transform: translateX(-3px);
-    }
-    80% {
-      transform: translateX(2px);
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
-  .error-shake {
+  .icon-morph {
+    display: inline-flex;
+    animation: icon-morph 240ms var(--ease-spring) both;
+  }
+  @keyframes icon-morph {
+    from {
+      transform: rotateY(90deg) scale(0.7);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+  .pw-pop {
     display: inline-block;
-    animation: shake 340ms cubic-bezier(0.36, 0.07, 0.19, 0.97) 60ms;
+    animation: pw-pop 280ms var(--ease-spring) both;
+  }
+  @keyframes pw-pop {
+    from {
+      transform: scale(0.6);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+  .error-pop {
+    display: inline-grid;
+    place-items: center;
+    animation: error-pop 350ms var(--ease-spring) both;
+  }
+  @keyframes error-pop {
+    from {
+      transform: scale(0.3);
+    }
+    to {
+      transform: scale(1);
+    }
   }
 
   .icon-swap {
@@ -368,6 +410,15 @@
     }
     .icon-swap:active {
       transform: none;
+    }
+    .mode-knob {
+      transition: none;
+    }
+    .mode-pop,
+    .icon-morph,
+    .pw-pop,
+    .error-pop {
+      animation: none;
     }
   }
 </style>

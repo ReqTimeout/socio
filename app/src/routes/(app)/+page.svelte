@@ -8,9 +8,13 @@
     PromoBanner,
     OrbField,
     revealDelay,
+    tweenNumber,
     EmptyOrdersArt,
+    Mascot,
+    Skeleton,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
+  import { navigating } from "$app/state";
   import { copy } from "@socio/core/copy";
   import { onMount } from "svelte";
   import { formatRupiah, serviceDisplayName } from "$lib/format";
@@ -149,6 +153,18 @@
   const hasActivity = $derived(
     data.chart.orders.some((v: number) => v > 0) || data.chart.deposits.some((v: number) => v > 0),
   );
+
+  // Inline-stat count-up saat mount (F1). SSR tampil 0 lalu naik — reduced = instan.
+  const statOrders = tweenNumber(0);
+  const statDeposit = tweenNumber(0);
+  const statSpent = tweenNumber(0);
+  onMount(() => {
+    const r = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const d = r ? 0 : 800;
+    statOrders.set(data.stats.totalOrders ?? 0, { duration: d });
+    statDeposit.set(data.stats.totalDeposit ?? 0, { duration: d });
+    statSpent.set(data.stats.totalSpent ?? 0, { duration: d });
+  });
 </script>
 
 <svelte:head>
@@ -275,7 +291,7 @@
           href={item.href}
           onclick={() => haptic(8)}
           style={revealDelay(i, 0, 60)}
-          class="card-lift group flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
+          class="reveal card-lift group flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
             lg:flex-col lg:items-start lg:gap-2 lg:py-3 lg:px-3 {item.glow}"
         >
           <span
@@ -327,7 +343,7 @@
               : ''}"
             onclick={() => haptic(10)}
             style={revealDelay(i, 0, 50)}
-            class="card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-4
+            class="reveal card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-4
               lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5"
           >
             <span
@@ -419,7 +435,7 @@
       <span
         class="flex items-center gap-1.5 font-display text-lg font-extrabold tabular-nums text-ink-900 sm:text-xl lg:text-2xl"
       >
-        {data.stats.totalOrders.toLocaleString("id-ID")}
+        {$statOrders.toLocaleString("id-ID")}
       </span>
       {#if data.stats.deltaOrders !== undefined && data.stats.deltaOrders !== 0}
         <span
@@ -458,7 +474,7 @@
             ><Icon name="star" size={10} stroke={2.5} /></span
           >
         {/if}
-        {formatRupiah(data.stats.totalDeposit)}
+        {formatRupiah($statDeposit)}
       </span>
     </div>
     <div class="flex flex-col items-center gap-0.5 px-1 lg:gap-1">
@@ -470,7 +486,7 @@
       </span>
       <span
         class="font-display text-lg font-extrabold tabular-nums text-ink-900 sm:text-xl lg:text-2xl"
-        >{formatRupiah(data.stats.totalSpent)}</span
+        >{formatRupiah($statSpent)}</span
       >
     </div>
   </div>
@@ -600,7 +616,10 @@
           <div
             class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
           ></div>
-          <EmptyOrdersArt size={112} class="relative mx-auto mb-3 text-ink-300" />
+          <div class="relative mx-auto mb-3 flex items-end justify-center">
+            <EmptyOrdersArt size={112} class="text-ink-300" />
+            <Mascot pose="fall" size={56} class="float-slow -ml-7 -rotate-12 text-mango-500" />
+          </div>
           <p class="relative text-sm font-bold text-ink-800">Pesanan pertama menunggu</p>
           <p class="relative mt-1 text-xs text-ink-500">
             <span class="lg:hidden">Pilih layanan favorit — proses otomatis.</span>
@@ -625,6 +644,20 @@
             <span class="hidden lg:inline relative">Buat Pesanan Pertama</span>
           </a>
         </div>
+      {:else if navigating.to?.url.pathname === "/"}
+        <!-- Skeleton saat refresh/navigasi (hindari flash list lama) -->
+        <ul class="divide-y divide-ink-100" aria-hidden="true">
+          {#each [0, 1, 2] as i (i)}
+            <li class="flex items-center gap-2.5 px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-3">
+              <Skeleton width="2.25rem" height="2.25rem" rounded="rounded-xl" />
+              <div class="min-w-0 flex-1 space-y-2">
+                <Skeleton width="65%" height="0.85rem" />
+                <Skeleton width="40%" height="0.7rem" />
+              </div>
+              <Skeleton width="3.5rem" height="1.25rem" rounded="rounded-full" />
+            </li>
+          {/each}
+        </ul>
       {:else}
         <ul class="divide-y divide-ink-100">
           {#each data.recent as o, i (o.id)}

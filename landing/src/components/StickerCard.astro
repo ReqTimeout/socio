@@ -1,0 +1,20 @@
+---
+// StickerCard — wrapper chrome sticker (PLAN inventory).
+// Budget: sticker chrome besar MAX 4 per halaman (PLAN §2.3#3) — pemakai
+// bertanggung jawab menghitung. Varian: tilt (-2°/+2°/±1°/none), size.
+// Pure Astro = 0 JS. Hover-lift opsional (A7) via prop `hover`.
+const {
+  tilt = 'none',
+  size = 'md',
+  hover = false,
+  class: cls = '',
+  ...rest
+} = Astro.props;
+const tiltCls =
+  tilt === 'l' ? 'tilt-l' : tilt === 'r' ? 'tilt-r' : tilt === 'l-sm' ? 'tilt-l-sm' : tilt === 'r-sm' ? 'tilt-r-sm' : '';
+const sizeCls = size === 'lg' ? 'sticker-lg' : 'sticker';
+---
+
+<div class={`${sizeCls} ${tiltCls} ${hover ? 'sticker-hover' : ''} ${cls}`} {...rest}>
+  <slot />
+</div>

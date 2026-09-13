@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { EmptyState, Icon, revealDelay } from "@socio/ui";
+  import { EmptyBalanceArt, Mascot, Icon, revealDelay } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { formatRupiah } from "$lib/format";
   import { goto } from "$app/navigation";
@@ -111,7 +111,11 @@
       <Icon name="chevron_left" size={14} />
       Ringkasan
     </a>
-    <a href="/saldo" class="inline-flex min-h-[24px] shrink-0 items-center text-xs font-bold text-primary sm:hidden">Ringkasan ›</a>
+    <a
+      href="/saldo"
+      class="inline-flex min-h-[24px] shrink-0 items-center text-xs font-bold text-primary sm:hidden"
+      >Ringkasan ›</a
+    >
   </div>
 
   <!-- Summary — all-time -->
@@ -172,12 +176,20 @@
   </div>
 
   {#if filtered.length === 0}
-    <EmptyState
-      title={currentType
-        ? `Tidak ada ${logMeta[currentType]?.label ?? currentType}`
-        : "Belum ada riwayat"}
-      description={currentType ? "Coba ganti filter." : "Pergerakan saldo akan muncul di sini."}
-    />
+    <div class="rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center">
+      <div class="relative mx-auto mb-2 flex w-fit items-end justify-center">
+        <EmptyBalanceArt size={96} class="text-ink-300" />
+        <Mascot pose="fall" size={48} class="float-slow -ml-6 -rotate-12 text-mango-500" />
+      </div>
+      <p class="text-sm font-bold text-ink-800">
+        {currentType
+          ? `Tidak ada ${logMeta[currentType]?.label ?? currentType}`
+          : "Belum ada riwayat"}
+      </p>
+      <p class="mt-1 text-xs text-ink-500">
+        {currentType ? "Coba ganti filter." : "Pergerakan saldo akan muncul di sini."}
+      </p>
+    </div>
   {:else}
     <!-- TABLE — premium, scroll on mobile -->
     <div class="overflow-hidden rounded-2xl border border-ink-100 bg-surface shadow-card">
@@ -199,7 +211,7 @@
               {@const isOut = isOutLog(l)}
               <tr
                 class="group transition-colors hover:bg-ink-50/70 reveal"
-                style={revealDelay(i, 60, 18)}
+                style={revealDelay(i, 60, 40)}
               >
                 <td class="px-4 py-3 whitespace-nowrap text-xs text-ink-500">
                   {formatDate(l.createdAt)}
@@ -225,7 +237,7 @@
                 </td>
                 <td class="px-4 py-3 text-right">
                   <span
-                    class="inline-flex rounded-lg px-2.5 py-1 text-sm font-extrabold tabular-nums {isOut
+                    class="inline-flex rounded-lg px-2.5 py-1 text-sm font-extrabold tabular-nums transition-transform duration-200 group-hover:-translate-y-0.5 {isOut
                       ? 'bg-danger text-white'
                       : 'bg-success text-white'}"
                   >

@@ -61,10 +61,10 @@
 
 <nav
   class="md:hidden fixed inset-x-3 bottom-3 z-50 grid
-    rounded-[28px] border border-white/40 bg-white/75 backdrop-blur-2xl
-    shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18),0_4px_16px_rgba(15,23,42,0.08)]
+    rounded-[28px] border-2 border-[var(--ink)] bg-white/85 backdrop-blur-2xl
+    shadow-[2px_2px_0_var(--ink),0_10px_40px_-12px_rgba(15,23,42,0.18)]
     p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]
-    transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]
+    transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
     {visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'}"
   style="grid-template-columns: 1fr 1fr 1fr 1.4fr"
   aria-label="Navigasi utama mobile"
@@ -97,9 +97,11 @@
         {/if}
       </span>
       <span class="text-[9px] font-bold tracking-wide leading-none">{tab.label}</span>
-      <!-- Indicator dot aktif -->
+      <!-- Indicator mango pop saat tab aktif -->
       {#if active}
-        <span class="absolute -bottom-0.5 h-1 w-1 rounded-full bg-[var(--accent-ink)]" aria-hidden="true"></span>
+        {#key pathname}
+          <span class="dock-pop absolute -bottom-0.5 h-1.5 w-5 rounded-full border border-[var(--ink)] bg-[var(--pop-mango)]" aria-hidden="true"></span>
+        {/key}
       {/if}
     </a>
   {/each}
@@ -107,12 +109,13 @@
   <!-- Slot CTA accent-ink (~40% lebar, plan §3g.0) -->
   <a
     href={cta.href}
-    class="flex min-h-[52px] items-center justify-center rounded-full bg-[var(--accent-ink)] px-3 text-sm font-bold text-white
-      shadow-[0_4px_16px_-6px_var(--accent-ink)]
-      transition-transform duration-150 active:scale-[0.97]
+    class="group relative flex min-h-[52px] items-center justify-center overflow-hidden rounded-full border-2 border-[var(--ink)] bg-[var(--accent-ink)] px-3 text-sm font-bold text-white
+      shadow-[2px_2px_0_var(--ink)]
+      transition-transform duration-150 active:scale-[0.95]
       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-focus-ring)]
       hover:bg-[var(--accent-hover)]"
   >
+    <span class="cta-shine" aria-hidden="true"></span>
     {cta.label}
   </a>
 </nav>
@@ -121,3 +124,43 @@
 <svelte:head>
   {@html '<style>body { padding-bottom: calc(88px + env(safe-area-inset-bottom)); } @media (min-width: 768px) { body { padding-bottom: 0; } }</style>'}
 </svelte:head>
+
+<style>
+  /* Indicator mango pop tiap ganti tab */
+  .dock-pop {
+    animation: dock-pop 400ms var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both;
+  }
+  @keyframes dock-pop {
+    from {
+      transform: scaleX(0);
+      opacity: 0;
+    }
+    to {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+  }
+  /* Shine sweep di CTA saat hover/focus */
+  .cta-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.35) 50%, transparent 60%);
+    transform: translateX(-120%);
+    pointer-events: none;
+  }
+  .group:hover .cta-shine,
+  .group:focus-visible .cta-shine {
+    animation: cta-shine 700ms ease;
+  }
+  @keyframes cta-shine {
+    to {
+      transform: translateX(120%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dock-pop,
+    .cta-shine {
+      animation: none;
+    }
+  }
+</style>

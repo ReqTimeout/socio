@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { AuthBackdrop, Button, Icon } from "@socio/ui";
+  import { AuthBackdrop, Button, Icon, Mascot } from "@socio/ui";
 
   let { data, form } = $props<{ data: typeof data; form: import("./$types").ActionData }>();
   let loading = $state(false);
@@ -27,8 +27,11 @@
   <AuthBackdrop variant="default" />
   <div class="relative z-10 flex-1 flex flex-col justify-center max-w-sm w-full mx-auto">
     <div class="mb-8 text-center">
+      <div class="flex justify-center">
+        <Mascot pose="wave" size={56} class="float-slow text-primary" />
+      </div>
       <div
-        class="font-display font-extrabold text-3xl text-primary tracking-tight animate-[authIn_420ms_var(--ease-out-soft)_both]"
+        class="mt-2 font-display font-extrabold text-3xl text-primary tracking-tight animate-[authIn_420ms_var(--ease-out-soft)_both]"
       >
         socio<span class="text-accent-700">.id</span>
       </div>
@@ -42,7 +45,7 @@
         class="mb-4 rounded-2xl bg-danger-soft text-danger text-sm px-4 py-3 font-medium flex items-start gap-2.5 form-shake"
         role="alert"
       >
-        <span class="error-shake shrink-0 mt-px"><Icon name="alert" size={17} stroke={2} /></span>
+        <span class="error-pop shrink-0 mt-px"><Icon name="alert" size={17} stroke={2} /></span>
         {form?.error}
       </div>
     {/if}
@@ -86,11 +89,15 @@
               focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <span class="icon-swap" aria-hidden="true">
-              {#if showPassword}
-                <Icon name="eye_off" size={18} />
-              {:else}
-                <Icon name="eye" size={18} />
-              {/if}
+              {#key showPassword}
+                <span class="icon-morph">
+                  {#if showPassword}
+                    <Icon name="eye_off" size={18} />
+                  {:else}
+                    <Icon name="eye" size={18} />
+                  {/if}
+                </span>
+              {/key}
             </span>
           </button>
         </div>
@@ -193,9 +200,34 @@
   .form-shake {
     animation: shake 340ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
   }
-  .error-shake {
-    display: inline-block;
-    animation: shake 340ms cubic-bezier(0.36, 0.07, 0.19, 0.97) 60ms;
+
+  /* F6 playful: morph + error pop */
+  .icon-morph {
+    display: inline-flex;
+    animation: icon-morph 240ms var(--ease-spring) both;
+  }
+  @keyframes icon-morph {
+    from {
+      transform: rotateY(90deg) scale(0.7);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+  .error-pop {
+    display: inline-grid;
+    place-items: center;
+    animation: error-pop 350ms var(--ease-spring) both;
+  }
+  @keyframes error-pop {
+    from {
+      transform: scale(0.3);
+    }
+    to {
+      transform: scale(1);
+    }
   }
 
   @keyframes tickPop {
@@ -236,9 +268,12 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .form-shake,
-    .error-shake {
+    .form-shake {
       animation: none !important;
+    }
+    .icon-morph,
+    .error-pop {
+      animation: none;
     }
     .icon-swap,
     .btn-arrow {

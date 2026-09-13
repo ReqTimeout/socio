@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, Button, toast, revealDelay, EmptyNotifArt } from "@socio/ui";
+  import { Icon, Button, toast, revealDelay, EmptyNotifArt, SwipeRow } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { goto } from "$app/navigation";
@@ -53,13 +53,17 @@
 
   function open(item: any) {
     haptic(10);
-    if (!isRead(item)) {
-      readIds = new Set(readIds).add(item.id);
-      const fd = new FormData();
-      fd.append("id", String(item.id));
-      fetch("?/read", { method: "POST", body: fd }).catch(() => {});
-    }
+    markRead(item.id);
     if (item.actionUrl) goto(item.actionUrl);
+  }
+
+  // Tandai dibaca saja (aksi swipe mobile) — tanpa navigasi.
+  function markRead(id: number) {
+    haptic(8);
+    readIds = new Set(readIds).add(id);
+    const fd = new FormData();
+    fd.append("id", String(id));
+    fetch("?/read", { method: "POST", body: fd }).catch(() => {});
   }
 
   let markAllBusy = $state(false);
@@ -88,6 +92,9 @@
     {#if data.unread > 0}
       <Button size="sm" variant="ghost" onclick={markAll} disabled={markAllBusy}>
         Tandai dibaca
+        {#key data.unread}
+          <span class="count-pill" aria-label={`${data.unread} belum dibaca`}>{data.unread}</span>
+        {/key}
       </Button>
     {/if}
   </div>
@@ -119,40 +126,56 @@
       <p class="relative mt-1 text-xs leading-relaxed text-ink-500">{copy.empty.notif.desc}</p>
     </div>
   {:else}
+    {#snippet notifRow(n: (typeof items)[0], nRead: boolean)}
+      <button
+        onclick={() => open(n)}
+        class="card-lift flex min-h-[56px] w-full items-start gap-3 rounded-2xl border p-3 text-left transition-colors duration-300
+          {nRead ? 'border-ink-100 bg-surface' : 'border-primary/30 bg-primary/5'}"
+      >
+        <span
+          class="icon-pop grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors duration-300
+            {nRead ? 'bg-ink-100 text-ink-500' : 'bg-primary/10 text-primary'}"
+        >
+          <Icon name={icons[n.type] ?? "info"} size={18} />
+        </span>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <p
+              class="min-w-0 truncate text-sm font-semibold {nRead
+                ? 'text-ink-700'
+                : 'text-ink-900'}"
+            >
+              {n.title}
+            </p>
+            {#if !nRead}
+              <span class="dot-unread h-2 w-2 shrink-0 rounded-full bg-primary"></span>
+            {/if}
+          </div>
+          {#if n.message}
+            <p class="mt-0.5 line-clamp-2 text-xs text-ink-500">{n.message}</p>
+          {/if}
+          <p class="mt-1 text-[10px] text-ink-500">{timeAgo(n.createdAt)}</p>
+        </div>
+      </button>
+    {/snippet}
     <ul class="space-y-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
       {#each items as n, i (n.id)}
         {@const nRead = isRead(n)}
         <li class="reveal" style={revealDelay(i, 0, 30)}>
-          <button
-            onclick={() => open(n)}
-            class="card-lift flex min-h-[56px] w-full items-start gap-3 rounded-2xl border p-3 text-left transition-colors duration-300
-              {nRead ? 'border-ink-100 bg-surface' : 'border-primary/30 bg-primary/5'}"
-          >
-            <span
-              class="grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors duration-300
-                {nRead ? 'bg-ink-100 text-ink-500' : 'bg-primary/10 text-primary'}"
+          <!-- Mobile: geser untuk tandai dibaca (simetri Pesanan) -->
+          <div class="lg:hidden">
+            <SwipeRow
+              threshold={80}
+              actionLabel="Tandai dibaca"
+              actionIcon="check"
+              onAction={() => markRead(n.id)}
             >
-              <Icon name={icons[n.type] ?? "info"} size={18} />
-            </span>
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2">
-                <p
-                  class="min-w-0 truncate text-sm font-semibold {nRead
-                    ? 'text-ink-700'
-                    : 'text-ink-900'}"
-                >
-                  {n.title}
-                </p>
-                {#if !nRead}
-                  <span class="dot-unread h-2 w-2 shrink-0 rounded-full bg-primary"></span>
-                {/if}
-              </div>
-              {#if n.message}
-                <p class="mt-0.5 line-clamp-2 text-xs text-ink-500">{n.message}</p>
-              {/if}
-              <p class="mt-1 text-[10px] text-ink-500">{timeAgo(n.createdAt)}</p>
-            </div>
-          </button>
+              {@render notifRow(n, nRead)}
+            </SwipeRow>
+          </div>
+          <div class="hidden lg:block">
+            {@render notifRow(n, nRead)}
+          </div>
         </li>
       {/each}
     </ul>
@@ -174,8 +197,42 @@
       opacity: 1;
     }
   }
+  /* F5 playful: ikon pop tiap render + counter mango */
+  .icon-pop {
+    animation: icon-pop 350ms var(--ease-spring) both;
+  }
+  @keyframes icon-pop {
+    0% {
+      transform: scale(0.6);
+    }
+    60% {
+      transform: scale(1.12);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  .count-pill {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 9999px;
+    background: var(--color-mango-soft);
+    color: var(--color-mango-ink);
+    border: 1.5px solid var(--color-mango-ink);
+    font-size: 11px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    animation: icon-pop 350ms var(--ease-spring) both;
+  }
   @media (prefers-reduced-motion: reduce) {
     .dot-unread {
+      animation: none;
+    }
+    .icon-pop,
+    .count-pill {
       animation: none;
     }
   }

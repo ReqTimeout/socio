@@ -1,5 +1,7 @@
 ---
 // D5: TestiReseller — 2 testi ledger row + inisial (pattern TestiLedger D4), paper-2 bg.
+// ⚠ TODO(testimoni-asli): kutipan di bawah PLACEHOLDER — GANTI dengan testimoni + foto
+// asli dari owner SEBELUM merge ke prod (risiko iklan menyesatkan, PLAN §5.8).
 const testi = [
   {
     initials: 'RA',
@@ -25,20 +27,21 @@ const testi = [
         Mereka sudah jualan duluan.
       </h2>
     </div>
-    <div class="mx-auto mt-10 max-w-3xl divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] md:mt-14">
+    <div class="mx-auto mt-10 grid max-w-3xl gap-5 md:mt-14 sm:grid-cols-2">
       {testi.map((t, i) => (
-        <div class="reveal flex items-start gap-4 py-6" style={`--d: ${i * 80}ms`}>
-          <span class="num grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)] text-[14px] font-extrabold text-[var(--accent-ink)]" aria-hidden="true">
-            {t.initials}
-          </span>
-          <div class="min-w-0 flex-1">
-            <blockquote class="text-[15px] font-medium leading-relaxed text-ink md:text-[16px]">
-              “{t.text}”
-            </blockquote>
-            <p class="mt-2 text-[12px] text-ink-3">
-              <span class="font-bold text-ink-2">{t.name}</span> · {t.role} · <span class="num font-semibold text-ink-2">{t.metric}</span>
-            </p>
+        <div class={`reveal rounded-2xl border-2 border-[var(--ink)] bg-white p-5 shadow-[3px_3px_0_var(--ink)] ${i === 0 ? 'tilt-l-sm' : 'tilt-r-sm'}`} style={`--d: ${i * 80}ms`}>
+          <div class="flex items-center gap-3">
+            <span class="num grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--pop-mango-soft)] text-[14px] font-extrabold text-ink" aria-hidden="true">
+              {t.initials}
+            </span>
+            <div class="min-w-0">
+              <p class="text-[13px] font-bold text-ink-2">{t.name}</p>
+              <p class="text-[11px] text-ink-3">{t.role} · <span class="num font-semibold">{t.metric}</span></p>
+            </div>
           </div>
+          <blockquote class="mt-3 text-[15px] font-medium leading-relaxed text-ink">
+            “{t.text}”
+          </blockquote>
         </div>
       ))}
     </div>

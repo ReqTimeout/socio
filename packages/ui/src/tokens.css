@@ -79,6 +79,24 @@
   --color-status-canceled: #b91c1c;
   --color-status-partial: #6d28d9;
 
+  /* ---- Mango playful accent (F0) ----
+   * Aksen opsional untuk maskot/sticker/confetti/indicator. Primary tetap
+   * indigo — mango TIDAK dipakai untuk CTA fill atau teks body.
+   * Kontras terverifikasi: mango-700 on white 5.43:1, on mango-100 4.61:1. */
+  --color-mango-50: #fdf6e3;
+  --color-mango-100: #f8ecc8;
+  --color-mango-200: #f3d98f;
+  --color-mango-300: #edc65e;
+  --color-mango-400: #e6b33c;
+  --color-mango-500: #d9a514;
+  --color-mango-600: #b98600;
+  --color-mango-700: #8a6300;
+  --color-mango-800: #5c4300;
+  --color-mango-900: #3a2b00;
+  --color-mango: var(--color-mango-500);
+  --color-mango-soft: var(--color-mango-100);
+  --color-mango-ink: var(--color-mango-800);
+
   /* ---- Typography ---- */
   /* "* Variable" = nama family dari @fontsource-variable (self-host di app) */
   --font-sans:
@@ -110,12 +128,16 @@
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
   /* Tweened numerics (saldo counter, KPI) + small UI hover */
   --ease-out-quad: cubic-bezier(0, 0, 0.2, 1);
+  /* Playful pop (F0): sticker/chip/mascot entrance. CSS + svelte backOut pair. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* Motion duration scale (UIUXADMIN §4) — micro:press/hover, macro:drawer/dialog, page:view-transition */
   --dur-micro: 140ms;
   --dur-macro: 260ms;
   --dur-page: 380ms;
   --dur-stagger: 45ms;
+  /* Playful pop duration (F0) */
+  --dur-pop: 400ms;
 
   /* Admin density (UIUXADMIN §2) — table rows + compact table text */
   --spacing-row: 44px;
@@ -198,6 +220,10 @@
   --color-danger-ink: #fca5a5;
   --color-primary-ink: #a5b4fc;
   --color-accent-ink: var(--color-accent-400);
+  /* Mango playful (F0): soft gelap + ink terang.
+   * Terverifikasi: mango-ink on soft 10.75:1, on surface 12.62:1. */
+  --color-mango-soft: #2e230a;
+  --color-mango-ink: #f6d47c;
 
   /* Status: di dark mode perlu lebih TERANG agar teks badge kontras di
      surface gelap (light-mode pakai -700 yang terlalu gelap di sini). */

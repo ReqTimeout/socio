@@ -1,11 +1,17 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { AuthBackdrop, Button, Icon } from "@socio/ui";
+  import { AuthBackdrop, Button, Icon, Mascot, ConfettiBurst } from "@socio/ui";
   import { renderTurnstile } from "$lib/turnstile";
 
   let { data, form } = $props<{ data: typeof data; form: import("./$types").ActionData }>();
   let loading = $state(false);
   let emailValid = $state(false);
+  let confettiFire = $state(0);
+
+  // Rayakan link terkirim 1× (F6, no-op saat reduced-motion)
+  $effect(() => {
+    if (form?.success) confettiFire += 1;
+  });
 
   const sitekey = $derived(data.turnstileSitekey);
   let turnstileEl = $state<HTMLElement | null>(null);
@@ -35,8 +41,11 @@
   <AuthBackdrop variant="default" />
   <div class="relative z-10 flex-1 flex flex-col justify-center max-w-sm w-full mx-auto">
     <div class="mb-8 text-center">
+      <div class="flex justify-center">
+        <Mascot pose="wave" size={56} class="float-slow text-primary" />
+      </div>
       <div
-        class="font-display font-extrabold text-3xl text-primary tracking-tight animate-[authIn_420ms_var(--ease-out-soft)_both]"
+        class="mt-2 font-display font-extrabold text-3xl text-primary tracking-tight animate-[authIn_420ms_var(--ease-out-soft)_both]"
       >
         socio<span class="text-accent-700">.id</span>
       </div>
@@ -47,10 +56,13 @@
 
     {#if form?.success}
       <div
-        class="rounded-2xl bg-success-soft text-success text-sm px-4 py-4 font-medium flex items-start gap-2.5 animate-[authIn_300ms_var(--ease-out-soft)_both]"
+        class="relative overflow-visible rounded-2xl bg-success-soft text-success text-sm px-4 py-4 font-medium flex items-start gap-2.5 animate-[authIn_300ms_var(--ease-out-soft)_both]"
         role="status"
       >
-        <Icon name="check" size={17} stroke={2} class="shrink-0 mt-px" />
+        <ConfettiBurst fire={confettiFire} />
+        <span class="error-pop shrink-0 mt-px" aria-hidden="true"
+          ><Icon name="check" size={17} stroke={2} /></span
+        >
         <span> Jika email terdaftar, link reset sudah dikirim. Cek kotak masuk Anda. </span>
       </div>
       <div class="mt-6 text-center">
@@ -183,10 +195,28 @@
     }
   }
 
+  /* F6 playful: ikon sukses pop */
+  .error-pop {
+    display: inline-grid;
+    place-items: center;
+    animation: error-pop 350ms var(--ease-spring) both;
+  }
+  @keyframes error-pop {
+    from {
+      transform: scale(0.3);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .form-shake,
     .error-shake {
       animation: none !important;
+    }
+    .error-pop {
+      animation: none;
     }
   }
 </style>
