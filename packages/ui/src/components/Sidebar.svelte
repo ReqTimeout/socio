@@ -93,17 +93,18 @@
             onclick={() => haptic(8)}
             class="group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all
               {active
-              ? 'bg-gradient-to-r from-primary-500/12 to-accent-500/10 text-primary font-semibold shadow-sm ring-1 ring-primary/10'
+              ? 'bg-ink-900 text-ink-50 font-semibold shadow-[2px_2px_0_var(--color-ink-300)] dark:bg-ink-50 dark:text-ink-900'
               : 'text-ink-500 hover:bg-ink-50 hover:text-ink-900 hover:translate-x-0.5'}"
           >
             {#if active}
               <span
-                class="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-primary-500 to-accent-500"
+                class="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full"
+                style="background: var(--sparko-mango);"
               ></span>
             {/if}
             <span
               class="grid h-8 w-8 place-items-center rounded-lg transition-all duration-200 group-hover:scale-105
-                {active ? 'bg-primary text-white shadow-sm scale-105' : 'bg-ink-50 text-ink-500 group-hover:bg-white group-hover:shadow-sm group-hover:text-ink-700'}"
+                {active ? 'bg-white/15 text-white scale-105 dark:bg-ink-900/10 dark:text-ink-900' : 'bg-ink-50 text-ink-500 group-hover:bg-white group-hover:shadow-sm group-hover:text-ink-700'}"
             >
               <span class={active ? "nav-pop" : ""}>
                 <Icon name={item.icon} size={18} stroke={active ? 2.25 : 1.75} />

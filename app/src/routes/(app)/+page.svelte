@@ -10,7 +10,6 @@
     revealDelay,
     tweenNumber,
     EmptyOrdersArt,
-    Mascot,
     Skeleton,
     Marker,
     StickerBadge,
@@ -687,7 +686,7 @@
           ></div>
           <div class="relative mx-auto mb-3 flex items-end justify-center">
             <EmptyOrdersArt size={112} class="text-ink-300" />
-            <Mascot pose="fall" size={56} class="float-slow -ml-7 -rotate-12 text-mango-500" />
+            <Sparko pose="sad" size={60} class="-ml-7" />
           </div>
           <p class="relative text-sm font-bold text-ink-800">Pesanan pertama menunggu</p>
           <p class="relative mt-1 text-xs text-ink-500">

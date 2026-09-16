@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { EmptyBalanceArt, Mascot, Icon, revealDelay } from "@socio/ui";
+  import { EmptyBalanceArt, Sparko, Icon, BackButton, revealDelay } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { formatRupiah } from "$lib/format";
   import { goto } from "$app/navigation";
@@ -133,18 +133,7 @@
           : ""} · geser tabel di mobile
       </p>
     </div>
-    <a
-      href="/saldo"
-      class="hidden shrink-0 items-center gap-1 rounded-full bg-ink-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition active:scale-95 hover:bg-ink-800 sm:inline-flex"
-    >
-      <Icon name="chevron_left" size={14} />
-      Ringkasan
-    </a>
-    <a
-      href="/saldo"
-      class="inline-flex min-h-[24px] shrink-0 items-center text-xs font-bold text-primary sm:hidden"
-      >Ringkasan ›</a
-    >
+    <BackButton href="/saldo" label="Ringkasan" class="shrink-0" />
   </div>
 
   <!-- Summary all-time — sticker-sm tilt berhadapan (APP V2 §6.4) -->
@@ -218,7 +207,7 @@
     <div class="rounded-2xl border border-dashed border-ink-200 bg-surface p-8 text-center">
       <div class="relative mx-auto mb-2 flex w-fit items-end justify-center">
         <EmptyBalanceArt size={96} class="text-ink-300" />
-        <Mascot pose="fall" size={48} class="float-slow -ml-6 -rotate-12 text-mango-500" />
+        <Sparko pose="sad" size={52} class="-ml-6" />
       </div>
       <p class="text-sm font-bold text-ink-800">
         {currentType

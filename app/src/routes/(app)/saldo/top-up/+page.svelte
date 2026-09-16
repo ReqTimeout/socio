@@ -10,7 +10,8 @@
     SuccessTopupArt,
     EmptyBalanceArt,
     Marker,
-    Mascot,
+    Sparko,
+    BackButton,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -107,13 +108,7 @@
 
 <section class="space-y-5 lg:grid lg:grid-cols-[1.45fr_0.75fr] lg:gap-6 lg:space-y-0">
   <div class="lg:col-span-2 flex items-center gap-2">
-    <a
-      href="/saldo"
-      aria-label="Kembali ke Saldo"
-      class="grid h-9 w-9 place-items-center rounded-full hover:bg-ink-100 -ml-1"
-    >
-      <Icon name="chevron_left" size={20} />
-    </a>
+    <BackButton href="/saldo" label="Saldo" />
     <h1 class="font-display text-lg font-bold tracking-tight lg:text-[1.55rem]">Top Up Saldo</h1>
     <!-- Stepper ringkas — 3 langkah di satu layar (P3-06): nominal → transfer → konfirmasi -->
     <div
@@ -419,7 +414,7 @@
   <div class="space-y-4">
     <div class="relative overflow-visible rounded-2xl bg-success/10 p-4 text-center">
       <ConfettiBurst fire={confettiFire} />
-      <Mascot pose="fly" size={36} class="absolute -top-2 right-3 rotate-12 opacity-90" />
+      <Sparko pose="celebrate" size={44} class="absolute -top-2 right-3 rotate-12 opacity-90" />
       <SuccessTopupArt size={72} class="mx-auto text-success" />
       <div class="mt-1 text-sm font-bold text-success">Invoice Dibuat</div>
       <div class="text-xs text-ink-600">Transfer dalam 24 jam agar tidak kedaluwarsa</div>

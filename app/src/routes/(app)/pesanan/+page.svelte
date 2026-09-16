@@ -8,7 +8,7 @@
     toast,
     revealDelay,
     EmptyOrdersArt,
-    Mascot,
+    Sparko,
     LiveDot,
     Skeleton,
     ConfettiBurst,
@@ -327,14 +327,14 @@
       {#if data.filter === "all"}
         <div class="relative mx-auto mb-3 flex items-end justify-center">
           <EmptyOrdersArt size={112} class="text-ink-300" />
-          <Mascot pose="fall" size={52} class="float-slow -ml-6 -rotate-12 text-mango-500" />
+          <Sparko pose="sad" size={56} class="-ml-6" />
         </div>
         <p class="relative text-sm font-bold text-ink-800">{copy.empty.orders.title}</p>
         <p class="relative mt-1 text-xs leading-relaxed text-ink-500">
           {copy.empty.orders.desc}
         </p>
       {:else}
-        <Mascot pose="wave" size={64} class="float-slow relative mx-auto mb-3 text-primary" />
+        <Sparko pose="idle" size={56} class="relative mx-auto mb-3" />
         <p class="relative text-sm font-bold text-ink-800">
           Tidak ada pesanan {tabs.find((t) => t.f === data.filter)?.label ?? ""}
         </p>

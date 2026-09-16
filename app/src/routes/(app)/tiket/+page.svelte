@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
-  import { Input, Button, toast, revealDelay, hoverLift, EmptyTicketsArt } from "@socio/ui";
+  import { Input, Button, toast, revealDelay, hoverLift, EmptyTicketsArt, Sparko, BackButton } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { applyAction, enhance } from "$app/forms";
@@ -33,10 +33,6 @@
     haptic();
     goto(`/tiket?ticket=${id}`, { keepFocus: true, noScroll: true });
   }
-  function back() {
-    haptic();
-    goto("/tiket", { noScroll: true });
-  }
   function timeAgo(d: Date | string) {
     const date = new Date(d);
     const time = new Intl.DateTimeFormat("id-ID", {
@@ -58,12 +54,7 @@
 <section class="space-y-4 lg:space-y-5">
   {#if data.activeId}
     <!-- Detail -->
-    <button
-      onclick={back}
-      class="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-3 py-1.5 text-sm font-semibold text-ink-600 transition hover:bg-ink-50 hover:text-ink-800"
-    >
-      <span aria-hidden="true">‹</span> Kembali ke daftar
-    </button>
+    <BackButton href="/tiket" label="Daftar" />
     <div class="rounded-2xl border border-ink-100 bg-surface p-4 shadow-sm lg:p-5">
       <h1 class="font-display text-base font-bold lg:text-lg">
         {data.messages[0]?.type === "user"
@@ -200,6 +191,9 @@
           class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
         ></div>
         <EmptyTicketsArt size={112} class="relative mx-auto mb-3 text-ink-300" />
+        <div class="relative mx-auto -mt-8 mb-2 flex w-fit translate-x-12 justify-end" aria-hidden="true">
+          <Sparko pose="wave" size={44} />
+        </div>
         <p class="relative text-sm font-bold text-ink-800">{copy.empty.tickets.title}</p>
         <p class="relative mt-1 text-xs leading-relaxed text-ink-500">{copy.empty.tickets.desc}</p>
       </div>

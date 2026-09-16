@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, Button, toast, revealDelay, EmptyNotifArt, Mascot, SwipeRow } from "@socio/ui";
+  import { Icon, Button, toast, revealDelay, EmptyNotifArt, Sparko, SwipeRow } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { goto } from "$app/navigation";
@@ -167,7 +167,7 @@
         class="relative mx-auto -mt-8 mb-2 flex w-fit translate-x-10 justify-end"
         aria-hidden="true"
       >
-        <Mascot pose="fly" size={40} class="float-slow -rotate-12 text-mango-500" />
+        <Sparko pose="idle" size={44} />
       </div>
       <p class="relative text-sm font-bold text-ink-800">{copy.empty.notif.title}</p>
       <p class="relative mt-1 text-xs leading-relaxed text-ink-500">{copy.empty.notif.desc}</p>

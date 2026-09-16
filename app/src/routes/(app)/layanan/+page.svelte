@@ -6,7 +6,7 @@
     Skeleton,
     revealDelay,
     EmptyServicesArt,
-    Mascot,
+    Sparko,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -217,7 +217,7 @@
       <div class="shake-once flex flex-col items-center justify-center py-14 text-center">
         <div class="relative flex items-end justify-center">
           <EmptyServicesArt size={132} class="text-ink-300" />
-          <Mascot pose="fly" size={48} class="float-slow -ml-8 -rotate-12 text-mango-500" />
+          <Sparko pose="sad" size={52} class="-ml-8" />
         </div>
         <h2 class="mt-4 font-display text-lg font-bold text-ink-900">
           {copy.empty.services.title}

@@ -9,6 +9,7 @@
     revealDelay,
     StickerCard,
     Marker,
+    Sparko,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -206,6 +207,9 @@
         class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
       ></div>
       <EmptyAffiliateArt size={104} class="relative mx-auto mb-2 text-ink-300" />
+      <div class="relative mx-auto -mt-6 mb-2 flex w-fit translate-x-12 justify-end" aria-hidden="true">
+        <Sparko pose="wave" size={44} />
+      </div>
       <p class="relative text-sm font-bold text-ink-800">{copy.empty.affiliate.title}</p>
       <p class="relative mt-1 text-xs leading-relaxed text-ink-500">{copy.empty.affiliate.desc}</p>
       <Button onclick={share} size="sm" class="relative mt-3">{copy.affiliate.cta}</Button>
