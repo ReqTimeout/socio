@@ -1,6 +1,5 @@
 <script>
-  import { motion } from '@humanspeak/svelte-motion';
-  // V2 §5.8 TestiWall — human touch puncak: kolom marquee chat (A5-Y) + 3 polaroid.
+  // V2 §5.8 TestiWall — kolom marquee chat (A5-Y).
   // ⚠ TODO(testimoni-asli): kutipan di bawah ini PLACEHOLDER pola ("Rina/Bagas/Agus"
   // persona §1.4) — GANTI dengan testimoni + foto asli dari owner SEBELUM merge ke
   // prod (risiko iklan menyesatkan, PLAN §5.8). Staging preview dulu (§9).
@@ -11,14 +10,6 @@
     { text: 'Harga grosirnya transparan di katalog. Margin ku hitung sebelum order, bukan sesudah. Enak buat jualan lagi.', name: 'Sari', role: 'Reseller TikTok · Medan' },
   ];
   const loop = [...chats, ...chats];
-  const polaroids = [
-    { initial: 'R', tilt: 'tilt-l', caption: 'klien pertama dari TikTok' },
-    { initial: 'A', tilt: 'tilt-r', caption: '20 klien, 1 dashboard' },
-    { initial: 'B', tilt: 'tilt-l-sm', caption: 'repeat order tiap minggu' },
-  ];
-  const reduced = typeof window !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const container = { hidden: {}, visible: { transition: { staggerChildren: reduced ? 0 : 0.08 } } };
-  const item = { hidden: { opacity: reduced ? 1 : 0, y: reduced ? 0 : 12 }, visible: { opacity: 1, y: 0, transition: { duration: reduced ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] } } };
 </script>
 
 <section class="bg-white py-16 md:py-24" aria-labelledby="testi-title">
@@ -29,7 +20,7 @@
       </h2>
     </div>
 
-    <div class="mt-10 grid gap-8 md:mt-14 lg:grid-cols-2 lg:gap-10">
+    <div class="mx-auto mt-10 max-w-2xl md:mt-14">
       <!-- kolom marquee vertikal (reduced → grid statis, 4 kartu pertama) -->
       <div
         class="marquee-y relative h-[420px] md:h-[480px]"
@@ -48,23 +39,9 @@
         </div>
       </div>
 
-      <!-- 3 polaroid terserak -->
-      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.15 }} variants={container} class="grid content-center gap-5 sm:grid-cols-3 lg:grid-cols-1 lg:gap-6">
-        {#each polaroids as p}
-          <motion.figure
-            variants={item}
-            whileHover={reduced ? {} : { rotate: 0, scale: 1.03, transition: { duration: 0.2 } }}
-            class="{p.tilt} mx-auto w-full max-w-[240px] rounded-xl border border-[var(--hairline-strong)] bg-white p-2.5 pb-3 shadow-[4px_4px_0_var(--ink)] lg:max-w-[260px]"
-          >
-            <!-- TODO(foto-asli): ganti inisial dengan foto asli (minta ke owner). -->
-            <span class="grid aspect-square w-full place-items-center rounded-lg bg-[var(--paper-warm-2)] font-display text-[56px] font-extrabold text-ink-3" aria-hidden="true">{p.initial}</span>
-            <figcaption class="font-hand pt-1.5 text-center text-[21px] leading-tight text-ink-2">“{p.caption}”</figcaption>
-          </motion.figure>
-        {/each}
-        <p class="text-center text-[13px] text-ink-3 lg:text-left">
-          Punya pengalaman pakai socio.id? <a href="https://app.socio.id/tiket" class="font-bold text-[var(--accent-ink)] underline decoration-2 underline-offset-2">Ceritain ke kami →</a> Cerita asli pelanggan bakal tampil di sini.
-        </p>
-      </motion.div>
+      <p class="mt-6 text-center text-[13px] text-ink-3">
+        Punya pengalaman pakai socio.id? <a href="https://app.socio.id/tiket" class="font-bold text-[var(--accent-ink)] underline decoration-2 underline-offset-2">Ceritain ke kami →</a> Cerita asli pelanggan bakal tampil di sini.
+      </p>
     </div>
   </div>
 </section>
