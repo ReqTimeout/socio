@@ -102,7 +102,7 @@
   const showFab = $derived(!onPesan);
 </script>
 
-<div class="min-h-dvh bg-ink-50 text-ink-900">
+<div class="app-paper min-h-dvh text-ink-900">
   <a
     href="#main"
     class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-ink-900 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"

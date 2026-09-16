@@ -237,12 +237,9 @@
         class="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
       >
         <div class="w-full min-w-0">
-          <p
-            class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500"
-          >
-            <span class="inline-block h-px w-6 bg-ink-300"></span>
-            <span
-              >{phase === "dawn"
+          <p class="flex items-center gap-2">
+            <span class="eyebrow-mango">
+              ✦ {phase === "dawn"
                 ? "Pagi"
                 : phase === "day"
                   ? "Siang"
@@ -294,7 +291,7 @@
                 <span class="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
               </span>
               <span
-                class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary ring-1 ring-primary/20"
+                class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-xs font-bold text-sky-700 ring-1 ring-sky-500/20"
                 >Aktif</span
               >
             {:else}
@@ -352,8 +349,8 @@
           href={item.href}
           onclick={() => haptic(8)}
           style={revealDelay(i, 0, 60)}
-          class="reveal card-lift tile-press group flex min-w-0 items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
-            lg:flex-col lg:items-start lg:gap-2 lg:py-3 lg:px-3 {item.glow}"
+          class="reveal card-lift tile-press group flex min-w-0 items-center gap-3 rounded-2xl border-2 border-ink-900 bg-surface p-3.5 shadow-[2px_2px_0_var(--color-ink-900)]
+            lg:flex-col lg:items-start lg:gap-2 lg:py-3 lg:px-3 hover:rotate-0 {i % 2 === 0 ? '-rotate-1' : 'rotate-1'} {item.glow}"
         >
           <span
             class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br {item.chip}
@@ -378,12 +375,7 @@
        bukan void kosong, supaya belajar bahwa fitur ini ada. -->
   <div class="reveal" style={revealDelay(0, 80)}>
     <div class="mb-2.5 flex items-center justify-between">
-      <h2 class="flex items-center gap-1.5 font-display text-base font-bold tracking-tight">
-        <span
-          class="grid h-6 w-6 place-items-center rounded-lg bg-gradient-to-br from-accent-400 to-accent-600 text-white"
-        >
-          <Icon name="zap" size={13} stroke={2.25} />
-        </span>
+      <h2 class="sec-title font-display text-base font-extrabold tracking-tight lg:text-[17px]">
         Pesan Cepat
       </h2>
       {#if data.quickOrders?.length}
@@ -404,10 +396,8 @@
               : ''}"
             onclick={() => haptic(10)}
             style={revealDelay(i, 0, 50)}
-            class="reveal card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border bg-surface p-4
-              lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5 {i === 0
-              ? 'border-ink-900 shadow-[2px_2px_0_var(--color-ink-900)]'
-              : 'border-ink-100'}"
+            class="reveal card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border-2 border-ink-900 bg-surface p-4 shadow-[2px_2px_0_var(--color-ink-900)] transition-transform duration-200 hover:rotate-0
+              lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5 {i % 2 === 0 ? '-rotate-1' : 'rotate-1'}"
           >
             <span
               class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-sm transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
@@ -432,7 +422,7 @@
               </span>
             </span>
             <span
-              class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white"
+              class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-sky-500/10 text-sky-700 transition-colors group-hover:bg-sky-500 group-hover:text-white"
             >
               <Icon name="chevron_right" size={14} stroke={2.5} />
             </span>
@@ -445,7 +435,7 @@
         class="flex items-center gap-3 rounded-2xl border border-dashed border-ink-200 bg-surface px-4 py-3.5"
       >
         <span
-          class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/5 text-primary"
+          class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-600"
         >
           <Icon name="zap" size={18} stroke={1.75} />
         </span>
@@ -460,7 +450,7 @@
         <a
           href="/layanan"
           onclick={() => haptic(8)}
-          class="hidden shrink-0 items-center gap-1 rounded-full bg-primary/10 px-3.5 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20 sm:inline-flex"
+          class="hidden shrink-0 items-center gap-1 rounded-full bg-sky-500/10 px-3.5 py-2 text-xs font-bold text-sky-700 transition-colors hover:bg-sky-500/20 sm:inline-flex"
         >
           Lihat Katalog
           <Icon name="chevron_right" size={13} stroke={2.5} />
@@ -582,7 +572,7 @@
           </div>
           <a
             href="/pesanan"
-            class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-primary hover:text-primary-800"
+            class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-sky-700 hover:text-sky-800"
           >
             Detail
             <Icon name="chevron_right" size={14} />
@@ -591,8 +581,8 @@
         {#if hasActivity}
           <Chart
             series={[
-              { label: "Pesanan", data: data.chart.orders },
-              { label: "Deposit", data: data.chart.deposits },
+              { label: "Pesanan", data: data.chart.orders, color: "#38bdf8" },
+              { label: "Deposit", data: data.chart.deposits, color: "#fbbf24" },
             ]}
             labels={data.chart.labels}
             height={220}
@@ -658,7 +648,7 @@
     <div class="lg:col-span-5 lg:sticky lg:top-20 self-start">
       <div class="mb-3 flex items-center justify-between gap-2">
         <div class="flex items-center gap-2">
-          <h2 class="font-display text-base font-bold tracking-tight lg:text-[17px]">
+          <h2 class="sec-title font-display text-base font-extrabold tracking-tight lg:text-[17px]">
             Pesanan Terbaru
           </h2>
           <LiveDot
@@ -670,7 +660,7 @@
         </div>
         <a
           href="/pesanan"
-          class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-primary hover:text-primary-800"
+          class="flex min-h-[24px] items-center gap-0.5 text-xs font-bold text-sky-700 hover:text-sky-800"
         >
           Lihat semua
           <Icon name="chevron_right" size={14} />

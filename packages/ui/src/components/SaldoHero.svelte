@@ -63,10 +63,12 @@
     aria-hidden="true"
   ></div>
   <div
-    class="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-white/12 blur-2xl"
+    class="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-sky-400/25 blur-2xl pointer-events-none"
+    aria-hidden="true"
   ></div>
   <div
-    class="absolute -bottom-12 -left-8 h-36 w-36 rounded-full bg-emerald-300/18 blur-3xl"
+    class="absolute -bottom-12 -left-8 h-36 w-36 rounded-full bg-amber-400/15 blur-3xl pointer-events-none"
+    aria-hidden="true"
   ></div>
   <svg class="absolute inset-0 h-full w-full opacity-[0.06]" aria-hidden="true">
     <defs>
@@ -84,7 +86,7 @@
     >
       <Sparkline
         data={trend}
-        color="#ffffff"
+        color="#38bdf8"
         height={64}
         strokeWidth={2}
         fill={false}
@@ -112,7 +114,7 @@
     </div>
 
     <p
-      class="font-display font-extrabold text-[2rem] lg:text-[2.45rem] leading-tight tabular-nums tracking-tight mt-2 drop-shadow-[0_1px_0_rgba(0,0,0,0.12)]"
+      class="font-display font-extrabold text-[2rem] lg:text-[2.45rem] leading-tight tabular-nums tracking-tight mt-2 text-[#fbbf24] drop-shadow-[0_1px_0_rgba(0,0,0,0.3)]"
     >
       <NumberFlow value={balance} format={fmt} duration={0.9} />
     </p>
@@ -190,9 +192,8 @@
       <a
         href={ctaHref}
         onclick={() => haptic(10)}
-        class="inline-flex items-center gap-1.5 rounded-full bg-white text-emerald-700 font-bold px-5 py-2.5 text-sm
-          transition-all duration-150 active:scale-95 hover:bg-white/95 focus-ring-on-accent
-          shadow-[0_6px_18px_-4px_rgba(0,0,0,0.25)]"
+        class="inline-flex items-center gap-1.5 rounded-full bg-[#fbbf24] text-[#1a1a1a] font-extrabold px-5 py-2.5 text-sm border-2 border-[#fbbf24]
+          shadow-[2px_2px_0_rgba(0,0,0,0.45)] transition-all duration-150 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:brightness-105"
       >
         <Icon name="plus" size={16} stroke={2.5} />
         {ctaLabel}
@@ -211,20 +212,19 @@
 </section>
 
 <style>
-  /* Emerald "money" — static premium, no drift (requested) */
+  /* Panel ink ala preview .usage (APP V3 R5) — SELALU gelap (hex hardcoded,
+     bukan token) supaya teks putih + angka mango aman di light & dark mode. */
   .saldo-hero {
     box-shadow:
-      0 18px 48px -14px rgba(16, 122, 78, 0.42),
-      0 6px 16px -4px rgba(16, 122, 78, 0.18);
+      0 18px 48px -14px rgba(0, 0, 0, 0.5);
   }
-  /* APP V2 C3 — sticker chrome di atas identitas emerald (border + hard shadow).
-     Radius + shadow ikut token (dark remap otomatis). */
+  /* Sticker chrome di panel gelap: border + shadow terang. */
   .saldo-sticker {
-    border: var(--sticker-border);
+    border: 2px solid rgb(255 255 255 / 0.28);
     border-radius: var(--radius-sticker);
     box-shadow:
-      var(--sticker-shadow),
-      0 18px 48px -14px rgba(16, 122, 78, 0.42);
+      3px 3px 0 rgb(255 255 255 / 0.22),
+      0 18px 48px -14px rgba(0, 0, 0, 0.5);
   }
   @keyframes saldo-breathe {
     0%, 100% { opacity: 0.35; }
@@ -246,12 +246,11 @@
   }
   .saldo-grad {
     background: linear-gradient(
-      110deg,
-      #0f7a4e 0%,
-      #16a34a 35%,
-      #10b981 55%,
-      #059669 75%,
-      #047857 100%
+      120deg,
+      #141414 0%,
+      #232323 40%,
+      #1a1a1a 70%,
+      #2b2b2b 100%
     );
   }
   @keyframes emeraldDrift {

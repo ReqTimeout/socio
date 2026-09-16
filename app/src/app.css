@@ -39,6 +39,49 @@
    component's classes are scanned. */
 @source "../../packages/ui/src";
 
+/* APP V3 reskin (R1) — paper-warm + dot grid ala sparko-preview.
+ * Dark mode: dots mati, bg ink-950 (permukaan lain ikut token remap). */
+.app-paper {
+  background-color: var(--sparko-paper);
+  background-image: radial-gradient(circle, rgb(26 26 26 / 0.07) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.dark .app-paper {
+  background-color: var(--color-surface);
+  background-image: none;
+}
+
+/* APP V3 reskin (R2) — eyebrow mango + section bar ala sparko-preview */
+.eyebrow-mango {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--sparko-mango);
+  color: #1a1a1a;
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 5px 12px;
+  border: 2px solid var(--color-ink-900);
+  border-radius: 999px;
+  box-shadow: 2px 2px 0 var(--color-ink-900);
+  transform: rotate(-1.5deg);
+}
+.sec-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sec-title::before {
+  content: "";
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-ink-900);
+  flex-shrink: 0;
+}
+
 /* Respect OS reduced-motion preference — matikan animasi non-esensial */
 @media (prefers-reduced-motion: reduce) {
   *,
