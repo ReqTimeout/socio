@@ -12,6 +12,9 @@
     EmptyOrdersArt,
     Mascot,
     Skeleton,
+    Marker,
+    StickerBadge,
+    ConfettiBurst,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { navigating } from "$app/state";
@@ -165,6 +168,20 @@
     statDeposit.set(data.stats.totalDeposit ?? 0, { duration: d });
     statSpent.set(data.stats.totalSpent ?? 0, { duration: d });
   });
+
+  // VIP confetti 1× seumur browser (APP V2 §4.2 M6 — flag localStorage, no repeat).
+  const isVip = $derived((data.stats.totalDeposit ?? 0) >= 5_000_000);
+  let vipConfetti = $state(0);
+  onMount(() => {
+    if (!isVip) return;
+    try {
+      if (localStorage.getItem("socio-celebrated-vip")) return;
+      localStorage.setItem("socio-celebrated-vip", "1");
+      vipConfetti++;
+    } catch {
+      // storage penuh/diblokir — lewati selebrasi, fungsi tetap jalan
+    }
+  });
 </script>
 
 <svelte:head>
@@ -215,10 +232,7 @@
             class="mt-1 font-display text-2xl font-extrabold tracking-tight lg:text-[2.25rem] lg:leading-[1.05] lg:tracking-[-0.02em]"
           >
             {greeting},
-            <span
-              class="bg-gradient-to-br from-primary-700 to-accent-600 bg-clip-text text-transparent"
-              >{firstName}</span
-            >
+            <Marker>{firstName}</Marker>
             <span class="inline-block motion-safe:animate-[wave_2s_ease-in-out_1]"
               >{greetEmoji}</span
             >
@@ -248,7 +262,7 @@
         </div>
         <a
           href="/akun"
-          class="group flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-600 to-accent-600 px-3 py-1.5 text-xs font-bold text-white shadow-[0_6px_16px_-8px_rgba(79,70,229,0.7)] transition-all active:scale-95 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_-8px_rgba(79,70,229,0.6)] motion-safe:animate-[pop_480ms_cubic-bezier(0.16,1,0.3,1)] lg:px-4 lg:py-2 lg:gap-2 lg:text-[13px]"
+          class="group flex shrink-0 -rotate-1 items-center gap-1.5 rounded-full border-2 border-ink-900 bg-gradient-to-r from-primary-600 to-accent-600 px-3 py-1.5 text-xs font-bold text-white shadow-[2px_2px_0_var(--color-ink-900)] transition-all active:scale-95 hover:-translate-y-0.5 motion-safe:animate-[pop_480ms_cubic-bezier(0.16,1,0.3,1)] lg:px-4 lg:py-2 lg:gap-2 lg:text-[13px]"
         >
           <Icon
             name="sparkles"
@@ -343,8 +357,10 @@
               : ''}"
             onclick={() => haptic(10)}
             style={revealDelay(i, 0, 50)}
-            class="reveal card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-4
-              lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5"
+            class="reveal card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border bg-surface p-4
+              lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5 {i === 0
+              ? 'border-ink-900 shadow-[2px_2px_0_var(--color-ink-900)]'
+              : 'border-ink-100'}"
           >
             <span
               class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-sm transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
@@ -358,9 +374,13 @@
               <span
                 class="mt-0.5 flex items-center gap-1 truncate text-[11px] leading-snug text-ink-500"
               >
-                <span class="rounded-full bg-ink-100 px-1.5 py-0.5 font-bold text-ink-600"
-                  >{q.times > 1 ? `${q.times}×` : "Baru"}</span
-                >
+                {#if i === 0}
+                  <StickerBadge>Favoritmu ✦</StickerBadge>
+                {:else}
+                  <span class="rounded-full bg-ink-100 px-1.5 py-0.5 font-bold text-ink-600"
+                    >{q.times > 1 ? `${q.times}×` : "Baru"}</span
+                  >
+                {/if}
                 <span>sentuh untuk pesan lagi</span>
               </span>
             </span>
@@ -412,13 +432,14 @@
   >
     {#if (data.stats.totalDeposit ?? 0) >= 5_000_000}
       <div
-        class="col-span-full -mx-2 mb-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 px-3 py-2 text-white shadow-sm sm:-mx-4 lg:-mx-6"
+        class="relative col-span-full -mx-2 mb-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 px-3 py-2 text-white shadow-sm sm:-mx-4 lg:-mx-6"
       >
+        <ConfettiBurst fire={vipConfetti} />
         <span class="flex items-center gap-1.5 text-xs font-bold tracking-wide">
           <span class="grid h-6 w-6 place-items-center rounded-full bg-white/20 backdrop-blur">
             <Icon name="star" size={12} stroke={2.5} />
           </span>
-          VIP — Deposit di atas 5 juta
+          <Marker>VIP</Marker> — Deposit di atas 5 juta
         </span>
         <span class="text-[11px] font-semibold opacity-90"
           >Terima kasih sudah percaya — Sahabat Socio!</span
@@ -702,7 +723,9 @@
                   </div>
                 </div>
                 <div class="flex flex-col items-end gap-1">
-                  <StatusBadge status={o.status} />
+                  {#key o.status}
+                    <StatusBadge status={o.status} />
+                  {/key}
                   <span class="text-[10px] text-ink-500">{timeAgo(o.createdAt)}</span>
                 </div>
               </a>

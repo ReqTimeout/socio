@@ -12,6 +12,7 @@
     Fab,
     Wordmark,
     NotifBell,
+    Mascot,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
 
@@ -67,7 +68,10 @@
   const isAdminUser = $derived((data.user as any)?.level === "Admin");
   const sidebarItems = $derived(
     isAdminUser
-      ? [...sidebarBase, { href: "/admin", label: "Dashboard Admin", icon: "shield", section: "Lainnya" }]
+      ? [
+          ...sidebarBase,
+          { href: "/admin", label: "Dashboard Admin", icon: "shield", section: "Lainnya" },
+        ]
       : sidebarBase,
   );
 
@@ -86,6 +90,9 @@
     "/notif": "Notifikasi",
   };
   const pageTitle = $derived(pageTitles[$page.url.pathname] ?? "socio.id");
+  // Greeting mikro header desktop — HANYA dashboard (APP V2 §5.3)
+  const isDashboard = $derived($page.url.pathname === "/");
+  const firstName = $derived((data.user?.name ?? data.user?.username ?? "").split(" ")[0] || "");
 
   // FAB UX1: tampil hanya di mobile (< lg) DAN bukan di halaman /pesan.
   // Desktop tidak butuh FAB karena sidebar desktop sudah punya semua menu.
@@ -110,8 +117,15 @@
     style="view-transition-name: app-header;"
   >
     <div class="flex h-14 items-center justify-between gap-3 px-4">
-      <a href="/" class="inline-flex min-h-[24px] shrink-0 items-center" aria-label="Socio.id — Beranda">
+      <a
+        href="/"
+        class="inline-flex min-h-[24px] shrink-0 items-center gap-1.5"
+        aria-label="Socio.id — Beranda"
+      >
         <Wordmark size="sm" />
+        <span class="wiggle-once inline-flex" aria-hidden="true">
+          <Mascot pose="wave" size={16} />
+        </span>
       </a>
       <div class="flex items-center gap-2">
         <NotifBell count={data.unreadCount} />
@@ -137,7 +151,11 @@
     style="view-transition-name: app-header-desktop;"
   >
     <div class="mx-auto flex w-full max-w-7xl items-center justify-between px-10">
-      <span class="font-display text-lg font-bold text-ink-900 tracking-tight">{pageTitle}</span>
+      <span class="font-display text-lg font-bold text-ink-900 tracking-tight">
+        {#if isDashboard && firstName}
+          <span class="mr-2 text-sm font-semibold text-ink-500">Halo, {firstName} ✦</span>
+        {/if}{pageTitle}</span
+      >
       <NotifBell count={data.unreadCount} />
     </div>
   </header>
@@ -292,7 +310,8 @@
             onclick={() => (showAccountSheet = false)}
             class="flex items-center justify-between rounded-xl border border-primary-200 bg-primary-50 px-3 py-3 text-sm font-bold text-primary-700 hover:bg-primary-100"
           >
-            <span class="flex items-center gap-2"><Icon name="shield" size={16} /> Dashboard Admin</span
+            <span class="flex items-center gap-2"
+              ><Icon name="shield" size={16} /> Dashboard Admin</span
             ><span>›</span>
           </a>
         {/if}

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { fly, fade } from "svelte/transition";
   import Icon from "./Icon.svelte";
   import { haptic } from "../haptic.js";
@@ -25,6 +25,29 @@
   let unread = $state(0);
   let loading = $state(false);
   let root = $state<HTMLDivElement | null>(null);
+
+  // M7 bell ring 1× saat unread BERTAMBAH (bukan tiap render, bukan saat mount).
+  // Gate reduced-motion; timer dibersihkan saat unmount.
+  let ringing = $state(false);
+  let ringTimer: ReturnType<typeof setTimeout> | null = null;
+  let prevUnread = 0;
+  let firstSync = true;
+  const reducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  $effect(() => {
+    const now = unread;
+    if (firstSync) {
+      firstSync = false;
+    } else if (!reducedMotion && now > prevUnread) {
+      ringing = true;
+      if (ringTimer) clearTimeout(ringTimer);
+      ringTimer = setTimeout(() => {
+        ringing = false;
+      }, 900);
+    }
+    prevUnread = now;
+  });
 
   // sinkronkan props reaktif ke state lokal (props initial/count bisa berubah saat nav)
   $effect(() => {
@@ -110,13 +133,32 @@
 
   function onWindowClick(e: MouseEvent) {
     if (open && root && !root.contains(e.target as Node)) open = false;
-  }
-  function onKey(e: KeyboardEvent) {
+  }  function onKey(e: KeyboardEvent) {
     if (e.key === "Escape" && open) open = false;
   }
+
+  onDestroy(() => {
+    if (ringTimer) clearTimeout(ringTimer);
+  });
 </script>
 
 <svelte:window onclick={onWindowClick} onkeydown={onKey} />
+
+<style>
+  /* M7 — bell ring 1× 900ms saat unread bertambah (transform only) */
+  .bell-ring {
+    animation: bell-ring 900ms ease-in-out 1;
+    transform-origin: 50% 0;
+  }
+  @keyframes bell-ring {
+    0%, 100% { transform: rotate(0); }
+    15% { transform: rotate(14deg); }
+    30% { transform: rotate(-12deg); }
+    45% { transform: rotate(8deg); }
+    60% { transform: rotate(-6deg); }
+    75% { transform: rotate(3deg); }
+  }
+</style>
 
 <div bind:this={root} class="relative">
   <button
@@ -127,7 +169,9 @@
     aria-expanded={open}
     class="relative grid h-9 w-9 place-items-center rounded-full bg-surface text-ink-700 shadow-sm ring-1 ring-ink-100 transition active:scale-90 hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
   >
-    <Icon name="bell" size={18} />
+    <span class={ringing ? "bell-ring" : ""} style="display: grid; place-items: center;">
+      <Icon name="bell" size={18} />
+    </span>
     {#if hasUnread}
       <span
         class="absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-danger px-1 text-[10px] font-extrabold leading-none text-ink-50 shadow-[0_2px_8px_rgba(220,38,38,0.45)] motion-safe:animate-[pulse_1.6s_ease-in-out_infinite]"

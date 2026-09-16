@@ -34,11 +34,17 @@
 </script>
 
 <section
-  class="saldo-hero group relative overflow-hidden rounded-2xl bg-emerald-gradient text-white px-5 py-3 lg:px-6 lg:py-6 safe-top"
+  class="saldo-hero saldo-sticker group relative overflow-hidden text-white px-5 py-3 lg:px-6 lg:py-6 safe-top"
 >
   <!-- static emerald — no animation (requested) -->
   <div
     class="saldo-grad pointer-events-none absolute inset-0"
+    aria-hidden="true"
+  ></div>
+  <!-- M15 breathing glow — opacity layer saja (bukan animasi shadow), 4s halus -->
+  <div
+    class="pointer-events-none absolute inset-0 motion-safe:animate-[saldo-breathe_4s_ease-in-out_infinite]"
+    style="background: radial-gradient(70% 60% at 50% 0%, rgba(255,255,255,0.22), transparent 70%);"
     aria-hidden="true"
   ></div>
   <div
@@ -183,6 +189,19 @@
     box-shadow:
       0 18px 48px -14px rgba(16, 122, 78, 0.42),
       0 6px 16px -4px rgba(16, 122, 78, 0.18);
+  }
+  /* APP V2 C3 — sticker chrome di atas identitas emerald (border + hard shadow).
+     Radius + shadow ikut token (dark remap otomatis). */
+  .saldo-sticker {
+    border: var(--sticker-border);
+    border-radius: var(--radius-sticker);
+    box-shadow:
+      var(--sticker-shadow),
+      0 18px 48px -14px rgba(16, 122, 78, 0.42);
+  }
+  @keyframes saldo-breathe {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
   }
   .saldo-grad {
     background: linear-gradient(

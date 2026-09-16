@@ -96,11 +96,15 @@
       role="dialog"
       aria-modal="true"
       aria-label={title ?? "Dialog"}
-      class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-card-hover
+      class="relative w-full max-w-lg bg-white rounded-t-[28px] sm:rounded-3xl shadow-card-hover
         max-h-[88vh] overflow-y-auto safe-bottom
         [transition:transform_320ms_cubic-bezier(0.32,0.72,0,1)]"
       style="animation: sheet-up 320ms cubic-bezier(0.32,0.72,0,1);"
     >
+      <!-- Grabber pill 36px (APP V2 §5.4) — visual saja, non-drag -->
+      <div class="flex justify-center pt-2.5 sm:hidden" aria-hidden="true">
+        <span class="h-1 w-9 rounded-full bg-ink-200"></span>
+      </div>
       <style>
         @keyframes sheet-up {
           from {

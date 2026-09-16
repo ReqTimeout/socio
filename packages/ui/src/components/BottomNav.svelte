@@ -36,6 +36,30 @@
     return $page.url.pathname.startsWith(href);
   }
 
+  // M12 — satu pill indicator geser (transform only, spring 300ms).
+  // Diukur dari anchor aktif; recompute saat pathname/resize berubah.
+  let nav = $state<HTMLElement | null>(null);
+  let ind = $state({ x: 0, w: 0, ready: false });
+  function placeIndicator() {
+    if (!nav) return;
+    const active = nav.querySelector('a[aria-current="page"]');
+    if (!(active instanceof HTMLElement)) return;
+    const nb = nav.getBoundingClientRect();
+    const b = active.getBoundingClientRect();
+    ind = { x: b.left - nb.left, w: b.width, ready: true };
+  }
+  onMount(() => {
+    placeIndicator();
+    requestAnimationFrame(placeIndicator);
+    window.addEventListener("resize", placeIndicator);
+    return () => window.removeEventListener("resize", placeIndicator);
+  });
+  // Reposisikan tiap navigasi (pathname = state filter existing, bukan state baru).
+  $effect(() => {
+    void $page.url.pathname;
+    requestAnimationFrame(placeIndicator);
+  });
+
   // Item yang dapat badge notifikasi (Tiket = balasan admin).
   // Kita tumpang di sini agar layout tidak perlu merender badge per-item.
   function badgeFor(href: string, own?: number): number | undefined {
@@ -50,6 +74,7 @@
      Solid bg-surface (tidak tembus konten), shadow berlapis = efek 3D mengambang,
      hairline gradient animasi = "hidup". -->
 <nav
+  bind:this={nav}
   class="dock-live-user lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px] border border-ink-200/70 bg-surface
     p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_18px_45px_-12px_rgba(15,23,42,0.35),0_4px_12px_rgba(15,23,42,0.12)] dark:shadow-[0_18px_45px_-12px_rgba(0,0,0,0.6),0_4px_12px_rgba(0,0,0,0.4)]
     transition-transform duration-300 ease-out will-change-transform {dockHidden
@@ -60,6 +85,14 @@
   aria-hidden={dockHidden}
   inert={dockHidden}
 >
+  {#if ind.ready}
+    <span
+      aria-hidden="true"
+      class="pointer-events-none absolute top-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] left-0 rounded-full bg-primary/10
+        motion-safe:transition-transform motion-safe:duration-300 motion-safe:[transition-timing-function:var(--ease-spring)]"
+      style="width: {ind.w}px; transform: translateX({ind.x}px);"
+    ></span>
+  {/if}
   {#each items as item (item.href)}
     {@const active = isActive(item.href)}
     <a
@@ -70,17 +103,23 @@
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-ink-900
         active:scale-[0.96]
         {active
-        ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-800 dark:text-ink-100 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
+        ? 'text-primary'
         : 'text-ink-800 hover:text-ink-900 dark:hover:text-ink-200'}"
     >
       <span class="relative">
         <span
           class="grid place-items-center transition-transform duration-300 {active
-            ? 'dock-bounce scale-[1.02]'
+            ? 'dock-bounce scale-105'
             : 'group-active:scale-95'}"
         >
           <Icon name={item.icon} size={20} stroke={active ? 2.4 : 1.9} />
         </span>
+        {#if active}
+          <span
+            class="absolute -bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full"
+            style="background: var(--pop-mango);"
+          ></span>
+        {/if}
         {#if badgeFor(item.href, item.badge)}
           <span
             class="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 grid place-items-center rounded-full bg-danger text-ink-50 text-[9px] font-bold leading-none ring-2 ring-white dark:ring-ink-900 shadow-sm"

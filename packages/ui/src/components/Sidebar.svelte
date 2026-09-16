@@ -5,6 +5,7 @@
   import Avatar from "./Avatar.svelte";
   import Wordmark from "./Wordmark.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
+  import Mascot from "./Mascot.svelte";
 
   type Item = { href: string; label: string; icon: string; badge?: number; section?: string };
 
@@ -102,7 +103,7 @@
             {/if}
             <span
               class="grid h-8 w-8 place-items-center rounded-lg transition-all duration-200 group-hover:scale-105
-                {active ? 'bg-primary text-white shadow-sm' : 'bg-ink-50 text-ink-500 group-hover:bg-white group-hover:shadow-sm group-hover:text-ink-700'}"
+                {active ? 'bg-primary text-white shadow-sm scale-105' : 'bg-ink-50 text-ink-500 group-hover:bg-white group-hover:shadow-sm group-hover:text-ink-700'}"
             >
               <span class={active ? "nav-pop" : ""}>
                 <Icon name={item.icon} size={18} stroke={active ? 2.25 : 1.75} />
@@ -141,6 +142,11 @@
     </span>
     <Icon name="chevron_right" size={14} class="text-ink-400" />
   </a>
+
+  <!-- Maskot footer (APP V2 AD-2) — fly 24px, dekoratif, ≤1 per layar -->
+  <div class="flex justify-center px-3 pb-1" aria-hidden="true">
+    <Mascot pose="fly" size={24} class="opacity-60" />
+  </div>
 
   <!-- User card -->
   <div class="border-t border-ink-100 p-3">

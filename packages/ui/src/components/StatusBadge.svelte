@@ -71,7 +71,7 @@
 </script>
 
 <span
-  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold {s.cls}"
+  class="badge-flip inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold {s.cls}"
 >
   {#if s.motion && animated}
     <span
@@ -107,7 +107,19 @@
   .status-pulse-partial {
     animation: status-pulse-partial 1.2s ease-in-out infinite;
   }
+  /* M4 — flip rotateX 320ms saat mount/remount ({#key status}).
+     Dipakai pesanan (SSE) + dashboard recent. Transform only, 1×. */
+  .badge-flip {
+    animation: badge-flip 320ms ease-out 1;
+  }
+  @keyframes badge-flip {
+    0% { transform: rotateX(90deg); opacity: 0; }
+    100% { transform: rotateX(0); opacity: 1; }
+  }
   @media (prefers-reduced-motion: reduce) {
+    .badge-flip {
+      animation: none;
+    }
     .status-pulse-pending,
     .status-spin-proses,
     .status-pulse-partial {
