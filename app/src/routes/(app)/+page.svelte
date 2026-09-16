@@ -306,7 +306,7 @@
           href={item.href}
           onclick={() => haptic(8)}
           style={revealDelay(i, 0, 60)}
-          class="reveal card-lift group flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
+          class="reveal card-lift group flex min-w-0 items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
             lg:flex-col lg:items-start lg:gap-2 lg:py-3 lg:px-3 {item.glow}"
         >
           <span
@@ -315,7 +315,7 @@
           >
             <Icon name={item.icon} size={20} stroke={2} />
           </span>
-          <span class="min-w-0 flex-1">
+          <span class="min-w-0 flex-1 lg:w-full">
             <span class="block text-sm font-bold text-ink-800 lg:text-[13px]">{item.label}</span>
             <!-- Desktop: deskripsi lengkap (1 baris truncate) -->
             <span class="hidden truncate text-xs text-ink-500 lg:block lg:text-[11.5px]"
