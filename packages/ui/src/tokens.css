@@ -97,6 +97,24 @@
   --color-mango-soft: var(--color-mango-100);
   --color-mango-ink: var(--color-mango-800);
 
+  /* ---- Playful pop tokens (APP V2 §2.2, AD-1) ----
+   * Nama kanonis plan: --pop-*. Alias ke skala mango existing (AA terverifikasi)
+   * supaya kode lama (--color-mango-*) tetap jalan = backward-compat.
+   * Aturan pakai: mango hanya aksen (badge, maskot, confetti, indicator) —
+   * DILARANG untuk CTA fill atau teks body. */
+  --pop-mango: var(--color-mango-500);
+  --pop-mango-soft: var(--color-mango-soft);
+  --pop-mango-ink: var(--color-mango-ink);
+  --pop-berry: var(
+    --color-red-500
+  ); /* dekorasi/ikon saja — max 1 elemen/layar */
+  --pop-berry-ink: var(--color-red-600); /* badge fill teks putih (AA ~4.8:1) */
+  --on-mango: var(--color-ink-800); /* teks di atas mango, light (AA) */
+  --sticker-border: 2px solid var(--color-ink-900);
+  --sticker-shadow: 4px 4px 0 var(--color-ink-900);
+  --sticker-shadow-sm: 2px 2px 0 var(--color-ink-900);
+  --radius-sticker: 20px;
+
   /* ---- Typography ---- */
   /* "* Variable" = nama family dari @fontsource-variable (self-host di app) */
   --font-sans:
@@ -224,6 +242,18 @@
    * Terverifikasi: mango-ink on soft 10.75:1, on surface 12.62:1. */
   --color-mango-soft: #2e230a;
   --color-mango-ink: #f6d47c;
+
+  /* Pop tokens (APP V2 §2.2, AD-1) — dark remap.
+   * --pop-mango-* ikut skala mango dark di atas (tidak perlu override).
+   * Berry terang di surface gelap; badge berry pakai --color-danger/-soft existing. */
+  --pop-mango-soft: var(--color-mango-soft);
+  --pop-mango-ink: var(--color-mango-ink);
+  --pop-berry: var(--color-red-400);
+  --on-mango: var(--color-ink-50);
+  --sticker-shadow: 4px 4px 0
+    color-mix(in oklab, var(--color-ink-900) 35%, transparent);
+  --sticker-shadow-sm: 2px 2px 0
+    color-mix(in oklab, var(--color-ink-900) 35%, transparent);
 
   /* Status: di dark mode perlu lebih TERANG agar teks badge kontras di
      surface gelap (light-mode pakai -700 yang terlalu gelap di sini). */

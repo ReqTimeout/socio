@@ -90,3 +90,8 @@ export { default as LiveDot } from "./components/LiveDot.svelte";
 export { default as Mascot } from "./components/Mascot.svelte";
 export { default as StickerBadge } from "./components/StickerBadge.svelte";
 export { default as ConfettiBurst } from "./components/ConfettiBurst.svelte";
+
+// Playful calm (APP V2 F1) — marker stabilo + sticker chrome.
+// Dipakai mulai F2/F3 (momen utama per layar, budget §2.3).
+export { default as Marker } from "./components/Marker.svelte";
+export { default as StickerCard } from "./components/StickerCard.svelte";

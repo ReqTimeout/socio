@@ -1,12 +1,15 @@
 /**
  * copy.ts — Single source of truth microcopy user-facing socio.id.
  *
- * Voice: santai-profesional, "kamu", verb-first, angka konkret.
+ * Voice: playful-human, "teman yang jago sosmed" (APP V2 §4.1). "kamu", verb-first,
+ * angka konkret. Jenaka HANYA di subtitle/empty/toast sukses (max 1 per layar);
+ * tombol & label fungsional TETAP jelas. Tanpa emoji baru (✦ = dingbat, OK).
  * Rules:
  *  - CTA = verb. Tanpa buzzword.
  *  - Toast sukses = apa yang terjadi + langkah berikutnya.
  *  - Error = penyebab + solusi (bukan menyalahkan user).
  *  - Empty state = empati + 1 CTA.
+ *  - DILARANG tambah/hapus/rename key (guardrail APP V2 #1) — hanya nilai string.
  */
 
 export const copy = {
@@ -18,36 +21,36 @@ export const copy = {
   },
   dashboard: {
     subtitleActive: (n: number) =>
-      `${n} pesanan berjalan — kami proses otomatis hingga selesai.`,
-    subtitleIdle: "Siap bantu naikin performa sosmed — cepat & aman.",
+      `${n} pesanan lagi jalan — duduk manis, kami proses sampai beres.`,
+    subtitleIdle: "Meja kerjamu siap. Hari ini mau nge-boost apa? ✦",
   },
   empty: {
     orders: {
-      title: "Pesanan pertama menunggu",
-      desc: "Pilih layanan favorit — sistem kami proses otomatis setelah bayar.",
+      title: "Masih bersih nih",
+      desc: "Order pertamamu cuma 2 tap lagi — sistem jalan otomatis setelah bayar.",
       cta: "Buat Pesanan",
     },
     services: {
-      title: "Layanan tidak ditemukan",
-      desc: "Coba kata kunci lain, misal 'IG followers' — atau ganti kategori.",
+      title: "Gak ketemu nih",
+      desc: "Coba kata lain, misal 'IG followers' — atau ganti kategori. Katalognya ribuan, wajar kalau nyasar.",
     },
     tickets: {
       title: "Belum ada tiket",
-      desc: "Berarti semuanya lancar. Kalau macet, kami balas < 5 menit.",
+      desc: "Berarti semuanya lancar. Kalau macet, tim kami balas < 5 menit — manusia beneran.",
       cta: "Buat Tiket",
     },
     notif: {
       title: "Belum ada notifikasi",
-      desc: "Nanti muncul di sini kalau ada update pesanan atau promo buatmu.",
+      desc: "Update pesanan dan promo buatmu bakal nongol di sini.",
     },
     balance: {
       title: "Riwayat masih kosong",
-      desc: "Top up pertama bakal tampil di sini — ±5 menit.",
+      desc: "Top up pertamamu bakal tercatat di sini — biasanya masuk ±5 menit.",
       cta: "Top Up Sekarang",
     },
     affiliate: {
       title: "Belum ada downline",
-      desc: "Bagikan link referral — tiap order downline, komisimu jalan otomatis.",
+      desc: "Belum ada yang join lewat linkmu. Bagikan — tiap order downline, komisimu jalan otomatis.",
     },
   },
   order: {
@@ -55,27 +58,28 @@ export const copy = {
     ctaWithTotal: (total: string) => `Pesan Sekarang · ${total}`,
     pickServiceFirst: "Pilih Layanan Dulu",
     notEnough: (gap: string) => `Saldo kurang ${gap}`,
-    notEnoughHint: "Top up dulu biar pesanan langsung jalan.",
-    successTitle: "Pesanan masuk antrean!",
-    successDesc:
-      "Sistem kami proses otomatis — cek statusnya real-time di halaman Pesanan.",
+    notEnoughHint:
+      "Saldonya kurang dikit — top up dulu biar pesanan langsung jalan.",
+    successTitle: "Order masuk! Mulai proses < 1 menit ✦",
+    successDesc: "Duduk manis — statusnya update real-time di halaman Pesanan.",
     linkHelper: "Tempel link publik — jangan private, biar prosesnya lancar.",
     processing: "Memproses…",
   },
   topup: {
     title: "Top up berapa?",
-    successTitle: "Saldo bertambah!",
+    successTitle: "Saldo masuk! ✦",
     successDesc: (amount: string) =>
-      `Saldo kamu +${amount}. Langsung bisa dipakai untuk pesanan pertamamu.`,
+      `Saldo kamu +${amount}. Langsung bisa dipakai buat order.`,
   },
   ticket: {
     cta: "Kirim Tiket",
-    replyEstimate: "Kami balas < 5 menit (24/7)",
+    replyEstimate:
+      "Tim kami balas < 5 menit (24/7) — manusia beneran, bukan bot.",
   },
   account: {
     logoutConfirm: "Keluar dari akun ini?",
     apiCopied: "API Key tersalin",
-    avatarOk: "Avatar diperbarui",
+    avatarOk: "Foto baru terpasang. Ganteng/cantik banget ✦",
     passwordOk: "Password diperbarui — ingat yang baru ya.",
     profileOk: "Profil tersimpan.",
   },
