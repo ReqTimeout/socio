@@ -297,8 +297,9 @@
     </div>
 
     <!-- UX2: mobile 2×2 (4 item dalam grid-cols-2), desktop side panel 1×4 (lg:grid-cols-4). -->
+    <!-- min-w-0 wajib: grid item + truncate chain (AGENTS.md) — tanpa ini track melar di desktop -->
     <div
-      class="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:col-span-4 lg:gap-2.5 lg:self-stretch content-start"
+      class="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4 lg:col-span-4 lg:gap-2.5 lg:self-stretch content-start"
     >
       {#each quick as item, i (item.href)}
         <a
