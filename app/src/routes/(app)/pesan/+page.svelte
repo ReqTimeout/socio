@@ -284,7 +284,9 @@
         class="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl"
       ></div>
       <div class="relative flex items-center gap-3">
-        <div class="grid h-11 w-11 place-items-center rounded-xl bg-white/15 backdrop-blur">
+        <div
+          class="float-slow grid h-11 w-11 place-items-center rounded-xl bg-white/15 backdrop-blur"
+        >
           <Icon name="rocket" size={22} />
         </div>
         <div>
@@ -293,6 +295,21 @@
             Pilih kategori, layanan, lalu order — cepat & otomatis
           </p>
         </div>
+        <!-- Doodle panah tangan (APP V2 §6.2) — dekoratif, SVG inline -->
+        <svg
+          class="pointer-events-none absolute -bottom-7 right-6 hidden h-8 w-8 -scale-x-100 rotate-12 text-white/70 sm:block"
+          viewBox="0 0 32 32"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M6 6c8 1 14 6 16 14m0 0-5-1m5 1-1-5"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
       </div>
     </div>
 
@@ -419,6 +436,21 @@
                 if (result.type === "failure") {
                   toast((result.data as any)?.error ?? "Gagal memesan", "error");
                 } else {
+                  // Sukses = redirect /pesanan (server). Selebrasi order PERTAMA
+                  // saja (APP V2 §4.2 M6): flag localStorage + sinyal ke /pesanan
+                  // via sessionStorage (confetti fire di sana, bukan di sini
+                  // yang langsung unmount). Toast global ikut ke /pesanan.
+                  if (result.type === "redirect") {
+                    try {
+                      if (!localStorage.getItem("socio-celebrated-firstOrder")) {
+                        localStorage.setItem("socio-celebrated-firstOrder", "1");
+                        sessionStorage.setItem("socio-first-order-fire", "1");
+                        toast(copy.order.successTitle, "success");
+                      }
+                    } catch {
+                      // storage diblokir — lanjut redirect normal tanpa selebrasi
+                    }
+                  }
                   await applyAction(result);
                 }
               };
@@ -571,9 +603,9 @@
               </p>
             </div>
 
-            <!-- Price summary -->
+            <!-- Price summary — sticker-dark (APP V2 §6.2) -->
             <div
-              class="reveal rounded-2xl bg-ink-900 p-4 text-white shadow-[0_16px_32px_-14px_rgba(15,23,42,0.45)]"
+              class="reveal rounded-2xl border-2 border-white/25 bg-ink-900 p-4 text-white shadow-[3px_3px_0_rgba(255,255,255,0.22),0_16px_32px_-14px_rgba(15,23,42,0.45)]"
               style="--d:40ms"
             >
               {#if couponOk && couponDiscount > 0}
@@ -666,9 +698,9 @@
           class="lg:hidden fixed inset-x-3 bottom-[88px] z-40 max-w-xl mx-auto space-y-2"
           aria-label="Total dan submit"
         >
-          <!-- Compact summary mobile -->
+          <!-- Compact summary mobile — sticker-dark -->
           <div
-            class="reveal rounded-2xl bg-ink-900 p-3 text-white shadow-[0_16px_32px_-14px_rgba(15,23,42,0.45)]"
+            class="reveal rounded-2xl border-2 border-white/25 bg-ink-900 p-3 text-white shadow-[3px_3px_0_rgba(255,255,255,0.22),0_16px_32px_-14px_rgba(15,23,42,0.45)]"
             style="--d:0ms"
           >
             <div class="flex items-center justify-between gap-3">

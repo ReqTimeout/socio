@@ -203,7 +203,7 @@
       Min {min.toLocaleString("id-ID")} · Max {max.toLocaleString("id-ID")}
       {#if refill}
         <span
-          class="ml-1 rounded-full bg-success/10 px-1.5 py-0.5 font-bold text-success"
+          class="ml-1 rounded-full bg-mango-soft px-1.5 py-0.5 font-bold text-mango-ink"
           >Refill</span
         >
       {/if}

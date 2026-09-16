@@ -11,6 +11,7 @@
     Mascot,
     LiveDot,
     Skeleton,
+    ConfettiBurst,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -105,6 +106,28 @@
     goto(`/pesanan?${p.toString()}`);
   }
 
+  // Progres determinate 0-100 dari remains/qty (update live via SSE).
+  // null = data tak lengkap → bar disembunyikan (jujur, bukan indeterminate).
+  function progressOf(o: { quantity: number; remains?: number | string | null }): number | null {
+    const qty = Number(o.quantity);
+    const rem = o.remains == null ? NaN : Number(o.remains);
+    if (!qty || Number.isNaN(rem)) return null;
+    return Math.min(100, Math.max(0, ((qty - rem) / qty) * 100));
+  }
+
+  // Confetti order pertama (APP V2 §4.2 M6) — sinyal dari /pesan via
+  // sessionStorage, dibaca + dihapus sekali di sini (host di inline-stat).
+  let firstOrderFire = $state(0);
+  onMount(() => {
+    try {
+      if (sessionStorage.getItem("socio-first-order-fire")) {
+        sessionStorage.removeItem("socio-first-order-fire");
+        firstOrderFire++;
+      }
+    } catch {
+      // storage diblokir — lewati selebrasi
+    }
+  });
   // Sliding indicator di bawah chip filter aktif (F2, presentasi saja).
   // Diukur dari DOM (offsetLeft/Width) — ikut pindah saat filter berubah/resize.
   let chipRow: HTMLElement | null = $state(null);
@@ -198,8 +221,9 @@
   <!-- UX4.1 + UX4.3 — inline-stat narrative replaces 4-col strip + SSE live banner -->
   {#if counts.all > 0}
     <div
-      class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-ink-100 bg-surface px-4 py-3 reveal"
+      class="relative flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-ink-100 bg-surface px-4 py-3 reveal"
     >
+      <ConfettiBurst fire={firstOrderFire} />
       <p class="text-sm leading-snug text-ink-700">
         <span class="font-display text-2xl font-extrabold tabular-nums text-ink-900"
           >{counts.all.toLocaleString("id-ID")}</span
@@ -386,13 +410,20 @@
                     {/key}
                   </span>
                 </div>
-                {#if o.status === "In progress" || o.status === "Processing"}
+                {#if (o.status === "In progress" || o.status === "Processing") && progressOf(o) != null}
                   <div
                     class="order-progress mt-2.5"
                     role="progressbar"
-                    aria-label="Order sedang diproses"
+                    aria-label="Progres order"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(progressOf(o) ?? 0)}
                   >
-                    <span class="order-progress-bar" aria-hidden="true"></span>
+                    <span
+                      class="order-progress-bar"
+                      style="width: {progressOf(o)}%"
+                      aria-hidden="true"
+                    ></span>
                   </div>
                 {/if}
                 {#if o.status === "Partial"}
@@ -451,13 +482,17 @@
               </span>
             </div>
 
-            {#if o.status === "In progress" || o.status === "Processing"}
+            {#if (o.status === "In progress" || o.status === "Processing") && progressOf(o) != null}
               <div
                 class="order-progress mt-2.5"
                 role="progressbar"
-                aria-label="Order sedang diproses"
+                aria-label="Progres order"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progressOf(o) ?? 0)}
               >
-                <span class="order-progress-bar" aria-hidden="true"></span>
+                <span class="order-progress-bar" style="width: {progressOf(o)}%" aria-hidden="true"
+                ></span>
               </div>
             {/if}
 
@@ -722,18 +757,16 @@
       animation: none;
       opacity: 0;
     }
-    .chip-indicator,
-    .order-progress-bar {
+    .chip-indicator {
       animation: none;
     }
     .order-progress-bar {
-      transform: none;
-      width: 40%;
+      transition: none;
     }
   }
 
-  /* F2 playful: sliding indicator chip + progress bar order Proses.
-   * Transform/opacity only (GPU). */
+  /* F2 playful: sliding indicator chip (transform only, GPU).
+   * Progress bar determinate — lebar dari data (transition, bukan infinite). */
   .chip-indicator {
     position: absolute;
     bottom: 1px;
@@ -756,17 +789,8 @@
   .order-progress-bar {
     display: block;
     height: 100%;
-    width: 35%;
     border-radius: inherit;
     background: linear-gradient(90deg, var(--color-accent-500), var(--color-primary-500));
-    animation: order-slide 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-  }
-  @keyframes order-slide {
-    0% {
-      transform: translateX(-110%);
-    }
-    100% {
-      transform: translateX(300%);
-    }
+    transition: width 400ms var(--ease-out-soft);
   }
 </style>

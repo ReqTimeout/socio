@@ -9,6 +9,8 @@
     ConfettiBurst,
     SuccessTopupArt,
     EmptyBalanceArt,
+    Marker,
+    Mascot,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -68,7 +70,15 @@
         instrCredited = r.credited ?? 0;
         instrBonus = r.bonus ?? 0;
         instructionOpen = true;
-        confettiFire += 1; // rayakan invoice berhasil (F4, no-op saat reduced)
+        // Confetti HANYA deposit pertama (APP V2 §4.2 M6, P-4) — no-op saat reduced
+        try {
+          if (!localStorage.getItem("socio-celebrated-firstTopup")) {
+            localStorage.setItem("socio-celebrated-firstTopup", "1");
+            confettiFire += 1;
+          }
+        } catch {
+          // storage diblokir — sheet tetap tampil tanpa confetti
+        }
       }
     }
   });
@@ -111,7 +121,8 @@
       aria-hidden="true"
     >
       <span class="flex items-center gap-1 text-primary">
-        <span class="grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] text-white"
+        <span
+          class="grid h-4 w-4 place-items-center rounded-full border border-ink-900 bg-primary text-[9px] text-white shadow-[1.5px_1.5px_0_var(--color-ink-900)]"
           >1</span
         >
         Nominal
@@ -170,14 +181,25 @@
                 {active ? 'scale-100 bg-primary opacity-100' : 'scale-50 bg-ink-200 opacity-0'}"
             >
               {#key active}
-                <span class="check-pop grid place-items-center" aria-hidden="true">
-                  <Icon name="check" size={12} stroke={3} class="text-white" />
-                </span>
+                <svg class="check-draw h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path
+                    d="M2.5 6.5 5 9 9.5 3.5"
+                    stroke="white"
+                    stroke-width="2.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    pathLength="1"
+                  />
+                </svg>
               {/key}
             </span>
             <div class="font-display text-lg font-extrabold tabular-nums">{formatRupiah(c)}</div>
             {#if isPopular}
-              <div class="mt-0.5 text-[10px] font-bold text-primary">Populer</div>
+              <div
+                class="mt-1 w-fit rounded-full bg-mango-soft px-2 py-0.5 text-[10px] font-extrabold text-mango-ink"
+              >
+                Populer
+              </div>
             {/if}
           </button>
         {/each}
@@ -268,7 +290,7 @@
       </div>
       <div class="mt-1 flex items-center justify-between text-sm">
         <span class="text-ink-300">Bonus deposit {Math.round(bonusRate * 100)}%</span>
-        <span class="tabular-nums text-emerald-400">+{formatRupiah(bonusPreview)}</span>
+        <Marker><span class="tabular-nums">+{formatRupiah(bonusPreview)}</span></Marker>
       </div>
       <div class="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
         <span class="text-sm font-semibold">Total transfer</span>
@@ -397,6 +419,7 @@
   <div class="space-y-4">
     <div class="relative overflow-visible rounded-2xl bg-success/10 p-4 text-center">
       <ConfettiBurst fire={confettiFire} />
+      <Mascot pose="fly" size={36} class="absolute -top-2 right-3 rotate-12 opacity-90" />
       <SuccessTopupArt size={72} class="mx-auto text-success" />
       <div class="mt-1 text-sm font-bold text-success">Invoice Dibuat</div>
       <div class="text-xs text-ink-600">Transfer dalam 24 jam agar tidak kedaluwarsa</div>
@@ -517,18 +540,15 @@
     transform: scale(0.96);
     transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1);
   }
-  /* F4 playful: check spring, QR pop */
-  .check-pop {
-    display: grid;
-    place-items: center;
-    animation: check-pop 300ms var(--ease-spring) both;
+  /* M13 — checkmark draw 400ms (ganti check-pop di tick nominal) */
+  .check-draw path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: check-draw 400ms var(--ease-out-soft) 60ms forwards;
   }
-  @keyframes check-pop {
-    from {
-      transform: scale(0.3);
-    }
+  @keyframes check-draw {
     to {
-      transform: scale(1);
+      stroke-dashoffset: 0;
     }
   }
   .qr-pop {
@@ -549,9 +569,12 @@
     .chip-press:active {
       transform: none;
     }
-    .check-pop,
+    .check-draw path,
     .qr-pop {
       animation: none;
+    }
+    .check-draw path {
+      stroke-dashoffset: 0;
     }
   }
 </style>

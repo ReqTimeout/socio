@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Icon, revealDelay, EmptyBalanceArt, NumberFlow } from "@socio/ui";
+  import { Icon, revealDelay, EmptyBalanceArt, NumberFlow, StickerCard } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { formatRupiah, formatDateShort } from "$lib/format";
@@ -74,12 +74,20 @@
 
 <section class="space-y-4 lg:space-y-5">
   <h1 class="sr-only">Saldo</h1>
-  <!-- Balance card — playful premium with glow shadow -->
-  <div
-    class="relative overflow-hidden rounded-2xl lg:rounded-3xl bg-gradient-to-br from-ink-900 via-ink-900 to-ink-800 p-5 lg:p-8 text-white lg:grid lg:grid-cols-[1.35fr_auto] lg:items-center lg:gap-8 shadow-[0_16px_40px_-16px_rgba(15,23,42,0.35),0_8px_16px_-8px_rgba(79,70,229,0.20)] hover:shadow-[0_20px_48px_-16px_rgba(15,23,42,0.40),0_10px_20px_-8px_rgba(79,70,229,0.25)] transition-all duration-300 hover:-translate-y-0.5"
+  <!-- Balance card — sticker-dark + breathing (APP V2 §6.4, F0 StickerCard).
+       Blob float-slow F1 dilepas (trade budget: breathe + pending-pulse max 2). -->
+  <StickerCard
+    tone="dark"
+    class="relative overflow-hidden p-5 lg:p-8 lg:grid lg:grid-cols-[1.35fr_auto] lg:items-center lg:gap-8 hover:-translate-y-0.5 transition-transform duration-300"
   >
     <div
-      class="float-slow absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-2xl pointer-events-none"
+      class="pointer-events-none absolute inset-0 motion-safe:animate-[saldo-breathe_4s_ease-in-out_infinite]"
+      style="background: radial-gradient(70% 60% at 50% 0%, rgba(255,255,255,0.10), transparent 70%);"
+      aria-hidden="true"
+    ></div>
+    <div
+      class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-2xl pointer-events-none"
+      aria-hidden="true"
     ></div>
     <div class="min-w-0">
       <div class="text-xs font-medium text-ink-300 lg:text-[13px]">Saldo Socio</div>
@@ -111,7 +119,7 @@
         Riwayat
       </a>
     </div>
-  </div>
+  </StickerCard>
 
   <!-- min-w-0 wajib: grid item default min-width auto — konten flex (note panjang
        + amount) tak bisa shrink → track melar 444px di 390px viewport (overflow 70px) -->
@@ -295,6 +303,16 @@
     to {
       opacity: 1;
       transform: none;
+    }
+  }
+  /* M15 breathing (APP V2 §6.4) — opacity glow, bukan animasi shadow */
+  @keyframes saldo-breathe {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
     }
   }
   @media (prefers-reduced-motion: reduce) {
