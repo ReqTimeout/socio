@@ -29,7 +29,7 @@
   } = $props();
 
   const base =
-    "inline-flex items-center justify-center gap-2 font-bold rounded-full transition-[background-color,border-color,color,box-shadow,transform] duration-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:pointer-events-none";
+    "relative inline-flex items-center justify-center gap-2 font-bold rounded-full transition-[background-color,border-color,color,box-shadow,transform] duration-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:pointer-events-none";
   const variants: Record<Variant, string> = {
     primary: "bg-primary text-white shadow-sm hover:bg-primary-700",
     accent: "bg-accent-700 text-white shadow-sm hover:brightness-90",
@@ -52,7 +52,10 @@
     {...rest}
     class="{base} {variants[variant]} {sizes[size]} {full
       ? 'w-full'
-      : ''} {className}">{@render children()}</a
+      : ''} {className}">{@render children()}{#if variant === "primary" || variant === "accent"}<span
+        class="btn-shine"
+        aria-hidden="true"
+      ></span>{/if}</a
   >
 {:else}
   <button
@@ -64,6 +67,55 @@
       ? 'w-full'
       : ''} {className}"
   >
-    {@render children()}
+    {@render children()}{#if variant === "primary" || variant === "accent"}<span
+        class="btn-shine"
+        aria-hidden="true"
+      ></span>{/if}
   </button>
 {/if}
+
+<style>
+  /* Shine sweep ala landing CTA — hover/focus/active, 1× 700ms */
+  .btn-shine {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 8px;
+    right: 8px;
+    border-radius: 9999px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .btn-shine::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 45%;
+    background: linear-gradient(
+      105deg,
+      transparent,
+      rgba(255, 255, 255, 0.45),
+      transparent
+    );
+    transform: translateX(-240%);
+  }
+  button:hover .btn-shine::before,
+  a:hover .btn-shine::before,
+  button:focus-visible .btn-shine::before,
+  a:focus-visible .btn-shine::before,
+  button:active .btn-shine::before,
+  a:active .btn-shine::before {
+    animation: btn-shine 700ms ease 1;
+  }
+  @keyframes btn-shine {
+    to {
+      transform: translateX(340%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-shine::before {
+      animation: none;
+    }
+  }
+</style>

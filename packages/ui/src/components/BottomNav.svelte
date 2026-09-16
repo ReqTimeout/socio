@@ -36,30 +36,6 @@
     return $page.url.pathname.startsWith(href);
   }
 
-  // M12 — satu pill indicator geser (transform only, spring 300ms).
-  // Diukur dari anchor aktif; recompute saat pathname/resize berubah.
-  let nav = $state<HTMLElement | null>(null);
-  let ind = $state({ x: 0, w: 0, ready: false });
-  function placeIndicator() {
-    if (!nav) return;
-    const active = nav.querySelector('a[aria-current="page"]');
-    if (!(active instanceof HTMLElement)) return;
-    const nb = nav.getBoundingClientRect();
-    const b = active.getBoundingClientRect();
-    ind = { x: b.left - nb.left, w: b.width, ready: true };
-  }
-  onMount(() => {
-    placeIndicator();
-    requestAnimationFrame(placeIndicator);
-    window.addEventListener("resize", placeIndicator);
-    return () => window.removeEventListener("resize", placeIndicator);
-  });
-  // Reposisikan tiap navigasi (pathname = state filter existing, bukan state baru).
-  $effect(() => {
-    void $page.url.pathname;
-    requestAnimationFrame(placeIndicator);
-  });
-
   // Item yang dapat badge notifikasi (Tiket = balasan admin).
   // Kita tumpang di sini agar layout tidak perlu merender badge per-item.
   function badgeFor(href: string, own?: number): number | undefined {
@@ -70,13 +46,11 @@
   }
 </script>
 
-<!-- Dock user: solid + 3D + border hidup (ganti glass transparan).
-     Solid bg-surface (tidak tembus konten), shadow berlapis = efek 3D mengambang,
-     hairline gradient animasi = "hidup". -->
+<!-- Dock sticker-chrome ala landing FloatingTabDock: border tinta 2px + hard shadow.
+     Active = teks ink + ikon tebal + pill mango (pop spring tiap ganti tab). -->
 <nav
-  bind:this={nav}
-  class="dock-live-user lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px] border border-ink-200/70 bg-surface
-    p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_18px_45px_-12px_rgba(15,23,42,0.35),0_4px_12px_rgba(15,23,42,0.12)] dark:shadow-[0_18px_45px_-12px_rgba(0,0,0,0.6),0_4px_12px_rgba(0,0,0,0.4)]
+  class="dock-live-user lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px] border-2 border-ink-900 bg-surface/90 backdrop-blur-xl
+    p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[2px_2px_0_var(--color-ink-900),0_18px_45px_-12px_rgba(15,23,42,0.35)] dark:shadow-[2px_2px_0_var(--color-ink-900),0_18px_45px_-12px_rgba(0,0,0,0.6)]
     transition-transform duration-300 ease-out will-change-transform {dockHidden
     ? 'translate-y-[calc(100%+1.5rem)]'
     : 'translate-y-0'}"
@@ -85,25 +59,16 @@
   aria-hidden={dockHidden}
   inert={dockHidden}
 >
-  {#if ind.ready}
-    <span
-      aria-hidden="true"
-      class="pointer-events-none absolute top-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] left-0 rounded-full bg-primary/10
-        motion-safe:transition-transform motion-safe:duration-300 motion-safe:[transition-timing-function:var(--ease-spring)]"
-      style="width: {ind.w}px; transform: translateX({ind.x}px);"
-    ></span>
-  {/if}
   {#each items as item (item.href)}
     {@const active = isActive(item.href)}
     <a
       href={item.href}
       aria-current={active ? "page" : undefined}
       onclick={() => haptic(active ? 6 : 10)}
-      class="group relative flex h-[52px] flex-col items-center justify-center gap-1 overflow-hidden rounded-full px-1 py-2 transition-all duration-300
+      class="group relative flex h-[52px] flex-col items-center justify-center gap-1 overflow-hidden rounded-full px-1 py-2 transition-transform duration-150 active:scale-[0.92]
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-ink-900
-        active:scale-[0.96]
         {active
-        ? 'text-primary'
+        ? 'text-ink-900'
         : 'text-ink-800 hover:text-ink-900 dark:hover:text-ink-200'}"
     >
       <span class="relative">
@@ -115,10 +80,13 @@
           <Icon name={item.icon} size={20} stroke={active ? 2.4 : 1.9} />
         </span>
         {#if active}
-          <span
-            class="absolute -bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full"
-            style="background: var(--pop-mango);"
-          ></span>
+          {#key $page.url.pathname}
+            <span
+              class="dock-pill absolute -bottom-1.5 left-1/2 h-1.5 w-5 -translate-x-1/2 rounded-full border border-ink-900"
+              style="background: var(--pop-mango);"
+              aria-hidden="true"
+            ></span>
+          {/key}
         {/if}
         {#if badgeFor(item.href, item.badge)}
           <span
@@ -157,40 +125,24 @@
       transform: scale(1.02) translateY(0);
     }
   }
-  @media (prefers-reduced-motion: reduce) {
-    .dock-bounce {
-      animation: none !important;
-    }
-    .dock-live-user::before {
-      animation: none;
-    }
+  /* Pill mango pop tiap ganti tab (ala landing dock-pop, scaleX spring) */
+  .dock-pill {
+    animation: dock-pill-pop 400ms var(--ease-spring) both;
   }
-
-  /* Hairline gradient animasi di sekeliling dock — border "hidup" */
-  .dock-live-user::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: 29px;
-    padding: 1.5px;
-    background: linear-gradient(
-      120deg,
-      var(--color-accent-300),
-      var(--color-primary-300),
-      var(--color-accent-300)
-    );
-    background-size: 220% 100%;
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    animation: dock-sheen 7s linear infinite;
-    pointer-events: none;
-  }
-  @keyframes dock-sheen {
+  @keyframes dock-pill-pop {
+    from {
+      transform: translateX(-50%) scaleX(0);
+      opacity: 0;
+    }
     to {
-      background-position: 220% 0;
+      transform: translateX(-50%) scaleX(1);
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dock-bounce,
+    .dock-pill {
+      animation: none !important;
     }
   }
 </style>
