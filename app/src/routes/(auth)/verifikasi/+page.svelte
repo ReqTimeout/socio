@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AuthBackdrop, Button, Icon, Mascot } from "@socio/ui";
+  import { AuthBackdrop, Button, Icon, Sparko } from "@socio/ui";
 
   let { data } = $props();
 </script>
@@ -16,7 +16,7 @@
   >
     {#if data.ok === true}
       <div class="flex justify-center">
-        <Mascot pose="fly" size={64} class="float-slow text-primary" />
+        <Sparko pose="idle" size={64} />
       </div>
       <div
         class="mx-auto mt-3 mb-4 grid h-16 w-16 place-items-center rounded-full bg-success-soft text-success animate-[popIn_380ms_var(--ease-out-soft)_both]"

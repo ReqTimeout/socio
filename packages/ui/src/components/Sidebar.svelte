@@ -5,7 +5,7 @@
   import Avatar from "./Avatar.svelte";
   import Wordmark from "./Wordmark.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
-  import Mascot from "./Mascot.svelte";
+  import Sparko from "./Sparko.svelte";
 
   type Item = { href: string; label: string; icon: string; badge?: number; section?: string };
 
@@ -144,9 +144,9 @@
     <Icon name="chevron_right" size={14} class="text-ink-400" />
   </a>
 
-  <!-- Maskot footer (APP V2 AD-2) — fly 24px, dekoratif, ≤1 per layar -->
+  <!-- Maskot footer (§4: Sparko resmi) — idle 24px, dekoratif -->
   <div class="flex justify-center px-3 pb-1" aria-hidden="true">
-    <Mascot pose="fly" size={24} class="opacity-60" />
+    <Sparko pose="idle" size={24} class="opacity-80" />
   </div>
 
   <!-- User card -->

@@ -58,8 +58,8 @@
   ></div>
   <!-- M15 breathing glow — opacity layer saja (bukan animasi shadow), 4s halus -->
   <div
-    class="pointer-events-none absolute inset-0 motion-safe:animate-[saldo-breathe_4s_ease-in-out_infinite]"
-    style="background: radial-gradient(70% 60% at 50% 0%, rgba(255,255,255,0.22), transparent 70%);"
+    class="pointer-events-none absolute inset-0"
+    style="background: radial-gradient(70% 60% at 50% 0%, rgba(255,255,255,0.10), transparent 70%);"
     aria-hidden="true"
   ></div>
   <div
@@ -215,20 +215,13 @@
   /* Panel ink ala preview .usage (APP V3 R5) — SELALU gelap (hex hardcoded,
      bukan token) supaya teks putih + angka mango aman di light & dark mode. */
   .saldo-hero {
-    box-shadow:
-      0 18px 48px -14px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
   }
-  /* Sticker chrome di panel gelap: border + shadow terang. */
+  /* Sticker chrome di panel gelap: border + hard offset SAJA (no blur, §2.2/13). */
   .saldo-sticker {
     border: 2px solid rgb(255 255 255 / 0.28);
     border-radius: var(--radius-sticker);
-    box-shadow:
-      3px 3px 0 rgb(255 255 255 / 0.22),
-      0 18px 48px -14px rgba(0, 0, 0, 0.5);
-  }
-  @keyframes saldo-breathe {
-    0%, 100% { opacity: 0.35; }
-    50% { opacity: 1; }
+    box-shadow: 3px 3px 0 rgb(255 255 255 / 0.22);
   }
   /* Sparkle burst saat saldo naik (APP V3 S2-2) — 6 titik mango pop 600ms 1× */
   .saldo-spark {

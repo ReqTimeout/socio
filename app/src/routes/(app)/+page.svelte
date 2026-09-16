@@ -73,7 +73,6 @@
 
   let phase = $state<TimePhase>("day");
   let greeting = $state("Halo");
-  let greetEmoji = $state("👋");
   let ambient = $state(phaseMeta.day.ambient);
 
   onMount(() => {
@@ -81,7 +80,6 @@
     const p = phaseOf(h);
     phase = p;
     greeting = phaseMeta[p].greeting;
-    greetEmoji = phaseMeta[p].emoji;
     ambient = phaseMeta[p].ambient;
     // Keep phase fresh if user leaves tab open across the hour
     const id = setInterval(() => {
@@ -90,7 +88,6 @@
       if (np !== phase) {
         phase = np;
         greeting = phaseMeta[np].greeting;
-        greetEmoji = phaseMeta[np].emoji;
         ambient = phaseMeta[np].ambient;
       }
     }, 60_000);
@@ -257,9 +254,6 @@
             <span>
               {greeting},
               <Marker>{firstName}</Marker>
-              <span class="inline-block motion-safe:animate-[wave_2s_ease-in-out_1]"
-                >{greetEmoji}</span
-              >
             </span>
           </h1>
           {#if nightOwl}
@@ -349,8 +343,8 @@
           href={item.href}
           onclick={() => haptic(8)}
           style={revealDelay(i, 0, 60)}
-          class="reveal card-lift tile-press group flex min-w-0 items-center gap-3 rounded-2xl border-2 border-ink-900 bg-surface p-3.5 shadow-[2px_2px_0_var(--color-ink-900)]
-            lg:flex-col lg:items-start lg:gap-2 lg:py-3 lg:px-3 hover:rotate-0 {i % 2 === 0 ? '-rotate-1' : 'rotate-1'} {item.glow}"
+          class="reveal card-lift tile-press group flex min-w-0 items-center gap-3 rounded-2xl border border-ink-200 bg-surface p-3.5
+            lg:flex-col lg:items-start lg:gap-2 lg:py-3 lg:px-3 {item.glow}"
         >
           <span
             class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br {item.chip}
@@ -396,7 +390,7 @@
               : ''}"
             onclick={() => haptic(10)}
             style={revealDelay(i, 0, 50)}
-            class="reveal card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border-2 border-ink-900 bg-surface p-4 shadow-[2px_2px_0_var(--color-ink-900)] transition-transform duration-200 hover:rotate-0
+            class="reveal card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border border-ink-200 bg-surface p-4 transition-transform duration-200 hover:rotate-0
               lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5 {i % 2 === 0 ? '-rotate-1' : 'rotate-1'}"
           >
             <span

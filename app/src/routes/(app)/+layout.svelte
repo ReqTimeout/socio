@@ -12,7 +12,7 @@
     Fab,
     Wordmark,
     NotifBell,
-    Mascot,
+    Sparko,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
 
@@ -124,7 +124,7 @@
       >
         <Wordmark size="sm" />
         <span class="wiggle-once inline-flex" aria-hidden="true">
-          <Mascot pose="wave" size={16} />
+          <Sparko pose="idle" size={20} />
         </span>
       </a>
       <div class="flex items-center gap-2">

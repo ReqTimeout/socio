@@ -32,7 +32,7 @@
     "relative inline-flex items-center justify-center gap-2 font-bold rounded-full transition-[background-color,border-color,color,box-shadow,transform] duration-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:pointer-events-none";
   const variants: Record<Variant, string> = {
     primary:
-      "bg-ink-900 text-ink-50 border-2 border-ink-900 shadow-[2px_2px_0_var(--color-ink-900)] hover:-translate-y-px active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
+      "bg-ink-900 text-ink-50 border-2 border-ink-900 shadow-[2px_2px_0_var(--color-ink-900)] hover:shadow-[6px_6px_0_var(--color-ink-900)] hover:-translate-x-[2px] hover:-translate-y-[2px] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
     accent: "bg-accent-700 text-white shadow-sm hover:brightness-90",
     ghost: "bg-ink-100 text-ink-700 hover:bg-ink-200",
     /* P2-12: pakai red-600 (Tailwind default, #dc2626) bukan --color-danger

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { AuthBackdrop, Button, Icon, Marker, Mascot } from "@socio/ui";
+  import { AuthBackdrop, Button, Icon, Marker, Sparko } from "@socio/ui";
   import { renderTurnstile } from "$lib/turnstile";
   import { onMount } from "svelte";
 
@@ -83,7 +83,7 @@
   <div class="relative z-10 flex-1 flex flex-col justify-center max-w-sm w-full mx-auto">
     <div class="mb-6 text-center animate-[authIn_420ms_var(--ease-out-soft)]">
       <div class="flex justify-center">
-        <Mascot pose="wave" size={56} class="float-slow text-primary" />
+        <Sparko pose="wave" size={64} />
       </div>
       <div class="mt-2 font-display font-extrabold text-3xl text-primary tracking-tight">
         socio<span class="text-accent-700">.id</span>
