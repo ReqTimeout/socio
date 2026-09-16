@@ -31,6 +31,21 @@
   const hasInsight = $derived(
     insight != null && (insight.deposit7 > 0 || insight.spend7 > 0),
   );
+
+  // Sparkle burst saat saldo NAIK (APP V3 S2-2) — reward visual tiap uang masuk.
+  // Skip burst pertama (mount/initial), hanya untuk kenaikan berikutnya.
+  let prevBalance = $state<number | null>(null);
+  let burstKey = $state(0);
+  $effect(() => {
+    const b = balance;
+    if (prevBalance !== null && b > prevBalance) burstKey++;
+    prevBalance = b;
+  });
+  const sparks = [
+    { left: "12%", top: "30%" }, { left: "22%", top: "62%" },
+    { left: "48%", top: "18%" }, { left: "68%", top: "55%" },
+    { left: "82%", top: "28%" }, { left: "58%", top: "74%" },
+  ];
 </script>
 
 <section
@@ -101,6 +116,18 @@
     >
       <NumberFlow value={balance} format={fmt} duration={0.9} />
     </p>
+    {#if burstKey > 0}
+      {#key burstKey}
+        <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+          {#each sparks as s, i}
+            <span
+              class="saldo-spark"
+              style="left: {s.left}; top: {s.top}; animation-delay: {i * 60}ms; background: var(--sparko-mango);"
+            ></span>
+          {/each}
+        </div>
+      {/key}
+    {/if}
     {#if hasInsight}
       <!-- Mobile (lg:hidden): chevron toggle — compact by default, expand on tap.
            Desktop (lg:block): always visible inline. -->
@@ -203,6 +230,20 @@
     0%, 100% { opacity: 0.35; }
     50% { opacity: 1; }
   }
+  /* Sparkle burst saat saldo naik (APP V3 S2-2) — 6 titik mango pop 600ms 1× */
+  .saldo-spark {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    transform: scale(0);
+    animation: saldo-spark 600ms var(--ease-spring) both;
+  }
+  @keyframes saldo-spark {
+    0% { transform: scale(0); opacity: 1; }
+    60% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(0); opacity: 0; }
+  }
   .saldo-grad {
     background: linear-gradient(
       110deg,
@@ -238,6 +279,10 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    .saldo-spark {
+      animation: none;
+      display: none;
+    }
     /* keep alive but softer when user prefers reduced motion */
     .saldo-grad {
       animation-duration: 14s;

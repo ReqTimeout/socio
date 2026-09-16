@@ -115,6 +115,20 @@
   --sticker-shadow-sm: 2px 2px 0 var(--color-ink-900);
   --radius-sticker: 20px;
 
+  /* ---- Sparko palette (APP V3 §S0.3, additive) ----
+   * sky = body/brand-actions, mango vivid = reward/sparkle, berry = danger/urgent.
+   * CATATAN: --sparko-mango (#fbbf24) BERBEDA dari --pop-mango (mango-500 #d9a514).
+   * Jangan campur keduanya dalam satu komponen. */
+  --sparko-sky: var(--color-sky-400);
+  --sparko-sky-deep: var(--color-sky-600);
+  --sparko-sky-soft: var(--color-sky-100);
+  --sparko-mango: #fbbf24;
+  --sparko-mango-soft: rgb(251 191 36 / 0.22);
+  --sparko-mango-ink: #92400e;
+  --sparko-berry: #ef4444;
+  --sparko-paper: #faf7f0;
+  --sparko-paper-lift: #fffdf8;
+
   /* ---- Typography ---- */
   /* "* Variable" = nama family dari @fontsource-variable (self-host di app) */
   --font-sans:
@@ -250,6 +264,9 @@
   --pop-mango-ink: var(--color-mango-ink);
   --pop-berry: var(--color-red-400);
   --on-mango: var(--color-ink-50);
+
+  /* Sparko dark: mango-ink terang di atas soft gelap (AA). Sky/berry ikut default. */
+  --sparko-mango-ink: #fcd34d;
   --sticker-shadow: 4px 4px 0
     color-mix(in oklab, var(--color-ink-900) 35%, transparent);
   --sticker-shadow-sm: 2px 2px 0

@@ -15,6 +15,7 @@
     Marker,
     StickerBadge,
     ConfettiBurst,
+    Sparko,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { navigating } from "$app/state";
@@ -172,6 +173,29 @@
   // VIP confetti 1× seumur browser (APP V2 §4.2 M6 — flag localStorage, no repeat).
   const isVip = $derived((data.stats.totalDeposit ?? 0) >= 5_000_000);
   let vipConfetti = $state(0);
+
+  // Sparko halo: pose tidur 21.00–05.00 ("lembur ya?"), streak kunjungan harian.
+  // Client-only (onMount) agar SSR/CSR sama — anti hydration mismatch.
+  let nightOwl = $state(false);
+  let streak = $state(0);
+  onMount(() => {
+    const h = new Date().getHours();
+    nightOwl = h >= 21 || h < 5;
+    try {
+      const today = new Date().toDateString();
+      const raw = localStorage.getItem("socio-streak");
+      const s = raw ? JSON.parse(raw) : { count: 0, last: "" };
+      if (s.last === today) {
+        streak = s.count;
+      } else {
+        const y = new Date(Date.now() - 864e5).toDateString();
+        streak = s.last === y ? s.count + 1 : 1;
+        localStorage.setItem("socio-streak", JSON.stringify({ count: streak, last: today }));
+      }
+    } catch {
+      streak = 0;
+    }
+  });
   onMount(() => {
     if (!isVip) return;
     try {
@@ -229,14 +253,37 @@
             >
           </p>
           <h1
-            class="mt-1 font-display text-2xl font-extrabold tracking-tight lg:text-[2.25rem] lg:leading-[1.05] lg:tracking-[-0.02em]"
+            class="mt-1 flex items-center gap-2 font-display text-2xl font-extrabold tracking-tight lg:text-[2.25rem] lg:leading-[1.05] lg:tracking-[-0.02em]"
           >
-            {greeting},
-            <Marker>{firstName}</Marker>
-            <span class="inline-block motion-safe:animate-[wave_2s_ease-in-out_1]"
-              >{greetEmoji}</span
-            >
+            <span class="sparko-hello inline-flex shrink-0" aria-hidden="true">
+              <Sparko pose={nightOwl ? "sleep" : "wave"} size={34} />
+            </span>
+            <span>
+              {greeting},
+              <Marker>{firstName}</Marker>
+              <span class="inline-block motion-safe:animate-[wave_2s_ease-in-out_1]"
+                >{greetEmoji}</span
+              >
+            </span>
           </h1>
+          {#if nightOwl}
+            <p class="mt-1 text-xs font-semibold text-ink-500">lembur ya? Sparko temenin ✦</p>
+          {:else if streak >= 2}
+            <p class="mt-1 inline-flex items-center gap-1 text-xs font-extrabold" style="color: var(--sparko-mango-ink);">
+              <Icon name="flame" size={13} stroke={2.4} />
+              {streak} hari beruntun ✦
+            </p>
+          {/if}
+          {#if (data.user?.balance ?? 0) < 20000}
+            <a
+              href="/saldo/top-up"
+              class="lowbal-pulse mt-1.5 inline-flex w-fit items-center gap-1.5 rounded-full border-2 border-ink-900 px-3 py-1 text-xs font-extrabold shadow-[2px_2px_0_var(--color-ink-900)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+              style="background: var(--sparko-mango-soft); color: var(--sparko-mango-ink);"
+            >
+              <Icon name="wallet" size={13} stroke={2.4} />
+              Saldo menipis · Top up yuk →
+            </a>
+          {/if}
           <p
             class="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 text-sm lg:text-[14.5px] text-ink-500"
           >
@@ -306,7 +353,7 @@
           href={item.href}
           onclick={() => haptic(8)}
           style={revealDelay(i, 0, 60)}
-          class="reveal card-lift group flex min-w-0 items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
+          class="reveal card-lift tile-press group flex min-w-0 items-center gap-3 rounded-2xl border border-ink-100 bg-surface p-3.5
             lg:flex-col lg:items-start lg:gap-2 lg:py-3 lg:px-3 {item.glow}"
         >
           <span
@@ -461,7 +508,7 @@
       </span>
       {#if data.stats.deltaOrders !== undefined && data.stats.deltaOrders !== 0}
         <span
-          class="rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data.stats
+          class="delta-pop rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data.stats
             .deltaOrders >= 0
             ? 'bg-success/10 text-success'
             : 'bg-danger/10 text-danger'}"
@@ -840,7 +887,65 @@
       opacity: 1;
     }
   }
+  /* Sparko halo — pop spring 1× saat mount (APP V3 S2-1) */
+  .sparko-hello {
+    animation: sparko-hello 500ms var(--ease-spring) both;
+    transform-origin: 50% 80%;
+  }
+  @keyframes sparko-hello {
+    from {
+      transform: scale(0) rotate(-12deg);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1) rotate(0);
+      opacity: 1;
+    }
+  }
+  /* Delta chip pop spring setelah count-up settle (APP V3 S2-5) */
+  .delta-pop {
+    animation: delta-pop 350ms var(--ease-spring) 800ms both;
+  }
+  @keyframes delta-pop {
+    from {
+      transform: scale(0.6);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  /* Quick tile sticker-press (APP V3 S2-3) — tenggelam + spring balik */
+  .tile-press {
+    transition:
+      transform 120ms ease-out,
+      box-shadow 120ms ease-out;
+  }
+  .tile-press:active {
+    transform: scale(0.96);
+    box-shadow: none;
+    transition-duration: 100ms;
+  }
+  /* Saldo menipis — lirik perhatian 3× lalu diam (APP V3 S3, pola P-2) */
+  .lowbal-pulse {
+    animation: lowbal-pulse 1.6s ease-in-out 3;
+  }
+  @keyframes lowbal-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
   @media (prefers-reduced-motion: reduce) {
+    .lowbal-pulse {
+      animation: none;
+    }
+    .tile-press {
+      transition: none;
+    }
+    .sparko-hello,
+    .delta-pop {
+      animation: none;
+    }
     .ctoa-premium,
     .ctoa-icon,
     .ctoa-shimmer::before {

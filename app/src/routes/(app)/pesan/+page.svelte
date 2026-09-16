@@ -605,9 +605,12 @@
 
             <!-- Price summary — sticker-dark (APP V2 §6.2) -->
             <div
-              class="reveal rounded-2xl border-2 border-white/25 bg-ink-900 p-4 text-white shadow-[3px_3px_0_rgba(255,255,255,0.22),0_16px_32px_-14px_rgba(15,23,42,0.45)]"
+              class="reveal relative overflow-hidden rounded-2xl border-2 border-white/25 bg-ink-900 p-4 text-white shadow-[3px_3px_0_rgba(255,255,255,0.22),0_16px_32px_-14px_rgba(15,23,42,0.45)]"
               style="--d:40ms"
             >
+              {#key selectedService?.id ?? "none"}
+                <span class="sum-flash" aria-hidden="true"></span>
+              {/key}
               {#if couponOk && couponDiscount > 0}
                 <div class="flex items-center justify-between text-xs text-ink-300">
                   <span>Subtotal</span>
@@ -752,8 +755,11 @@
       <aside class="hidden lg:block lg:sticky lg:top-20 self-start space-y-4">
         <!-- Live summary — playful shadow -->
         <div
-          class="reveal rounded-2xl lg:rounded-[20px] border border-ink-100 bg-surface p-4 lg:p-5 shadow-[0_18px_42px_-16px_rgba(15,23,42,0.12)]"
+          class="reveal relative overflow-hidden rounded-2xl lg:rounded-[20px] border border-ink-100 bg-surface p-4 lg:p-5 shadow-[0_18px_42px_-16px_rgba(15,23,42,0.12)]"
         >
+          {#key selectedService?.id ?? "none"}
+            <span class="sum-flash sum-flash--light" aria-hidden="true"></span>
+          {/key}
           <div class="mb-3 flex items-center gap-2">
             <div class="grid h-8 w-8 place-items-center rounded-lg bg-success/10 text-success">
               <Icon name="receipt" size={16} />
@@ -890,7 +896,39 @@
       opacity: 1;
     }
   }
+  /* Summary flash saat ganti layanan (APP V3 S3) — kilau mango 600ms 1× */
+  .sum-flash {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgb(251 191 36 / 0.22) 50%,
+      transparent 70%
+    );
+    transform: translateX(-110%);
+    animation: sum-flash 600ms ease-out 1;
+  }
+  .sum-flash--light {
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgb(217 165 20 / 0.16) 50%,
+      transparent 70%
+    );
+  }
+  @keyframes sum-flash {
+    to {
+      transform: translateX(110%);
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
+    .sum-flash {
+      animation: none;
+      display: none;
+    }
     .step-dot {
       transition: none;
     }

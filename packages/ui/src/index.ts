@@ -95,3 +95,7 @@ export { default as ConfettiBurst } from "./components/ConfettiBurst.svelte";
 // Dipakai mulai F2/F3 (momen utama per layar, budget §2.3).
 export { default as Marker } from "./components/Marker.svelte";
 export { default as StickerCard } from "./components/StickerCard.svelte";
+
+// Sparko mascot (APP V3) — 6 pose, pure SVG. Budget: ≤1 instance per layar.
+export { default as Sparko } from "./components/Sparko.svelte";
+export { default as BackButton } from "./components/BackButton.svelte";
