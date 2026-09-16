@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { AuthBackdrop, Button, Icon, Mascot } from "@socio/ui";
+  import { AuthBackdrop, Button, Icon, Marker, Mascot } from "@socio/ui";
   import { renderTurnstile } from "$lib/turnstile";
   import { onMount } from "svelte";
 
@@ -144,14 +144,15 @@
         <div class="flex items-start gap-2.5 rounded-2xl border border-ink-100 bg-white px-4 py-3">
           <Icon name="tag" size={16} class="mt-0.5 shrink-0 text-primary" />
           <p class="text-xs leading-relaxed text-ink-600">
-            Harga grosir khusus reseller, cocok untuk jualan ulang &amp; produksi harian.
+            <Marker>Harga grosir khusus reseller</Marker>, cocok untuk jualan ulang &amp; produksi
+            harian.
           </p>
         </div>
         <div class="flex items-start gap-2.5 rounded-2xl border border-ink-100 bg-white px-4 py-3">
           <Icon name="zap" size={16} class="mt-0.5 shrink-0 text-primary" />
           <p class="text-xs leading-relaxed text-ink-600">
-            Aktivasi Rp50.000 via transfer BCA — <b>saldo Rp20.000 sudah termasuk</b> &amp; langsung bisa
-            dipakai pesan.
+            Aktivasi Rp50.000 via transfer BCA — <Marker>saldo Rp20.000 sudah termasuk</Marker> &amp;
+            langsung bisa dipakai pesan.
           </p>
         </div>
       </div>
@@ -340,7 +341,7 @@
 
   /* F6 playful: knob spring, mode pop, morph, strength pop, error pop */
   .mode-knob {
-    transition: transform 300ms var(--ease-spring);
+    transition: transform 260ms var(--ease-spring);
   }
   .mode-pop {
     animation: mode-pop 380ms var(--ease-spring) both;

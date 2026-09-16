@@ -5,9 +5,10 @@
     hoverLift,
     Icon,
     NumberFlow,
-    ConfettiBurst,
     EmptyAffiliateArt,
     revealDelay,
+    StickerCard,
+    Marker,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -19,10 +20,10 @@
   let busy = $state(false);
   let confirmOpen = $state(false);
 
-  // Referral copy: ikon morph copy → check (spring scale), reset setelah 1.6s
+  // Referral copy: ikon morph copy → check (spring scale), reset setelah 1.6s.
+  // Tanpa confetti (P-4: komisi withdraw butuh approval — jangan rayakan dulu).
   let linkCopied = $state(false);
   let copyTimer: ReturnType<typeof setTimeout> | undefined;
-  let confettiFire = $state(0);
 
   async function submitWithdraw(input: any) {
     busy = true;
@@ -59,7 +60,6 @@
     haptic(8);
     navigator.clipboard?.writeText(data.refLink);
     linkCopied = true;
-    confettiFire += 1; // rayakan 1× (F5, no-op saat reduced-motion)
     clearTimeout(copyTimer);
     copyTimer = setTimeout(() => (linkCopied = false), 1600);
   }
@@ -82,13 +82,10 @@
   </h1>
 
   <div class="grid min-w-0 gap-4 lg:grid-cols-2 lg:items-start">
-    <div
-      class="reveal min-w-0 rounded-2xl bg-ink-900 p-4 lg:p-5 text-white shadow-[0_16px_40px_-16px_rgba(15,23,42,0.35)] hover:shadow-[0_20px_48px_-16px_rgba(15,23,42,0.42)] hover:-translate-y-1 transition-all duration-300"
-      style="--d:80ms"
-    >
+    <StickerCard tone="dark" class="reveal min-w-0 p-4 lg:p-5">
       <div class="text-xs text-ink-300">Komisi Pending</div>
       <div class="font-display text-2xl lg:text-3xl font-extrabold">
-        <NumberFlow value={Number(data.commission)} format={formatRupiah} />
+        <Marker><NumberFlow value={Number(data.commission)} format={formatRupiah} /></Marker>
       </div>
       <div class="mt-1 flex items-center justify-between text-xs">
         <span class="text-ink-300">{data.downline} downline · kode {data.code}</span>
@@ -146,7 +143,7 @@
           </div>
         {/if}
       </div>
-    </div>
+    </StickerCard>
 
     <div class="min-w-0 space-y-4">
       <div
@@ -162,7 +159,6 @@
             class="h-10 min-w-0 flex-1 rounded-xl border border-ink-200 bg-ink-50 px-3 text-sm"
           />
           <span class="relative shrink-0">
-            <ConfettiBurst fire={confettiFire} />
             <Button onclick={copyRefLink} size="sm" class="shrink-0">
               <span class="grid h-4 w-4 place-items-center">
                 {#key linkCopied}

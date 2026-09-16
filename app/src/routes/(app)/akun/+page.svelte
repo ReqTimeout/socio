@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { Avatar, Button, ConfirmDialog, Icon, Input, toast } from "@socio/ui";
+  import { Avatar, Button, ConfirmDialog, Icon, Input, Marker, toast } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { formatRupiah } from "$lib/format";
   import { applyAction, enhance } from "$app/forms";
+  import { onMount } from "svelte";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
@@ -17,6 +18,34 @@
 
   // UX5 — toggle edit mode untuk settings rows (default collapsed)
   let editMode = $state<"profile" | "password" | "apikey" | null>(null);
+
+  // M12 — pill geser di segmented tema (diukur DOM, ikut theme/mount/resize)
+  let segRow: HTMLElement | null = $state(null);
+  let segInd = $state({ x: 0, w: 0, show: false });
+  function placeSegInd() {
+    if (!segRow) return;
+    const active = segRow.querySelector<HTMLElement>('[data-active="true"]');
+    if (!active) {
+      segInd.show = false;
+      return;
+    }
+    segInd = { x: active.offsetLeft, w: active.offsetWidth, show: true };
+  }
+  onMount(() => {
+    placeSegInd();
+    const t = setTimeout(placeSegInd, 300);
+    const onRs = () => placeSegInd();
+    addEventListener("resize", onRs);
+    return () => {
+      clearTimeout(t);
+      removeEventListener("resize", onRs);
+    };
+  });
+  $effect(() => {
+    data.user.theme; // track → reposisi tiap ganti tema
+    const t = setTimeout(placeSegInd, 60);
+    return () => clearTimeout(t);
+  });
 
   // Password strength — bar width spring-ish (CSS width transition, 0→100)
   // Heuristik sederhana: panjang + variasi kelas karakter (zxcvbn berat untuk bundle client).
@@ -207,11 +236,9 @@
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
           <div class="font-display text-lg lg:text-xl font-bold truncate">{data.user.name}</div>
-          <span
-            class="level-shine relative inline-flex shrink-0 items-center overflow-hidden rounded-full bg-gradient-to-r from-primary to-accent-500 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white"
+          <Marker class="text-[10px] font-extrabold uppercase tracking-wide"
+            >{data.user.level}</Marker
           >
-            {data.user.level}
-          </span>
         </div>
         <div class="text-sm text-ink-500 truncate">@{data.user.username}</div>
       </div>
@@ -455,11 +482,22 @@
         <p class="text-sm font-semibold text-ink-900">Tema</p>
         <p class="text-xs text-ink-500">Light (default) / Dark (untuk malam)</p>
       </div>
-      <div class="flex shrink-0 gap-1 rounded-full bg-ink-100 p-1 dark:bg-ink-200">
+      <div
+        class="relative flex shrink-0 gap-1 rounded-full bg-ink-100 p-1 dark:bg-ink-200"
+        bind:this={segRow}
+      >
+        {#if segInd.show}
+          <span
+            class="pointer-events-none absolute top-1 bottom-1 left-0 rounded-full bg-white shadow-sm motion-safe:transition-all motion-safe:duration-200 dark:bg-ink-900"
+            style="transform: translateX({segInd.x}px); width: {segInd.w}px;"
+            aria-hidden="true"
+          ></span>
+        {/if}
         <button
           type="submit"
           name="theme"
           value="light"
+          data-active={data.user.theme === "light" ? "true" : undefined}
           onclick={() => {
             haptic();
             localStorage.setItem("theme", "light");
@@ -467,9 +505,9 @@
           }}
           aria-label="Aktifkan tema terang"
           aria-pressed={data.user.theme === "light"}
-          class="rounded-full px-3 py-1 text-xs font-semibold transition {data.user.theme ===
-          'light'
-            ? 'bg-white text-ink-900 shadow-sm'
+          class="relative rounded-full px-3 py-1 text-xs font-semibold transition {data.user
+            .theme === 'light'
+            ? 'text-ink-900 dark:text-ink-50'
             : 'text-ink-500'}"
         >
           Light
@@ -478,6 +516,7 @@
           type="submit"
           name="theme"
           value="dark"
+          data-active={data.user.theme === "dark" ? "true" : undefined}
           onclick={() => {
             haptic();
             localStorage.setItem("theme", "dark");
@@ -485,8 +524,9 @@
           }}
           aria-label="Aktifkan tema gelap"
           aria-pressed={data.user.theme === "dark"}
-          class="rounded-full px-3 py-1 text-xs font-semibold transition {data.user.theme === 'dark'
-            ? 'bg-ink-900 text-ink-50'
+          class="relative rounded-full px-3 py-1 text-xs font-semibold transition {data.user
+            .theme === 'dark'
+            ? 'text-ink-900 dark:text-ink-50'
             : 'text-ink-500'}"
         >
           Dark
@@ -586,26 +626,6 @@
 />
 
 <style>
-  /* Level badge — micro-shine sweep sekali saat mount (bukan loop) */
-  .level-shine::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      105deg,
-      transparent 40%,
-      rgb(255 255 255 / 0.35) 50%,
-      transparent 60%
-    );
-    transform: translateX(-120%);
-    animation: shine-sweep 900ms cubic-bezier(0.16, 1, 0.3, 1) 350ms forwards;
-    pointer-events: none;
-  }
-  @keyframes shine-sweep {
-    to {
-      transform: translateX(120%);
-    }
-  }
   /* Ledger rows — stagger reveal (delay via --d per baris) */
   .row-slide {
     animation: row-in 320ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
@@ -653,7 +673,6 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .level-shine::after,
     .row-slide,
     .avatar-pop,
     .theme-morph {

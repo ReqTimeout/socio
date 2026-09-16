@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { Icon, Button, toast, revealDelay, EmptyNotifArt, SwipeRow } from "@socio/ui";
+  import { Icon, Button, toast, revealDelay, EmptyNotifArt, Mascot, SwipeRow } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
+  import { onMount } from "svelte";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
@@ -53,13 +54,14 @@
 
   function open(item: any) {
     haptic(10);
-    markRead(item.id);
+    markRead(item.id, true);
     if (item.actionUrl) goto(item.actionUrl);
   }
 
   // Tandai dibaca saja (aksi swipe mobile) — tanpa navigasi.
-  function markRead(id: number) {
-    haptic(8);
+  // quiet=true saat dipanggil dari open() (haptic sudah bunyi 1× — anti-ganda).
+  function markRead(id: number, quiet = false) {
+    if (!quiet) haptic(8);
     readIds = new Set(readIds).add(id);
     const fd = new FormData();
     fd.append("id", String(id));
@@ -67,6 +69,35 @@
   }
 
   let markAllBusy = $state(false);
+
+  // M12 — indicator mango di bawah chip filter aktif (diukur DOM, ikut filter/resize)
+  let chipRow: HTMLElement | null = $state(null);
+  let chipInd = $state({ left: 0, width: 0, show: false });
+  function placeChipInd() {
+    if (!chipRow) return;
+    const active = chipRow.querySelector<HTMLElement>('[data-active="true"]');
+    if (!active) {
+      chipInd.show = false;
+      return;
+    }
+    chipInd = { left: active.offsetLeft, width: active.offsetWidth, show: true };
+  }
+  onMount(() => {
+    placeChipInd();
+    const t = setTimeout(placeChipInd, 300);
+    const onRs = () => placeChipInd();
+    addEventListener("resize", onRs);
+    return () => {
+      clearTimeout(t);
+      removeEventListener("resize", onRs);
+    };
+  });
+  $effect(() => {
+    data.type; // track → reposisi tiap ganti filter
+    const t = setTimeout(placeChipInd, 60);
+    return () => clearTimeout(t);
+  });
+
   function markAll() {
     markAllBusy = true;
     // optimistic: semua tandai read
@@ -99,19 +130,29 @@
     {/if}
   </div>
 
-  <!-- Filter chips — min-h 44 for thumb -->
-  <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-    {#each filters as f}
-      <button
-        onclick={() => selectType(f.v)}
-        class="min-h-[44px] shrink-0 rounded-full px-3.5 py-2 text-xs font-bold transition-all duration-200 active:scale-95
-          {data.type === f.v
-          ? 'bg-primary text-white shadow-sm'
-          : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
-      >
-        {f.label}
-      </button>
-    {/each}
+  <!-- Filter chips — min-h 44 for thumb; indicator mango M12 -->
+  <div class="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+    <div class="relative flex w-fit gap-2" bind:this={chipRow}>
+      {#each filters as f}
+        <button
+          onclick={() => selectType(f.v)}
+          data-active={data.type === f.v ? "true" : undefined}
+          class="min-h-[44px] shrink-0 rounded-full px-3.5 py-2 pb-3 text-xs font-bold transition-all duration-200 active:scale-95
+            {data.type === f.v
+            ? 'bg-primary text-white shadow-sm'
+            : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
+        >
+          {f.label}
+        </button>
+      {/each}
+      <span
+        class="pointer-events-none absolute bottom-0 left-0 h-[3px] rounded-full motion-safe:transition-all motion-safe:duration-200"
+        style="transform: translateX({chipInd.left}px); width: {chipInd.width}px; opacity: {chipInd.show
+          ? 1
+          : 0}; background: var(--color-mango-500);"
+        aria-hidden="true"
+      ></span>
+    </div>
   </div>
 
   {#if data.items.length === 0}
@@ -122,6 +163,12 @@
         class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
       ></div>
       <EmptyNotifArt size={112} class="relative mx-auto mb-3 text-ink-300" />
+      <div
+        class="relative mx-auto -mt-8 mb-2 flex w-fit translate-x-10 justify-end"
+        aria-hidden="true"
+      >
+        <Mascot pose="fly" size={40} class="float-slow -rotate-12 text-mango-500" />
+      </div>
       <p class="relative text-sm font-bold text-ink-800">{copy.empty.notif.title}</p>
       <p class="relative mt-1 text-xs leading-relaxed text-ink-500">{copy.empty.notif.desc}</p>
     </div>

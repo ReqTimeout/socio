@@ -344,9 +344,9 @@
       opacity: 1;
     }
   }
-  /* Pill Answered pulse halus */
+  /* Pill Answered: lirik perhatian 3× lalu diam (P-2 — bukan infinite) */
   .answered-pulse {
-    animation: answered-pulse 2.2s ease-in-out infinite;
+    animation: answered-pulse 2.2s ease-in-out 3;
   }
   @keyframes answered-pulse {
     0%,

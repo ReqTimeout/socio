@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { ServiceCard, Icon, Select, Skeleton, revealDelay, EmptyServicesArt } from "@socio/ui";
+  import {
+    ServiceCard,
+    Icon,
+    Select,
+    Skeleton,
+    revealDelay,
+    EmptyServicesArt,
+    Mascot,
+  } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { goto } from "$app/navigation";
@@ -207,7 +215,10 @@
   {#if data.services.length === 0}
     {#key data.total}
       <div class="shake-once flex flex-col items-center justify-center py-14 text-center">
-        <EmptyServicesArt size={132} class="text-ink-300" />
+        <div class="relative flex items-end justify-center">
+          <EmptyServicesArt size={132} class="text-ink-300" />
+          <Mascot pose="fly" size={48} class="float-slow -ml-8 -rotate-12 text-mango-500" />
+        </div>
         <h2 class="mt-4 font-display text-lg font-bold text-ink-900">
           {copy.empty.services.title}
         </h2>
