@@ -6,7 +6,6 @@
     Icon,
     LiveDot,
     PromoBanner,
-    OrbField,
     revealDelay,
     tweenNumber,
     EmptyOrdersArt,
@@ -29,26 +28,18 @@
   // Time-aware greeting (WIB) — client clock → Asia/Jakarta.
   // Range: pagi 04-10, siang 11-14, sore 15-17, malam 18-03.
   type TimePhase = "dawn" | "day" | "dusk" | "night";
-  const phaseMeta: Record<TimePhase, { greeting: string; emoji: string; ambient: string }> = {
+  const phaseMeta: Record<TimePhase, { greeting: string }> = {
     dawn: {
       greeting: copy.greeting.dawn,
-      emoji: "🌅",
-      ambient: "from-amber-200/40 via-orange-100/20 to-transparent",
     },
     day: {
       greeting: copy.greeting.day,
-      emoji: "☀️",
-      ambient: "from-sky-200/30 via-cyan-100/20 to-transparent",
     },
     dusk: {
       greeting: copy.greeting.dusk,
-      emoji: "🌇",
-      ambient: "from-violet-200/40 via-amber-100/25 to-transparent",
     },
     night: {
       greeting: copy.greeting.night,
-      emoji: "🌙",
-      ambient: "from-indigo-200/30 via-violet-100/15 to-transparent",
     },
   };
   function phaseOf(h: number): TimePhase {
@@ -73,14 +64,12 @@
 
   let phase = $state<TimePhase>("day");
   let greeting = $state("Halo");
-  let ambient = $state(phaseMeta.day.ambient);
 
   onMount(() => {
     const h = hourWIB();
     const p = phaseOf(h);
     phase = p;
     greeting = phaseMeta[p].greeting;
-    ambient = phaseMeta[p].ambient;
     // Keep phase fresh if user leaves tab open across the hour
     const id = setInterval(() => {
       const nh = hourWIB();
@@ -88,7 +77,6 @@
       if (np !== phase) {
         phase = np;
         greeting = phaseMeta[np].greeting;
-        ambient = phaseMeta[np].ambient;
       }
     }, 60_000);
     return () => clearInterval(id);
@@ -219,16 +207,11 @@
 </svelte:head>
 
 <section class="space-y-5 lg:space-y-6 relative">
-  <!-- Hero greeting — premium editorial layout with OrbField backdrop (M5 upgrade)
-     Palette shifts by time-of-day untuk ambient feel. -->
-  <header class="reveal relative -mx-4 sm:-mx-6 lg:-mx-10 overflow-hidden rounded-b-[28px]">
-    <OrbField
-      palette={phase === "dawn" ? "dawn" : phase === "night" ? "night" : "primary"}
-      intensity="soft"
-    />
+  <!-- Hero greeting — dot-grid + sky wash (brand §8.3/§13: no gradient blob).
+     Rasa waktu tetap ada via eyebrow fase (Pagi/Siang/Sore/Malam). -->
+  <header class="reveal hero-sky relative -mx-4 sm:-mx-6 lg:-mx-10 overflow-hidden rounded-b-[28px] border-b-2 border-ink-900">
     <div
-      class="relative z-10 px-4 pt-5 pb-6 sm:px-6 lg:px-10 lg:pt-7 lg:pb-8
-      bg-gradient-to-b {ambient} backdrop-blur-[2px]"
+      class="relative z-10 px-4 pt-5 pb-6 sm:px-6 lg:px-10 lg:pt-7 lg:pb-8"
     >
       <div
         class="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
@@ -859,16 +842,18 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.28),
       inset 0 -1px 0 rgba(0, 0, 0, 0.12);
   }
-  @keyframes ambientDrift {
-    0%,
-    100% {
-      transform: translateY(0) scale(1);
-      opacity: 0.85;
-    }
-    50% {
-      transform: translateY(-6px) scale(1.02);
-      opacity: 1;
-    }
+  /* Hero dot-grid + sky wash (brand §8.3: dot default, linear 2-stop max) */
+  .hero-sky {
+    background-color: var(--sparko-paper);
+    background-image:
+      linear-gradient(180deg, rgb(125 211 252 / 0.22), rgb(125 211 252 / 0) 70%),
+      radial-gradient(circle, rgb(26 26 26 / 0.08) 1px, transparent 1px);
+    background-size: auto, 16px 16px;
+  }
+  .dark .hero-sky {
+    background-color: var(--color-surface);
+    background-image:
+      linear-gradient(180deg, rgb(56 189 248 / 0.1), transparent 70%);
   }
   /* Sparko halo — pop spring 1× saat mount (APP V3 S2-1) */
   .sparko-hello {
@@ -937,9 +922,6 @@
     }
     .ctoa-shimmer::before {
       display: none;
-    }
-    [style*="ambientDrift"] {
-      animation: none !important;
     }
   }
 </style>
