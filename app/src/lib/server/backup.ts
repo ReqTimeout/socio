@@ -66,6 +66,11 @@ export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id:
       timezone: "Z",
     });
 
+    // Snapshot konsisten (InnoDB): seluruh dump mencerminkan satu titik waktu
+    // walau tabel terus ditulis user/cron saat backup jalan.
+    await conn.query("SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+    await conn.query("START TRANSACTION WITH CONSISTENT SNAPSHOT");
+
     const [tables] = (await conn.query("SHOW TABLES")) as any;
     const tableNames: string[] = tables.map((r: any) => Object.values(r)[0] as string);
 
@@ -73,9 +78,12 @@ export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id:
     const gzip = zlib.createGzip();
     gzip.pipe(gzipOut);
 
-    let header = `-- Socio.id backup\n-- Database: ${dbc.database}\n-- Generated: ${new Date().toISOString()}\n-- Tables: ${tableNames.length}\n\n`;
-    gzip.write(Buffer.from(header, "utf8"));
-    header = "";
+    // Preamble wajib untuk restore: dump lama tidak punya header sama sekali,
+    // sehingga DROP/CREATE per tabel (urutan SHOW TABLES) menyerempet foreign-key.
+    const preamble =
+      `-- Socio.id backup\n-- Database: ${dbc.database}\n-- Generated: ${new Date().toISOString()}\n-- Tables: ${tableNames.length}\n` +
+      `SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS=0;\nSET UNIQUE_CHECKS=0;\nSET sql_mode='NO_ENGINE_SUBSTITUTION';\n\n`;
+    gzip.write(Buffer.from(preamble, "utf8"));
 
     const q = (s: string) => "`" + s.replace(/`/g, "``") + "`";
 
@@ -101,8 +109,8 @@ export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id:
       for (let offset = 0; offset < count; offset += batchSize) {
         const [rows] = (await conn.query(`SELECT * FROM ${q(table)} LIMIT ${batchSize} OFFSET ${offset}`)) as any;
         if (!rows.length) continue;
-        const colList = colNames.map((c) => "`" + c.replace(/`/g, "``") + "`").join("`,`");
-        const head = `INSERT INTO ${q(table)} (\`${colList}\`) VALUES\n`;
+        const colList = colNames.map(q).join(",");
+        const head = `INSERT INTO ${q(table)} (${colList}) VALUES\n`;
         const body = (rows as any[])
           .map((r: any, i: number) => {
             const vals = colNames.map((c: string) => escape(r[c])).join(",");
@@ -115,6 +123,8 @@ export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id:
       gzip.write(Buffer.from(`-- ${count} rows\n`, "utf8"));
     }
 
+    gzip.write(Buffer.from(`\nSET FOREIGN_KEY_CHECKS=1;\n`, "utf8"));
+    await conn.query("COMMIT");
     gzip.end();
     await new Promise<void>((resolve, reject) => {
       gzipOut.on("finish", () => resolve());
