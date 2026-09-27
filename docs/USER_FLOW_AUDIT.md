@@ -114,7 +114,7 @@
 - Email template Resend sudah ada (`verificationEmail`, `resetPasswordEmail`, `sendResellerInstructionsEmail`, `activateReseller`).
 - Dev server masih di `http://localhost:5199` (butuh login `testadmin@socio.local / admin123` yang di-seed untuk Playwright — sudah di-cleanup setelah verifikasi, buat ulang jika perlu).
 
-> **Next:** isi env VPS sesuai §2, lalu `pnpm --filter app build` di VPS dan `pnpm --filter app lint && pnpm --filter app check` harus 0 error sebelum `git push vps/main`.
+> **Next:** isi env VPS sesuai §2, lalu `pnpm --filter app build` di VPS dan `pnpm --filter app lint && pnpm --filter app check` harus 0 error sebelum `git push origin main` (deploy = GitHub → Coolify auto-build; remote `vps` legacy sudah dihapus).
 
 ---
 

@@ -10,7 +10,7 @@
 
 | Komponen | Status | Catatan |
 |---|---|---|
-| VPS (Tencent Jakarta) | ✅ Live | `43.157.204.17`, Coolify panel `coolify.socio.id` |
+| VPS (Tencent APAC) | ✅ Live | `130.254.47.93` (VPS lama `43.157.204.17` MATI, migrasi 2026-09-02), Coolify panel `coolify.socio.id` |
 | DB MySQL (`socio-db`) | ✅ Live | 37 tabel, `127.0.0.1:3306` di VPS, **BUKAN TiDB** |
 | app.socio.id | ✅ Live | SvelteKit + adapter-node, deploy via Coolify (git push → auto deploy) |
 | socio.id (landing) | ✅ Live | Cloudflare Pages, Astro |

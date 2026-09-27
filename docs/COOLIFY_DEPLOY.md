@@ -1,6 +1,13 @@
 # Coolify Deploy Runbook — app.socio.id
 
-> Status: **LIVE on Coolify (2026-07-17).** `app.socio.id` is served by Coolify:
+> ⚠️ **DOKUMEN HISTORIS (era VPS lama, 2026-07-17).** Semua IP `43.157.204.17` di file
+> ini **SUDAH MATI** sejak server migration 2026-09-02. Sumber kebenaran operasional
+> harian sekarang: [`docs/deploy/APPSOCIOID_VPS.md`](./deploy/APPSOCIOID_VPS.md)
+> (VPS baru `130.254.47.93` / IPv6 `2607:adc0:5::215`). Riwayat migrasi:
+> [`docs/operations/server-migration-2026-09-02.md`](./operations/server-migration-2026-09-02.md).
+> File ini hanya disimpan untuk catatan gotcha (better-auth pin, Dockerfile, SSH key encrypt).
+
+> Status historis: **LIVE on Coolify (2026-07-17, VPS lama).** `app.socio.id` saat itu served by Coolify:
 > Traefik (`coolify-proxy`) on :80/:443 → app container `f13y38...` (port 3000) → MySQL `socio-db`.
 > systemd `socio-app-prod` and Caddy are **stopped** (no longer used). Cloudflare SSL = **full**.
 
@@ -36,10 +43,10 @@
 placing the app on the same network as the DB — set `SOCIO_DB_HOST` to the DB service
 hostname Coolify assigns (or the `socio-db` container IP).
 
-## Coolify setup steps (do in dashboard at https://43.157.204.17:8000)
+## Coolify setup steps (do in dashboard — dashboard VPS lama `43.157.204.17:8000` sudah MATI; pakai `130.254.47.93:8000`, lihat APPSOCIOID_VPS.md)
 
 1. **Onboarding**: complete the initial Coolify setup (admin user, SSH key).
-2. **Server**: register the VPS as a server (IP `43.157.204.17`, Docker already present).
+2. **Server**: register the VPS as a server (IP lama `43.157.204.17` sudah MATI — VPS aktif `130.254.47.93`, Docker sudah ada).
    Or use the "localhost" server since Coolify runs on the same VPS.
 3. **Project**: create project `socio-app`.
 4. **Application (Dockerfile)**:

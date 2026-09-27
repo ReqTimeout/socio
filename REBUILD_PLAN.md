@@ -678,7 +678,7 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 - [x] Verifikasi: `bcryptjs.compare` → true. Login user existing works (commit `3313099`, auth endpoint 200 + token).
 - [~] Setup TiDB Serverless (Singapore) + Tencent Lighthouse Jakarta (Coolify panel). → **Tencent Lighthouse + Coolify SELESAI & LIVE** (app.socio.id diproteksi Coolify proxy). **TiDB Serverless TIDAK dipakai** — pakai MySQL di VPS (`socio-db`, sudah di network `coolify`). Keputusan §12#1 berubah ke MySQL VPS.
 - [x] Deploy skeleton `app.socio.id` ke VPS via Coolify (Dockerfile git-backed dari GitHub `ReqTimeout/socio`, branch `main`). Healthcheck `/` = 200.
-- [x] Setup DNS: `app.socio.id` → VPS (CF proxy full). `cdn.socio.id` → R2 public (aktif, verified PutObject). `socio.id` + `www.socio.id` → Cloudflare Pages (landing LIVE 2026-07-17, HTTP 200). `coolify.socio.id` → VPS 43.157.204.17.
+- [x] Setup DNS: `app.socio.id` → VPS (CF proxy full). `cdn.socio.id` → R2 public (aktif, verified PutObject). `socio.id` + `www.socio.id` → Cloudflare Pages (landing LIVE 2026-07-17, HTTP 200). `coolify.socio.id` → VPS. ⚠️ VPS **MIGRASI 2026-09-02**: lama `43.157.204.17` (Jakarta, MATI) → baru `130.254.47.93` (APAC). Lihat docs/operations/server-migration-2026-09-02.md.
 
 ### M1 — Auth + DB wiring (4-5 hari)
 
@@ -828,7 +828,7 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 
 - [x] Cloudflare Pages project `socio-id` dibuat + deploy (wrangler).
 - [x] Custom domain `socio.id` + `www.socio.id` → CNAME `socio-id.pages.dev` (proxied, CF).
-- [x] DNS zone socio.id: `app.socio.id`→VPS, `cdn.socio.id`→R2, `coolify.socio.id`→VPS (43.157.204.17).
+- [x] DNS zone socio.id: `app.socio.id`→VPS, `cdn.socio.id`→R2, `coolify.socio.id`→VPS (IP aktif `130.254.47.93`; `43.157.204.17` lama MATI sejak migrasi 2026-09-02).
 - [x] R2 creds valid (verified PutObject OK), VAPID injected ke Coolify env.
 - [~] Upgrade `landing/` (clone haloka) ke Tailwind v4 + astro:assets. (sudah v4, perlu ganti konten)
 - [ ] Ganti konten haloka (WhatsApp AI) → socio.id (SMM panel).

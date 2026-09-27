@@ -99,5 +99,5 @@ Belum dikerjakan — deploy manual dulu sampai M7.
 
 ## 7. Masalah diketahui
 
-- `app.socio.id` HTTP 522 (origin VPS 43.157.204.17 down) — **pre-existing, bukan akibat cutover** (DNS app tidak disentuh). User akan kasih akses VPS untuk setup Coolify + DB + app deploy (M1/M2 infra).
+- ~~`app.socio.id` HTTP 522 (origin VPS 43.157.204.17 down)~~ — **RESOLVED 2026-09-02.** VPS lama `43.157.204.17` sudah MATI dan diganti VPS baru `130.254.47.93` (Tencent APAC) via [server migration](./operations/server-migration-2026-09-02.md). `app.socio.id` kini **LIVE** di Coolify (VPS baru). Operasional app: lihat [`deploy/APPSOCIOID_VPS.md`](./deploy/APPSOCIOID_VPS.md). Catatan 522 ini tinggal sebagai riwayat pra-migrasi.
 - Project duplikat `socio-id-er2.pages.dev` di akun 3smedianet — artefak salah akun saat CF1. Bisa dihapus kalau sudah tidak dipakai (preview URL lama `https://socio-id-er2.pages.dev` akan mati).

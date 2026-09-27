@@ -13,7 +13,7 @@
 - Test admin: user id 2395 (`admin`), 3154, 2393. Session cookie format `${sessionId}.${token}`.
 
 ## 1. Akses produksi
-- VPS: `root@130.254.47.93` (SSH key, tanpa password). ⚠️ IP lama `43.157.204.17` MATI — remote git `vps` masih menunjuk IP itu (belum dikoreksi). Semua port IP lama filtered.
+- VPS: `root@130.254.47.93` (SSH key, tanpa password — diverifikasi 27-Sep: `ssh root@130.254.47.93 'hostname'` sukses via key). ⚠️ IP lama `43.157.204.17` MATI. Remote git `vps` (dulunya `ubuntu@43.157.204.17:~/socio-repo.git`) **SUDAH DIHAPUS 27-Sep** — dead IP + bare repo tidak ada di VPS baru anyway. Deploy app = `git push origin main` → GitHub → Coolify auto-build (BUKAN git push ke VPS).
 - ⚠️ SSH dari PC baru (IP publik `182.10.137.165`) kena **rate-limit intermiten** (kemungkinan proteksi Lighthouse): koneksi fresh sering `Permission denied` walau key benar. **Solusi: satu ControlMaster** (`ssh -o ControlMaster=auto -o ControlPath=/tmp/ssh-%r@%h:%p -o ControlPersist=900 -fN`), scp/ssh reuse socket; jangan spam koneksi paralel; kalau diblok, tunggu window (±3 mnt) lalu satu percobaan gabungan.
 - Deploy API Coolify terbukti jalan 2026-09-27 dari PC baru: token tinker sekali-pakai → `POST /api/v1/deploy {"uuid":"nqsjafrei6k8dkup1pxkcuwf"}` → hapus token → poll `application_deployment_queues.status` di `coolify-db` sampai `finished` (~4 mnt).
 - App container: prefix nama `nqsjafrei6k8dkup1pxkcuwf-` (ID berubah tiap deploy — selalu resolve via `docker ps --filter`).
