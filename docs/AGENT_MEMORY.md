@@ -148,6 +148,13 @@
 
 ## 10. PC baru 2026-09-27 (setup terverifikasi — untuk agent sesudahnya)
 
+### Pipeline landing (Cloudflare Pages) — terverifikasi via API 27-Sep
+- Kredensial CF di `accountcf.md` (ROOT, **gitignored, JANGAN pernah commit/jadikan dokumen lain**). Token-1 (`cfat_9TXS...`) AKTIF: bisa baca Pages + R2 + list zones; TIDAK bisa baca DNS records zone (error 7003). Token-2 (`cfat_d9rQ...`) mati/tak berwenang API biasa (kemungkinan cuma utk S3-compat R2).
+- Project Pages: **`socio-id`** (id 61cba457...), domain `socio.id`+`www.socio.id`, subdomain `socio-id.pages.dev`. **TIDAK terhubung GitHub (source null)** → deploy = DIRECT UPLOAD build lokal. Push git TIDAK auto-deploy landing.
+- Deploy production terakhir: **`25afc65f` 13-Sep-2026 14:43 WIB** (pola 3 deploy manual berjarak menit: afa522d8/8da4bda1/25afc65f). ⚠️ Commit `06f7d7f` (16 Sep, fix polaroid testimoni mobile) **BELUM ter-deploy** — koreksi klaim sesi 27-Sep: grep `polaroid` di HTML live bukan bukti (string itu hanya ada di source, tidak pernah masuk build output).
+- Cara deploy landing yang benar: `pnpm --filter landing build` → upload `landing/dist` via `wrangler pages deploy` / API Pages upload pakai token-1 (perlu dites scope Edit saat deploy pertama). Setelah deploy: verifikasi marker konten baru di `https://socio.id`.
+- R2: bucket **`socio`** ada (sejak 16 Jul). `cdn.socio.id` resolving CF, root 404 = normal (custom domain bucket, hanya object path yang melayani).
+
 - Repo: `/Volumes/macmini/Desktop/socio.id` (HOME user ada di volume eksternal `/Volumes/miniex` — bikin akses `~/.ssh` kadang terhambat sandbox; jangan panik lihat "Could not stat ~/.ssh").
 - `.env` root terpasang (versi 18 Agu dari PC lama, chmod 600, gitignored). Key baru pasca-18 Agu TIDAK ada tapi kode punya fallback: `SOCIO_PROVIDER_ENC_KEY`→`SOCIO_AUTH_SECRET`, SMTP→`RESEND_API_KEY`, DKIM→tanpa tanda tangan. `.env` ini khusus DEV LOKAL (DB 127.0.0.1) — env produksi beda (Coolify).
 - **DB dev lokal: MariaDB 12.3.3 Homebrew** (`sh.brew.mariadb`, port 3306) = mirror penuh produksi per 27-Sep-2026 03:00 (47 tabel; users 3312, orders 26083, services 8413). Akses root: `mariadb -u root` via **unix_socket tanpa password** (sengaja di-set begitu — tidak ada secret baru). User DB = `socio_app` sesuai `.env`.
