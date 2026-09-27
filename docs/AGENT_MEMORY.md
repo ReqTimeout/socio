@@ -1,6 +1,6 @@
 # AGENT_MEMORY.md — Memori Operasional Socio.id (wajib baca tiap sesi)
 
-> Untuk coding agent (semua model). Fakta terverifikasi dari sesi kerja s/d 2026-09-08.
+> Untuk coding agent (semua model). Fakta terverifikasi dari sesi kerja s/d 2026-09-27 (pindah PC + fix backup).
 > Urutan baca sesi baru: file ini → `AGENTS.md` → `REBUILD_PLAN.md §9` → `docs/audit/admin-mobile-audit.md` (kerja mobile).
 
 ## 0. Fakta kunci (TL;DR)
@@ -13,7 +13,9 @@
 - Test admin: user id 2395 (`admin`), 3154, 2393. Session cookie format `${sessionId}.${token}`.
 
 ## 1. Akses produksi
-- VPS: `root@130.254.47.93` (SSH key, tanpa password).
+- VPS: `root@130.254.47.93` (SSH key, tanpa password). ⚠️ IP lama `43.157.204.17` MATI — remote git `vps` masih menunjuk IP itu (belum dikoreksi). Semua port IP lama filtered.
+- ⚠️ SSH dari PC baru (IP publik `182.10.137.165`) kena **rate-limit intermiten** (kemungkinan proteksi Lighthouse): koneksi fresh sering `Permission denied` walau key benar. **Solusi: satu ControlMaster** (`ssh -o ControlMaster=auto -o ControlPath=/tmp/ssh-%r@%h:%p -o ControlPersist=900 -fN`), scp/ssh reuse socket; jangan spam koneksi paralel; kalau diblok, tunggu window (±3 mnt) lalu satu percobaan gabungan.
+- Deploy API Coolify terbukti jalan 2026-09-27 dari PC baru: token tinker sekali-pakai → `POST /api/v1/deploy {"uuid":"nqsjafrei6k8dkup1pxkcuwf"}` → hapus token → poll `application_deployment_queues.status` di `coolify-db` sampai `finished` (~4 mnt).
 - App container: prefix nama `nqsjafrei6k8dkup1pxkcuwf-` (ID berubah tiap deploy — selalu resolve via `docker ps --filter`).
 - DB container: `rebicrj57r3afbg9knieq9ks`, user `socio`, db `socio_smm`.
 - Password DB: ambil dari container app — `docker exec $APP printenv SOCIO_DB_URL | sed -n 's|.*://[^:]*:\([^@]*\)@.*|\1|p'`. **JANGAN hardcode/tulis password di file/repo.**
@@ -129,10 +131,11 @@
   (restart saja tidak cukup — env baked saat container create). Pernah kejadian 2026-09-08
   (semua vars kena, app crash-loop, fix + redeploy pulih).
 
-## 8. Status & sisa (2026-09-08)
-- Selesai: UX1–UX6, P3-01–P3-10, M4 (cron/provider/email-deposit), M7 cutover (DB tetap VPS MySQL, VPS lama terminate, monitoring ditunda).
-- Sisa: **M5** landing (konten haloka→socio.id + OrderSimulator + sitemap + deploy Pages), **M6** (template email lain, bounce webhook, unsubscribe, Lighthouse ≥90, Vitest).
-- Pending keputusan user: flag "kunci harga" manual; UptimeRobot (ditunda).
+## 8. Status & sisa (update 2026-09-27)
+- Selesai: M0–M4, M3 admin, M5 landing V2 playful F0–F8 + Sparko S/R/G **LIVE** (Pages deploy terakhir dgn fix polaroid 16 Sep terverifikasi di HTML produksi; app Coolify build `4ba0116`).
+- Sisa: **M5 blocker** testimoni + foto asli owner (skip atas perintah user 27-Sep), Lighthouse formal landing, **M6** (bounce webhook, unsubscribe, template email sisa, Vitest), **M7** monitoring (ditunda).
+- Pending keputusan user: flag "kunci harga" manual; UptimeRobot (ditunda); streak login & progress level Sparko (OPT di `APP_V3_SPARKO_PLAN §S4/S6`); roll-out maskot Sparko ke `pesan`/`akun`/`saldo` utama (belum — by design dashboard-first).
+- Verifikasi tertunda: trigger 1× backup manual dari /admin/backup lalu pastikan dump baru bersih (terblokir rate-limit SSH saat sesi 27-Sep; cron 03:00 otomatis sudah pakai kode fix).
 
 ## 9. Checklist verifikasi per kerjaan
 - [ ] `check` 0 error + `build` sukses + commit `--no-verify` + push + deploy `finished`
@@ -142,3 +145,13 @@
 - [ ] Schema baru: ALTER prod idempotent + catat di `scripts/db/migration-pre-deploy.sql`
 - [ ] Cleanup: session + data test dihapus; tidak ada secret di git
 - [ ] Update `REBUILD_PLAN.md §9` / docs terkait bila milestone berubah
+
+## 10. PC baru 2026-09-27 (setup terverifikasi — untuk agent sesudahnya)
+
+- Repo: `/Volumes/macmini/Desktop/socio.id` (HOME user ada di volume eksternal `/Volumes/miniex` — bikin akses `~/.ssh` kadang terhambat sandbox; jangan panik lihat "Could not stat ~/.ssh").
+- `.env` root terpasang (versi 18 Agu dari PC lama, chmod 600, gitignored). Key baru pasca-18 Agu TIDAK ada tapi kode punya fallback: `SOCIO_PROVIDER_ENC_KEY`→`SOCIO_AUTH_SECRET`, SMTP→`RESEND_API_KEY`, DKIM→tanpa tanda tangan. `.env` ini khusus DEV LOKAL (DB 127.0.0.1) — env produksi beda (Coolify).
+- **DB dev lokal: MariaDB 12.3.3 Homebrew** (`sh.brew.mariadb`, port 3306) = mirror penuh produksi per 27-Sep-2026 03:00 (47 tabel; users 3312, orders 26083, services 8413). Akses root: `mariadb -u root` via **unix_socket tanpa password** (sengaja di-set begitu — tidak ada secret baru). User DB = `socio_app` sesuai `.env`.
+- ⚠️ Restore dump produksi MySQL8→MariaDB butuh 3 tambalan LOKAL (produksi MySQL8 tidak perlu): `utf8mb4_0900_ai_ci`/`utf8mb3_*`→`utf8mb4_unicode_ci`, tipe `json`→`longtext` (hindari CHECK json_valid), + `SET FOREIGN_KEY_CHECKS=0` di awal.
+- **BUG BACKUP KRITIS (ditemukan & diperbaiki 27-Sep, commit `efff5ff`, LIVE di produksi):** `backup.ts` lama menghasilkan INSERT dengan backtick dobel (syntax invalid untuk MySQL sekalipun) + tanpa header FOREIGN_KEY_CHECKS → SEMUA backup otomatis 22 Agu–27 Sep sebenarnya tidak restore-able apa adanya (masih bisa diselamatkan via tambalan seperti di atas — terbukti). Fix: `q()` per kolom + preamble SET + `START TRANSACTION WITH CONSISTENT SNAPSHOT` (dump kini titik-waktu konsisten). Round-trip teruji di MariaDB lokal (0 error, FK anak masuk). Sisa verifikasi: trigger 1× backup manual dari /admin/backup, pastikan file baru bersih (tertunda, lihat §8).
+- Audit status dokumen: `LANDING_V2_PLAYFUL_PLAN.md` F1–F6 selesai+live (checkbox §9 belum dicentang manual — skip atas perintah user); `LANDING_V2_PLAN.md` SUPERSEDED oleh versi playful; `APP_V3_SPARKO_PLAN.md` S1–S5 live — Sparko di 8/11 halaman user + layout + 5 auth; `pesan`/`akun`/`saldo` sudah playful F4/F5 tanpa maskot (by design §S6).
+- Handover files: `docs/SESSION_HANDOVER_77HARI_2026-09-27.md` + `sparko/` sudah **ter-push ke origin** (sempat terjebak untracked di PC lama). Backup file-file itu ada di `/tmp/socio-backup-2709/` sampai sengaja dihapus.
