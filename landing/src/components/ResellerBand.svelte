@@ -1,6 +1,6 @@
 <script>
   import Confetti from './Confetti.svelte';
-  import SocioMascot from './SocioMascot.svelte';
+  import Sparko from '@socio/ui/components/Sparko.svelte';
   // V2 §5.10 ResellerBand — inverted: dorongan terakhir offer reseller.
   // Split: kiri copy + ledger 4 baris on-dark; kanan kartu member (sticker, tilt, float).
   // CTA confetti on click → app…/daftar?mode=reseller.
@@ -41,7 +41,7 @@
     <div class="reveal flex justify-center lg:justify-end" style="--d:160ms">
       <div class="tilt-r sticker float-idle w-full max-w-[320px] bg-[var(--paper)] p-6" aria-hidden="true">
         <div class="flex items-center gap-2.5">
-          <SocioMascot pose="wave" class="h-10 w-10" />
+          <Sparko pose="wave" size={40} />
           <div>
             <p class="font-display text-[15px] font-extrabold tracking-tight text-ink">SOCIO RESELLER</p>
             <p class="text-[12px] text-ink-3">member grosir · sejak 2026</p>

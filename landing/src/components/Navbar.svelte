@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import SocioMascot from './SocioMascot.svelte';
+  import Sparko from '@socio/ui/components/Sparko.svelte';
 
   let isScrolled = false;
 
@@ -29,7 +29,7 @@
       {isScrolled ? 'py-3' : 'py-5'} transition-all duration-300"
   >
     <a href="/" class="mascot-wiggle inline-flex items-center gap-1.5" aria-label="Socio.id — beranda">
-      <SocioMascot pose="fly" class="h-7 w-7" />
+      <Sparko pose="idle" size={28} />
       <span class="font-display text-xl font-bold tracking-tight md:text-2xl">
         <span class="text-ink">socio</span><span class="text-accent-ink">.id</span>
       </span>

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import SocioMascot from './SocioMascot.svelte';
+  import Sparko from '@socio/ui/components/Sparko.svelte';
   // V2 §5.7 HowItWorks — roadmap: hapus rasa "ribet", 3 langkah santai.
   // Jalur SVG berkelok, line-draw A6 mengikuti scroll (rAF + passive).
   // Desktop: horizontal; mobile: vertikal kiri. Tiap pos max 2 baris (anti #1).
@@ -94,12 +94,12 @@
         />
       </svg>
       {#if done && !reduced}
-        <span class="float-idle absolute top-2 right-4" aria-hidden="true">
-          <SocioMascot pose="fly" class="h-12 w-12" />
+        <span class="absolute top-2 right-4" aria-hidden="true">
+          <Sparko pose="idle" size={48} />
         </span>
       {:else}
         <span class="absolute top-2 right-4" aria-hidden="true">
-          <SocioMascot pose="fly" class="h-12 w-12" />
+          <Sparko pose="idle" size={48} />
         </span>
       {/if}
       <ol class="mt-2 grid grid-cols-3 gap-6">
@@ -142,7 +142,7 @@
         {/each}
       </ol>
       <p class="mt-6 flex items-center gap-2 pl-14 text-[14px] text-ink-2">
-        <SocioMascot pose="wave" class="h-9 w-9" />
+        <Sparko pose="wave" size={36} />
         <span>Udah? Gas order pertama — sistem yang begadang buat kamu.</span>
       </p>
     </div>

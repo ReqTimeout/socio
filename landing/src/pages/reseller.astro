@@ -6,7 +6,7 @@ import FloatingTabDock from '../components/FloatingTabDock.svelte';
 import Footer from '../components/Footer.astro';
 import FloatingWhatsApp from '../components/FloatingWhatsApp.svelte';
 import Doodle from '../components/Doodle.astro';
-import SocioMascot from '../components/SocioMascot.svelte';
+import Sparko from '@socio/ui/components/Sparko.svelte';
 import ProgramLedger from '../components/ProgramLedger.astro';
 import ProfitCalculator from '../components/ProfitCalculator.svelte';
 import GrosirTable from '../components/GrosirTable.astro';
@@ -102,7 +102,7 @@ const breadcrumbSchema = {
   <section class="relative overflow-hidden bg-[var(--dark-panel)] py-20 text-[var(--on-dark)] isolate md:py-28" aria-labelledby="cta-r-title">
     <div class="mx-auto max-w-3xl px-5 space-y-6 text-center md:px-8">
       <p class="reveal flex justify-center" aria-hidden="true">
-        <SocioMascot pose="wave" class="float-idle h-14 w-14" />
+        <Sparko pose="wave" size={56} class="float-idle" />
       </p>
       <h2 id="cta-r-title" class="reveal font-display text-3xl font-bold leading-tight tracking-tight md:text-5xl">
         Besok client kamu udah order.

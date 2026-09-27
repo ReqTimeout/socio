@@ -7,7 +7,7 @@ import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
   // (dari bento home) & ?q= (dari 404 search) + empty state maskot.
   import { onMount } from 'svelte';
   import prices from '../data/prices.json';
-  import SocioMascot from './SocioMascot.svelte';
+  import Sparko from '@socio/ui/components/Sparko.svelte';
 
   interface Row {
     platform: string;
@@ -161,7 +161,7 @@ import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
             {#if filtered.length === 0}
               <tr>
                 <td colspan="5" class="px-4 py-10 text-center">
-                  <span class="flex justify-center" aria-hidden="true"><SocioMascot pose="fall" class="float-idle h-16 w-16" /></span>
+                  <span class="flex justify-center" aria-hidden="true"><Sparko pose="sad" size={64} /></span>
                   <p class="mx-auto mt-3 max-w-xs text-[14px] leading-relaxed text-ink-2">
                     Gak ketemu{query ? ` “${query}”` : ''}? {totalKategori} kategori kadang bikin pusing sendiri.
                   </p>

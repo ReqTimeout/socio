@@ -8,6 +8,7 @@ import HeroMockup from '../components/HeroMockup.svelte';
 import LiveTicker from '../components/LiveTicker.astro';
 import LiveOrderToast from '../components/LiveOrderToast.svelte';
 import Doodle from '../components/Doodle.astro';
+import Sparko from '@socio/ui/components/Sparko.svelte';
 import ProblemLedger from '../components/ProblemLedgerMotion.svelte';
 import OrderSimulator from '../components/OrderSimulator.svelte';
 import OrderBoard from '../components/OrderBoardMotion.svelte';
@@ -118,6 +119,10 @@ const pageDesc = `SMM panel Indonesia: ${totalLayanan} layanan IG, TikTok, YouTu
       <!-- Mockup 7/12 — frame sticker tilt +2°, doodle tangan, floaters -->
       <div class="tilt-stage relative mt-4 flex justify-center lg:col-span-7 lg:justify-end lg:mt-0">
         <div class="tilt-toward sticker relative p-3 sm:p-4" data-tilt>
+          <!-- Sparko ngelambai di pojok kartu (brand asset baru — sparko/README: hero default) -->
+          <span class="absolute -top-7 -left-5 z-10 hidden sm:block" aria-hidden="true">
+            <Sparko pose="wave" size={64} />
+          </span>
           <!-- client:visible: astro-island display:contents + mockup
                entrance transform bikin island rect 0×0 → IO tak pernah trigger.
                Hero = above-fold, harus hidup seketika. -->

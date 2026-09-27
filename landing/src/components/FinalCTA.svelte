@@ -1,5 +1,5 @@
 <script>
-  import SocioMascot from './SocioMascot.svelte';
+  import Sparko from '@socio/ui/components/Sparko.svelte';
   // V2 §5.12 FinalCTA — sederhana & hangat. CTA tunggal accent-ink besar (A8 hover),
   // trust line, maskot melambai. Background paper-warm + tanpa blob.
   const regBase = 'https://app.socio.id/daftar';
@@ -8,7 +8,7 @@
 <section class="bg-[var(--paper-warm)] py-16 md:py-24" aria-labelledby="final-cta-title">
   <div class="mx-auto max-w-2xl px-5 text-center md:px-8">
     <p class="reveal flex justify-center" aria-hidden="true">
-      <SocioMascot pose="wave" class="float-idle h-16 w-16" />
+      <Sparko pose="wave" size={64} />
     </p>
     <h2 id="final-cta-title" class="reveal font-display mt-4 text-[length:var(--text-h2)] font-bold tracking-tight text-ink" style="--d:80ms">
       Siap bikin sosmed-mu (dan klienmu) bahagia?
