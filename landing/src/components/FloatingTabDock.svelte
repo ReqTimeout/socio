@@ -48,10 +48,16 @@
 
   onMount(() => {
     pathname = location.pathname.replace(/\/$/, '') || '/';
-    // A6b: dock masuk setelah scroll modest (>50vh) — atau langsung jika halaman pendek
+    // Auto-hide dgn hysteresis: muncul setelah lewati ~0.6vh, baru sembunyi lagi
+    // saat balik dekat atas (~0.3vh) — biar gak kedip/flip di ambang scroll.
     const check = () => {
       const max = document.documentElement.scrollHeight - innerHeight;
-      visible = max < innerHeight * 0.5 || scrollY > innerHeight * 0.5;
+      if (max < innerHeight * 0.6) {
+        visible = true; // halaman pendek: selalu tampil
+        return;
+      }
+      if (scrollY > innerHeight * 0.6) visible = true;
+      else if (scrollY < innerHeight * 0.3) visible = false;
     };
     check();
     addEventListener('scroll', check, { passive: true });
@@ -64,8 +70,7 @@
     rounded-[28px] border-2 border-[var(--ink)] bg-white/85 backdrop-blur-2xl
     shadow-[2px_2px_0_var(--ink),0_10px_40px_-12px_rgba(15,23,42,0.18)]
     p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]
-    transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-    {visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'}"
+    mobile-dock {visible ? 'mobile-dock--visible' : 'mobile-dock--hidden'}"
   style="grid-template-columns: 1fr 1fr 1fr 1.4fr"
   aria-label="Navigasi utama mobile"
 >
@@ -126,6 +131,39 @@
 </svelte:head>
 
 <style>
+  /* Auto-hide mulus: slide penuh + ease-out bersih (bukan overshoot spring).
+     Nama class mobile-dock didaftarkan ke allowlist reduced-motion di
+     packages/ui/src/theme.css supaya transisi ini tidak di-zero global. */
+  .mobile-dock {
+    transition:
+      transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 260ms ease-out;
+    will-change: transform, opacity;
+  }
+  .mobile-dock--visible {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  .mobile-dock--hidden {
+    transform: translateY(120%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Reduce Motion: tetap halus tapi fade-only (tanpa geser) — aman utk motion-sensitivity */
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-dock {
+      transition: opacity 240ms ease-out;
+      transform: none;
+    }
+    .mobile-dock--visible {
+      opacity: 1;
+    }
+    .mobile-dock--hidden {
+      opacity: 0;
+    }
+  }
+
   /* Indicator mango pop tiap ganti tab */
   .dock-pop {
     animation: dock-pop 400ms var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both;

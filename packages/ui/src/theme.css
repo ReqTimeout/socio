@@ -21,12 +21,14 @@
       scroll-behavior: auto;
     }
     /* Keep essential feedback animations but exclude premium cues (FAB + saldo money) */
-    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *),
-    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(
-        .saldo-hero *
+    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *):not(.mobile-dock):not(
+        .mobile-dock *
+      ),
+    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *):not(.mobile-dock):not(
+        .mobile-dock *
       )::before,
-    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(
-        .saldo-hero *
+    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *):not(.mobile-dock):not(
+        .mobile-dock *
       )::after {
       animation-duration: 0.001ms !important;
       animation-iteration-count: 1 !important;
