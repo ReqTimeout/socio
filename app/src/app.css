@@ -82,9 +82,11 @@
   flex-shrink: 0;
 }
 
-/* Respect OS reduced-motion preference — matikan animasi non-esensial */
+/* Respect OS reduced-motion preference — matikan animasi non-esensial.
+   Sparko maskot dikecualikan (brand mascot) — diperlambat + blink off di
+   komponen Sparko.svelte sendiri; tetap bergerak untuk user Reduce Motion. */
 @media (prefers-reduced-motion: reduce) {
-  *,
+  *:not(.sparko):not(.sparko *),
   *::before,
   *::after {
     animation-duration: 0.01ms !important;

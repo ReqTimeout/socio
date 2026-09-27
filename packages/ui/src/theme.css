@@ -20,15 +20,15 @@
     html {
       scroll-behavior: auto;
     }
-    /* Keep essential feedback animations but exclude premium cues (FAB + saldo money) */
-    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *):not(.mobile-dock):not(
-        .mobile-dock *
+    /* Keep essential feedback animations but exclude premium cues (FAB + saldo money + mobile dock + Sparko mascot) */
+    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *):not(.mobile-dock):not(.mobile-dock *):not(.sparko):not(
+        .sparko *
       ),
-    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *):not(.mobile-dock):not(
-        .mobile-dock *
+    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *):not(.mobile-dock):not(.mobile-dock *):not(.sparko):not(
+        .sparko *
       )::before,
-    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *):not(.mobile-dock):not(
-        .mobile-dock *
+    *:not(.fab-premium):not(.fab-premium *):not(.saldo-hero):not(.saldo-hero *):not(.mobile-dock):not(.mobile-dock *):not(.sparko):not(
+        .sparko *
       )::after {
       animation-duration: 0.001ms !important;
       animation-iteration-count: 1 !important;

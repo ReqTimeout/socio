@@ -322,13 +322,18 @@
     50% { transform: scale(0.85); opacity: 0.7; }
   }
 
-  /* Reduced motion */
+  /* Reduced motion: pelihara brand mascot tetap hidup, tapi lebih lambat dan
+     tanpa pupil blink (lebih ramah motion-sensitive). Diimbangi exemption
+     .sparko di theme.css + app.css supaya reset global tidak mematikan ini. */
   @media (prefers-reduced-motion: reduce) {
-    .sparko-body,
-    .sparko-shadow,
-    .sparko-pupil,
-    .sparko-top-spark {
-      animation: none !important;
-    }
+    .sparko-body { animation-duration: 8s; }
+    .sparko--wave .sparko-body { animation-duration: 3.6s; }
+    .sparko--celebrate .sparko-body { animation-duration: 1s; }
+    .sparko--sad .sparko-body { animation-duration: 7s; }
+    .sparko--error .sparko-body { animation-duration: 0.8s; }
+    .sparko--sleep .sparko-body { animation-duration: 10s; }
+    .sparko-shadow { animation-duration: 8s; }
+    .sparko-top-spark { animation-duration: 4s; }
+    .sparko-pupil { animation: none; }
   }
 </style>
