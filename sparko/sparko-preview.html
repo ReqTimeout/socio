@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sparko — Maskot Socio.id | Preview</title>
+<style>
+  /* ========== Design tokens (sama dengan design system) ========== */
+  :root {
+    --ink: #1a1a1a;
+    --ink-2: #404040;
+    --paper: #fdfdf8;
+    --paper-warm: #faf6ec;
+    --paper-warm-2: #f5efde;
+    --accent-ink: #1a1a1a;
+    --color-sky-300: #7dd3fc;
+    --color-sky-400: #38bdf8;
+    --color-sky-500: #0ea5e9;
+    --pop-mango: #fbbf24;
+    --pop-berry: #ef4444;
+    --pop-berry-ink: #dc2626;
+    --sticker-border: 2px solid var(--ink);
+    --sticker-shadow: 4px 4px 0 var(--ink);
+    --sticker-shadow-hover: 6px 6px 0 var(--ink);
+    --radius-sticker: 20px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Plus Jakarta Sans", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper-warm);
+    background-image:
+      radial-gradient(circle, rgba(26,26,26,0.06) 1px, transparent 1px);
+    background-size: 16px 16px;
+    min-height: 100vh;
+    padding: 48px 24px 80px;
+    color: var(--ink);
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    background: var(--pop-mango);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 6px 14px;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    box-shadow: 3px 3px 0 var(--ink);
+    transform: rotate(-1.5deg);
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+
+  h1 .accent {
+    background: var(--color-sky-400);
+    color: white;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 2px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+    display: inline-block;
+    transform: rotate(-1deg);
+  }
+
+  .sub {
+    font-size: 17px;
+    color: var(--ink-2);
+    max-width: 540px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 28px;
+    margin-bottom: 56px;
+  }
+
+  .card {
+    background: var(--paper);
+    border: var(--sticker-border);
+    border-radius: var(--radius-sticker);
+    box-shadow: var(--sticker-shadow);
+    padding: 32px 20px 24px;
+    text-align: center;
+    transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .card:nth-child(odd) { transform: rotate(-1deg); }
+  .card:nth-child(even) { transform: rotate(1deg); }
+
+  .card:hover {
+    transform: translateY(-4px) rotate(0deg);
+    box-shadow: var(--sticker-shadow-hover);
+  }
+
+  .card .pose-name {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 16px 0 8px;
+    letter-spacing: -0.01em;
+  }
+
+  .card .when {
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.4;
+    padding: 0 4px;
+  }
+
+  .card .tag {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  .card.idle .tag { background: var(--color-sky-500); }
+  .card.celebrate .tag { background: var(--pop-mango); color: var(--ink); }
+  .card.sad .tag { background: var(--pop-berry-ink); }
+  .card.error .tag { background: var(--pop-berry-ink); }
+  .card.sleep .tag { background: var(--ink-2); }
+
+  .section-title {
+    font-size: 24px;
+    font-weight: 800;
+    margin: 40px 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-title::before {
+    content: "";
+    width: 32px;
+    height: 4px;
+    background: var(--accent-ink);
+    border-radius: 2px;
+  }
+
+  .sizes-row {
+    background: var(--paper);
+    border: var(--sticker-border);
+    border-radius: var(--radius-sticker);
+    box-shadow: var(--sticker-shadow);
+    padding: 32px 24px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+
+  .size-item {
+    text-align: center;
+  }
+
+  .size-item svg {
+    display: block;
+    margin: 0 auto 8px;
+  }
+
+  .size-item .label {
+    font-size: 12px;
+    color: var(--ink-2);
+    font-weight: 600;
+  }
+
+  .usage {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: var(--radius-sticker);
+    padding: 28px;
+    margin-top: 28px;
+  }
+
+  .usage h3 {
+    color: var(--pop-mango);
+    margin-bottom: 12px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  pre {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    font-family: ui-monospace, monospace;
+  }
+
+  code { font-family: ui-monospace, monospace; }
+
+  footer {
+    text-align: center;
+    margin-top: 64px;
+    color: var(--ink-2);
+    font-size: 14px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <span class="eyebrow">★ Design v1</span>
+    <h1>Meet <span class="accent">Sparko</span></h1>
+    <p class="sub">Maskot petir netral untuk socio.id — pengganti paper-plane yang terlalu generic. 6 pose, satu file Svelte, ~1.6KB gzip.</p>
+  </header>
+
+  <!-- ============ Pose showcase ============ -->
+  <div class="grid">
+
+    <div class="card idle">
+      <svg viewBox="0 0 120 130" width="140" height="151.7" role="img" aria-label="Sparko idle">
+        <ellipse cx="62" cy="127" rx="20" ry="2.5" fill="#1a1a1a" opacity="0.15"/>
+        <path d="M 90 18 L 92.5 22 L 96.5 24 L 92.5 26 L 90 30 L 87.5 26 L 83.5 24 L 87.5 22 Z" fill="#fbbf24"/>
+        <path d="M 70 15 L 12 72 L 42 72 L 32 128 L 112 65 L 82 65 Z" fill="#38bdf8" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 70 20 Q 60 40 32 124" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
+        <ellipse cx="34" cy="60" rx="5" ry="3" fill="#ef4444" opacity="0.45"/>
+        <ellipse cx="72" cy="60" rx="5" ry="3" fill="#ef4444" opacity="0.45"/>
+        <circle cx="46" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="65" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="46" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <circle cx="65" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <circle cx="47.2" cy="46.2" r="0.9" fill="white"/>
+        <circle cx="66.2" cy="46.2" r="0.9" fill="white"/>
+        <path d="M 50 60 Q 55.5 64.5 61 60" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 28 80 Q 26 90 30 96" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.45"/>
+        <path d="M 100 72 Q 104 82 102 92" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.45"/>
+        <animateTransform attributeName="transform" type="translate" values="0,0; 0,-3; 0,0" dur="4s" repeatCount="indefinite"/>
+      </svg>
+      <div class="pose-name">Idle</div>
+      <p class="when">Hero, navbar logo mini, default state. Float halus 4s loop + blink sesekali.</p>
+      <span class="tag">Default</span>
+    </div>
+
+    <div class="card idle">
+      <svg viewBox="0 0 120 130" width="140" height="151.7" role="img" aria-label="Sparko wave">
+        <ellipse cx="62" cy="127" rx="20" ry="2.5" fill="#1a1a1a" opacity="0.15"/>
+        <path d="M 90 18 L 92.5 22 L 96.5 24 L 92.5 26 L 90 30 L 87.5 26 L 83.5 24 L 87.5 22 Z" fill="#fbbf24"/>
+        <path d="M 70 15 L 12 72 L 42 72 L 32 128 L 112 65 L 82 65 Z" fill="#38bdf8" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 70 20 Q 60 40 32 124" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
+        <ellipse cx="34" cy="60" rx="5" ry="3" fill="#ef4444" opacity="0.45"/>
+        <ellipse cx="72" cy="60" rx="5" ry="3" fill="#ef4444" opacity="0.45"/>
+        <circle cx="46" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="65" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="46" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <circle cx="65" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <circle cx="47.2" cy="46.2" r="0.9" fill="white"/>
+        <circle cx="66.2" cy="46.2" r="0.9" fill="white"/>
+        <path d="M 49 60 Q 55.5 66 62 60" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 100 70 Q 110 50 116 32" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 113 32 L 118 26 M 116 32 L 113 27" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.85"/>
+        <path d="M 30 80 Q 28 92 32 100" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+        <animateTransform attributeName="transform" type="rotate" values="0 62 70; 2.5 95 70; -1.5 95 70; 0 62 70" dur="1.8s" repeatCount="indefinite"/>
+      </svg>
+      <div class="pose-name">Wave</div>
+      <p class="when">HowItWorks step 1, hero CTA hover, onboarding welcome.</p>
+      <span class="tag">Friendly</span>
+    </div>
+
+    <div class="card celebrate">
+      <svg viewBox="0 0 120 130" width="140" height="151.7" role="img" aria-label="Sparko celebrate">
+        <ellipse cx="62" cy="127" rx="20" ry="2.5" fill="#1a1a1a" opacity="0.15"/>
+        <path d="M 90 18 L 92.5 22 L 96.5 24 L 92.5 26 L 90 30 L 87.5 26 L 83.5 24 L 87.5 22 Z" fill="#fbbf24"/>
+        <path d="M 70 15 L 12 72 L 42 72 L 32 128 L 112 65 L 82 65 Z" fill="#38bdf8" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 70 20 Q 60 40 32 124" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
+        <ellipse cx="34" cy="60" rx="5" ry="3" fill="#ef4444" opacity="0.45"/>
+        <ellipse cx="72" cy="60" rx="5" ry="3" fill="#ef4444" opacity="0.45"/>
+        <path d="M 40 47 Q 46 41 52 47" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 59 47 Q 65 41 71 47" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <ellipse cx="55.5" cy="63" rx="4" ry="5" fill="#1a1a1a"/>
+        <path d="M 28 80 Q 20 60 16 36" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 100 70 Q 110 52 116 30" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="20" cy="38" r="2" fill="#fbbf24"/>
+        <circle cx="105" cy="20" r="2.5" fill="#ef4444"/>
+        <circle cx="110" cy="92" r="2" fill="#fbbf24"/>
+        <circle cx="12" cy="78" r="2" fill="#ef4444"/>
+        <circle cx="8" cy="50" r="1.5" fill="#7dd3fc"/>
+        <animateTransform attributeName="transform" type="translate" values="0,0; 0,-8; 0,0" dur="0.5s" repeatCount="indefinite"/>
+      </svg>
+      <div class="pose-name">Celebrate</div>
+      <p class="when">Order sukses, signup confirmation, confetti moments.</p>
+      <span class="tag">Joy</span>
+    </div>
+
+    <div class="card sad">
+      <svg viewBox="0 0 120 130" width="140" height="151.7" role="img" aria-label="Sparko sad">
+        <ellipse cx="62" cy="127" rx="20" ry="2.5" fill="#1a1a1a" opacity="0.15"/>
+        <path d="M 70 15 L 12 72 L 42 72 L 32 128 L 112 65 L 82 65 Z" fill="#38bdf8" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 70 20 Q 60 40 32 124" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
+        <ellipse cx="46" cy="48" rx="5" ry="3" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <ellipse cx="65" cy="48" rx="5" ry="3" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="46" cy="49.5" r="2.4" fill="#1a1a1a"/>
+        <circle cx="65" cy="49.5" r="2.4" fill="#1a1a1a"/>
+        <path d="M 49 65 Q 55.5 59 62 65" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 28 82 L 32 102" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+        <path d="M 100 72 L 105 92" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+        <path d="M 44 52 Q 41 57 44 60 Q 47 57 44 52 Z" fill="#7dd3fc" opacity="0.85"/>
+        <animateTransform attributeName="transform" type="rotate" values="0 62 70; -1.5 62 70; 0 62 70" dur="3.5s" repeatCount="indefinite"/>
+      </svg>
+      <div class="pose-name">Sad</div>
+      <p class="when">Saldo habis, order gagal, empty cart, "kok hasilnya kosong ya?".</p>
+      <span class="tag">Sympathy</span>
+    </div>
+
+    <div class="card error">
+      <svg viewBox="0 0 120 130" width="140" height="151.7" role="img" aria-label="Sparko error">
+        <ellipse cx="62" cy="127" rx="20" ry="2.5" fill="#1a1a1a" opacity="0.15"/>
+        <path d="M 70 15 L 12 72 L 42 72 L 32 128 L 112 65 L 82 65 Z" fill="#38bdf8" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 70 20 Q 60 40 32 124" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
+        <path d="M 41 42 L 51 50 M 51 42 L 41 50 M 60 42 L 70 50 M 70 42 L 60 50" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M 49 62 L 53 65 L 57 62 L 61 65 L 64 62" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M 100 70 Q 108 55 112 38" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 30 80 L 28 96" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+        <g stroke="#ef4444" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.7">
+          <path d="M 5 50 L 12 55"/>
+          <path d="M 115 78 L 108 82"/>
+          <path d="M 8 95 L 14 92"/>
+        </g>
+        <animateTransform attributeName="transform" type="translate" values="0,0; -2,0; 2,0; 0,0" dur="0.4s" repeatCount="indefinite"/>
+      </svg>
+      <div class="pose-name">Error</div>
+      <p class="when">500 error, API down, "ada yang gak beres nih".</p>
+      <span class="tag">Alert</span>
+    </div>
+
+    <div class="card sleep">
+      <svg viewBox="0 0 120 130" width="140" height="151.7" role="img" aria-label="Sparko sleep">
+        <ellipse cx="62" cy="127" rx="20" ry="2.5" fill="#1a1a1a" opacity="0.15"/>
+        <path d="M 70 15 L 12 72 L 42 72 L 32 128 L 112 65 L 82 65 Z" fill="#38bdf8" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 70 20 Q 60 40 32 124" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
+        <path d="M 41 47 Q 46 51 51 47" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 60 47 Q 65 51 70 47" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <ellipse cx="55.5" cy="62" rx="2.2" ry="2.6" fill="#1a1a1a"/>
+        <path d="M 30 85 Q 28 92 30 98" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.4"/>
+        <path d="M 100 75 Q 102 82 100 88" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.4"/>
+        <g fill="#1a1a1a" font-family="ui-rounded, system-ui" font-weight="700" font-style="italic">
+          <text x="92" y="22" font-size="13">z</text>
+          <text x="100" y="14" font-size="10">z</text>
+          <text x="106" y="9" font-size="8">z</text>
+        </g>
+        <animateTransform attributeName="transform" type="rotate" values="-2 62 70; -3 62 70; -2 62 70" dur="5s" repeatCount="indefinite"/>
+      </svg>
+      <div class="pose-name">Sleep</div>
+      <p class="when">404 page, "panel lagi istirahat", maintenance mode.</p>
+      <span class="tag">Chill</span>
+    </div>
+
+  </div>
+
+  <!-- ============ Sizes ============ -->
+  <h2 class="section-title">Responsive sizing</h2>
+  <div class="sizes-row">
+    <div class="size-item">
+      <svg viewBox="0 0 120 130" width="24" height="26" role="img" aria-label="Sparko 24">
+        <path d="M 70 15 L 12 72 L 42 72 L 32 128 L 112 65 L 82 65 Z" fill="#38bdf8" stroke="#1a1a1a" stroke-width="4" stroke-linejoin="round"/>
+        <circle cx="46" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="3"/>
+        <circle cx="65" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="3"/>
+        <circle cx="46" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <circle cx="65" cy="47.5" r="2.8" fill="#1a1a1a"/>
+      </svg>
+      <div class="label">24px (navbar)</div>
+    </div>
+    <div class="size-item">
+      <svg viewBox="0 0 120 130" width="48" height="52" role="img" aria-label="Sparko 48">
+        <path d="M 90 18 L 92.5 22 L 96.5 24 L 92.5 26 L 90 30 L 87.5 26 L 83.5 24 L 87.5 22 Z" fill="#fbbf24"/>
+        <path d="M 70 15 L 12 72 L 42 72 L 32 128 L 112 65 L 82 65 Z" fill="#38bdf8" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/>
+        <circle cx="46" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="65" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="46" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <circle cx="65" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <path d="M 50 60 Q 55.5 64.5 61 60" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="label">48px (HowItWorks)</div>
+    </div>
+    <div class="size-item">
+      <svg viewBox="0 0 120 130" width="96" height="104" role="img" aria-label="Sparko 96">
+        <ellipse cx="62" cy="127" rx="20" ry="2.5" fill="#1a1a1a" opacity="0.15"/>
+        <path d="M 90 18 L 92.5 22 L 96.5 24 L 92.5 26 L 90 30 L 87.5 26 L 83.5 24 L 87.5 22 Z" fill="#fbbf24"/>
+        <path d="M 70 15 L 12 72 L 42 72 L 32 128 L 112 65 L 82 65 Z" fill="#38bdf8" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 70 20 Q 60 40 32 124" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
+        <ellipse cx="34" cy="60" rx="5" ry="3" fill="#ef4444" opacity="0.45"/>
+        <ellipse cx="72" cy="60" rx="5" ry="3" fill="#ef4444" opacity="0.45"/>
+        <circle cx="46" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="65" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="46" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <circle cx="65" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <circle cx="47.2" cy="46.2" r="0.9" fill="white"/>
+        <circle cx="66.2" cy="46.2" r="0.9" fill="white"/>
+        <path d="M 50 60 Q 55.5 64.5 61 60" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="label">96px (hero)</div>
+    </div>
+    <div class="size-item">
+      <svg viewBox="0 0 120 130" width="160" height="173" role="img" aria-label="Sparko 160">
+        <ellipse cx="62" cy="127" rx="20" ry="2.5" fill="#1a1a1a" opacity="0.15"/>
+        <path d="M 90 18 L 92.5 22 L 96.5 24 L 92.5 26 L 90 30 L 87.5 26 L 83.5 24 L 87.5 22 Z" fill="#fbbf24"/>
+        <path d="M 70 15 L 12 72 L 42 72 L 32 128 L 112 65 L 82 65 Z" fill="#38bdf8" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 70 20 Q 60 40 32 124" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
+        <ellipse cx="34" cy="60" rx="5" ry="3" fill="#ef4444" opacity="0.45"/>
+        <ellipse cx="72" cy="60" rx="5" ry="3" fill="#ef4444" opacity="0.45"/>
+        <circle cx="46" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="65" cy="46" r="6" fill="white" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="46" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <circle cx="65" cy="47.5" r="2.8" fill="#1a1a1a"/>
+        <circle cx="47.2" cy="46.2" r="0.9" fill="white"/>
+        <circle cx="66.2" cy="46.2" r="0.9" fill="white"/>
+        <path d="M 50 60 Q 55.5 64.5 61 60" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 28 80 Q 26 90 30 96" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.45"/>
+        <path d="M 100 72 Q 104 82 102 92" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.45"/>
+      </svg>
+      <div class="label">160px (404 hero)</div>
+    </div>
+  </div>
+
+  <!-- ============ Usage ============ -->
+  <h2 class="section-title">Cara pakai</h2>
+  <div class="usage">
+    <h3>Import &amp; render</h3>
+    <pre><code>&lt;script&gt;
+  import Sparko from '$lib/components/Sparko.svelte';
+&lt;/script&gt;
+
+&lt;Sparko pose="idle" size={96} /&gt;
+&lt;Sparko pose="wave" size={48} /&gt;
+&lt;Sparko pose="celebrate" size={120} /&gt;</code></pre>
+
+    <h3 style="margin-top: 20px;">Props</h3>
+    <pre><code>pose   'idle' | 'wave' | 'celebrate' | 'sad' | 'error' | 'sleep'  (default: 'idle')
+size   number (default: 120)
+label  string override aria-label</code></pre>
+
+    <h3 style="margin-top: 20px;">Kapan pakai pose apa</h3>
+    <pre><code>idle       → navbar logo mini, hero default, loading
+wave       → HowItWorks step 1, "hallo newbie" CTA
+celebrate  → order sukses, signup ok, confetti moment
+sad        → saldo 0, empty cart, "kok sepi ya"
+error      → 500 page, API error, form gagal submit
+sleep      → 404, maintenance mode, "panel istirahat dulu ya"</code></pre>
+  </div>
+
+  <footer>
+    Sparko v1 · Built untuk socio.id landing v2 "Playful Premium"
+  </footer>
+
+</div>
+</body>
+</html>
