@@ -148,6 +148,20 @@
 
 ## 10. PC baru 2026-09-27 (setup terverifikasi — untuk agent sesudahnya)
 
+### ⚠️ PATH KANONIK BARU (27-Sep malam): `/Volumes/miniex/Users/maabook/web-project/socio.id`
+- Project DIPINDAHKAN dari `/Volumes/macmini/Desktop/socio.id` (rsync penuh; folder lama cadangan, hapus setelah user konfirmasi workspace baru). ALASAN: pnpm store di volume miniex — beda volume = salin file (17 mnt nyangkut), se-volume = hardlink (13,8 detik). JANGAN kerja di dua copy sekaligus.
+- Landing dev localhost:4321, app dev localhost:3000 (DB MariaDB lokal tetap 127.0.0.1, tidak ikut pindah).
+
+### Deploy landing CF Pages — TERBUKTI JALAN 27-Sep (deploy `8916c3b9` = production socio.id sekarang)
+```bash
+cd /Volumes/miniex/Users/maabook/web-project/socio.id
+pnpm --filter landing build
+CLOUDFLARE_API_TOKEN=<token-1 di accountcf.md> CLOUDFLARE_ACCOUNT_ID=0298214d1069f75436f490b51ea4763e \
+WRANGLER_SEND_METRICS=false CI=1 npx --yes wrangler pages deploy landing/dist \
+  --project-name socio-id --branch main --commit-dirty=true
+```
+PENTING: pakai **npx**, BUKAN `pnpm dlx` (pnpm memblokir postinstall esbuild/workerd → gagal). Versi wrangler `latest` (v9 tidak ada). Verifikasi: `curl https://socio.id/ | grep sparko--`. Catatan: skill `.qoder/skills/cloudflare` memuat DNS lama (43.157.204.17 sudah MATI) — jangan dipercaya buta.
+
 ### Pipeline landing (Cloudflare Pages) — terverifikasi via API 27-Sep
 - Kredensial CF di `accountcf.md` (ROOT, **gitignored, JANGAN pernah commit/jadikan dokumen lain**). Token-1 (`cfat_9TXS...`) AKTIF: bisa baca Pages + R2 + list zones; TIDAK bisa baca DNS records zone (error 7003). Token-2 (`cfat_d9rQ...`) mati/tak berwenang API biasa (kemungkinan cuma utk S3-compat R2).
 - Project Pages: **`socio-id`** (id 61cba457...), domain `socio.id`+`www.socio.id`, subdomain `socio-id.pages.dev`. **TIDAK terhubung GitHub (source null)** → deploy = DIRECT UPLOAD build lokal. Push git TIDAK auto-deploy landing.
@@ -155,7 +169,7 @@
 - Cara deploy landing yang benar: `pnpm --filter landing build` → upload `landing/dist` via `wrangler pages deploy` / API Pages upload pakai token-1 (perlu dites scope Edit saat deploy pertama). Setelah deploy: verifikasi marker konten baru di `https://socio.id`.
 - R2: bucket **`socio`** ada (sejak 16 Jul). `cdn.socio.id` resolving CF, root 404 = normal (custom domain bucket, hanya object path yang melayani).
 
-- Repo: `/Volumes/macmini/Desktop/socio.id` (HOME user ada di volume eksternal `/Volumes/miniex` — bikin akses `~/.ssh` kadang terhambat sandbox; jangan panik lihat "Could not stat ~/.ssh").
+- Repo: `/Volumes/miniex/Users/maabook/web-project/socio.id` (path kanonik sejak 27-Sep malam; sebelumnya `/Volumes/macmini/Desktop/socio.id`) (HOME user ada di volume eksternal `/Volumes/miniex` — bikin akses `~/.ssh` kadang terhambat sandbox; jangan panik lihat "Could not stat ~/.ssh").
 - `.env` root terpasang (versi 18 Agu dari PC lama, chmod 600, gitignored). Key baru pasca-18 Agu TIDAK ada tapi kode punya fallback: `SOCIO_PROVIDER_ENC_KEY`→`SOCIO_AUTH_SECRET`, SMTP→`RESEND_API_KEY`, DKIM→tanpa tanda tangan. `.env` ini khusus DEV LOKAL (DB 127.0.0.1) — env produksi beda (Coolify).
 - **DB dev lokal: MariaDB 12.3.3 Homebrew** (`sh.brew.mariadb`, port 3306) = mirror penuh produksi per 27-Sep-2026 03:00 (47 tabel; users 3312, orders 26083, services 8413). Akses root: `mariadb -u root` via **unix_socket tanpa password** (sengaja di-set begitu — tidak ada secret baru). User DB = `socio_app` sesuai `.env`.
 - ⚠️ Restore dump produksi MySQL8→MariaDB butuh 3 tambalan LOKAL (produksi MySQL8 tidak perlu): `utf8mb4_0900_ai_ci`/`utf8mb3_*`→`utf8mb4_unicode_ci`, tipe `json`→`longtext` (hindari CHECK json_valid), + `SET FOREIGN_KEY_CHECKS=0` di awal.
