@@ -12,6 +12,8 @@
   let {
     items,
     user,
+    collapsed = false,
+    onToggle,
   }: {
     items: Item[];
     user: {
@@ -20,6 +22,10 @@
       level?: string;
       balance: number;
     };
+    /** Rail ikon-only saat true (desktop collapse). */
+    collapsed?: boolean;
+    /** Panggil saat user menekan tombol collapse/expand. */
+    onToggle?: () => void;
   } = $props();
 
   function isActive(href: string): boolean {
@@ -66,32 +72,54 @@
 </script>
 
 <aside
-  class="hidden lg:flex fixed inset-y-0 left-0 z-40 w-72 flex-col border-r border-ink-100 bg-surface safe-top"
+  class="hidden lg:flex fixed inset-y-0 left-0 z-40 flex-col border-r border-ink-100 bg-surface safe-top transition-[width] duration-300 ease-out {collapsed
+    ? 'w-20'
+    : 'w-72'}"
   style="view-transition-name: sidebar;"
   aria-label="Navigasi desktop"
 >
-  <!-- Logo -->
-  <div class="flex h-16 items-center justify-between border-b border-ink-100 px-5">
-    <a href="/" class="transition-transform duration-200 hover:scale-[1.02]" aria-label="Socio.id — Beranda">
-      <Wordmark size="md" />
-    </a>
-    <span class="hidden rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary xl:inline">Panel</span>
+  <!-- Logo + toggle -->
+  <div class="flex h-16 items-center border-b border-ink-100 px-3 {collapsed ? 'justify-center' : 'justify-between px-5'}">
+    {#if collapsed}
+      <a href="/" class="grid h-9 w-9 place-items-center" aria-label="Socio.id — Beranda">
+        <Sparko pose="idle" size={26} />
+      </a>
+    {:else}
+      <a href="/" class="transition-transform duration-200 hover:scale-[1.02]" aria-label="Socio.id — Beranda">
+        <Wordmark size="md" />
+      </a>
+    {/if}
+    <button
+      type="button"
+      onclick={() => (onToggle?.(), haptic(6))}
+      aria-label={collapsed ? "Lebarkan menu" : "Sembunyikan menu"}
+      aria-expanded={!collapsed}
+      class="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-ink-400 transition hover:bg-ink-100 hover:text-ink-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+    >
+      <Icon name={collapsed ? "chevron_right" : "chevron_left"} size={18} stroke={2.25} />
+    </button>
   </div>
 
   <!-- Nav -->
-  <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+  <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-4 {collapsed ? 'px-2' : ''}">
     {#each Object.entries(groups) as [section, groupItems] (section)}
       <div class="space-y-1">
-        <p class="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-500">
-          {section}
-        </p>
+        {#if !collapsed}
+          <p class="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-500">
+            {section}
+          </p>
+        {:else}
+          <p class="mx-auto mb-2 h-px w-6 bg-ink-100" aria-hidden="true"></p>
+        {/if}
         {#each groupItems as item (item.href)}
           {@const active = isActive(item.href)}
           <a
             href={item.href}
             aria-current={active ? "page" : undefined}
+            title={collapsed ? item.label : undefined}
             onclick={() => haptic(8)}
-            class="group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all
+            class="group relative flex items-center rounded-xl text-sm font-medium transition-all
+              {collapsed ? 'justify-center gap-0 px-0 py-2.5' : 'gap-3 px-3 py-2.5'}
               {active
               ? 'bg-ink-900 text-ink-50 font-semibold shadow-[2px_2px_0_var(--color-ink-300)] dark:bg-ink-50 dark:text-ink-900'
               : 'text-ink-500 hover:bg-ink-50 hover:text-ink-900 hover:translate-x-0.5'}"
@@ -117,9 +145,11 @@
                 </span>
               {/if}
             </span>
-            <span>{item.label}</span>
-            {#if active}
-              <Icon name="chevron_right" size={16} class="ml-auto text-primary/60" />
+            {#if !collapsed}
+              <span>{item.label}</span>
+              {#if active}
+                <Icon name="chevron_right" size={16} class="ml-auto text-primary/60" />
+              {/if}
             {/if}
           </a>
         {/each}
@@ -131,40 +161,48 @@
        page supaya tidak duplikat 4 tempat). Tap → /saldo lihat nominal. -->
   <a
     href="/saldo"
-    class="mx-3 mb-3 flex items-center gap-2.5 rounded-xl bg-ink-50 px-3 py-2.5 text-left transition hover:bg-ink-100"
+    class="mx-3 mb-3 flex items-center rounded-xl bg-ink-50 text-left transition hover:bg-ink-100
+      {collapsed ? 'justify-center gap-0 px-0 py-2.5' : 'gap-2.5 px-3 py-2.5'}"
     aria-label="Buka halaman saldo"
+    title={collapsed ? "Saldo" : undefined}
   >
     <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-ink-900 to-ink-800 text-white">
       <Icon name="wallet" size={15} stroke={2} />
     </span>
-    <span class="min-w-0 flex-1">
-      <span class="block text-xs font-bold text-ink-800">Saldo</span>
-      <span class="block text-[10px] text-ink-500">Lihat & top up</span>
-    </span>
-    <Icon name="chevron_right" size={14} class="text-ink-400" />
+    {#if !collapsed}
+      <span class="min-w-0 flex-1">
+        <span class="block text-xs font-bold text-ink-800">Saldo</span>
+        <span class="block text-[10px] text-ink-500">Lihat & top up</span>
+      </span>
+      <Icon name="chevron_right" size={14} class="text-ink-400" />
+    {/if}
   </a>
 
-  <!-- Maskot footer (§4: Sparko resmi) — idle 24px, dekoratif -->
-  <div class="flex justify-center px-3 pb-1" aria-hidden="true">
-    <Sparko pose="idle" size={24} class="opacity-80" />
-  </div>
+  <!-- Maskot footer (§4: Sparko resmi) — idle 24px, dekoratif (hidden saat rail) -->
+  {#if !collapsed}
+    <div class="flex justify-center px-3 pb-1" aria-hidden="true">
+      <Sparko pose="idle" size={24} class="opacity-80" />
+    </div>
+  {/if}
 
   <!-- User card -->
   <div class="border-t border-ink-100 p-3">
-    <div class="flex items-center gap-3 rounded-xl bg-ink-50 px-3 py-2.5">
+    <div class="flex items-center rounded-xl bg-ink-50 {collapsed ? 'justify-center gap-0 px-0 py-2' : 'gap-3 px-3 py-2.5'}">
       <Avatar name={displayName} size="sm" />
-      <div class="min-w-0 flex-1">
-        <p class="truncate text-sm font-bold text-ink-900">{displayName}</p>
-        <span
-          class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold {levelStyle}"
-        >
-          {level}
-        </span>
-      </div>
+      {#if !collapsed}
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-bold text-ink-900">{displayName}</p>
+          <span
+            class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold {levelStyle}"
+          >
+            {level}
+          </span>
+        </div>
+      {/if}
       <button
         onclick={handleLogout}
         aria-label="Keluar"
-        class="grid h-9 w-9 place-items-center rounded-lg bg-white text-ink-500 shadow-sm ring-1 ring-ink-100 transition hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+        class="{collapsed ? 'mt-2 grid h-8 w-8' : 'grid h-9 w-9'} place-items-center rounded-lg bg-white text-ink-500 shadow-sm ring-1 ring-ink-100 transition hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
       >
         <Icon name="logout" size={16} />
       </button>

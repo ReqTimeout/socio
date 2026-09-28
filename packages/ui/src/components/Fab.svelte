@@ -1,6 +1,6 @@
 <script lang="ts">
   import { haptic } from "../haptic.js";
-  import Icon from "./Icon.svelte";
+  import Sparko from "./Sparko.svelte";
   import type { Snippet } from "svelte";
 
   let {
@@ -76,7 +76,7 @@
       {#if children}
         {@render children()}
       {:else}
-        <Icon name={icon} size={14} stroke={2.8} />
+        <Sparko pose="wave" size={22} />
       {/if}
     </span>
   </span>

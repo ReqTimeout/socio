@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import {
@@ -20,6 +21,18 @@
   let showAccountSheet = $state(false);
   let confirmLogout = $state(false);
   let showFabSheet = $state(false);
+
+  // Sidebar desktop collapsible (user: "ada fitur hide jadi rapih").
+  // collapsed = rail ikon-only (w-20), expanded = penuh (w-72). Persist localStorage.
+  let sidebarCollapsed = $state(false);
+  onMount(() => {
+    sidebarCollapsed = localStorage.getItem("socio-sidebar-collapsed") === "1";
+  });
+  function toggleSidebar() {
+    haptic(6);
+    sidebarCollapsed = !sidebarCollapsed;
+    localStorage.setItem("socio-sidebar-collapsed", sidebarCollapsed ? "1" : "0");
+  }
   // Inisial avatar dipakai di aria-label supaya accessible name mengandung
   // visible text (label-content-name-mismatch Lighthouse).
   const avatarName = $derived(data.user?.name ?? data.user?.username ?? "U");
@@ -109,7 +122,7 @@
     >Lewati ke konten utama</a
   >
   <!-- Desktop sidebar -->
-  <Sidebar items={sidebarItems} user={data.user} />
+  <Sidebar items={sidebarItems} user={data.user} collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
   <!-- Mobile header — avatar + notif (thumb-friendly, single tap to sheet) -->
   <header
@@ -147,7 +160,9 @@
 
   <!-- Desktop header (sticky, inside main area) — aligned to content column -->
   <header
-    class="hidden lg:flex sticky top-0 z-30 h-16 items-center border-b border-ink-100 bg-surface/90 backdrop-blur-xl lg:ml-72"
+    class="hidden lg:flex sticky top-0 z-30 h-16 items-center border-b border-ink-100 bg-surface/90 backdrop-blur-xl transition-[margin] duration-300 ease-out {sidebarCollapsed
+      ? 'lg:ml-20'
+      : 'lg:ml-72'}"
     style="view-transition-name: app-header-desktop;"
   >
     <div class="mx-auto flex w-full max-w-7xl items-center justify-between px-10">
@@ -163,7 +178,7 @@
   <!-- Main content — offset for sidebar on desktop.
        pb-40 (mobile, FAB aktif): FAB duduk ~108px + dock ~70px — konten terakhir
        butuh clearance supaya tidak tertutup FAB/dock (P2-02/P3-01). -->
-  <main id="main" class="lg:ml-72">
+  <main id="main" class="transition-[margin] duration-300 ease-out {sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}">
     <div
       class="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 lg:px-10 {showFab
         ? 'pb-40 lg:pb-12'

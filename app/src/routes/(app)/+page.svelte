@@ -296,14 +296,15 @@
     </div>
   </header>
 
-  <!-- Banner promo (admin-managed, fallback dummy) -->
-  {#if data.banners?.length}
-    <PromoBanner banners={data.banners} />
-  {/if}
-
-  <!-- Hero saldo + quick actions — desktop compact (hero dominant) -->
-  <div class="grid gap-3 lg:gap-4 lg:grid-cols-12 lg:items-stretch">
-    <div class="lg:col-span-8">
+  <!-- Desktop 2 kolom: banner berdampingan dgn box saldo (user: banner full-width kegedean).
+       Mobile urutan tetap: banner → saldo → tiles. -->
+  <div class="grid gap-3 lg:gap-4 lg:grid-cols-2 lg:items-stretch">
+    <div class="lg:order-1">
+      {#if data.banners?.length}
+        <PromoBanner banners={data.banners} />
+      {/if}
+    </div>
+    <div class="lg:order-2">
       <SaldoHero
         balance={data.user?.balance ?? 0}
         ctaHref="/saldo/top-up"
@@ -315,36 +316,32 @@
         }}
       />
     </div>
+  </div>
 
-    <!-- UX2: mobile 2×2 (4 item dalam grid-cols-2), desktop side panel 1×4 (lg:grid-cols-4). -->
-    <!-- min-w-0 wajib: grid item + truncate chain (AGENTS.md) — tanpa ini track melar di desktop -->
-    <div
-      class="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4 lg:col-span-4 lg:gap-2.5 lg:self-stretch content-start"
-    >
-      {#each quick as item, i (item.href)}
-        <a
-          href={item.href}
-          onclick={() => haptic(8)}
-          style={revealDelay(i, 0, 60)}
-          class="reveal tile-press group flex min-w-0 items-center gap-3 rounded-2xl border-2 border-ink-900 bg-surface p-3.5 shadow-[2px_2px_0_var(--color-ink-900)] hover:shadow-[3px_3px_0_var(--color-ink-900)]
-            lg:flex-col lg:items-start lg:gap-2 lg:py-3 lg:px-3 {item.glow}"
+  <!-- Quick actions — baris penuh 4 kolom (mobile 2x2) -->
+  <div class="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+    {#each quick as item, i (item.href)}
+      <a
+        href={item.href}
+        onclick={() => haptic(8)}
+        style={revealDelay(i, 0, 60)}
+        class="reveal tile-press group flex min-w-0 items-center gap-3 rounded-2xl border-2 border-ink-900 bg-surface p-3.5 shadow-[2px_2px_0_var(--color-ink-900)] hover:shadow-[3px_3px_0_var(--color-ink-900)]
+          {item.glow}"
+      >
+        <span
+          class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br {item.chip}
+            text-white shadow-[1.5px_1.5px_0_var(--color-ink-900)] transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
         >
-          <span
-            class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br {item.chip}
-              text-white shadow-[1.5px_1.5px_0_var(--color-ink-900)] transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
+          <Icon name={item.icon} size={20} stroke={2} />
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-sm font-bold text-ink-800">{item.label}</span>
+          <span class="hidden truncate text-xs text-ink-500 lg:block lg:text-[11.5px]"
+            >{item.desc}</span
           >
-            <Icon name={item.icon} size={20} stroke={2} />
-          </span>
-          <span class="min-w-0 flex-1 lg:w-full">
-            <span class="block text-sm font-bold text-ink-800 lg:text-[13px]">{item.label}</span>
-            <!-- Desktop: deskripsi lengkap (1 baris truncate) -->
-            <span class="hidden truncate text-xs text-ink-500 lg:block lg:text-[11.5px]"
-              >{item.desc}</span
-            >
-          </span>
-        </a>
-      {/each}
-    </div>
+        </span>
+      </a>
+    {/each}
   </div>
 
   <!-- Pesan Cepat — repeat flow: layanan yang paling sering di-order, 1 sentuh langsung ke form.
@@ -374,7 +371,7 @@
             onclick={() => haptic(10)}
             style={revealDelay(i, 0, 50)}
             class="reveal card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border border-ink-200 bg-surface p-4 transition-transform duration-200 hover:rotate-0
-              lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5 {i % 2 === 0 ? '-rotate-1' : 'rotate-1'}"
+              lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5 lg:rotate-0 {i % 2 === 0 ? '-rotate-1' : 'rotate-1'}"
           >
             <span
               class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-sm transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
@@ -436,91 +433,89 @@
     {/if}
   </div>
 
-  <!-- INLINE-STAT (P3-04): typographic strip — no card chrome, hairline divider.
-       Containment variance per DESIGN.md §B.7 (ledger style, bukan card stack). -->
-  <div
-    class="grid grid-cols-3 divide-x divide-ink-100 rounded-2xl border-2 border-ink-900 bg-surface px-2 py-3.5 shadow-[2px_2px_0_var(--color-ink-900)] sm:px-4 lg:px-6 lg:py-4 {(data
-      .stats.totalDeposit ?? 0) >= 5_000_000
-      ? 'bg-gradient-to-br from-white via-amber-50/50 to-white'
-      : ''}"
-  >
-    {#if (data.stats.totalDeposit ?? 0) >= 5_000_000}
-      <div
-        class="relative col-span-full -mx-2 mb-3 flex items-center justify-between gap-2 rounded-xl border-2 border-ink-900 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-400 px-3 py-2 text-ink-900 shadow-[2px_2px_0_var(--color-ink-900)] sm:-mx-4 lg:-mx-6"
-      >
-        <ConfettiBurst fire={vipConfetti} />
-        <span class="flex items-center gap-1.5 text-xs font-bold tracking-wide">
-          <span class="grid h-6 w-6 place-items-center rounded-full border border-ink-900 bg-white">
-            <Icon name="star" size={12} stroke={2.5} />
-          </span>
-          <Marker>VIP</Marker> — Deposit di atas 5 juta
+  <!-- INLINE-STAT (P3-04): mobile = ledger rows (label kiri · angka kanan, tidak
+       pernah cramped), desktop (sm+) = 3 kolom. VIP ribbon berdiri sendiri di atas
+       (full-width), bukan col-span dalam grid sempit — fix "kacau di mobile". -->
+  {#if (data.stats.totalDeposit ?? 0) >= 5_000_000}
+    <div
+      class="relative flex items-center justify-between gap-2 overflow-hidden rounded-2xl border-2 border-ink-900 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-400 px-3.5 py-2.5 text-ink-900 shadow-[2px_2px_0_var(--color-ink-900)]"
+    >
+      <ConfettiBurst fire={vipConfetti} />
+      <span class="flex min-w-0 items-center gap-2 text-xs font-bold tracking-wide">
+        <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-ink-900 bg-white">
+          <Icon name="star" size={12} stroke={2.5} />
         </span>
-        <span class="hidden text-[11px] font-semibold opacity-90 sm:inline"
-          >Terima kasih sudah percaya — Sahabat Socio!</span
-        >
-      </div>
-    {/if}
-    <div class="flex flex-col items-center gap-0.5 px-1 lg:gap-1">
-      <span
-        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-500"
+        <span class="min-w-0 truncate"><Marker>VIP</Marker> — Deposit di atas 5 juta</span>
+      </span>
+      <span class="hidden shrink-0 text-[11px] font-semibold opacity-90 md:inline"
+        >Terima kasih sudah percaya — Sahabat Socio!</span
       >
-        <Icon name="receipt" size={13} stroke={2} class="text-ink-400" />
+    </div>
+  {/if}
+  <div
+    class="divide-y divide-ink-100 overflow-hidden rounded-2xl border-2 border-ink-900 bg-surface shadow-[2px_2px_0_var(--color-ink-900)] sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+  >
+    <div class="flex items-center justify-between gap-3 px-4 py-3 sm:flex-col sm:items-center sm:gap-1 sm:px-2 sm:py-4">
+      <span
+        class="flex shrink-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-500"
+      >
+        <Icon name="receipt" size={14} stroke={2} class="text-ink-400" />
         Pesanan
       </span>
-      <span
-        class="flex items-center gap-1.5 font-display text-lg font-extrabold tabular-nums text-ink-900 sm:text-xl lg:text-2xl"
-      >
-        {$statOrders.toLocaleString("id-ID")}
-      </span>
-      {#if data.stats.deltaOrders !== undefined && data.stats.deltaOrders !== 0}
-        <span
-          class="delta-pop rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data.stats
-            .deltaOrders >= 0
-            ? 'bg-success/10 text-success'
-            : 'bg-danger/10 text-danger'}"
-          >{data.stats.deltaOrders >= 0 ? "+" : ""}{data.stats.deltaOrders.toFixed(1)}%</span
+      <span class="flex min-w-0 items-center gap-1.5 sm:flex-col sm:gap-1">
+        <span class="font-display text-lg font-extrabold tabular-nums text-ink-900 sm:text-xl lg:text-2xl"
+          >{$statOrders.toLocaleString("id-ID")}</span
         >
-      {/if}
+        {#if data.stats.deltaOrders !== undefined && data.stats.deltaOrders !== 0}
+          <span
+            class="delta-pop rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data.stats
+              .deltaOrders >= 0
+              ? 'bg-success/10 text-success'
+              : 'bg-danger/10 text-danger'}"
+            >{data.stats.deltaOrders >= 0 ? "+" : ""}{data.stats.deltaOrders.toFixed(1)}%</span
+          >
+        {/if}
+      </span>
     </div>
-    <div class="flex flex-col items-center gap-0.5 px-1 lg:gap-1">
+    <div class="flex items-center justify-between gap-3 px-4 py-3 sm:flex-col sm:items-center sm:gap-1 sm:px-2 sm:py-4">
       <span
-        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide {(data.stats
+        class="flex shrink-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide {(data.stats
           .totalDeposit ?? 0) >= 5_000_000
           ? 'text-amber-600'
           : 'text-ink-500'}"
       >
         <Icon
           name="wallet"
-          size={13}
+          size={14}
           stroke={2}
           class={(data.stats.totalDeposit ?? 0) >= 5_000_000 ? "text-amber-500" : "text-ink-400"}
         />
         Deposit
       </span>
       <span
-        class="flex items-center gap-1.5 font-display text-lg font-extrabold tabular-nums sm:text-xl lg:text-2xl {(data
+        class="flex min-w-0 items-center gap-1.5 font-display text-lg font-extrabold tabular-nums sm:text-xl lg:text-2xl {(data
           .stats.totalDeposit ?? 0) >= 5_000_000
           ? 'text-amber-700'
           : 'text-ink-900'}"
       >
         {#if (data.stats.totalDeposit ?? 0) >= 5_000_000}
           <span
-            class="grid h-5 w-5 place-items-center rounded-full bg-gradient-to-br from-amber-300 to-yellow-500 text-white shadow-sm"
+            class="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-ink-900 bg-gradient-to-br from-amber-300 to-yellow-500 text-white"
             ><Icon name="star" size={10} stroke={2.5} /></span
           >
         {/if}
-        {formatRupiah($statDeposit)}
+        <span class="truncate">{formatRupiah($statDeposit)}</span>
       </span>
     </div>
-    <div class="flex flex-col items-center gap-0.5 px-1 lg:gap-1">
+    <div class="flex items-center justify-between gap-3 px-4 py-3 sm:flex-col sm:items-center sm:gap-1 sm:px-2 sm:py-4">
       <span
-        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-500"
+        class="flex shrink-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-500"
       >
-        <Icon name="banknote" size={13} stroke={2} class="text-ink-400" />
+        <Icon name="banknote" size={14} stroke={2} class="text-ink-400" />
         Belanja
       </span>
       <span
-        class="font-display text-lg font-extrabold tabular-nums text-ink-900 sm:text-xl lg:text-2xl"
+        class="truncate font-display text-lg font-extrabold tabular-nums text-ink-900 sm:text-xl lg:text-2xl"
         >{formatRupiah($statSpent)}</span
       >
     </div>
@@ -681,7 +676,7 @@
         </div>
       {:else if navigating.to?.url.pathname === "/"}
         <!-- Skeleton saat refresh/navigasi (hindari flash list lama) -->
-        <ul class="divide-y divide-ink-100" aria-hidden="true">
+        <ul class="divide-y divide-ink-100 overflow-hidden rounded-card border border-ink-100 bg-surface shadow-card" aria-hidden="true">
           {#each [0, 1, 2] as i (i)}
             <li class="flex items-center gap-2.5 px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-3">
               <Skeleton width="2.25rem" height="2.25rem" rounded="rounded-xl" />
@@ -694,7 +689,7 @@
           {/each}
         </ul>
       {:else}
-        <ul class="divide-y divide-ink-100">
+        <ul class="divide-y divide-ink-100 overflow-hidden rounded-card border border-ink-100 bg-surface shadow-card">
           {#each data.recent as o, i (o.id)}
             {@const p = (() => {
               const n = (o.serviceName || "").toLowerCase();
