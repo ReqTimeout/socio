@@ -678,7 +678,7 @@
         <!-- Skeleton saat refresh/navigasi (hindari flash list lama) -->
         <ul class="divide-y divide-ink-100 overflow-hidden rounded-card border border-ink-100 bg-surface shadow-card" aria-hidden="true">
           {#each [0, 1, 2] as i (i)}
-            <li class="flex items-center gap-2.5 px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-3">
+            <li class="flex items-center gap-2.5 px-3 py-2.5 sm:gap-3 sm:px-3.5 sm:py-3">
               <Skeleton width="2.25rem" height="2.25rem" rounded="rounded-xl" />
               <div class="min-w-0 flex-1 space-y-2">
                 <Skeleton width="65%" height="0.85rem" />
@@ -713,7 +713,7 @@
               <a
                 href="/pesanan"
                 title={serviceDisplayName(o.serviceName)}
-                class="group flex min-w-0 items-center gap-2.5 -mx-2.5 rounded-xl px-2.5 py-2.5 transition-colors hover:bg-ink-50 active:bg-ink-100 sm:gap-3 sm:mx-0 sm:px-3 sm:py-3 lg:px-3.5 lg:py-3.5"
+                class="group flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 transition-colors hover:bg-ink-50 active:bg-ink-100 sm:gap-3 sm:px-3.5 sm:py-3 lg:px-3.5 lg:py-3.5"
               >
                 <div
                   class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br {p.grad} text-white transition-transform duration-200 group-hover:scale-110 sm:h-10 sm:w-10"

@@ -128,36 +128,8 @@
       // storage diblokir — lewati selebrasi
     }
   });
-  // Sliding indicator di bawah chip filter aktif (F2, presentasi saja).
-  // Diukur dari DOM (offsetLeft/Width) — ikut pindah saat filter berubah/resize.
-  let chipRow: HTMLElement | null = $state(null);
-  let chipInd = $state({ left: 0, width: 0, show: false });
-  function placeChipInd() {
-    if (!chipRow) return;
-    const active = chipRow.querySelector<HTMLElement>('[data-active="true"]');
-    if (!active) {
-      chipInd.show = false;
-      return;
-    }
-    chipInd = { left: active.offsetLeft, width: active.offsetWidth, show: true };
-  }
-  onMount(() => {
-    placeChipInd();
-    // Tunggu font/layout stabil agar ukuran chip akurat
-    const t1 = setTimeout(placeChipInd, 300);
-    const onRs = () => placeChipInd();
-    addEventListener("resize", onRs);
-    return () => {
-      clearTimeout(t1);
-      removeEventListener("resize", onRs);
-    };
-  });
-  $effect(() => {
-    data.filter; // track → reposisi tiap ganti filter
-    // Tunggu DOM update + skeleton selesai sebelum ukur
-    const t = setTimeout(placeChipInd, 60);
-    return () => clearTimeout(t);
-  });
+  // Chip filter aktif ditandai dengan fill bg-primary (lihat tombol chip di bawah) —
+  // sliding indikator garis di bawahnya dulu bikin "garis coklat" mengganggu, DIHAPUS.
 
   function openDetail(id: number) {
     haptic(10);
@@ -211,7 +183,7 @@
     </div>
     <a
       href="/pesan"
-      class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary-600 to-accent-500 px-4 py-2 text-sm font-bold text-white shadow-[0_8px_20px_-8px_rgba(79,70,229,0.6)] transition hover:-translate-y-0.5 active:scale-95"
+      class="inline-flex items-center gap-1.5 rounded-full border-2 border-ink-900 bg-gradient-to-r from-primary-600 to-accent-500 px-4 py-2 text-sm font-bold text-white shadow-[2px_2px_0_var(--color-ink-900)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:-translate-y-0.5"
     >
       <Icon name="plus" size={16} stroke={2.5} />
       Pesan Baru
@@ -253,7 +225,7 @@
   <div
     class="sticky top-14 z-20 -mx-4 flex items-center gap-2 overflow-x-auto border-b border-ink-100 bg-surface/95 px-4 py-2 backdrop-blur shadow-[0_4px_12px_-8px_rgba(15,23,42,0.08)] [scrollbar-width:none] sm:static sm:border-0 sm:bg-transparent sm:p-0 lg:mx-0 lg:px-0 lg:gap-3 lg:py-1 sm:shadow-none"
   >
-    <div class="relative flex shrink-0 items-center gap-2" bind:this={chipRow}>
+    <div class="relative flex shrink-0 items-center gap-2">
       {#each tabs as t}
         {@const c = (counts as any)[t.f] ?? 0}
         {@const isActive = data.filter === t.f}
@@ -261,7 +233,7 @@
           onclick={() => select(t.f)}
           data-active={isActive ? "true" : undefined}
           aria-current={isActive ? "true" : undefined}
-          class="min-h-[44px] shrink-0 rounded-full px-4 py-2 pb-3 text-xs font-bold transition-all duration-200 active:scale-95
+          class="min-h-[44px] shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all duration-200 active:scale-95
             {isActive
             ? 'bg-primary text-white shadow-sm'
             : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
@@ -276,11 +248,6 @@
           {/if}
         </button>
       {/each}
-      <span
-        class="chip-indicator"
-        style={`transform: translateX(${chipInd.left}px); width: ${chipInd.width}px; opacity: ${chipInd.show ? 1 : 0};`}
-        aria-hidden="true"
-      ></span>
     </div>
     <button
       onclick={toggleSelectMode}
@@ -529,10 +496,10 @@
                 <button
                   type="button"
                   onclick={() => toggleCheck(o.id)}
-                  class="inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition active:scale-95
+                  class="inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold shadow-[2px_2px_0_var(--color-ink-900)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
                     {checked.has(o.id)
-                    ? 'border-primary bg-primary text-white'
-                    : 'border-ink-200 text-ink-600 hover:border-ink-300'}"
+                    ? 'border-ink-900 bg-primary text-white'
+                    : 'border-ink-900 bg-surface text-ink-900 hover:bg-ink-50'}"
                 >
                   <span
                     class="grid h-4 w-4 place-items-center rounded-full {checked.has(o.id)
@@ -546,14 +513,14 @@
               {:else}
                 <button
                   onclick={() => openDetail(o.id)}
-                  class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-ink-800 active:scale-95"
+                  class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border-2 border-ink-900 bg-ink-900 px-4 py-2 text-xs font-bold text-white shadow-[2px_2px_0_var(--color-ink-300)] transition-all hover:bg-ink-800 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
                 >
                   <Icon name="eye" size={14} />
                   Detail
                 </button>
                 <button
                   onclick={() => repeatOrder(o)}
-                  class="inline-flex items-center justify-center gap-1.5 rounded-full border border-ink-200 bg-surface px-4 py-2 text-xs font-bold text-ink-700 transition hover:bg-ink-50 active:scale-95"
+                  class="inline-flex items-center justify-center gap-1.5 rounded-full border-2 border-ink-900 bg-surface px-4 py-2 text-xs font-bold text-ink-900 shadow-[2px_2px_0_var(--color-ink-900)] transition-all hover:bg-ink-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
                 >
                   <Icon name="refresh" size={14} stroke={2} />
                   Pesan lagi
@@ -757,29 +724,12 @@
       animation: none;
       opacity: 0;
     }
-    .chip-indicator {
-      animation: none;
-    }
     .order-progress-bar {
       transition: none;
     }
   }
 
-  /* F2 playful: sliding indicator chip (transform only, GPU).
-   * Progress bar determinate — lebar dari data (transition, bukan infinite). */
-  .chip-indicator {
-    position: absolute;
-    bottom: 1px;
-    left: 0;
-    height: 3px;
-    border-radius: 9999px;
-    background: var(--color-mango-500);
-    transition:
-      transform 260ms var(--ease-out-soft),
-      width 260ms var(--ease-out-soft),
-      opacity 200ms ease;
-    pointer-events: none;
-  }
+  /* F2 playful: progress bar determinate — lebar dari data (transition, bukan infinite). */
   .order-progress {
     height: 3px;
     overflow: hidden;
