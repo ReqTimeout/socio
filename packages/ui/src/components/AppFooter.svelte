@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Sparko from "./Sparko.svelte";
   const links = [
     { href: "/layanan", label: "Layanan" },
     { href: "/pesanan", label: "Pesanan" },
@@ -13,73 +14,40 @@
 </script>
 
 <footer class="border-t border-ink-100 bg-surface">
-  <div class="mx-auto max-w-7xl px-4 py-6 lg:px-8 lg:py-8">
-    <!-- Desktop: 3 col grid | Mobile: centered stack -->
-    <div
-      class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between lg:gap-8"
-    >
-      <!-- Brand + tagline -->
-      <div class="text-center lg:text-left">
-        <a
-          href="/"
-          class="inline-flex items-center gap-1.5 font-display text-lg font-extrabold tracking-tight"
+  <div class="mx-auto max-w-7xl px-4 py-4 lg:px-8 lg:py-5">
+    <!-- Desktop: satu baris rapi (brand kiri · menu kanan). Mobile: stack center. -->
+    <div class="flex flex-col items-center gap-3 lg:flex-row lg:justify-between lg:gap-6">
+      <!-- Brand + Sparko -->
+      <a href="/" class="inline-flex items-center gap-2">
+        <Sparko pose="wave" size={30} />
+        <span class="font-display text-lg font-extrabold tracking-tight"
+          >socio<span class="text-primary">.id</span></span
         >
-          socio<span class="text-primary">.id</span>
-        </a>
-        <p
-          class="mx-auto mt-1 max-w-[240px] text-xs leading-relaxed text-ink-500 lg:mx-0"
-        >
-          Panel SMM Indonesia — proses otomatis, harga termurah.
-        </p>
-      </div>
+      </a>
 
-      <!-- Links -->
-      <div
-        class="flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-center lg:items-start"
-      >
-        <div class="text-center sm:text-left">
-          <p
-            class="text-[11px] font-bold uppercase tracking-widest text-ink-500"
+      <!-- Menu -->
+      <nav class="flex flex-wrap items-center justify-center gap-x-1 gap-y-1 lg:justify-end">
+        {#each links as l}
+          <a
+            href={l.href}
+            class="rounded-full px-3 py-1.5 text-xs font-semibold text-ink-600 transition hover:bg-ink-50 hover:text-ink-900"
+            >{l.label}</a
           >
-            Menu
-          </p>
-          <div
-            class="mt-2 flex flex-wrap justify-center gap-1 sm:justify-start lg:gap-1"
+        {/each}
+        <span class="mx-1 hidden h-4 w-px bg-ink-200 lg:inline-block" aria-hidden="true"></span>
+        {#each legal as l}
+          <a
+            href={l.href}
+            class="rounded-full px-3 py-1.5 text-xs font-semibold text-ink-600 transition hover:bg-ink-50 hover:text-ink-900"
+            >{l.label}</a
           >
-            {#each links as l}
-              <a
-                href={l.href}
-                class="rounded-full px-3 py-1.5 text-xs font-semibold text-ink-600 transition hover:bg-ink-50 hover:text-ink-900"
-                >{l.label}</a
-              >
-            {/each}
-          </div>
-        </div>
-        <div class="hidden h-10 w-px bg-ink-100 sm:block"></div>
-        <div class="text-center sm:text-left">
-          <p
-            class="text-[11px] font-bold uppercase tracking-widest text-ink-500"
-          >
-            Bantuan
-          </p>
-          <div
-            class="mt-2 flex flex-wrap justify-center gap-1 sm:justify-start"
-          >
-            {#each legal as l}
-              <a
-                href={l.href}
-                class="rounded-full px-3 py-1.5 text-xs font-semibold text-ink-600 transition hover:bg-ink-50 hover:text-ink-900"
-                >{l.label}</a
-              >
-            {/each}
-          </div>
-        </div>
-      </div>
+        {/each}
+      </nav>
     </div>
 
     <!-- Bottom bar -->
     <div
-      class="mt-6 flex flex-col items-center gap-2 border-t border-ink-100 pt-4 text-center lg:mt-8 lg:flex-row lg:justify-between"
+      class="mt-3 flex flex-col items-center justify-between gap-1 border-t border-ink-100 pt-3 text-center lg:mt-4 lg:flex-row"
     >
       <p class="text-[11px] font-medium text-ink-500">
         &copy; {new Date().getFullYear()} Socio.id · Panel SMM Indonesia

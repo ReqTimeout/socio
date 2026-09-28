@@ -1,12 +1,29 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Icon, revealDelay, EmptyBalanceArt, NumberFlow, StickerCard } from "@socio/ui";
+  import { Icon, revealDelay, EmptyBalanceArt, NumberFlow, Sparko } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { formatRupiah, formatDateShort } from "$lib/format";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
+
+  // Sparko interaktif pada kartu saldo: tiap klik → cycle pose + pesan semangat.
+  const sparkoLines = [
+    { pose: "wave", msg: "Halo! Mau top up?" },
+    { pose: "celebrate", msg: "Saldo aman, gas pesan!" },
+    { pose: "wave", msg: "Cuan mengalir 🍀" },
+    { pose: "celebrate", msg: "Semangat, cuan nambah!" },
+  ] as const;
+  let sparkoIdx = $state(0);
+  let sparkoPose = $state<"wave" | "celebrate">("wave");
+  let sparkoMsg = $state<string>(sparkoLines[0].msg);
+  function tapSparko() {
+    haptic(8);
+    sparkoIdx = (sparkoIdx + 1) % sparkoLines.length;
+    sparkoPose = sparkoLines[sparkoIdx].pose;
+    sparkoMsg = sparkoLines[sparkoIdx].msg;
+  }
 
   const logLabel: Record<string, { label: string; icon: string; tone: string }> = {
     order: { label: "Pesan", icon: "receipt", tone: "danger" },
@@ -74,52 +91,67 @@
 
 <section class="space-y-4 lg:space-y-5">
   <h1 class="sr-only">Saldo</h1>
-  <!-- Balance card — sticker-dark + breathing (APP V2 §6.4, F0 StickerCard).
-       Blob float-slow F1 dilepas (trade budget: breathe + pending-pulse max 2). -->
-  <StickerCard
-    tone="dark"
-    class="relative overflow-hidden p-5 lg:p-8 lg:grid lg:grid-cols-[1.35fr_auto] lg:items-center lg:gap-8 hover:-translate-y-0.5 transition-transform duration-300"
+  <!-- Balance card — hijau premium sesuai tema + pop chrome (border tinta +
+       hard-shadow) + Sparko interaktif. Klik Sparko → ganti pose & pesan.
+       Glow breathe tetap (motion-safe); .sparko di-allowlist dari reduced-motion kill. -->
+  <div
+    class="relative overflow-hidden rounded-[var(--radius-sticker)] border-2 border-ink-900 bg-gradient-to-br from-emerald-600 via-emerald-700 to-green-800 p-5 text-white shadow-[3px_3px_0_var(--color-ink-900)] transition-transform duration-300 hover:-translate-y-0.5 lg:p-8"
   >
     <div
       class="pointer-events-none absolute inset-0 motion-safe:animate-[saldo-breathe_4s_ease-in-out_infinite]"
-      style="background: radial-gradient(70% 60% at 50% 0%, rgba(255,255,255,0.10), transparent 70%);"
+      style="background: radial-gradient(70% 60% at 50% 0%, rgba(255,255,255,0.12), transparent 70%);"
       aria-hidden="true"
     ></div>
     <div
-      class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-2xl pointer-events-none"
+      class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-emerald-300/30 blur-2xl pointer-events-none"
       aria-hidden="true"
     ></div>
-    <div class="min-w-0">
-      <div class="text-xs font-medium text-ink-300 lg:text-[13px]">Saldo Socio</div>
-      <div
-        class="mt-1 font-display text-3xl lg:text-[2.85rem] lg:leading-none font-extrabold truncate"
-      >
-        <NumberFlow
-          value={Number(data.balance)}
-          format={formatRupiah}
-          class="text-white [font-variant-numeric:tabular-nums]"
-        />
+
+    <div class="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <!-- Saldo + Sparko interaktif -->
+      <div class="min-w-0">
+        <div class="text-xs font-medium text-emerald-50/90 lg:text-[13px]">Saldo Socio</div>
+        <div
+          class="mt-1 font-display text-3xl lg:text-[2.85rem] lg:leading-none font-extrabold truncate"
+        >
+          <NumberFlow
+            value={Number(data.balance)}
+            format={formatRupiah}
+            class="text-white [font-variant-numeric:tabular-nums]"
+          />
+        </div>
+        <button
+          type="button"
+          onclick={tapSparko}
+          aria-label="Sparko, klik untuk sapa"
+          class="mt-3 inline-flex items-center gap-2 rounded-full bg-white/12 px-2.5 py-1.5 text-left ring-1 ring-white/20 backdrop-blur-sm transition active:scale-95 hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+        >
+          <Sparko pose={sparkoPose} size={38} />
+          <span class="text-xs font-semibold text-white/90" aria-live="polite">{sparkoMsg}</span>
+        </button>
+      </div>
+
+      <!-- Aksi (pop) -->
+      <div class="flex gap-2 sm:flex-col sm:w-44">
+        <a
+          href="/saldo/top-up"
+          class="flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-full border-2 border-ink-900 bg-white px-4 py-2.5 text-sm font-bold text-emerald-800 shadow-[2px_2px_0_var(--color-ink-900)] transition-all hover:-translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-ink-900)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+          onclick={() => haptic(10)}
+        >
+          <Icon name="plus" size={16} stroke={2.5} />
+          Top Up
+        </a>
+        <a
+          href="/saldo/riwayat"
+          class="flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-full border-2 border-ink-900 bg-emerald-400 px-4 py-2.5 text-sm font-bold text-ink-900 shadow-[2px_2px_0_var(--color-ink-900)] transition-all hover:-translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-ink-900)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+          onclick={() => haptic(10)}
+        >
+          <Icon name="receipt" size={16} />
+          Riwayat
+        </a>
       </div>
     </div>
-    <div class="mt-4 lg:mt-0 flex gap-2 lg:flex-col lg:w-44">
-      <a
-        href="/saldo/top-up"
-        class="flex flex-1 lg:flex-none items-center justify-center gap-1.5 rounded-full bg-primary py-2.5 text-sm font-bold transition active:scale-95 hover:bg-primary-700"
-        onclick={() => haptic(10)}
-      >
-        <Icon name="plus" size={16} stroke={2.5} />
-        Top Up
-      </a>
-      <a
-        href="/saldo/riwayat"
-        class="flex flex-1 lg:flex-none items-center justify-center gap-1.5 rounded-full bg-white/10 py-2.5 text-sm font-bold transition active:scale-95 hover:bg-white/20"
-        onclick={() => haptic(10)}
-      >
-        <Icon name="receipt" size={16} />
-        Riwayat
-      </a>
-    </div>
-  </StickerCard>
+  </div>
 
   <!-- min-w-0 wajib: grid item default min-width auto — konten flex (note panjang
        + amount) tak bisa shrink → track melar 444px di 390px viewport (overflow 70px) -->

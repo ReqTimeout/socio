@@ -43,12 +43,20 @@ export function fixMojibake(s: string): string {
 }
 
 /**
- * Short display label for service cards/quick-order.
- * Strips bracket tags and trims; preserves leading flag emoji cleanly.
+ * Short display label for service cards/quick-order/dropdown.
+ * - Strips provider branding ("SMMturk" → "Socio", removes "[...Provider...]" tags).
+ * - Fixes mojibake emoji.
+ * - Extracts meaningful head before bracket metadata tags.
  */
 export function serviceDisplayName(name: string): string {
-  const fixed = fixMojibake(name);
+  let fixed = fixMojibake(name);
+  // Replace provider branding with "Socio"
+  fixed = fixed.replace(/SMMturk/gi, "Socio");
+  // Remove bracket tags containing "Provider" (e.g. "[ Provider ]", "[%100 Provider]", "[ %100 Provider ]")
+  fixed = fixed.replace(/\[\s*%?\d*\s*Provider\s*\]/gi, "");
+  // Collapse whitespace left by removals
+  fixed = fixed.replace(/\s{2,}/g, " ").trim();
+  // Extract head before first [ metadata tag
   const head = (fixed.split("[")[0] ?? fixed).trim();
-  // Collapse whitespace, keep emoji intact
-  return head.replace(/\s{2,}/g, " ").trim() || fixed.trim();
+  return head.replace(/\s{2,}/g, " ").trim() || fixed;
 }

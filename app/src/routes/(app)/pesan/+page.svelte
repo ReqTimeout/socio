@@ -61,6 +61,18 @@
   let loadingServices = $state(false);
   let selectedService = $state<Svc | null>(null);
 
+  // Harga efektif per 1000 (sudah termasuk markup level user) — dipakai untuk
+  // tampilkan harga real di dropdown & info layanan supaya konsisten dgn total.
+  function effectivePer1k(svc: Svc): number {
+    return computePrice(
+      pickPrice(svc),
+      1000,
+      data.level as UserLevel,
+      levelRule,
+      svc.priceApi ?? 0,
+    );
+  }
+
   // ── Order form state ────────────────────────────────────────
   let link = $state("");
   let quantity = $state(0);
@@ -204,8 +216,8 @@
   const serviceOptions = $derived(
     serviceList.map((s) => ({
       value: s.id,
-      label: s.serviceName,
-      hint: formatRupiah(pickPrice(s)),
+      label: serviceDisplayName(s.serviceName),
+      hint: formatRupiah(effectivePer1k(s)),
     })),
   );
 
@@ -278,7 +290,7 @@
   <div class="space-y-4">
     <!-- Hero — full width, compact -->
     <div
-      class="relative overflow-hidden rounded-2xl lg:rounded-[22px] bg-gradient-to-br from-primary-600 via-primary to-accent-600 p-4 lg:p-5 text-white shadow-[0_14px_32px_-14px_rgba(79,70,229,0.55)] lg:shadow-[0_20px_48px_-16px_rgba(79,70,229,0.45),0_8px_20px_-10px_rgba(15,23,42,0.10)]"
+      class="relative overflow-hidden rounded-2xl lg:rounded-[22px] border-2 border-ink-900 bg-gradient-to-br from-primary-600 via-primary to-accent-600 p-4 lg:p-5 text-white shadow-[3px_3px_0_var(--color-ink-900)] transition-transform duration-300 hover:-translate-y-0.5"
     >
       <div
         class="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl"
@@ -403,13 +415,13 @@
             {/if}
             {#if selectedService}
               <p class="mt-2 text-sm font-bold leading-snug text-ink-900">
-                {selectedService.serviceName}
+                {serviceDisplayName(selectedService.serviceName)}
               </p>
               <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                 <span class="font-display font-bold text-accent-ink"
-                  >{formatRupiah(pickPrice(selectedService))}</span
+                  >{formatRupiah(effectivePer1k(selectedService))}</span
                 >
-                <span class="text-ink-500">· harga dasar per 1000</span>
+                <span class="text-ink-500">· harga per 1000</span>
                 <span class="text-ink-500">·</span>
                 <span class="text-ink-500"
                   >Min {selectedService.min.toLocaleString("id-ID")} – {selectedService.max.toLocaleString(
