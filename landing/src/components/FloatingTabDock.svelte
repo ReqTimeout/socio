@@ -48,20 +48,34 @@
 
   onMount(() => {
     pathname = location.pathname.replace(/\/$/, '') || '/';
-    // Auto-hide dgn hysteresis: muncul setelah lewati ~0.6vh, baru sembunyi lagi
-    // saat balik dekat atas (~0.3vh) — biar gak kedip/flip di ambang scroll.
-    const check = () => {
+    // Autohide pola mobile standard: SEMBUNYI saat scroll ke bawah (eksplorasi),
+    // MUNCUL lagi saat scroll ke atas (butuh navigasi). Delta 8px jadi hysteresis
+    // biar tidak kedip saat arah scroll berubah.
+    let lastY = scrollY;
+    const apply = () => {
+      const y = scrollY;
       const max = document.documentElement.scrollHeight - innerHeight;
+      // halaman pendek (tidak bisa di-scroll berarti) → dock selalu tampil
       if (max < innerHeight * 0.6) {
-        visible = true; // halaman pendek: selalu tampil
+        visible = true;
+        lastY = y;
         return;
       }
-      if (scrollY > innerHeight * 0.6) visible = true;
-      else if (scrollY < innerHeight * 0.3) visible = false;
+      const dy = y - lastY;
+      if (Math.abs(dy) < 8) return; // ambang anti-jitter
+      if (dy > 0) visible = false; // scroll turun → sembunyi
+      else visible = true; // scroll naik → tampil
+      lastY = y;
     };
-    check();
-    addEventListener('scroll', check, { passive: true });
-    return () => removeEventListener('scroll', check);
+    const onScroll = () => {
+      // di posisi paling atas: dock tampil (user lihat awal halaman)
+      if (scrollY <= 4) { visible = true; lastY = scrollY; return; }
+      apply();
+    };
+    // init: di atas halaman → tampil
+    visible = scrollY <= 4 || document.documentElement.scrollHeight - innerHeight < innerHeight * 0.6;
+    addEventListener('scroll', onScroll, { passive: true });
+    return () => removeEventListener('scroll', onScroll);
   });
 </script>
 
