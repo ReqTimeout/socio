@@ -9,21 +9,15 @@
     Skeleton,
     revealDelay,
     NumberFlow,
-    hoverLift,
     Sparko,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
-  import {
-    computePrice,
-    baseForLevel,
-    type UserLevel,
-    type PricingRule,
-  } from "@socio/core/pricing";
   import { formatRupiah, serviceDisplayName } from "$lib/format";
   import { applyAction, enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
+  import { fly } from "svelte/transition";
   import type { ActionData, PageData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -32,29 +26,15 @@
     id: number;
     serviceName: string;
     type: string;
-    price: number;
-    priceApi: number;
-    priceReseller: number;
     min: number;
     max: number;
     isRefill: number;
     note: string;
     waktu: string;
-    providerId: number;
-    providerServiceId: number;
+    // Harga efektif per-1000 utk level user ini — SUDAH markup, dihitung server.
+    // Client TIDAK pernah menerima harga base/modal/markup (anti-kebocoran).
+    pricePer1k: number;
   };
-
-  // Rule markup level user dari server (DB pricing_rules)
-  const levelRule = $derived.by<PricingRule | undefined>(() =>
-    (data.rules ?? []).find((r) => r.level === data.level),
-  );
-
-  function pickPrice(svc: Svc): number {
-    return baseForLevel(
-      { price: svc.price, priceApi: svc.priceApi ?? 0, priceReseller: svc.priceReseller ?? 0 },
-      data.level as UserLevel,
-    );
-  }
 
   // ── Step state ──────────────────────────────────────────────
   let selectedCat = $state<number>(0);
@@ -62,16 +42,9 @@
   let loadingServices = $state(false);
   let selectedService = $state<Svc | null>(null);
 
-  // Harga efektif per 1000 (sudah termasuk markup level user) — dipakai untuk
-  // tampilkan harga real di dropdown & info layanan supaya konsisten dgn total.
+  // Harga efektif per 1000 tinggal dibaca dari field server (sudah markup).
   function effectivePer1k(svc: Svc): number {
-    return computePrice(
-      pickPrice(svc),
-      1000,
-      data.level as UserLevel,
-      levelRule,
-      svc.priceApi ?? 0,
-    );
+    return svc.pricePer1k;
   }
 
   // ── Order form state ────────────────────────────────────────
@@ -96,17 +69,9 @@
   const isCustomComments = $derived(selectedService?.type === "Custom Comments");
   const lineCount = $derived(komen.split("\n").filter(Boolean).length);
   const effectiveQty = $derived(isCustomComments ? lineCount : quantity);
-  // Total live pakai base per level + markup DB — persis sama dengan hitungan server
+  // Total live — sama persis dgn server (round(qty/1000 * harga efektif per-1000)).
   const total = $derived(
-    selectedService
-      ? computePrice(
-          pickPrice(selectedService),
-          effectiveQty,
-          data.level as UserLevel,
-          levelRule,
-          selectedService.priceApi ?? 0,
-        )
-      : 0,
+    selectedService ? Math.round((effectiveQty / 1000) * selectedService.pricePer1k) : 0,
   );
 
   // ── Inline validation (UX3.3) — link pattern + qty range
@@ -392,11 +357,12 @@
       <!-- Kolom kiri: form utama -->
       <div>
         <div
-          class="mx-auto w-full max-w-none space-y-4 rounded-2xl lg:rounded-[22px] border border-ink-100 bg-surface p-4 sm:p-5 lg:p-6 sm:max-w-xl lg:shadow-[0_24px_56px_-18px_rgba(15,23,42,0.18),0_10px_24px_-10px_rgba(15,23,42,0.10),0_1px_0_rgba(255,255,255,0.9)_inset] lg:border-white/70 lg:backdrop-blur-xl transition-shadow duration-300 hover:lg:shadow-[0_28px_64px_-18px_rgba(15,23,42,0.22),0_12px_28px_-10px_rgba(15,23,42,0.12)]"
+          class="mx-auto w-full max-w-none space-y-4 rounded-2xl lg:rounded-[22px] border-2 border-ink-900 bg-surface p-4 sm:p-5 lg:p-6 sm:max-w-xl shadow-[6px_6px_0_var(--color-ink-900)]"
         >
           {#if form?.error}
             <div
-              class="flex items-center gap-2 rounded-xl bg-danger/10 px-3 py-2.5 text-sm font-medium text-danger"
+              transition:fly={{ y: 8, duration: 260 }}
+              class="flex items-center gap-2 rounded-xl border-2 border-danger/40 bg-danger/10 px-3 py-2.5 text-sm font-medium text-danger"
             >
               <Icon name="alert" size={16} />
               {form.error}
@@ -474,10 +440,16 @@
               </div>
             {/if}
             {#if selectedService}
-              <p class="mt-2 text-sm font-bold leading-snug text-ink-900">
+              <p
+                transition:fly={{ y: 6, duration: 240 }}
+                class="mt-2 text-sm font-bold leading-snug text-ink-900"
+              >
                 {serviceDisplayName(selectedService.serviceName)}
               </p>
-              <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+              <div
+                transition:fly={{ y: 6, duration: 280 }}
+                class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
+              >
                 <span class="font-display font-bold text-accent-ink"
                   >{formatRupiah(effectivePer1k(selectedService))}</span
                 >
@@ -665,18 +637,34 @@
 
             <!-- Kupon -->
             <div>
-              <label class="mb-1.5 block text-sm font-bold" for="coupon-input"
-                >Kode kupon (opsional)</label
-              >
-              <input
-                id="coupon-input"
-                name="coupon"
-                bind:value={couponCode}
-                oninput={checkCoupon}
-                placeholder="SUMMER25"
-                autocomplete="off"
-                class="h-11 w-full rounded-xl border border-ink-200 px-3 font-mono text-sm uppercase outline-none transition-colors focus:border-primary"
-              />
+              <label class="mb-1.5 flex items-center gap-1.5 text-sm font-bold" for="coupon-input">
+                <Icon name="tag" size={15} stroke={2} class="text-ink-500" />
+                Kode kupon (opsional)
+              </label>
+              <div class="relative">
+                <input
+                  id="coupon-input"
+                  name="coupon"
+                  bind:value={couponCode}
+                  oninput={checkCoupon}
+                  placeholder="SUMMER25"
+                  autocomplete="off"
+                  class="h-11 w-full rounded-xl border-2 border-ink-900 bg-white px-3 pr-10 font-mono text-sm uppercase tracking-wide outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-primary/40"
+                />
+                {#if checkingCoupon}
+                  <Icon
+                    name="refresh"
+                    size={16}
+                    class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-ink-500"
+                  />
+                {:else if couponOk}
+                  <span
+                    class="pointer-events-none absolute right-2.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full border-2 border-ink-900 bg-emerald-500 text-white"
+                  >
+                    <Icon name="check" size={13} stroke={3} />
+                  </span>
+                {/if}
+              </div>
               <p
                 class="mt-1.5 min-h-[1.25rem] text-xs font-medium {couponOk
                   ? 'text-success'
@@ -848,6 +836,15 @@
               >
                 {sparkoMsg}
               </p>
+              <!-- Saldo kamu (mobile) — ringkas di kanan strip Sparko -->
+              <span
+                class="flex shrink-0 items-baseline gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tabular-nums"
+              >
+                <span class="font-semibold text-ink-300">Saldo</span>
+                <span class="font-bold {enough ? 'text-emerald-300' : 'text-red-300'}"
+                  >{formatRupiah(data.balance)}</span
+                >
+              </span>
             </div>
           </div>
         </div>

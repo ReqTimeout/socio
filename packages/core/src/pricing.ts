@@ -42,6 +42,31 @@ export function baseForLevel(
 }
 
 /**
+ * Harga efektif per 1000 untuk satu level — SUDAH termasuk markup + floor
+ * anti-jual-rugi. TIDAK bergantung quantity. Dipakai server untuk mengirim
+ * SATU angka harga final ke client (tanpa membocorkan base/modal/markup).
+ *
+ * `modalPer1k` (opsional) = harga provider per 1000, untuk floor `modal + minProfit`.
+ */
+export function effectivePer1k(
+  basePricePer1k: number,
+  level: UserLevel = "Member",
+  rule?: PricingRule,
+  modalPer1k?: number,
+): number {
+  const r = rule ?? ZERO_RULE(level);
+  let per1k =
+    Number(basePricePer1k) * (1 + Number(r.markupPercent) / 100) +
+    Number(r.flatPer1k);
+  if (r.isActive && modalPer1k !== undefined && Number(r.minProfitPer1k) > 0) {
+    per1k = Math.max(per1k, Number(modalPer1k) + Number(r.minProfitPer1k));
+  } else if (!r.isActive) {
+    per1k = Number(basePricePer1k);
+  }
+  return per1k;
+}
+
+/**
  * Compute the user-facing price for an order.
  * `basePricePer1k` = harga dasar per 1000 sesuai level (lihat `baseForLevel`).
  * `modalPer1k` (opsional) = harga provider per 1000, untuk floor `modal + minProfit`.
@@ -53,15 +78,8 @@ export function computePrice(
   rule?: PricingRule,
   modalPer1k?: number,
 ): number {
-  const r = rule ?? ZERO_RULE(level);
-  let per1k = Number(basePricePer1k) * (1 + Number(r.markupPercent) / 100) + Number(r.flatPer1k);
-  if (r.isActive && modalPer1k !== undefined && Number(r.minProfitPer1k) > 0) {
-    per1k = Math.max(per1k, Number(modalPer1k) + Number(r.minProfitPer1k));
-  } else if (!r.isActive) {
-    per1k = Number(basePricePer1k);
-  }
-  const total = (quantity / 1000) * per1k;
-  return Math.round(total);
+  const per1k = effectivePer1k(basePricePer1k, level, rule, modalPer1k);
+  return Math.round((quantity / 1000) * per1k);
 }
 
 export interface CouponInput {
@@ -87,7 +105,8 @@ export interface CouponResult {
  * `subtotal` is the already-computed user-facing price (after level markup).
  */
 export function applyCoupon(c: CouponInput, subtotal: number): CouponResult {
-  if (c.active !== "1") return { valid: false, discount: 0, message: "Kupon tidak aktif." };
+  if (c.active !== "1")
+    return { valid: false, discount: 0, message: "Kupon tidak aktif." };
   if (c.expiresAt && new Date(c.expiresAt) < new Date())
     return { valid: false, discount: 0, message: "Kupon sudah kedaluwarsa." };
   if (c.maxUsage > 0 && c.used >= c.maxUsage)
@@ -99,10 +118,21 @@ export function applyCoupon(c: CouponInput, subtotal: number): CouponResult {
       message: `Min. pembelian Rp${Math.round(c.minOrder).toLocaleString("id-ID")}.`,
     };
   let discount =
-    c.type === "percent" ? Math.round(subtotal * (c.value / 100)) : Math.round(c.value);
-  if (c.maxDiscount > 0) discount = Math.min(discount, Math.round(c.maxDiscount));
+    c.type === "percent"
+      ? Math.round(subtotal * (c.value / 100))
+      : Math.round(c.value);
+  if (c.maxDiscount > 0)
+    discount = Math.min(discount, Math.round(c.maxDiscount));
   discount = Math.min(discount, subtotal);
   if (discount <= 0)
-    return { valid: false, discount: 0, message: "Kupon tidak dapat diterapkan." };
-  return { valid: true, discount, message: `Hemat Rp${discount.toLocaleString("id-ID")}.` };
+    return {
+      valid: false,
+      discount: 0,
+      message: "Kupon tidak dapat diterapkan.",
+    };
+  return {
+    valid: true,
+    discount,
+    message: `Hemat Rp${discount.toLocaleString("id-ID")}.`,
+  };
 }

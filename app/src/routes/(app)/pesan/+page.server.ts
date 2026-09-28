@@ -10,7 +10,7 @@ import {
 } from "@socio/db/schema";
 import { eq, desc, asc, sql } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
-import { computePrice, baseForLevel, type UserLevel } from "@socio/core/pricing";
+import { computePrice, baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
 import { smmturkAddFor } from "@socio/core/smmturk";
 import { decryptSecret } from "$lib/server/crypto";
 import { getPricingRules } from "$lib/server/pricing";
@@ -21,26 +21,25 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const serviceId = Number(url.searchParams.get("service") ?? 0);
   const prefillLink = url.searchParams.get("link") ?? "";
   const prefillQty = Number(url.searchParams.get("qty") ?? 0);
+  const level = ((locals.user!.level as UserLevel) ?? "Member") as UserLevel;
   const catRows = await db
     .select({ id: categories.id, name: categories.name })
     .from(categories)
     .orderBy(asc(categories.name));
 
+  // Bentuk AMAN untuk client: TIDAK ada harga base/modal (price, price_api,
+  // price_reseller) maupun providerId — hanya harga efektif per-1000 level user.
   let service: null | {
     id: number;
     serviceName: string;
     type: string;
-    price: number;
-    priceApi: number;
-    priceReseller: number;
     min: number;
     max: number;
-    providerId: number;
-    providerServiceId: number;
     isRefill: number;
     note: string;
     waktu: string;
     categoryId: number;
+    pricePer1k: number;
   } = null;
 
   if (serviceId) {
@@ -54,8 +53,6 @@ export const load: PageServerLoad = async ({ url, locals }) => {
         priceReseller: services.priceReseller,
         min: services.min,
         max: services.max,
-        providerId: services.providerId,
-        providerServiceId: services.providerServiceId,
         isRefill: services.isRefill,
         note: services.note,
         waktu: services.waktu,
@@ -64,7 +61,26 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       .from(services)
       .where(eq(services.id, serviceId))
       .limit(1);
-    service = s ?? null;
+    if (s) {
+      const modal = Number(s.priceApi ?? 0);
+      const base = baseForLevel(
+        { price: Number(s.price), priceApi: modal, priceReseller: Number(s.priceReseller) },
+        level,
+      );
+      const rule = (await getPricingRules())[level];
+      service = {
+        id: s.id,
+        serviceName: s.serviceName,
+        type: s.type,
+        min: s.min,
+        max: s.max,
+        isRefill: s.isRefill,
+        note: s.note,
+        waktu: s.waktu,
+        categoryId: s.categoryId,
+        pricePer1k: effectivePer1k(base, level, rule, modal),
+      };
+    }
   }
 
   const saved = await db
@@ -79,23 +95,16 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     .orderBy(desc(savedLinks.createdAt))
     .limit(10);
 
-  const rules = await getPricingRules();
-
   return {
     service,
     categories: catRows,
     saved,
     balance: locals.user!.balance ?? 0,
-    level: (locals.user!.level as UserLevel) ?? "Member",
+    level,
     prefill: { link: prefillLink, qty: prefillQty },
-    // Markup live dari DB (bukan hardcode) — dipakai total realtime di client
-    rules: Object.values(rules).map((r) => ({
-      level: r.level,
-      markupPercent: r.markupPercent,
-      flatPer1k: r.flatPer1k,
-      minProfitPer1k: r.minProfitPer1k,
-      isActive: r.isActive,
-    })),
+    // Catatan: harga base/modal & persentase markup TIDAK dikirim ke client.
+    // Harga efektif per-1000 sudah dihitung server per level (lihat `service`
+    // dan endpoint /pesan/services). Anti-kebocoran margin.
   };
 };
 
@@ -347,10 +356,14 @@ export const actions: Actions = {
       }
       const msg = String(e?.message ?? e);
       if (msg.startsWith("PROVIDER:")) {
-        return fail(502, { error: `Gagal mengirim order ke provider: ${msg.slice(9)}. Saldo dikembalikan.` });
+        return fail(502, {
+          error: `Gagal mengirim order ke provider: ${msg.slice(9)}. Saldo dikembalikan.`,
+        });
       }
       console.error("[order] unexpected failure (refunded):", msg);
-      return fail(500, { error: "Terjadi kesalahan saat memproses order. Saldo dikembalikan — coba lagi." });
+      return fail(500, {
+        error: "Terjadi kesalahan saat memproses order. Saldo dikembalikan — coba lagi.",
+      });
     }
 
     throw redirect(303, "/pesanan");
