@@ -772,80 +772,84 @@
           {/if}
         </div>
 
-        <!-- UX3.1 — Mobile bottom-CTA pinned (di atas dock) — lg:hidden karena desktop pakai sticky di column -->
+        <!-- UX3.1 — Mobile bottom-CTA pinned (di atas dock) — compact premium 1-baris -->
         <div
-          class="lg:hidden fixed inset-x-3 bottom-[88px] z-40 max-w-xl mx-auto space-y-2"
+          class="lg:hidden fixed inset-x-3 bottom-[88px] z-40 max-w-xl mx-auto"
           aria-label="Total dan submit"
         >
-          <!-- Compact summary mobile — sticker-dark -->
           <div
-            class="reveal rounded-2xl border-2 border-white/25 bg-ink-900 p-3 text-white shadow-[3px_3px_0_rgba(255,255,255,0.22),0_16px_32px_-14px_rgba(15,23,42,0.45)]"
+            class="reveal rounded-xl border-2 border-white/25 bg-ink-900 px-2 py-1.5 text-white shadow-[3px_3px_0_rgba(255,255,255,0.22),0_10px_24px_-10px_rgba(15,23,42,0.5)]"
             style="--d:0ms"
           >
-            <div class="flex items-center justify-between gap-3">
+            <!-- Row 1: Sparko (sparkle stars) + Total/Saldo inline + Button compact -->
+            <div class="flex items-center gap-2">
+              <!-- Sparko wrap + sparkle bintang (mewarisi exception reduced-motion .sparko) -->
+              <div class="sparko relative shrink-0" style="line-height:0">
+                <Sparko pose={sparkoPose} size={22} />
+                <span class="sparkle sparkle--a" aria-hidden="true">✦</span>
+                <span class="sparkle sparkle--b" aria-hidden="true">✧</span>
+                <span class="sparkle sparkle--c" aria-hidden="true">✦</span>
+              </div>
+
               <div class="min-w-0 flex-1">
                 <div
-                  class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-300"
+                  class="flex items-center gap-1.5 text-[9px] font-bold uppercase leading-none tracking-wide text-ink-300"
                 >
-                  Total bayar
+                  Total
                   {#key payable}<span class="tick-dot" aria-hidden="true"></span>{/key}
-                </div>
-                <div class="font-display text-xl font-extrabold tabular-nums">
-                  <NumberFlow value={totalFlow} format={formatRupiah} duration={0.6} />
-                </div>
-                {#if !enough && payable > 0}
-                  <a
-                    href="/saldo/top-up"
-                    class="mt-0.5 inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 hover:underline"
+                  <span
+                    class="ml-1 inline-flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-[2px] normal-case tracking-normal text-[9px] font-semibold"
                   >
-                    <Icon name="plus" size={10} stroke={2.5} />
-                    Kurang {formatRupiah(payable - data.balance)} · Top Up
-                  </a>
-                {/if}
+                    <span class="text-ink-300">Saldo</span>
+                    <span class="tabular-nums {enough ? 'text-emerald-300' : 'text-red-300'}"
+                      >{formatRupiah(data.balance)}</span
+                    >
+                  </span>
+                </div>
+                <div
+                  class="mt-0.5 font-display text-base font-extrabold leading-tight tabular-nums"
+                >
+                  <NumberFlow value={totalFlow} format={formatRupiah} duration={0.5} />
+                </div>
               </div>
+
               <Button
                 type="submit"
                 form="pesan-form"
                 disabled={!canSubmit || !enough || saving}
-                size="md"
+                size="sm"
                 class="shrink-0"
               >
                 {#if saving}
-                  <Icon name="refresh" size={14} class="animate-spin" />
-                  {copy.order.processing}
+                  <Icon name="refresh" size={12} class="animate-spin" />
+                  Proses
                 {:else if !selectedService}
-                  {copy.order.pickServiceFirst}
+                  Pilih Layanan
                 {:else if !enough}
-                  Top Up Dulu
+                  Top Up
                 {:else}
                   Pesan
                 {/if}
               </Button>
             </div>
-            <!-- Sparko asisten — strip mini di bawah total+button (mobile) -->
-            <div class="mt-2.5 flex items-center gap-2 border-t border-white/10 pt-2.5">
-              <Sparko pose={sparkoPose} size={28} class="shrink-0" />
+
+            <!-- Row 2 mikro — kondisional: hanya saat butuh perhatian (mismatch/error/saldo kurang) -->
+            {#if platformMismatch || linkHasError || (!enough && payable > 0)}
               <p
-                class="min-w-0 flex-1 truncate text-[11px] leading-tight
-                {platformMismatch || linkHasError
-                  ? 'text-amber-300 font-semibold'
-                  : linkOk
-                    ? 'text-emerald-300 font-semibold'
-                    : 'text-ink-300'}"
+                class="mt-1.5 flex items-center gap-1.5 border-t border-white/10 pt-1.5 text-[10px] font-semibold leading-tight text-amber-300"
                 aria-live="polite"
               >
-                {sparkoMsg}
+                <Icon name="alert" size={11} stroke={2.2} class="shrink-0" />
+                <span class="min-w-0 flex-1 truncate">{sparkoMsg}</span>
+                {#if !enough && payable > 0}
+                  <a
+                    href="/saldo/top-up"
+                    class="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-300 hover:bg-white/20"
+                    >Top Up ›</a
+                  >
+                {/if}
               </p>
-              <!-- Saldo kamu (mobile) — ringkas di kanan strip Sparko -->
-              <span
-                class="flex shrink-0 items-baseline gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tabular-nums"
-              >
-                <span class="font-semibold text-ink-300">Saldo</span>
-                <span class="font-bold {enough ? 'text-emerald-300' : 'text-red-300'}"
-                  >{formatRupiah(data.balance)}</span
-                >
-              </span>
-            </div>
+            {/if}
           </div>
         </div>
       </div>
@@ -1059,6 +1063,58 @@
     .stamp-pop,
     .tick-dot {
       animation: none;
+    }
+  }
+
+  /* Sparkle bintang di sekitar Sparko — premium halus, tidak dibunuh reduced-motion
+     karena wrapper membawa class .sparko → rule global `*:not(.sparko):not(.sparko *)`
+     mengecualikan sparkle dari kill-switch. */
+  .sparkle {
+    position: absolute;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--pop-mango, #fbbf24);
+    text-shadow:
+      0 0 6px rgba(251, 191, 36, 0.9),
+      0 0 14px rgba(251, 191, 36, 0.45);
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.35) rotate(0deg);
+    animation: sparkle-twinkle 2.6s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+  .sparkle--a {
+    top: -6px;
+    right: -6px;
+    animation-delay: 0s;
+  }
+  .sparkle--b {
+    top: 4px;
+    left: -7px;
+    animation-delay: 0.9s;
+  }
+  .sparkle--c {
+    bottom: -6px;
+    right: -9px;
+    animation-delay: 1.7s;
+  }
+  @keyframes sparkle-twinkle {
+    0%,
+    100% {
+      opacity: 0;
+      transform: scale(0.35) rotate(0deg);
+    }
+    15% {
+      opacity: 1;
+      transform: scale(1.1) rotate(20deg);
+    }
+    35% {
+      opacity: 0.75;
+      transform: scale(0.85) rotate(-6deg);
+    }
+    55% {
+      opacity: 0;
+      transform: scale(0.4) rotate(-4deg);
     }
   }
 </style>
