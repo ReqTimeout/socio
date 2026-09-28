@@ -23,11 +23,11 @@
   {#if mark}
     <span class="hidden" aria-hidden="true"></span>
   {/if}
-  <!-- Must match auth style: socio (primary) + .id (accent — AA contrast on white) -->
+  <!-- Selaras landing Navbar: wordmark ink solid + .id accent (AA contrast on white) -->
   <span
     class="font-display font-extrabold leading-none tracking-tight {text[size]}"
   >
-    <span class="text-primary">socio</span><span class="text-accent-700"
+    <span class="text-ink-900">socio</span><span class="text-accent-700"
       >.id</span
     >
   </span>

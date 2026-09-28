@@ -99,16 +99,16 @@
     bottom: calc(108px + env(safe-area-inset-bottom));
     gap: 8px;
     padding: 8px 16px 8px 10px;
-    background: linear-gradient(135deg, #ff8c3a 0%, #f97316 38%, #ef4444 100%);
+    /* Style "pop" konsisten landing/app: fill brand + border tinta + hard shadow */
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 55%, #4338ca 100%);
+    border: 2px solid var(--color-ink-900);
     isolation: isolate;
     overflow: visible;
     will-change: transform;
-    /* Blend dengan dock: shadow tipis + elevated */
     box-shadow:
-      0 10px 24px -8px rgba(239, 68, 68, 0.5),
-      0 3px 10px -3px rgba(15, 23, 42, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.32),
-      inset 0 -1px 0 rgba(124, 45, 18, 0.18);
+      2px 2px 0 var(--color-ink-900),
+      0 10px 24px -10px rgba(79, 70, 229, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
     animation:
       fab-pop 520ms cubic-bezier(0.16, 1, 0.3, 1),
       fab-float 3s ease-in-out 1.2s infinite;
@@ -120,19 +120,21 @@
 
   .fab-premium:hover {
     transform: translateY(-1px) scale(1.04);
-    filter: brightness(1.04);
+    filter: brightness(1.06);
     box-shadow:
-      0 14px 30px -8px rgba(239, 68, 68, 0.58),
-      0 5px 14px -3px rgba(15, 23, 42, 0.14),
-      inset 0 1px 0 rgba(255, 255, 255, 0.38),
-      inset 0 -1px 0 rgba(124, 45, 18, 0.2);
+      3px 3px 0 var(--color-ink-900),
+      0 14px 30px -10px rgba(79, 70, 229, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
   }
   .fab-premium:active {
-    transform: translateY(0) scale(0.96);
+    transform: translate(2px, 2px) scale(0.97);
+    box-shadow:
+      0 0 0 var(--color-ink-900),
+      0 4px 12px -6px rgba(79, 70, 229, 0.4);
     transition-duration: 80ms;
   }
   .fab-premium:focus-visible {
-    outline: 2px solid #fdba74;
+    outline: 2px solid var(--pop-mango, #fbbf24);
     outline-offset: 3px;
   }
 
@@ -145,17 +147,15 @@
       padding: 12px 22px 12px 14px;
       min-height: 52px;
       box-shadow:
-        0 18px 40px -12px rgba(239, 68, 68, 0.55),
-        0 6px 18px -6px rgba(15, 23, 42, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.34),
-        inset 0 -1px 0 rgba(124, 45, 18, 0.18);
+        3px 3px 0 var(--color-ink-900),
+        0 16px 36px -12px rgba(79, 70, 229, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
     }
     .fab-premium:hover {
       box-shadow:
-        0 22px 48px -12px rgba(239, 68, 68, 0.62),
-        0 8px 22px -6px rgba(15, 23, 42, 0.14),
-        inset 0 1px 0 rgba(255, 255, 255, 0.38),
-        inset 0 -1px 0 rgba(124, 45, 18, 0.2);
+        4px 4px 0 var(--color-ink-900),
+        0 20px 44px -12px rgba(79, 70, 229, 0.58),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
     }
     .fab-disc {
       width: 34px;
@@ -176,7 +176,7 @@
   .fab-glow {
     background: radial-gradient(
       60% 80% at 50% 50%,
-      rgba(249, 115, 22, 0.45),
+      rgba(99, 102, 241, 0.4),
       transparent 70%
     );
     filter: blur(8px);
@@ -184,15 +184,15 @@
     animation: fab-glow-pulse 2.8s ease-in-out infinite;
   }
 
-  /* Icon disc */
+  /* Icon disc — chip putih dengan ikon brand (pop) */
   .fab-disc {
-    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    background: #ffffff;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.85),
-      0 1px 4px rgba(124, 45, 18, 0.22);
+      0 1px 4px rgba(15, 23, 42, 0.22);
   }
   .fab-icon {
-    color: #c2410c;
+    color: #4f46e5;
     display: grid;
     place-items: center;
     transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -205,7 +205,7 @@
   }
 
   .fab-label {
-    text-shadow: 0 1px 1px rgba(124, 45, 18, 0.28);
+    text-shadow: 0 1px 1px rgba(15, 23, 42, 0.28);
     letter-spacing: -0.01em;
   }
 

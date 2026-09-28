@@ -79,15 +79,6 @@
         >
           <Icon name={item.icon} size={20} stroke={active ? 2.4 : 1.9} />
         </span>
-        {#if active}
-          {#key $page.url.pathname}
-            <span
-              class="dock-pill absolute -bottom-1.5 left-1/2 h-1.5 w-5 -translate-x-1/2 rounded-full border border-ink-900"
-              style="background: var(--pop-mango);"
-              aria-hidden="true"
-            ></span>
-          {/key}
-        {/if}
         {#if badgeFor(item.href, item.badge)}
           <span
             class="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] px-1 grid place-items-center rounded-full bg-danger text-ink-50 text-[9px] font-bold leading-none ring-2 ring-white dark:ring-ink-900 shadow-sm"
@@ -98,6 +89,17 @@
           </span>
         {/if}
       </span>
+      <!-- Indicator mango: anchor ke <a> (bukan span ikon) biar tidak menimpa label,
+           sama persis pola dock landing -->
+      {#if active}
+        {#key $page.url.pathname}
+          <span
+            class="dock-pill absolute -bottom-0.5 left-1/2 h-1.5 w-5 -translate-x-1/2 rounded-full border border-ink-900"
+            style="background: var(--pop-mango);"
+            aria-hidden="true"
+          ></span>
+        {/key}
+      {/if}
       <!-- Label: full opacity — AA contrast (opacity dim membuat ink-500 turun ke 2.71) -->
       <span
         class="whitespace-nowrap text-[9px] font-bold tracking-wide leading-none transition-colors

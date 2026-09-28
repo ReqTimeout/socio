@@ -122,10 +122,10 @@
         class="inline-flex min-h-[24px] shrink-0 items-center gap-1.5"
         aria-label="Socio.id — Beranda"
       >
-        <Wordmark size="sm" />
         <span class="wiggle-once inline-flex" aria-hidden="true">
-          <Sparko pose="idle" size={20} />
+          <Sparko pose="idle" size={24} />
         </span>
+        <Wordmark size="sm" />
       </a>
       <div class="flex items-center gap-2">
         <NotifBell count={data.unreadCount} />

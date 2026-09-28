@@ -124,8 +124,8 @@
       </a>
     {/each}
 
-    <!-- Spacer untuk tinggi (banner absolute) — proporsional premium -->
-    <div class="h-[200px] sm:h-[220px] lg:h-[260px]" aria-hidden="true"></div>
+    <!-- Spacer untuk tinggi (banner absolute) — proporsional, tidak memanjang di desktop -->
+    <div class="h-[176px] sm:h-[184px] lg:h-[190px]" aria-hidden="true"></div>
 
     {#if many}
       <div

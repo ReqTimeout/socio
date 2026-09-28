@@ -98,7 +98,7 @@
       desc: "Pilih layanan → order",
       icon: "rocket",
       chip: "from-primary-500 to-accent-500",
-      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(79,70,229,0.32)]",
+      glow: "group-hover:shadow-[3px_3px_0_rgba(79,70,229,0.65)]",
     },
     {
       href: "/saldo/top-up",
@@ -106,7 +106,7 @@
       desc: "Transfer BCA, ±5 menit",
       icon: "wallet",
       chip: "from-emerald-400 to-emerald-600",
-      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(16,163,74,0.32)]",
+      glow: "group-hover:shadow-[3px_3px_0_rgba(16,163,74,0.6)]",
     },
     {
       href: "/layanan",
@@ -114,7 +114,7 @@
       desc: "8.270 layanan aktif",
       icon: "grid",
       chip: "from-amber-400 to-orange-500",
-      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(245,158,11,0.32)]",
+      glow: "group-hover:shadow-[3px_3px_0_rgba(245,158,11,0.65)]",
     },
     {
       href: "/affiliate",
@@ -122,7 +122,7 @@
       desc: "Ajak teman, dapat komisi",
       icon: "gift",
       chip: "from-pink-500 to-rose-500",
-      glow: "group-hover:shadow-[0_4px_10px_-4px_rgb(15_23_42/0.06),0_16px_36px_-10px_rgba(236,72,153,0.32)]",
+      glow: "group-hover:shadow-[3px_3px_0_rgba(236,72,153,0.6)]",
     },
   ];
 
@@ -326,12 +326,12 @@
           href={item.href}
           onclick={() => haptic(8)}
           style={revealDelay(i, 0, 60)}
-          class="reveal card-lift tile-press group flex min-w-0 items-center gap-3 rounded-2xl border border-ink-200 bg-surface p-3.5
+          class="reveal tile-press group flex min-w-0 items-center gap-3 rounded-2xl border-2 border-ink-900 bg-surface p-3.5 shadow-[2px_2px_0_var(--color-ink-900)] hover:shadow-[3px_3px_0_var(--color-ink-900)]
             lg:flex-col lg:items-start lg:gap-2 lg:py-3 lg:px-3 {item.glow}"
         >
           <span
             class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br {item.chip}
-              text-white shadow-sm transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
+              text-white shadow-[1.5px_1.5px_0_var(--color-ink-900)] transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
           >
             <Icon name={item.icon} size={20} stroke={2} />
           </span>
@@ -439,23 +439,23 @@
   <!-- INLINE-STAT (P3-04): typographic strip — no card chrome, hairline divider.
        Containment variance per DESIGN.md §B.7 (ledger style, bukan card stack). -->
   <div
-    class="grid grid-cols-3 divide-x divide-ink-100 rounded-2xl border border-ink-100 bg-surface px-2 py-3.5 sm:px-4 lg:px-6 lg:py-4 {(data
+    class="grid grid-cols-3 divide-x divide-ink-100 rounded-2xl border-2 border-ink-900 bg-surface px-2 py-3.5 shadow-[2px_2px_0_var(--color-ink-900)] sm:px-4 lg:px-6 lg:py-4 {(data
       .stats.totalDeposit ?? 0) >= 5_000_000
-      ? 'ring-1 ring-amber-200/70 bg-gradient-to-br from-white via-amber-50/40 to-white'
+      ? 'bg-gradient-to-br from-white via-amber-50/50 to-white'
       : ''}"
   >
     {#if (data.stats.totalDeposit ?? 0) >= 5_000_000}
       <div
-        class="relative col-span-full -mx-2 mb-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500 px-3 py-2 text-white shadow-sm sm:-mx-4 lg:-mx-6"
+        class="relative col-span-full -mx-2 mb-3 flex items-center justify-between gap-2 rounded-xl border-2 border-ink-900 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-400 px-3 py-2 text-ink-900 shadow-[2px_2px_0_var(--color-ink-900)] sm:-mx-4 lg:-mx-6"
       >
         <ConfettiBurst fire={vipConfetti} />
         <span class="flex items-center gap-1.5 text-xs font-bold tracking-wide">
-          <span class="grid h-6 w-6 place-items-center rounded-full bg-white/20 backdrop-blur">
+          <span class="grid h-6 w-6 place-items-center rounded-full border border-ink-900 bg-white">
             <Icon name="star" size={12} stroke={2.5} />
           </span>
           <Marker>VIP</Marker> — Deposit di atas 5 juta
         </span>
-        <span class="text-[11px] font-semibold opacity-90"
+        <span class="hidden text-[11px] font-semibold opacity-90 sm:inline"
           >Terima kasih sudah percaya — Sahabat Socio!</span
         >
       </div>
