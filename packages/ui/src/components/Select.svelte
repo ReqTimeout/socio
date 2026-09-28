@@ -7,6 +7,8 @@
     label: string;
     hint?: string;
     icon?: string;
+    /** Chip kecil di kanan label (mis. "Termurah"). */
+    badge?: string;
   };
 
   let {
@@ -147,6 +149,9 @@
                   <Icon name={o.icon} size={16} stroke={2} class="shrink-0 {multiline ? 'mt-0.5' : ''} {active ? 'text-primary' : 'text-ink-500'}" />
                 {/if}
                 <span class="min-w-0 flex-1 {multiline ? 'line-clamp-3 text-[13px] leading-snug' : 'truncate'}">{o.label}</span>
+                {#if o.badge}
+                  <span class="shrink-0 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">{o.badge}</span>
+                {/if}
                 {#if o.hint}
                   <span class="shrink-0 text-xs tabular-nums {active ? 'text-primary/70' : 'text-ink-500'}">{o.hint}</span>
                 {/if}

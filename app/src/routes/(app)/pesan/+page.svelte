@@ -10,6 +10,7 @@
     revealDelay,
     NumberFlow,
     hoverLift,
+    Sparko,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -204,24 +205,83 @@
   // NumberFlow — total "mengalir" saat service/qty/kupon berubah (hero moment).
   const totalFlow = $derived(payable);
 
+  const catOptions = $derived(data.categories.map((c) => ({ value: c.id, label: c.name })));
+  // Dropdown layanan — urutkan harga efektif termurah ke atas, tandai termurah.
+  const serviceOptions = $derived.by(() => {
+    const rows = serviceList
+      .map((s) => ({ s, eff: effectivePer1k(s) }))
+      .sort((a, b) => a.eff - b.eff);
+    return rows.map(({ s, eff }, i) => ({
+      value: s.id,
+      label: serviceDisplayName(s.serviceName),
+      hint: formatRupiah(eff),
+      badge: i === 0 && rows.length > 1 ? "Termurah" : undefined,
+    }));
+  });
+
+  const catName = $derived(data.categories.find((c) => c.id === selectedCat)?.name ?? "");
+
+  // ── Deteksi platform dari kategori/layanan — untuk validasi link silang.
+  // Return string kanonik SAMA dgn validateLink() supaya bisa dibandingkan langsung.
+  function platformFromName(name: string): string {
+    const n = (name || "").toLowerCase();
+    if (/instagram|insta|\big\b/.test(n)) return "Instagram";
+    if (/tiktok|tik-tok|\btt\b/.test(n)) return "TikTok";
+    if (/youtube|youtu|\byt\b/.test(n)) return "YouTube";
+    if (/facebook|\bfb\b/.test(n)) return "Facebook";
+    if (/twitter|\bx\b/.test(n)) return "X / Twitter";
+    if (/telegram|\btg\b/.test(n)) return "Telegram";
+    return "";
+  }
+  const expectedPlatform = $derived(
+    platformFromName(catName || selectedService?.serviceName || ""),
+  );
+  // Link valid tapi platform-nya tidak cocok dgn layanan → mismatch (user sering salah).
+  const platformMismatch = $derived(
+    !!expectedPlatform && linkOk && linkPlatform !== expectedPlatform,
+  );
+
   const canSubmit = $derived(
     !!selectedService &&
       !!link &&
       linkValid.ok !== false &&
+      !platformMismatch &&
       (isCustomComments ? lineCount > 0 : quantity >= (selectedService?.min ?? 0)) &&
       !qtyOutOfRange,
   );
-
-  const catOptions = $derived(data.categories.map((c) => ({ value: c.id, label: c.name })));
-  const serviceOptions = $derived(
-    serviceList.map((s) => ({
-      value: s.id,
-      label: serviceDisplayName(s.serviceName),
-      hint: formatRupiah(effectivePer1k(s)),
-    })),
+  const placeholderByPlatform: Record<string, string> = {
+    Instagram: "https://instagram.com/username",
+    TikTok: "https://tiktok.com/@username",
+    YouTube: "https://youtube.com/watch?v=...",
+    Facebook: "https://facebook.com/...",
+    "X / Twitter": "https://x.com/username",
+    Telegram: "https://t.me/username",
+  };
+  const dynamicPlaceholder = $derived(
+    placeholderByPlatform[expectedPlatform] ?? "https://link-target-kamu",
   );
 
-  const catName = $derived(data.categories.find((c) => c.id === selectedCat)?.name ?? "");
+  // ── Sparko asisten kontekstual — 1 instance, pesan mengikuti state paling urgent.
+  const sparkoMsg = $derived.by(() => {
+    if (platformMismatch)
+      return `Layanan ini ${expectedPlatform}, tapi link-mu ${linkPlatform}. Ganti link ${expectedPlatform} ya!`;
+    if (linkHasError) return linkReason;
+    if (!selectedService) return "Pilih kategori & layanan dulu yuk!";
+    if (!enough && payable > 0) return "Saldo kurang — top up dulu~";
+    if (linkOk) return "Mantap, link valid. Siap pesan!";
+    return "Tempel link target untuk lanjut.";
+  });
+  const sparkoPose = $derived<"error" | "sad" | "wave" | "celebrate" | "idle">(
+    platformMismatch || linkHasError
+      ? "error"
+      : !selectedService
+        ? "wave"
+        : !enough && payable > 0
+          ? "sad"
+          : linkOk
+            ? "celebrate"
+            : "idle",
+  );
 
   // ── Data loading ────────────────────────────────────────────
   async function loadServices(cat: number) {
@@ -508,14 +568,23 @@
                   id="link-input"
                   name="link"
                   bind:value={link}
-                  placeholder="https://instagram.com/username"
+                  placeholder={dynamicPlaceholder}
                   required
                   inputmode="url"
                   autocomplete="off"
-                  aria-invalid={linkHasError ? "true" : undefined}
+                  aria-invalid={linkHasError || platformMismatch ? "true" : undefined}
                   aria-describedby="link-hint"
                 />
-                {#if linkOk}
+                {#if platformMismatch}
+                  {#key expectedPlatform}
+                    <span
+                      class="stamp-pop pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full bg-amber-500 text-white"
+                      aria-hidden="true"
+                    >
+                      <Icon name="alert" size={12} stroke={3} />
+                    </span>
+                  {/key}
+                {:else if linkOk}
                   {#key linkPlatform}
                     <span
                       class="stamp-pop pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"
@@ -529,19 +598,26 @@
               <p
                 id="link-hint"
                 class="mt-1.5 flex items-center gap-1 text-xs leading-relaxed
-              {linkHasError
+              {linkHasError || platformMismatch
                   ? 'text-danger font-medium'
                   : linkOk
                     ? 'text-success font-medium'
                     : 'text-ink-500'}"
                 aria-live="polite"
               >
-                {#if linkHasError}
+                {#if platformMismatch}
+                  <Icon name="alert" size={12} class="shrink-0" />
+                  Layanan {expectedPlatform}, tapi link-mu {linkPlatform}. Pakai link
+                  {expectedPlatform}.
+                {:else if linkHasError}
                   <Icon name="alert" size={12} class="shrink-0" />
                   {linkReason}
                 {:else if linkOk}
                   <Icon name="check" size={12} class="shrink-0" />
-                  Platform {linkPlatform} terdeteksi
+                  Platform {linkPlatform} cocok
+                {:else if expectedPlatform}
+                  <Icon name="info" size={12} class="shrink-0" />
+                  Layanan ini butuh link {expectedPlatform}
                 {:else}
                   <Icon name="info" size={12} class="shrink-0" />
                   {copy.order.linkHelper}
@@ -758,6 +834,21 @@
                 {/if}
               </Button>
             </div>
+            <!-- Sparko asisten — strip mini di bawah total+button (mobile) -->
+            <div class="mt-2.5 flex items-center gap-2 border-t border-white/10 pt-2.5">
+              <Sparko pose={sparkoPose} size={28} class="shrink-0" />
+              <p
+                class="min-w-0 flex-1 truncate text-[11px] leading-tight
+                {platformMismatch || linkHasError
+                  ? 'text-amber-300 font-semibold'
+                  : linkOk
+                    ? 'text-emerald-300 font-semibold'
+                    : 'text-ink-300'}"
+                aria-live="polite"
+              >
+                {sparkoMsg}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -805,6 +896,29 @@
               </dd>
             </div>
           </dl>
+
+          <!-- Sparko asisten (desktop) -->
+          <div
+            class="mt-3 flex items-start gap-2.5 rounded-xl border p-2.5
+            {platformMismatch || linkHasError
+              ? 'border-red-200 bg-red-50'
+              : linkOk
+                ? 'border-emerald-200 bg-emerald-50'
+                : 'border-ink-100 bg-ink-50'}"
+          >
+            <Sparko pose={sparkoPose} size={34} class="shrink-0 -mt-0.5" />
+            <p
+              class="min-w-0 flex-1 text-xs leading-snug
+              {platformMismatch || linkHasError
+                ? 'font-semibold text-red-700'
+                : linkOk
+                  ? 'font-semibold text-emerald-700'
+                  : 'text-ink-600'}"
+              aria-live="polite"
+            >
+              {sparkoMsg}
+            </p>
+          </div>
         </div>
 
         <!-- Guide -->
