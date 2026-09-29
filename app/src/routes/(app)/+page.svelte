@@ -20,7 +20,7 @@
   import { copy } from "@socio/core/copy";
   import { onMount } from "svelte";
   import { formatRupiah, serviceDisplayName } from "$lib/format";
-  import { newsMeta, isOrderableEvent, newsPriceSegments } from "$lib/news-meta";
+  import { newsMeta, isOrderableEvent, newsPriceSegments, newsSplit } from "$lib/news-meta";
 
   let { data } = $props();
 
@@ -467,7 +467,11 @@
           {#each data.newsFeed as n (n.id)}
             {@const meta = newsMeta(n.eventType)}
             {@const orderable = n.serviceId > 0 && isOrderableEvent(n.eventType)}
-            {@const segs = newsPriceSegments(n.content)}
+            <!-- Konten sync = "Nama — info harga"; label event sudah ada di chip,
+                 jangan ulangi prefix di teks. Harga di baris sendiri supaya tidak
+                 hilang ter-potong truncate saat nama panjang. -->
+            {@const sp = newsSplit(n.content)}
+            {@const segs = newsPriceSegments(sp.detail)}
             <li>
               <a
                 href={orderable ? `/pesan?service=${n.serviceId}` : "/berita"}
@@ -486,7 +490,12 @@
                     >
                       {meta.label}
                     </span>
-                    <span class="min-w-0 truncate text-xs leading-snug text-ink-600">
+                    <span class="min-w-0 truncate text-xs font-bold leading-snug text-ink-700">
+                      {sp.name}
+                    </span>
+                  </span>
+                  {#if segs.length}
+                    <span class="mt-0.5 block truncate text-[11px] leading-snug text-ink-500">
                       {#each segs as seg, si (si)}
                         {#if seg.price}
                           <span class="font-extrabold text-ink-900">{seg.t}</span>
@@ -495,7 +504,7 @@
                         {/if}
                       {/each}
                     </span>
-                  </span>
+                  {/if}
                 </span>
                 <span class="shrink-0 text-[11px] tabular-nums text-ink-400">
                   {timeAgo(n.createdAt)}

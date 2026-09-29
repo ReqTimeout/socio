@@ -277,7 +277,8 @@ export async function runServiceSync(providerId: number): Promise<void> {
           });
           newsCandidates.push({
             kategori: "Layanan Baru",
-            content: `Layanan baru tersedia: ${dispName} — Rp ${rpFmt.format(priceMember)} /1k`,
+            // Copy compact: label event sudah ada di UI (chip), jangan ulangi prefix.
+            content: `${dispName} — Rp ${rpFmt.format(priceMember)} /1k`,
             eventType: "new_service",
             serviceId: newSvcId,
           });
@@ -417,9 +418,9 @@ export async function runServiceSync(providerId: number): Promise<void> {
               const isUp = d.event === "price_up";
               newsCandidates.push({
                 kategori: isUp ? "Harga Naik" : "Harga Turun",
-                content: `${dispName} — ${isUp ? "harga naik" : "harga turun"} Rp ${rpFmt.format(
-                  Number(d.old),
-                )} → Rp ${rpFmt.format(Number(d.cur))} /1k`,
+                content: `${dispName} — Rp ${rpFmt.format(Number(d.old))} → Rp ${rpFmt.format(
+                  Number(d.cur),
+                )} /1k`,
                 eventType: d.event,
                 serviceId: svc.id,
               });
@@ -448,7 +449,7 @@ export async function runServiceSync(providerId: number): Promise<void> {
         });
         newsCandidates.push({
           kategori: "Layanan Dihentikan",
-          content: `Layanan dihentikan: ${s.serviceName}`,
+          content: `${s.serviceName}`,
           eventType: "discontinued",
           serviceId: s.id,
         });

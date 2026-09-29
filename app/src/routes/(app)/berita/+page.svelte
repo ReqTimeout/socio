@@ -7,6 +7,8 @@
     isOrderableEvent,
     cleanNewsText,
     newsPriceSegments,
+    newsSplit,
+    newsFinalPrice,
   } from "$lib/news-meta";
   import type { PageData } from "./$types";
 
@@ -90,8 +92,13 @@
     <ul class="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
       {#each data.items as n, i (n.id)}
         {@const meta = newsMeta(n.eventType)}
-        {@const title = cleanNewsText(n.kategori) || meta.label}
-        {@const segs = newsPriceSegments(n.content)}
+        <!-- Konten sync = "Nama — info harga" (label event sudah ada di chip, jangan
+             diulang). Judul kartu = nama layanan; pengumuman manual tetap kategori. -->
+        {@const sync = n.source === "sync"}
+        {@const sp = newsSplit(n.content)}
+        {@const title = sync ? sp.name : cleanNewsText(n.kategori) || meta.label}
+        {@const segs = newsPriceSegments(sync ? sp.detail : n.content)}
+        {@const price = sync ? newsFinalPrice(n.content) : ""}
         {@const href =
           n.serviceId > 0 && isOrderableEvent(n.eventType) ? `/pesan?service=${n.serviceId}` : null}
         {@const showBadge = title.toLowerCase() !== meta.label.toLowerCase()}
@@ -119,21 +126,34 @@
                   </span>
                 {/if}
               </span>
-              <span class="mt-1 line-clamp-2 text-[13px] leading-snug text-ink-600 lg:line-clamp-3">
-                {#each segs as seg, si (si)}
-                  {#if seg.price}
-                    <span class="font-extrabold text-ink-900">{seg.t}</span>
-                  {:else}
-                    {seg.t}
-                  {/if}
-                {/each}
-              </span>
+              {#if segs.length}
+                <span
+                  class="mt-1 line-clamp-2 text-[13px] leading-snug text-ink-600 lg:line-clamp-3"
+                >
+                  {#each segs as seg, si (si)}
+                    {#if seg.price}
+                      <span class="font-extrabold text-ink-900">{seg.t}</span>
+                    {:else}
+                      {seg.t}
+                    {/if}
+                  {/each}
+                </span>
+              {/if}
               <span class="mt-1.5 flex items-center gap-1 text-[11px] text-ink-400">
                 <Icon name="clock" size={11} />
                 {newsTimeAgo(n.createdAt)}
+                {#if price}
+                  <span
+                    class="ml-auto inline-flex items-center rounded-full border-2 border-ink-900 px-2.5 py-0.5 text-[10px] font-extrabold shadow-[1.5px_1.5px_0_var(--color-ink-900)] {meta.chipBg} {meta.chipInk}"
+                  >
+                    {price}
+                  </span>
+                {/if}
                 {#if href}
                   <span
-                    class="ml-auto inline-flex items-center rounded-full border-2 border-ink-900 bg-primary px-2.5 py-0.5 text-[10px] font-extrabold text-white shadow-[1.5px_1.5px_0_var(--color-ink-900)] transition-transform group-hover:-translate-y-px"
+                    class="{price
+                      ? ''
+                      : 'ml-auto '}inline-flex items-center rounded-full border-2 border-ink-900 bg-primary px-2.5 py-0.5 text-[10px] font-extrabold text-white shadow-[1.5px_1.5px_0_var(--color-ink-900)] transition-transform group-hover:-translate-y-px"
                   >
                     Pesan sekarang
                   </span>

@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
 import { provider, providerServices } from "@socio/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { smmturkBalanceFor, smmturkServicesFor, withConcurrency } from "@socio/core/smmturk";
 import { decryptSecret, encryptSecret } from "$lib/server/crypto";
 import { getUsdToIdr } from "$lib/server/fx";
@@ -129,6 +129,33 @@ export async function runProviderSync(providerId = 1): Promise<void> {
           },
         });
     });
+
+    // Prune: baris mirror yang TIDAK lagi ada di remote = layanan sudah mati di
+    // provider. Tanpa prune, chained service-sync tidak pernah melihat layanan
+    // hilang (mirror cuma di-upsert) → event "Dihentikan" tidak pernah firing
+    // dan 1.000+ layanan mati tetap bisa di-order. Guard anti-API blip: kalau
+    // remote kosong ATAU rasio hidup < 80% dari mirror, skip prune + warning.
+    const remotePids = new Set(remote.map((r) => String(r.service)));
+    const gone = existing.filter((e) => !remotePids.has(e.providerServiceId));
+    if (gone.length > 0) {
+      const aliveRatio =
+        existing.length > 0 ? (existing.length - gone.length) / existing.length : 1;
+      if (remote.length === 0 || aliveRatio < 0.8) {
+        console.warn(
+          `[provider-sync] prune SKIP (remote mencurigakan): remote=${remote.length} mirror=${existing.length} gone=${gone.length}`,
+        );
+      } else {
+        const goneIds = gone.map((g) => g.id);
+        for (let i = 0; i < goneIds.length; i += 500) {
+          await db
+            .delete(providerServices)
+            .where(inArray(providerServices.id, goneIds.slice(i, i + 500)));
+        }
+        console.log(
+          `[provider-sync] prune: ${gone.length} baris mirror dihapus (remote=${remote.length}, mirror=${existing.length})`,
+        );
+      }
+    }
 
     // update balance if column exists (best-effort)
     try {

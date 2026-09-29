@@ -134,3 +134,23 @@ export function newsPriceSegments(s: string | null | undefined): NewsSeg[] {
   if (last < text.length) segs.push({ t: text.slice(last), price: false });
   return segs;
 }
+
+/**
+ * Pecah konten berita sync jadi `nama — detail_harga`. Format konten dari
+ * service-sync: "Nama Layanan — Rp X /1k" atau "Nama — Rp A → Rp B /1k".
+ * Teks tanpa pemisah (manual/pengumuman) → name = seluruh teks, detail kosong.
+ */
+export function newsSplit(s: string | null | undefined): { name: string; detail: string } {
+  const t = cleanNewsText(s);
+  const i = t.indexOf(" — ");
+  if (i === -1) return { name: t, detail: "" };
+  return { name: t.slice(0, i), detail: t.slice(i + 3) };
+}
+
+/** Harga akhir (terakhir disebut) untuk pill harga di kartu berita. */
+export function newsFinalPrice(s: string | null | undefined): string {
+  const text = cleanNewsText(s);
+  const ms = text.match(/Rp\s?\d[\d.,]*/g);
+  if (!ms || ms.length === 0) return "";
+  return ms[ms.length - 1] + (/\/1k\s*$/.test(text) ? " /1k" : "");
+}
