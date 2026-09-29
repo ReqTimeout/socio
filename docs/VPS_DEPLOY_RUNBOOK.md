@@ -1,5 +1,7 @@
 # VPS Deploy Runbook — Socio.id
 
+> ⚠️ **[KOREKSI PROVIDER 2026-09-29]** Runbook ini ditulis saat perencanaan (25 Agt 2026) dengan asumsi **Contabo Cloud VPS 4 Singapore**. REALISASI aktual: VPS jalan di **TNA Hosting (hybrid, infrastruktur Hostinger)** — IP `130.254.47.93`, hostname `srv1476160.hstgr.cloud`, ASN TNAHOSTING (dicek via whois IPv6 `2607:adc0:5::215`). Langkah beli VPS Contabo di bawah = catatan historis, JANGAN dipakai sebagai panduan provider aktif. Topologi, port, dan prosedur Coolify/Docker tetap valid.
+
 > **Target:** deploy `app.socio.id` (SvelteKit + node-cron) + MySQL 8.0 + Coolify + Cloudflare.
 > **Topologi final (per diskusi):**
 > - **Landing `socio.id`** → **Cloudflare Pages** (gratis, edge cached, latency ID ~10-20ms)

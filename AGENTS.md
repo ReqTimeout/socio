@@ -34,7 +34,7 @@
 ## 2. Tech stack final (JANGAN diubah)
 
 - **Landing**: Astro 5 + Svelte 5 islands + Tailwind v4 + MDX → Cloudflare Pages
-- **App**: SvelteKit + adapter-node + Tailwind v4 → Tencent Lighthouse Jakarta + Coolify
+- **App**: SvelteKit + adapter-node + Tailwind v4 → VPS TNA Hosting (hybrid, infra Hostinger SG) + Coolify
 - **DB**: MySQL via Drizzle ORM → TiDB Serverless Singapore (managed, terpisah dari VPS)
 - **Auth**: better-auth + bcryptjs (kompatibel PHP `password_hash`)
 - **Queue**: DB-backed (`job_queue` + `SELECT FOR UPDATE SKIP LOCKED`) — NO Redis
@@ -52,7 +52,7 @@
 ## 2.1 Cloudflare (wajib pakai skill resmi)
 
 **Semua konfigurasi Cloudflare dikerjakan via skill `cloudflare`** (bukan asal CLI/manual) supaya sesuai dokumentasi resmi:
-- **DNS**: zone `socio.id`, record `socio.id` (Cloudflare Pages), `app.socio.id` (VPS Tencent Jakarta via A/AAAA/CNAME + orange-cloud proxy), `cdn.socio.id` (R2 custom domain).
+- **DNS**: zone `socio.id`, record `socio.id` (Cloudflare Pages), `app.socio.id` (VPS TNA Hosting 130.254.47.93 via A/AAAA + orange-cloud proxy), `cdn.socio.id` (R2 custom domain).
 - **Pages**: deploy landing `socio.id` dari repo (build `pnpm --filter landing build`, output `dist/`).
 - **R2**: bucket `socio` (10GB free) untuk avatar/banner/blog image/payment proof. Setup custom domain `cdn.socio.id` + public access.
 - **Turnstile**: signup/signin/forgot gate — pakai skill `turnstile-spin` untuk setup widget + sitekey/secret.

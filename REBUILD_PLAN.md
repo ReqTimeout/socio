@@ -11,7 +11,7 @@
 | Item | Keputusan |
 |---|---|
 | Landing `socio.id` | **Astro 5 + Svelte 5 islands** → Cloudflare Pages (Rp0) |
-| App `app.socio.id` | **SvelteKit + adapter-node** → **Tencent Lighthouse Jakarta** (2vCPU/2GB/50GB) + Coolify |
+| App `app.socio.id` | **SvelteKit + adapter-node** → **VPS TNA Hosting** (hybrid, infra Hostinger SG) + Coolify |
 | Database | **MySQL** via **Drizzle ORM** — **TiDB Serverless Singapore** (managed, terpisah dari VPS, free 5GB) |
 | Auth | **better-auth** + bcryptjs (kompatibel `password_hash()` PHP) + Passkey WebAuthn |
 | Provider SMM | **SMMturk** (smmturk.org/api/v2) — 8185 layanan, 872 kategori, USD currency |
@@ -70,7 +70,7 @@
 | Komponen | Tempat | Biaya | Catatan |
 |---|---|---|---|
 | Landing `socio.id` | Cloudflare Pages | Rp0 | Static, edge, SEO |
-| App `app.socio.id` + cron | **Tencent Lighthouse Jakarta** (2vCPU/2GB/50GB/30Mbps/1.02TB) + Coolify | ~Rp200k/bln | latency ID <10ms, panel Coolify |
+| App `app.socio.id` + cron | **VPS TNA Hosting** (hybrid, infra Hostinger SG) + Coolify | (lihat tagihan aktual) | panel Coolify, IPv4 shared + IPv6 dedicated |
 | DB MySQL | **TiDB Serverless Singapore** (managed, terpisah) | Rp0 (5GB) | backup otomatis, encryption, HA, dump lama import |
 | R2 storage | Cloudflare R2 | Rp0 (10GB) | avatar, banner, blog image, payment proof |
 | Email | Resend | Rp0 (3.000/bln) | atau CF Email Routing + MailChannels (unlimited Rp0) |
@@ -79,10 +79,11 @@
 | DNS | Cloudflare | Rp0 | zone socio.id |
 
 > **DB wajib terpisah dari VPS app** (sesuai permintaan user — keamanan): kalau VPS kena kompromi/crash, data user+saldo+order tetap aman di TiDB managed. VPS app hanya punya DB credential terbatas via env, gak ada akses shell ke DB.
+> **[KOREKSI 2026-09-29]** Rencana awal "Tencent Lighthouse Jakarta" TIDAK jadi realisasi. Status aktual: app jalan di **VPS TNA Hosting** (hybrid, infrastruktur Hostinger — hostname `srv1476160.hstgr.cloud`, ASN TNAHOSTING via IPv6 `2607:adc0:5::215`), IP `130.254.47.93`, IPv4 shared. IP lama `43.157.204.17` = Tencent Cloud SG (produksi PHP lama, sudah mati). Paragraf di bawah = catatan historis saat perencanaan.
 > **Tencent Lighthouse Jakarta** dipilih karena: latency ID tercepat (<10ms untuk user mobile Indonesia), panel gampang (Coolify), spec cukup (2vCPU/2GB — Node app ~300MB + cron burst ~800MB saat sync SMMturk, masih ada buffer). Kalau RAM sempit nanti → aktifkan swap 2GB atau upgrade plan.
 > **TiDB free 5GB penuh** → pindah ke PlanetScale / Aiven / self-hosted MySQL di VPS DB terpisah (Hetzner/Contabo private network). Dump sama.
 
-### Spesifikasi VPS Tencent Lighthouse — apakah cukup?
+### Spesifikasi VPS (historis: rencana Tencent Lighthouse; aktual TNA Hosting — lihat koreksi di atas) — apakah cukup?
 
 | Resource | Spec | Kebutuhan app | Status |
 |---|---|---|---|
@@ -320,7 +321,7 @@ DB **wajib terpisah** dari VPS app — tidak digabung. Sesuai permintaan user: k
 
 ```
 ┌─────────────────────────────────┐      ┌───────────────────────────────┐
-│  VPS Tencent Lighthouse Jakarta │      │  TiDB Serverless Singapore     │
+│  VPS TNA Hosting (SG)           │      │  MySQL socio-db di VPS         │
 │  (app.socio.id + cron)          │      │  (DB managed, terpisah)        │
 │                                 │      │                                │
 │  - SvelteKit Node (adapter)     │─────▶│  - MySQL socio_smm             │
@@ -359,7 +360,7 @@ DB **wajib terpisah** dari VPS app — tidak digabung. Sesuai permintaan user: k
 1. Daftar `tidbcloud.com` → buat cluster Serverless free (region Singapore).
 2. Buat database `socio_smm` + user `socio_app` dgn privilege terbatas.
 3. Import dump: `mysql -h gateway.singapore.tidbcloud.com -P 4000 -u socio_app -p socio_smm < socio_smm_*.sql` (set `SET FOREIGN_KEY_CHECKS=0` di awal dump).
-4. Whitelist IP VPS Tencent Jakarta di TiDB console (setelah VPS dibeli).
+4. Whitelist IP VPS di console DB bila pakai DB managed terpisah. (Realisasi: MySQL lokal container `socio-db` di network `coolify` — tidak perlu whitelist.)
 5. Connection string: `mysql://socio_app:PASS@gateway.singapore.tidbcloud.com:4000/socio_smm?sslmode=require`.
 
 ---
@@ -676,9 +677,9 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 - [x] Setup SvelteKit skeleton di `app/` dgn adapter-node, Tailwind v4, ESLint, Prettier, Vitest.
 - [x] Setup Drizzle: `packages/db/src/schema/{users,rebuild,index}.ts`. Import dump ke MySQL VPS `socio-db` (bukan TiDB — deviasi keputusan §12#1, disetujui praktis karena VPS sudah ada MySQL).
 - [x] Verifikasi: `bcryptjs.compare` → true. Login user existing works (commit `3313099`, auth endpoint 200 + token).
-- [~] Setup TiDB Serverless (Singapore) + Tencent Lighthouse Jakarta (Coolify panel). → **Tencent Lighthouse + Coolify SELESAI & LIVE** (app.socio.id diproteksi Coolify proxy). **TiDB Serverless TIDAK dipakai** — pakai MySQL di VPS (`socio-db`, sudah di network `coolify`). Keputusan §12#1 berubah ke MySQL VPS.
+- [~] Setup TiDB Serverless (Singapore) + VPS app (Coolify panel). → **VPS + Coolify SELESAI & LIVE** di TNA Hosting `130.254.47.93` (app.socio.id diproteksi Coolify proxy; koreksi provider 2026-09-29: bukan Tencent, ASN TNAHOSTING/infra Hostinger). **TiDB Serverless TIDAK dipakai** — pakai MySQL di VPS (`socio-db`, sudah di network `coolify`). Keputusan §12#1 berubah ke MySQL VPS.
 - [x] Deploy skeleton `app.socio.id` ke VPS via Coolify (Dockerfile git-backed dari GitHub `ReqTimeout/socio`, branch `main`). Healthcheck `/` = 200.
-- [x] Setup DNS: `app.socio.id` → VPS (CF proxy full). `cdn.socio.id` → R2 public (aktif, verified PutObject). `socio.id` + `www.socio.id` → Cloudflare Pages (landing LIVE 2026-07-17, HTTP 200). `coolify.socio.id` → VPS. ⚠️ VPS **MIGRASI 2026-09-02**: lama `43.157.204.17` (Jakarta, MATI) → baru `130.254.47.93` (APAC). Lihat docs/operations/server-migration-2026-09-02.md.
+- [x] Setup DNS: `app.socio.id` → VPS (CF proxy full). `cdn.socio.id` → R2 public (aktif, verified PutObject). `socio.id` + `www.socio.id` → Cloudflare Pages (landing LIVE 2026-07-17, HTTP 200). `coolify.socio.id` → VPS. ⚠️ VPS **MIGRASI 2026-09-02**: lama `43.157.204.17` (Tencent Cloud SG, MATI) → baru `130.254.47.93` (TNA Hosting hybrid, infra Hostinger APAC). Lihat docs/operations/server-migration-2026-09-02.md.
 
 ### M1 — Auth + DB wiring (4-5 hari)
 

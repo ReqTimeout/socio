@@ -32,8 +32,9 @@ interface SendArgs {
  * Send transactional email.
  *
  * Provider priority (2026-09-29, keputusan deliverability):
- *   1. RESEND_API_KEY — IP pool bersih + PTR/DMARC sehat. IP Contabo sendiri
- *      (130.254.47.93) di-block Gmail (550 5.7.25 missing PTR + 421 4.7.28
+ *   1. RESEND_API_KEY — IP pool bersih + PTR/DMARC sehat. IP VPS saat ini
+ *      (130.254.47.93, TNA Hosting/infra Hostinger — salah dicatat "Contabo"
+ *      di dokumen lama) di-block Gmail (550 5.7.25 missing PTR + 421 4.7.28
  *      rate-limit) sehingga email verifikasi user hilang tanpa kabar.
  *   2. SMTP_HOST/PORT/USER/PASS (self-hosted) — fallback kalau Resend tidak
  *      tersedia / gagal.

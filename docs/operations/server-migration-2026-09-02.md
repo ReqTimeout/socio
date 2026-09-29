@@ -7,7 +7,7 @@
 
 | Aspek | Sebelum | Sesudah |
 |---|---|---|
-| VPS | `43.157.204.17` (Tencent Jakarta, down) | `130.254.47.93` (Tencent APAC, ssh key `~/.ssh/id_rsa`) |
+| VPS | `43.157.204.17` (Tencent Cloud SG, down) | `130.254.47.93` (TNA Hosting hybrid / infra Hostinger APAC — koreksi provider 2026-09-29, sebelumnya salah tulis "Tencent APAC"; ssh key `~/.ssh/id_rsa`) |
 | IPv6 | n/a | `2607:adc0:5::215` |
 | Coolify | up tapi tak bisa diupdate (server dead) | fresh install v4.3.14, root user, port 8000 |
 | MySQL | import langsung dari `.sql` dump di repo, fix schema pakai ALTER | MySQL 8.0 container `rebicrj57r3afbg9knieq9ks`, network `coolify` |
