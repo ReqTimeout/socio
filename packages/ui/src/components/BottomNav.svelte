@@ -47,7 +47,7 @@
 </script>
 
 <!-- Dock sticker-chrome ala landing FloatingTabDock: border tinta 2px + hard shadow.
-     Active = teks ink + ikon tebal + pill mango (pop spring tiap ganti tab). -->
+     Active = teks ink + IKON mango (bukan underline pill) + pop spring tiap ganti tab. -->
 <nav
   class="dock-live-user lg:hidden fixed inset-x-3 bottom-3 z-50 grid rounded-[28px] border-2 border-ink-900 bg-surface/90 backdrop-blur-xl
     p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[2px_2px_0_var(--color-ink-900),0_18px_45px_-12px_rgba(15,23,42,0.35)] dark:shadow-[2px_2px_0_var(--color-ink-900),0_18px_45px_-12px_rgba(0,0,0,0.6)]
@@ -73,11 +73,12 @@
     >
       <span class="relative">
         <span
-          class="grid place-items-center transition-transform duration-300 {active
-            ? 'dock-bounce scale-105'
-            : 'group-active:scale-95'}"
+          class="grid place-items-center transition-[transform,color] duration-300 {active
+            ? 'dock-bounce scale-105 text-amber-500'
+            : 'text-ink-800 group-active:scale-95'}"
+          style={active ? "filter: drop-shadow(0 1px 0 rgba(217,119,6,0.35));" : undefined}
         >
-          <Icon name={item.icon} size={20} stroke={active ? 2.4 : 1.9} />
+          <Icon name={item.icon} size={20} stroke={active ? 2.6 : 1.9} />
         </span>
         {#if badgeFor(item.href, item.badge)}
           <span
@@ -89,17 +90,6 @@
           </span>
         {/if}
       </span>
-      <!-- Indicator mango: anchor ke <a> (bukan span ikon) biar tidak menimpa label,
-           sama persis pola dock landing -->
-      {#if active}
-        {#key $page.url.pathname}
-          <span
-            class="dock-pill absolute -bottom-0.5 left-1/2 h-1.5 w-5 -translate-x-1/2 rounded-full border border-ink-900"
-            style="background: var(--pop-mango);"
-            aria-hidden="true"
-          ></span>
-        {/key}
-      {/if}
       <!-- Label: full opacity — AA contrast (opacity dim membuat ink-500 turun ke 2.71) -->
       <span
         class="whitespace-nowrap text-[9px] font-bold tracking-wide leading-none transition-colors
@@ -127,23 +117,8 @@
       transform: scale(1.02) translateY(0);
     }
   }
-  /* Pill mango pop tiap ganti tab (ala landing dock-pop, scaleX spring) */
-  .dock-pill {
-    animation: dock-pill-pop 400ms var(--ease-spring) both;
-  }
-  @keyframes dock-pill-pop {
-    from {
-      transform: translateX(-50%) scaleX(0);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(-50%) scaleX(1);
-      opacity: 1;
-    }
-  }
   @media (prefers-reduced-motion: reduce) {
-    .dock-bounce,
-    .dock-pill {
+    .dock-bounce {
       animation: none !important;
     }
   }

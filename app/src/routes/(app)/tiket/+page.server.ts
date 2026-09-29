@@ -1,6 +1,7 @@
 import { db } from "@socio/db";
 import { sql } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
+import { notifyAdmins } from "$lib/server/email-templates";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -39,6 +40,15 @@ export const actions: Actions = {
       INSERT INTO message (user_id, type, subject, message, status, created_at, ticket_id, is_read)
       VALUES (${userId}, 'user', ${subject}, ${message}, 'Pending', NOW(), ${ticketId}, 0)
     `);
+    // Beritahu admin: email + admin_notifications (in-app bell admin).
+    const uname = String((locals.user as any)?.username ?? locals.user?.email ?? `#${userId}`);
+    await notifyAdmins({
+      subject: `[Tiket Baru] ${subject.slice(0, 60)}`,
+      body: `User @${uname} membuka tiket baru #${ticketId}.\n\n${message.slice(0, 500)}`,
+      ctaText: "Balas Tiket",
+      ctaUrl: `/admin/tickets?id=${ticketId}`,
+      templateName: "admin-alert",
+    });
     return { success: true, ticketId };
   },
 
@@ -61,6 +71,15 @@ export const actions: Actions = {
     await db.execute(
       sql`UPDATE message SET status = 'Pending' WHERE ticket_id = ${ticketId} AND user_id = ${userId}`,
     );
+    // Notif admin: user membalas -> tiket kembali Pending.
+    const uname = String((locals.user as any)?.username ?? locals.user?.email ?? `#${userId}`);
+    await notifyAdmins({
+      subject: `[Balasan User] Tiket #${ticketId}`,
+      body: `User @${uname} membalas tiket #${ticketId}.\n\n${message.slice(0, 500)}`,
+      ctaText: "Buka Tiket",
+      ctaUrl: `/admin/tickets?id=${ticketId}`,
+      templateName: "admin-alert",
+    });
     return { success: true };
   },
 

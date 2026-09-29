@@ -3,6 +3,8 @@ import { orders, services, users, balanceLogs } from "@socio/db/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import { smmturkRefill, smmturkCancel } from "@socio/core/smmturk";
+import { notifyOrderCancel } from "$lib/server/notification";
+import { notifyAdmins } from "$lib/server/email-templates";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
@@ -90,9 +92,20 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       const pids = topRows.map((r: any) => Number(r.sid)).filter((n) => n > 0);
       if (pids.length) {
         const svc = await db
-          .select({ id: services.id, serviceName: services.serviceName, price: services.price, providerServiceId: services.providerServiceId })
+          .select({
+            id: services.id,
+            serviceName: services.serviceName,
+            price: services.price,
+            providerServiceId: services.providerServiceId,
+          })
           .from(services)
-          .where(and(eq(services.providerId, 2), eq(services.status, 1), inArray(services.providerServiceId, pids)));
+          .where(
+            and(
+              eq(services.providerId, 2),
+              eq(services.status, 1),
+              inArray(services.providerServiceId, pids),
+            ),
+          );
         const order: Record<number, number> = {};
         pids.forEach((id, i) => (order[id] = i));
         const byPid = new Map(svc.map((s) => [Number((s as any).providerServiceId ?? 0), s]));
@@ -210,6 +223,16 @@ export const actions: Actions = {
       createdAt: new Date(),
     });
 
+    // Notif user (in-app + push) + alert admin (email + admin_notifications).
+    await notifyOrderCancel(Number(locals.user!.id), orderId, Number(order.price));
+    await notifyAdmins({
+      subject: `[Cancel User] Order #${orderId}`,
+      body: `User membatalkan order #${orderId} (status Pending). Refund ${new Intl.NumberFormat("id-ID").format(Number(order.price))} ke saldo user.`,
+      ctaText: "Lihat Order",
+      ctaUrl: `/admin/orders?order=${orderId}`,
+      templateName: "admin-alert",
+    });
+
     return { success: `Order dibatalkan. Saldo dikembalikan Rp ${order.price}` };
   },
 
@@ -260,6 +283,15 @@ export const actions: Actions = {
       amount: refunded,
       note: `Mass refund ${pending.length} order dibatalkan`,
       createdAt: new Date(),
+    });
+
+    // Alert admin mass cancel (1 email agregat; tidak spam in-app user).
+    await notifyAdmins({
+      subject: `[Mass Cancel] ${pending.length} order user #${userId}`,
+      body: `User melakukan pembatalan massal: ${pending.length} order Pending dibatalkan. Total refund ${new Intl.NumberFormat("id-ID").format(refunded)}. IDs: ${pending.map((o) => o.id).join(", ")}`,
+      ctaText: "Lihat Pesanan",
+      ctaUrl: `/admin/orders`,
+      templateName: "admin-alert",
     });
 
     return {

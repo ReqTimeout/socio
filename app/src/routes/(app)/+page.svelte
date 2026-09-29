@@ -209,10 +209,10 @@
 <section class="space-y-5 lg:space-y-6 relative">
   <!-- Hero greeting — dot-grid + sky wash (brand §8.3/§13: no gradient blob).
      Rasa waktu tetap ada via eyebrow fase (Pagi/Siang/Sore/Malam). -->
-  <header class="reveal hero-sky relative -mx-4 sm:-mx-6 lg:-mx-10 overflow-hidden rounded-b-[28px] border-b-2 border-ink-900">
-    <div
-      class="relative z-10 px-4 pt-5 pb-6 sm:px-6 lg:px-10 lg:pt-7 lg:pb-8"
-    >
+  <header
+    class="reveal hero-sky relative -mx-4 -mt-6 sm:-mx-6 sm:-mt-6 lg:-mx-10 lg:-mt-6 overflow-hidden rounded-b-[28px] border-b-2 border-ink-900"
+  >
+    <div class="relative z-10 px-4 pt-5 pb-6 sm:px-6 lg:px-10 lg:pt-7 lg:pb-8">
       <div
         class="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
       >
@@ -242,7 +242,10 @@
           {#if nightOwl}
             <p class="mt-1 text-xs font-semibold text-ink-500">lembur ya? Sparko temenin ✦</p>
           {:else if streak >= 2}
-            <p class="mt-1 inline-flex items-center gap-1 text-xs font-extrabold" style="color: var(--sparko-mango-ink);">
+            <p
+              class="mt-1 inline-flex items-center gap-1 text-xs font-extrabold"
+              style="color: var(--sparko-mango-ink);"
+            >
               <Icon name="flame" size={13} stroke={2.4} />
               {streak} hari beruntun ✦
             </p>
@@ -371,7 +374,9 @@
             onclick={() => haptic(10)}
             style={revealDelay(i, 0, 50)}
             class="reveal card-lift group relative flex min-h-[64px] w-[78%] max-w-[320px] min-w-[240px] shrink-0 snap-start items-center gap-3 rounded-2xl border border-ink-200 bg-surface p-4 transition-transform duration-200 hover:rotate-0
-              lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5 lg:rotate-0 {i % 2 === 0 ? '-rotate-1' : 'rotate-1'}"
+              lg:w-auto lg:min-w-0 lg:max-w-none lg:p-3.5 lg:gap-2.5 lg:rotate-0 {i % 2 === 0
+              ? '-rotate-1'
+              : 'rotate-1'}"
           >
             <span
               class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-sm transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
@@ -442,7 +447,9 @@
     >
       <ConfettiBurst fire={vipConfetti} />
       <span class="flex min-w-0 items-center gap-2 text-xs font-bold tracking-wide">
-        <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-ink-900 bg-white">
+        <span
+          class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-ink-900 bg-white"
+        >
           <Icon name="star" size={12} stroke={2.5} />
         </span>
         <span class="min-w-0 truncate"><Marker>VIP</Marker> — Deposit di atas 5 juta</span>
@@ -455,7 +462,9 @@
   <div
     class="divide-y divide-ink-100 overflow-hidden rounded-2xl border-2 border-ink-900 bg-surface shadow-[2px_2px_0_var(--color-ink-900)] sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0"
   >
-    <div class="flex items-center justify-between gap-3 px-4 py-3 sm:flex-col sm:items-center sm:gap-1 sm:px-2 sm:py-4">
+    <div
+      class="flex items-center justify-between gap-3 px-4 py-3 sm:flex-col sm:items-center sm:gap-1 sm:px-2 sm:py-4"
+    >
       <span
         class="flex shrink-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-500"
       >
@@ -463,13 +472,14 @@
         Pesanan
       </span>
       <span class="flex min-w-0 items-center gap-1.5 sm:flex-col sm:gap-1">
-        <span class="font-display text-lg font-extrabold tabular-nums text-ink-900 sm:text-xl lg:text-2xl"
+        <span
+          class="font-display text-lg font-extrabold tabular-nums text-ink-900 sm:text-xl lg:text-2xl"
           >{$statOrders.toLocaleString("id-ID")}</span
         >
         {#if data.stats.deltaOrders !== undefined && data.stats.deltaOrders !== 0}
           <span
-            class="delta-pop rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data.stats
-              .deltaOrders >= 0
+            class="delta-pop rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums {data
+              .stats.deltaOrders >= 0
               ? 'bg-success/10 text-success'
               : 'bg-danger/10 text-danger'}"
             >{data.stats.deltaOrders >= 0 ? "+" : ""}{data.stats.deltaOrders.toFixed(1)}%</span
@@ -477,10 +487,12 @@
         {/if}
       </span>
     </div>
-    <div class="flex items-center justify-between gap-3 px-4 py-3 sm:flex-col sm:items-center sm:gap-1 sm:px-2 sm:py-4">
+    <div
+      class="flex items-center justify-between gap-3 px-4 py-3 sm:flex-col sm:items-center sm:gap-1 sm:px-2 sm:py-4"
+    >
       <span
-        class="flex shrink-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide {(data.stats
-          .totalDeposit ?? 0) >= 5_000_000
+        class="flex shrink-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide {(data
+          .stats.totalDeposit ?? 0) >= 5_000_000
           ? 'text-amber-600'
           : 'text-ink-500'}"
       >
@@ -507,7 +519,9 @@
         <span class="truncate">{formatRupiah($statDeposit)}</span>
       </span>
     </div>
-    <div class="flex items-center justify-between gap-3 px-4 py-3 sm:flex-col sm:items-center sm:gap-1 sm:px-2 sm:py-4">
+    <div
+      class="flex items-center justify-between gap-3 px-4 py-3 sm:flex-col sm:items-center sm:gap-1 sm:px-2 sm:py-4"
+    >
       <span
         class="flex shrink-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-500"
       >
@@ -676,7 +690,10 @@
         </div>
       {:else if navigating.to?.url.pathname === "/"}
         <!-- Skeleton saat refresh/navigasi (hindari flash list lama) -->
-        <ul class="divide-y divide-ink-100 overflow-hidden rounded-card border border-ink-100 bg-surface shadow-card" aria-hidden="true">
+        <ul
+          class="divide-y divide-ink-100 overflow-hidden rounded-card border border-ink-100 bg-surface shadow-card"
+          aria-hidden="true"
+        >
           {#each [0, 1, 2] as i (i)}
             <li class="flex items-center gap-2.5 px-3 py-2.5 sm:gap-3 sm:px-3.5 sm:py-3">
               <Skeleton width="2.25rem" height="2.25rem" rounded="rounded-xl" />
@@ -689,7 +706,9 @@
           {/each}
         </ul>
       {:else}
-        <ul class="divide-y divide-ink-100 overflow-hidden rounded-card border border-ink-100 bg-surface shadow-card">
+        <ul
+          class="divide-y divide-ink-100 overflow-hidden rounded-card border border-ink-100 bg-surface shadow-card"
+        >
           {#each data.recent as o, i (o.id)}
             {@const p = (() => {
               const n = (o.serviceName || "").toLowerCase();
@@ -843,12 +862,13 @@
     background-image:
       linear-gradient(180deg, rgb(125 211 252 / 0.22), rgb(125 211 252 / 0) 70%),
       radial-gradient(circle, rgb(26 26 26 / 0.08) 1px, transparent 1px);
-    background-size: auto, 16px 16px;
+    background-size:
+      auto,
+      16px 16px;
   }
   .dark .hero-sky {
     background-color: var(--color-surface);
-    background-image:
-      linear-gradient(180deg, rgb(56 189 248 / 0.1), transparent 70%);
+    background-image: linear-gradient(180deg, rgb(56 189 248 / 0.1), transparent 70%);
   }
   /* Sparko halo — pop spring 1× saat mount (APP V3 S2-1) */
   .sparko-hello {
@@ -895,8 +915,13 @@
     animation: lowbal-pulse 1.6s ease-in-out 3;
   }
   @keyframes lowbal-pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     .lowbal-pulse {

@@ -2,6 +2,7 @@ import { db } from "@socio/db";
 import { sql } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { notifyTicketReply } from "$lib/server/notification";
 import type { Actions, PageServerLoad } from "./$types";
 
 const PAGE_SIZE = 25;
@@ -181,6 +182,9 @@ export const actions: Actions = {
     `);
     // Bump all messages to Answered (latest wins for list grouping)
     await db.execute(sql`UPDATE message SET status = 'Answered' WHERE ticket_id = ${ticketId}`);
+
+    // Notif user: tiket dibalas admin (in-app bell + Web Push).
+    await notifyTicketReply(Number(f.user_id), ticketId, msg);
 
     await logAudit({
       adminId: Number(locals.user!.id),

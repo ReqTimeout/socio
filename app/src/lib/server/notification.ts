@@ -20,6 +20,26 @@ const STATUS_LABEL: Record<string, string> = {
 
 export type NotificationType = "order" | "deposit" | "ticket" | "news" | "promo";
 
+/** Helper: fire Web Push best-effort. Silent fail (tabel bisa belum ada). */
+async function dispatchPush(userId: number, title: string, body: string, url: string) {
+  try {
+    const subs = await db.execute(
+      sql`SELECT endpoint, p256dh, auth FROM web_push_subscriptions WHERE user_id = ${userId}`,
+    );
+    const rows = (subs as any).rows ?? [];
+    if (!rows.length) return;
+    const payload = JSON.stringify({ title, body, url });
+    await Promise.all(
+      rows.map((r: any) => {
+        const sub = { endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } };
+        return webpush.sendNotification(sub as any, payload).catch(() => {});
+      }),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Insert notifikasi in-app generik (deposit/affiliate/sistem). Best-effort. */
 export async function createNotification(
   userId: number,
@@ -41,39 +61,47 @@ export async function notifyOrderUpdate(
   status: string,
 ): Promise<void> {
   const label = STATUS_LABEL[status] ?? status;
+  const title = `Order #${orderId} ${label}`;
+  const message = `Status order kamu telah diperbarui menjadi ${label}.`;
+  const actionUrl = `/pesanan`;
   try {
-    await db.insert(notifications).values({
-      userId,
-      type: "order",
-      title: `Order #${orderId} ${label}`,
-      message: `Status order kamu telah diperbarui menjadi ${label}.`,
-      actionUrl: `/pesanan`,
-    });
+    await db.insert(notifications).values({ userId, type: "order", title, message, actionUrl });
   } catch (e) {
     console.error("[notify] insert failed:", e);
   }
+  await dispatchPush(userId, title, message, `/pesanan/${orderId}`);
+}
 
-  // Web Push
+/** Notif user: admin membalas tiket. */
+export async function notifyTicketReply(
+  userId: number,
+  ticketId: number,
+  snippet: string,
+): Promise<void> {
+  const title = `Tiket #${ticketId} dibalas`;
+  const message = String(snippet).slice(0, 200) || "Ada balasan baru dari tim Socio.id.";
+  const actionUrl = `/tiket?ticket=${ticketId}`;
   try {
-    const subs = await db.execute(
-      sql`SELECT endpoint, p256dh, auth FROM web_push_subscriptions WHERE user_id = ${userId}`,
-    );
-    const rows = (subs as any).rows ?? [];
-    const payload = JSON.stringify({
-      title: `Order #${orderId} ${label}`,
-      body: `Status: ${label}`,
-      url: `/pesanan/${orderId}`,
-    });
-    await Promise.all(
-      rows.map((r: any) => {
-        const sub = {
-          endpoint: r.endpoint,
-          keys: { p256dh: r.p256dh, auth: r.auth },
-        };
-        return webpush.sendNotification(sub as any, payload).catch(() => {});
-      }),
-    );
-  } catch {
-    // push subscription table may not exist yet — ignore
+    await db.insert(notifications).values({ userId, type: "ticket", title, message, actionUrl });
+  } catch (e) {
+    console.error("[notify] ticket insert:", e);
   }
+  await dispatchPush(userId, title, message, actionUrl);
+}
+
+/** Notif user: dia sendiri cancel order (in-app + push). */
+export async function notifyOrderCancel(
+  userId: number,
+  orderId: number,
+  amount: number,
+): Promise<void> {
+  const title = `Order #${orderId} dibatalkan`;
+  const message = `Saldo ${new Intl.NumberFormat("id-ID").format(amount)} dikembalikan ke akunmu.`;
+  const actionUrl = `/pesanan`;
+  try {
+    await db.insert(notifications).values({ userId, type: "order", title, message, actionUrl });
+  } catch (e) {
+    console.error("[notify] cancel insert:", e);
+  }
+  await dispatchPush(userId, title, message, actionUrl);
 }
