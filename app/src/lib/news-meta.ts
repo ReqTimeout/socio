@@ -10,6 +10,8 @@ export type NewsMeta = {
   icon: string;
   chipBg: string;
   chipInk: string;
+  /** Titik warna solid untuk filter chip (bg-*-500). */
+  dot: string;
   label: string;
 };
 
@@ -20,6 +22,7 @@ export function newsMeta(t: string | null | undefined): NewsMeta {
         icon: "sparkles",
         chipBg: "bg-emerald-50",
         chipInk: "text-emerald-700",
+        dot: "bg-emerald-500",
         label: "Layanan Baru",
       };
     case "price_down":
@@ -27,6 +30,7 @@ export function newsMeta(t: string | null | undefined): NewsMeta {
         icon: "trending_down",
         chipBg: "bg-teal-50",
         chipInk: "text-teal-700",
+        dot: "bg-teal-500",
         label: "Harga Turun",
       };
     case "price_up":
@@ -34,6 +38,7 @@ export function newsMeta(t: string | null | undefined): NewsMeta {
         icon: "trending_up",
         chipBg: "bg-amber-50",
         chipInk: "text-amber-700",
+        dot: "bg-amber-500",
         label: "Harga Naik",
       };
     case "discontinued":
@@ -41,6 +46,7 @@ export function newsMeta(t: string | null | undefined): NewsMeta {
         icon: "alert",
         chipBg: "bg-rose-50",
         chipInk: "text-rose-700",
+        dot: "bg-rose-500",
         label: "Dihentikan",
       };
     default:
@@ -48,6 +54,7 @@ export function newsMeta(t: string | null | undefined): NewsMeta {
         icon: "megaphone",
         chipBg: "bg-sky-50",
         chipInk: "text-sky-700",
+        dot: "bg-sky-500",
         label: "Pengumuman",
       };
   }
@@ -94,11 +101,36 @@ export function newsTimeAgo(d: Date | string): string {
  * Idempotent: teks bersih tidak berubah.
  */
 export function cleanNewsText(s: string | null | undefined): string {
-  let t = String(s ?? "").replace(/[^\x20-\x7E]+/g, " ");
+  // Whitelist ASCII printable + "→" / "—" / "–" (dipakai konten harga naik/turun
+  // "Nama — harga Rp A → Rp B" supaya pemisah tetap terbaca).
+  let t = String(s ?? "").replace(/[^\x20-\x7E→—–]+/g, " ");
   t = t.replace(/\s{2,}/g, " ").trim();
   t = t
     .replace(/^(?:[-|,:;]\s*)+/, "")
     .replace(/(?:\s*[-|,:;])+$/, "")
     .trim();
   return t;
+}
+
+/**
+ * Pecah teks berita jadi segmen supaya nominal harga ("Rp 5.000") bisa di-
+ * highlight. Number amount mana pun setelah "Rp" (dengan pemisah titik/koma)
+ * ditandai `price: true`. Dipakai widget "Update" + halaman /berita.
+ */
+export type NewsSeg = { t: string; price: boolean };
+const RP_RE = /Rp\s?\d[\d.,]*/g;
+export function newsPriceSegments(s: string | null | undefined): NewsSeg[] {
+  const text = cleanNewsText(s);
+  if (!text) return [];
+  const segs: NewsSeg[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  RP_RE.lastIndex = 0;
+  while ((m = RP_RE.exec(text))) {
+    if (m.index > last) segs.push({ t: text.slice(last, m.index), price: false });
+    segs.push({ t: m[0], price: true });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) segs.push({ t: text.slice(last), price: false });
+  return segs;
 }

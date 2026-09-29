@@ -6,6 +6,7 @@
     NEWS_EVENT_FILTERS,
     isOrderableEvent,
     cleanNewsText,
+    newsPriceSegments,
   } from "$lib/news-meta";
   import type { PageData } from "./$types";
 
@@ -38,18 +39,27 @@
     </p>
   </div>
 
-  <!-- Filter chips pop/neo-brutalist (standar sama dgn /notif & /pesanan) -->
+  <!-- Filter chips pop/neo-brutalist — compact + titik warna sesuai event -->
   <div class="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-    <div class="flex w-fit gap-2">
+    <div class="flex w-fit gap-1.5">
       {#each NEWS_EVENT_FILTERS as f (f.v)}
+        {@const fm = f.v ? newsMeta(f.v) : null}
+        {@const active = data.t === f.v}
         <a
           href={f.v ? `/berita?t=${f.v}` : "/berita"}
-          aria-current={data.t === f.v ? "page" : undefined}
-          class="min-h-[44px] shrink-0 rounded-full border-2 px-4 py-2 text-xs font-bold transition-all duration-200 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
-            {data.t === f.v
-            ? 'border-ink-900 bg-primary text-white shadow-[2px_2px_0_var(--color-ink-900)]'
-            : 'border-ink-900 bg-surface text-ink-700 shadow-[2px_2px_0_var(--color-ink-900)] hover:bg-ink-50'}"
-          >{f.label}</a
+          aria-current={active ? "page" : undefined}
+          onclick={() => haptic(6)}
+          class="inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full border-2 border-ink-900 px-3 py-1 text-[11px] font-bold shadow-[2px_2px_0_var(--color-ink-900)] transition-all duration-200 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
+            {active
+            ? fm
+              ? `${fm.chipBg} ${fm.chipInk} font-extrabold`
+              : 'bg-primary text-white'
+            : 'bg-surface text-ink-700 hover:bg-ink-50'}"
+        >
+          {#if fm}
+            <span class="h-2 w-2 shrink-0 rounded-full ring-1 ring-ink-900/20 {fm.dot}"></span>
+          {/if}
+          {f.label}</a
         >
       {/each}
     </div>
@@ -81,6 +91,7 @@
       {#each data.items as n, i (n.id)}
         {@const meta = newsMeta(n.eventType)}
         {@const title = cleanNewsText(n.kategori) || meta.label}
+        {@const segs = newsPriceSegments(n.content)}
         {@const href =
           n.serviceId > 0 && isOrderableEvent(n.eventType) ? `/pesan?service=${n.serviceId}` : null}
         {@const showBadge = title.toLowerCase() !== meta.label.toLowerCase()}
@@ -109,13 +120,23 @@
                 {/if}
               </span>
               <span class="mt-1 line-clamp-2 text-[13px] leading-snug text-ink-600 lg:line-clamp-3">
-                {cleanNewsText(n.content)}
+                {#each segs as seg, si (si)}
+                  {#if seg.price}
+                    <span class="font-extrabold text-ink-900">{seg.t}</span>
+                  {:else}
+                    {seg.t}
+                  {/if}
+                {/each}
               </span>
               <span class="mt-1.5 flex items-center gap-1 text-[11px] text-ink-400">
                 <Icon name="clock" size={11} />
                 {newsTimeAgo(n.createdAt)}
                 {#if href}
-                  <span class="ml-1 font-bold text-primary">Pesan sekarang ›</span>
+                  <span
+                    class="ml-auto inline-flex items-center rounded-full border-2 border-ink-900 bg-primary px-2.5 py-0.5 text-[10px] font-extrabold text-white shadow-[1.5px_1.5px_0_var(--color-ink-900)] transition-transform group-hover:-translate-y-px"
+                  >
+                    Pesan sekarang
+                  </span>
                 {/if}
               </span>
             </span>

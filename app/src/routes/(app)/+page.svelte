@@ -20,7 +20,7 @@
   import { copy } from "@socio/core/copy";
   import { onMount } from "svelte";
   import { formatRupiah, serviceDisplayName } from "$lib/format";
-  import { newsMeta, isOrderableEvent, cleanNewsText } from "$lib/news-meta";
+  import { newsMeta, isOrderableEvent, newsPriceSegments } from "$lib/news-meta";
 
   let { data } = $props();
 
@@ -447,14 +447,17 @@
   {#if data.newsFeed?.length}
     <div class="reveal" style={revealDelay(0, 120)}>
       <div class="mb-2.5 flex items-center justify-between">
-        <h2 class="sec-title font-display text-base font-extrabold tracking-tight lg:text-[17px]">
+        <h2
+          class="sec-title flex items-center gap-1.5 font-display text-base font-extrabold tracking-tight lg:text-[17px]"
+        >
+          <Sparko pose="idle" size={22} class="shrink-0" />
           Update
         </h2>
         <a
           href="/berita"
           class="inline-flex items-center gap-0.5 text-xs font-semibold text-ink-500 transition-colors hover:text-ink-800"
         >
-          Semua <Icon name="chevron_right" size={12} stroke={2.5} />
+          Lihat Semua <Icon name="chevron_right" size={12} stroke={2.5} />
         </a>
       </div>
       <div
@@ -464,6 +467,7 @@
           {#each data.newsFeed as n (n.id)}
             {@const meta = newsMeta(n.eventType)}
             {@const orderable = n.serviceId > 0 && isOrderableEvent(n.eventType)}
+            {@const segs = newsPriceSegments(n.content)}
             <li>
               <a
                 href={orderable ? `/pesan?service=${n.serviceId}` : "/berita"}
@@ -471,16 +475,26 @@
                 class="group flex items-center gap-3 px-3.5 py-2.5 transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 lg:px-4 lg:py-3"
               >
                 <span
-                  class="grid h-9 w-9 shrink-0 place-items-center rounded-xl {meta.chipBg} {meta.chipInk} transition-transform group-hover:scale-105"
+                  class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-ink-900/10 {meta.chipBg} {meta.chipInk} transition-transform group-hover:scale-105"
                 >
                   <Icon name={meta.icon} size={16} stroke={2} />
                 </span>
                 <span class="min-w-0 flex-1">
-                  <span class="block truncate text-sm font-bold leading-tight text-ink-800">
-                    {cleanNewsText(n.kategori) || meta.label}
-                  </span>
-                  <span class="mt-0.5 block line-clamp-2 text-xs leading-snug text-ink-500">
-                    {cleanNewsText(n.content)}
+                  <span class="flex items-center gap-1.5">
+                    <span
+                      class="shrink-0 rounded-full border border-ink-900 px-1.5 py-px text-[9px] font-extrabold {meta.chipBg} {meta.chipInk}"
+                    >
+                      {meta.label}
+                    </span>
+                    <span class="min-w-0 truncate text-xs leading-snug text-ink-600">
+                      {#each segs as seg, si (si)}
+                        {#if seg.price}
+                          <span class="font-extrabold text-ink-900">{seg.t}</span>
+                        {:else}
+                          {seg.t}
+                        {/if}
+                      {/each}
+                    </span>
                   </span>
                 </span>
                 <span class="shrink-0 text-[11px] tabular-nums text-ink-400">
