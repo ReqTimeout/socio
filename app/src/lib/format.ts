@@ -50,8 +50,8 @@ export function fixMojibake(s: string): string {
  */
 export function serviceDisplayName(name: string): string {
   let fixed = fixMojibake(name);
-  // Replace provider branding with "Socio"
-  fixed = fixed.replace(/SMMturk/gi, "Socio");
+  // Replace provider branding with "Socio" (varian: SMMTURK / SMMTurk / SMMTÜRK)
+  fixed = fixed.replace(/SMMT[UÜ]RK/gi, "Socio");
   // Remove bracket tags containing "Provider" (e.g. "[ Provider ]", "[%100 Provider]", "[ %100 Provider ]")
   fixed = fixed.replace(/\[\s*%?\d*\s*Provider\s*\]/gi, "");
   // Collapse whitespace left by removals
@@ -59,4 +59,30 @@ export function serviceDisplayName(name: string): string {
   // Extract head before first [ metadata tag
   const head = (fixed.split("[")[0] ?? fixed).trim();
   return head.replace(/\s{2,}/g, " ").trim() || fixed;
+}
+
+/**
+ * White-label a provider-supplied name (kategori maupun layanan) supaya nama
+ * hulu "SMMTURK/SMMT\u00dcRK" TIDAK pernah tampil ke reseller/user. Dibuat idempotent
+ * dan no-op untuk nama yang sudah bersih, sehingga aman dipakai saat tulis
+ * (cron service-sync) maupun saat baca (display).
+ *
+ * 1. buang grup dalam kurung yang menyebut brand,
+ * 2. buang segmen ber-pipe yang menyebut brand,
+ * 3. buang anak-kalimat trailing (setelah , : - –) yang masih menyebut brand,
+ * 4. netralisasi sisa token brand → "Socio",
+ * 5. rapikan kata noise ("Own"/"Exclusive"/"Special Update") + separator menggantung.
+ */
+export function whitelabel(raw: string): string {
+  let s = fixMojibake(String(raw ?? ""));
+  s = s.replace(/\((?:[^()]*\bSMMT[UÜ]RK\b[^()]*)\)/gi, " ");
+  const parts = s.split("|");
+  const kept = parts.filter((p) => !/SMMT[UÜ]RK/i.test(p));
+  s = (kept.length ? kept : parts).join("|");
+  s = s.replace(/[:,\-\u2013]\s*[^|]*\bSMMT[UÜ]RK\b[^|]*$/gi, "");
+  s = s.replace(/SMMT[UÜ]RK/gi, "Socio");
+  s = s.replace(/(^|\||,|\s)\s*(Special Update|Own|Exclusive)\b/gi, "$1");
+  s = s.replace(/[ ,]+$/, "").replace(/^[ ,]+/, "");
+  s = s.replace(/\s{2,}/g, " ").trim();
+  return s;
 }

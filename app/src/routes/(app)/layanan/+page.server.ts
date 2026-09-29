@@ -3,6 +3,7 @@ import { services, categories, favorites } from "@socio/db/schema";
 import { eq, like, desc, asc, sql, and, inArray } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import { baseForLevel, type UserLevel } from "@socio/core/pricing";
+import { whitelabel } from "$lib/format";
 import type { PageServerLoad, Actions } from "./$types";
 
 const PAGE_SIZE = 20;
@@ -63,6 +64,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
   const withLevelPrice = rows.map((s) => ({
     ...s,
+    categoryName: whitelabel((s as any).categoryName ?? ""),
     fav: favIds.includes(s.id),
     levelPrice: Math.round(
       baseForLevel(
@@ -88,7 +90,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
   return {
     services: withLevelPrice,
-    categories: cats,
+    categories: cats.map((c) => ({ id: c.id, name: whitelabel(c.name) })),
     total: Number(total),
     page,
     hasMore: page * PAGE_SIZE < Number(total),

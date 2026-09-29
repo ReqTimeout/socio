@@ -21,6 +21,7 @@ import { provider, providerServices, services, categories, adminNotifications, u
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { logSync } from "./provider-sync";
 import { getPricingRules } from "$lib/server/pricing";
+import { whitelabel } from "$lib/format";
 
 // NOTE: konversi USD→IDR terjadi di provider-sync via getUsdToIdr() (kurs terpusat).
 // File ini membaca ps.rate yang SUDAH IDR — tidak pakai rate langsung.
@@ -51,8 +52,11 @@ export async function runServiceSync(providerId: number): Promise<void> {
     const mr = rules.Reseller?.markupPercent ?? 150;
     const ma = rules.Agen?.markupPercent ?? 30;
 
-    // Kategori: resolve/create semua kategori unik
-    const catNames = [...new Set(psRows.map((r) => (r.category || "").trim() || "Uncategorized"))];
+    // Kategori: resolve/create semua kategori unik — WHITE-LABEL lebih dulu supaya
+    // branding hulu (SMMTURK/SMMTÜRK) tidak pernah tersimpan ke tabel categories.
+    // whitelabel() idempotent & no-op untuk nama bersih, jadi lookup_by_name tetap
+    // cocok dengan baris lama yang sudah bersih (tidak bikin duplikat).
+    const catNames = [...new Set(psRows.map((r) => whitelabel((r.category || "").trim() || "Uncategorized")))];
     const catIdByName = new Map<string, number>();
     for (const cname of catNames) {
       const [existing] = await db
@@ -90,7 +94,7 @@ export async function runServiceSync(providerId: number): Promise<void> {
       const priceMember = Math.ceil(rateIdr * (1 + mm / 100));
       const priceReseller = Math.ceil(rateIdr * (1 + mr / 100));
       const priceAgen = Math.ceil(rateIdr * (1 + ma / 100));
-      const catId = catIdByName.get((ps.category || "").trim() || "Uncategorized") ?? 1;
+      const catId = catIdByName.get(whitelabel((ps.category || "").trim() || "Uncategorized")) ?? 1;
       const svc = svcByPid.get(pid);
 
       if (!svc) {
@@ -98,7 +102,7 @@ export async function runServiceSync(providerId: number): Promise<void> {
         await db.insert(services).values({
           categoryId: catId,
           type: "Default",
-          serviceName: ps.name,
+          serviceName: whitelabel(ps.name),
           note: "",
           price: priceMember,
           priceApi: priceAgen,

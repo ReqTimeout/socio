@@ -15,6 +15,7 @@ import { smmturkAddFor } from "@socio/core/smmturk";
 import { decryptSecret } from "$lib/server/crypto";
 import { getPricingRules } from "$lib/server/pricing";
 import { validateCoupon, consumeCoupon, releaseCoupon } from "$lib/server/coupons";
+import { whitelabel } from "$lib/format";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
@@ -97,7 +98,9 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
   return {
     service,
-    categories: catRows,
+    // Safety-net white-label: nama kategori disanitasi saat baca, supaya branding
+    // hulu tidak pernah tampil walau ada baris lama yang belum di-backfill.
+    categories: catRows.map((c) => ({ id: c.id, name: whitelabel(c.name) })),
     saved,
     balance: locals.user!.balance ?? 0,
     level,
