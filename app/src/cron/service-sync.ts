@@ -136,9 +136,14 @@ export async function runServiceSync(providerId: number): Promise<void> {
       if (existing) {
         catIdByName.set(disp, existing.id);
         // Update raw kalau beda (baseline-safe, tanpa event emit — kolom raw bukan
-        // untuk user display, cukup jejak admin).
+        // untuk user display, cukup jejak admin). One row gagal (mis. charset/
+        // panjang) tidak boleh abort seluruh sync → best-effort.
         if (existing.nameRaw !== raw) {
-          await db.update(categories).set({ nameRaw: raw }).where(eq(categories.id, existing.id));
+          try {
+            await db.update(categories).set({ nameRaw: raw }).where(eq(categories.id, existing.id));
+          } catch (e) {
+            console.error(`[cron] service-sync category raw update gagal (${disp}):`, e);
+          }
         }
       } else {
         await db.insert(categories).values({ name: disp, nameRaw: raw });
@@ -361,16 +366,26 @@ export async function runServiceSync(providerId: number): Promise<void> {
         if (diffs.length > 0 || isBaseline) patch.updatedAt = now;
 
         if (svc.status === 1) {
-          await db.update(services).set(patch).where(eq(services.id, svc.id));
-          updated++;
+          try {
+            await db.update(services).set(patch).where(eq(services.id, svc.id));
+            updated++;
+          } catch (e) {
+            console.error(`[cron] service-sync update service ${pid} gagal:`, e);
+            continue; // jangan abort loop; lewati changelog/news untuk baris ini
+          }
         } else if (!isManualOff) {
-          await db
-            .update(services)
-            .set({ ...patch, status: 1 })
-            .where(eq(services.id, svc.id));
-          enabled++;
-          if (!isBaseline) {
-            diffs.push({ event: "enabled", field: "status", old: "0", cur: "1" });
+          try {
+            await db
+              .update(services)
+              .set({ ...patch, status: 1 })
+              .where(eq(services.id, svc.id));
+            enabled++;
+            if (!isBaseline) {
+              diffs.push({ event: "enabled", field: "status", old: "0", cur: "1" });
+            }
+          } catch (e) {
+            console.error(`[cron] service-sync enable service ${pid} gagal:`, e);
+            continue;
           }
         }
 

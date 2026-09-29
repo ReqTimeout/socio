@@ -102,13 +102,13 @@
                 <span class="min-w-0 truncate text-sm font-extrabold text-ink-900">{title}</span>
                 {#if showBadge}
                   <span
-                    class="shrink-0 rounded-full border border-ink-200 px-2 py-0.5 text-[10px] font-bold text-ink-500"
+                    class="shrink-0 rounded-full border-2 border-ink-900 px-2 py-0.5 text-[10px] font-extrabold {meta.chipBg} {meta.chipInk}"
                   >
                     {meta.label}
                   </span>
                 {/if}
               </span>
-              <span class="mt-1 line-clamp-3 text-[13px] leading-snug text-ink-600">
+              <span class="mt-1 line-clamp-2 text-[13px] leading-snug text-ink-600 lg:line-clamp-3">
                 {cleanNewsText(n.content)}
               </span>
               <span class="mt-1.5 flex items-center gap-1 text-[11px] text-ink-400">

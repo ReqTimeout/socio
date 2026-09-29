@@ -147,6 +147,27 @@ export const load: PageServerLoad = async ({ locals }) => {
         .limit(5),
     ]);
 
+  // Fallback widget "Update": kalau tak ada berita <=14 hari (pengumuman lama,
+  // atau Service Sync belum memproduksi event), tampil 5 berita terbaru secara
+  // umum supaya widget tidak pernah kosong.
+  let newsFeed = recentNews;
+  if (newsFeed.length === 0) {
+    newsFeed = await db
+      .select({
+        id: news.id,
+        kategori: news.kategori,
+        content: news.content,
+        eventType: news.eventType,
+        serviceId: news.serviceId,
+        source: news.source,
+        createdAt: news.createdAt,
+      })
+      .from(news)
+      .where(eq(news.isHidden, 0))
+      .orderBy(desc(news.createdAt), desc(news.id))
+      .limit(5);
+  }
+
   // Isi 14 hari (0=paling lama, 13=hari ini) supaya chart selalu penuh.
   const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
   // Key tanggal lokal (bukan toISOString/UTC — hindari geser hari di WIB)
@@ -312,7 +333,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     categories: catRows,
     activeOrders: Number(statActive[0]?.count ?? 0),
     quickOrders,
-    newsFeed: recentNews,
+    newsFeed,
 
     stats: {
       totalOrders: Number(statOrders[0]?.count ?? 0),

@@ -36,6 +36,41 @@ async function tryExec(stmt: ReturnType<typeof sql>) {
   }
 }
 
+/**
+ * Lebarkan charset satu TABEL ke utf8mb4 bila kolom teks mentah-nya masih
+ * latin1/utf8mb3. Guard via information_schema → ALTER jalan sekali; boot
+ * berikutnya kolom sudah utf8mb4 → skip (tidak rebuild tiap restart).
+ * Memakai CONVERT TO (bukan MODIFY per kolom) supaya type/nullable/DEFAULT
+ * tiap kolom tetap utuh — penting karena categories INSERT mengandalkan
+ * DEFAULT '' pada name_raw.
+ */
+async function ensureTableUtf8mb4(table: string, probeColumn: string) {
+  try {
+    const res: any = await db.execute(
+      sql`SELECT CHARACTER_SET_NAME cs FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${table} AND COLUMN_NAME = ${probeColumn}`,
+    );
+    const rows = Array.isArray(res?.[0])
+      ? res[0]
+      : Array.isArray(res)
+        ? res
+        : [];
+    const cs = (rows[0] as { cs?: string } | undefined)?.cs;
+    if (!cs || cs === "utf8mb4") return; // kolom tak ada / sudah utf8mb4
+    await db.execute(
+      sql.raw(
+        `ALTER TABLE \`${table}\` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+      ),
+    );
+    console.log(`[ensure] ${table}: charset ${probeColumn} ${cs} → utf8mb4`);
+  } catch (e) {
+    console.error(
+      `[ensure] convert ${table} → utf8mb4 gagal:`,
+      (e as { message?: string })?.message ?? e,
+    );
+  }
+}
+
 export async function ensureAdminSchema() {
   if (ensured) return;
   ensured = true;
@@ -290,4 +325,13 @@ export async function ensureAdminSchema() {
       INDEX scl_event_idx (event, detected_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+
+  // ── Charset: tabel penampung teks MENTAH provider (bisa ada emoji 4-byte,
+  // mis. kategori "IMPOSSIBLE SERVICES ❤️"). ADD COLUMN service-sync v2 mewarisi
+  // charset tabel lama (latin1/utf8mb3) → INSERT/UPDATE "Incorrect string value"
+  // bikin runServiceSync crash total → berita layanan (harga naik/turun/baru/
+  // stop) tidak pernah terbentuk. Lebarkan ke utf8mb4 (guard, sekali jalan).
+  await ensureTableUtf8mb4("categories", "name_raw");
+  await ensureTableUtf8mb4("services", "service_name_raw");
+  await ensureTableUtf8mb4("news", "content");
 }
