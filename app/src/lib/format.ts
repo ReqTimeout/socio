@@ -7,6 +7,19 @@ export function formatNumber(n: number): string {
 }
 
 /**
+ * Buang karakter non-ASCII (emoji 4-byte, mojibake) supaya teks aman disimpan
+ * ke kolom ber-charset utf8mb3 (mis. balance_logs.note). Dipakai untuk catatan
+ * log order agar insert riwayat saldo tidak gagal saat nama layanan mengandung
+ * emoji (\u{1F1EE}\u{1F1E9} dsb). Idempotent untuk teks ASCII.
+ */
+export function asciiSafe(s: string): string {
+  return String(s ?? "")
+    .replace(/[^\x20-\x7E]+/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
  * Tanggal singkat konsisten antar halaman: "11 Apr 2023" (bukan "11/4/2023"
  * dari toLocaleDateString default yang ambigu dan berbeda format per-halaman).
  */
@@ -84,6 +97,9 @@ export function whitelabel(raw: string): string {
   s = s.replace(/(^|\||,|\s)\s*(Special Update|Own|Exclusive)\b/gi, "$1");
   s = s.replace(/\s{2,}/g, " ").trim();
   // buang pemisah menggantung di ujung hasil penghapusan (mis. "... -", "... |")
-  s = s.replace(/^(?:[-|,:;]\s*)+/, "").replace(/(?:\s*[-|,:;])+$/, "").trim();
+  s = s
+    .replace(/^(?:[-|,:;]\s*)+/, "")
+    .replace(/(?:\s*[-|,:;])+$/, "")
+    .trim();
   return s;
 }

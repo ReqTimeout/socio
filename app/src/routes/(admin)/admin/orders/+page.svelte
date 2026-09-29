@@ -431,11 +431,13 @@
               style="--d:{300 + i * 30}ms"
             >
               <td class="px-3 py-3 font-semibold tabular-nums text-ink-900">#{o.id}</td>
-              <td class="px-3 py-3 text-ink-700">{o.username ?? "—"}{#if (o as any).userLevel === "Admin"}
+              <td class="px-3 py-3 text-ink-700"
+                >{o.username ?? "—"}{#if (o as any).userLevel === "Admin"}
                   <span
                     class="ml-1 rounded-full bg-violet-100 px-1.5 py-px text-[10px] font-bold text-violet-700"
                     >Internal</span
-                  >{/if}</td>
+                  >{/if}</td
+              >
               <td class="max-w-xs px-3 py-3 text-ink-700">
                 <div class="flex items-center gap-2">
                   <span
@@ -499,7 +501,8 @@
                     <span class="truncate font-semibold text-ink-900">{o.serviceName}</span>
                   </div>
                   <p class="truncate text-xs text-ink-500">
-                    {o.username ?? "—"} · {orderBy(o.isApi)}{#if (o as any).userLevel === "Admin"} · <span
+                    {o.username ?? "—"} · {orderBy(o.isApi)}{#if (o as any).userLevel === "Admin"}
+                      · <span
                         class="rounded-full bg-violet-100 px-1.5 py-px text-[10px] font-bold text-violet-700"
                         >Internal</span
                       >{/if}
@@ -954,7 +957,9 @@
         rows="2"
         class="w-full rounded-xl border border-ink-200 px-3 py-2 text-sm"
       ></textarea>
-      <p class="text-[11px] text-ink-400">≥ Rp50.000 butuh approval admin kedua.</p>
+      <p class="text-[11px] text-ink-400">
+        Refund langsung dikembalikan ke saldo konsumen (tanpa approval kedua).
+      </p>
       <div class="flex gap-3">
         <Button type="button" variant="ghost" full onclick={() => (confirmRefund = false)}
           >Batal</Button

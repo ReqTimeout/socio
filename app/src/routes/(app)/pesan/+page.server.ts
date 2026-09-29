@@ -15,7 +15,7 @@ import { smmturkAddFor } from "@socio/core/smmturk";
 import { decryptSecret } from "$lib/server/crypto";
 import { getPricingRules } from "$lib/server/pricing";
 import { validateCoupon, consumeCoupon, releaseCoupon } from "$lib/server/coupons";
-import { whitelabel } from "$lib/format";
+import { whitelabel, asciiSafe } from "$lib/format";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
@@ -329,13 +329,17 @@ export const actions: Actions = {
       });
 
       // Saldo sudah dideduct atomik di awal (sebelum kontak provider).
+      // NOTE di-sanitize ke ASCII: balance_logs.note = utf8mb3 (3-byte) di TiDB,
+      // nama layanan ber-emoji (🇮🇩) bikin insert gagal → order bocor (live tapi ke-refund).
       await db.insert(balanceLogs).values({
         userId,
         type: "order",
         amount: -payable,
-        note: applyCode
-          ? `Pesan ${s.serviceName} (${oid}) — kupon ${applyCode}`
-          : `Pesan ${s.serviceName} (${oid})`,
+        note: asciiSafe(
+          applyCode
+            ? `Pesan ${s.serviceName} (${oid}) — kupon ${applyCode}`
+            : `Pesan ${s.serviceName} (${oid})`,
+        ),
         createdAt: new Date(),
       });
 
@@ -351,11 +355,15 @@ export const actions: Actions = {
           .update(users)
           .set({ balance: sql`${users.balance} + ${payable}` })
           .where(eq(users.id, userId));
-      } catch {}
+      } catch {
+        /* refund best-effort */
+      }
       if (couponId !== undefined) {
         try {
           await releaseCoupon(couponId);
-        } catch {}
+        } catch {
+          /* release best-effort */
+        }
       }
       const msg = String(e?.message ?? e);
       if (msg.startsWith("PROVIDER:")) {

@@ -1,5 +1,5 @@
 import { db } from "@socio/db";
-import { orders, users, balanceLogs } from "@socio/db/schema";
+import { orders, users } from "@socio/db/schema";
 import { sql, eq, ne, and, desc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
@@ -182,8 +182,8 @@ export const actions: Actions = {
   },
 
   /**
-   * Refund manual per order — via P3-03 dual-approval workflow.
-   * < Rp50k → auto-execute (langsung refund). >= Rp50k → pending approval admin kedua.
+   * Refund manual per order — LANGSUNG dieksekusi ke saldo konsumen (tanpa approval kedua).
+   * Tetap dijaga: assertAdmin + rate-limit + audit_log + CAS is_refund (anti refund ganda).
    */
   refund: async ({ request, locals }) => {
     assertAdmin(locals);
@@ -198,7 +198,12 @@ export const actions: Actions = {
     if (!reason) return fail(400, { error: "Alasan refund wajib diisi." });
 
     const [o] = await db
-      .select({ status: orders.status, userId: orders.userId, price: orders.price, isRefund: orders.isRefund })
+      .select({
+        status: orders.status,
+        userId: orders.userId,
+        price: orders.price,
+        isRefund: orders.isRefund,
+      })
       .from(orders)
       .where(eq(orders.id, id))
       .limit(1);
@@ -211,7 +216,8 @@ export const actions: Actions = {
     const price = Number(o.price) || 0;
     const want = rawAmount > 0 ? rawAmount : price;
     const refundAmount = Math.min(want, price);
-    if (refundAmount <= 0) return fail(400, { error: "Harga order 0 — tidak ada dana untuk di-refund." });
+    if (refundAmount <= 0)
+      return fail(400, { error: "Harga order 0 — tidak ada dana untuk di-refund." });
 
     try {
       const { requestRefund } = await import("$lib/server/refund");
@@ -222,13 +228,10 @@ export const actions: Actions = {
         requestedBy: Number(locals.user.id),
         ip: (locals as any).ip,
       });
-      if (res.auto) {
-        return { success: `Order #${id} di-refund otomatis Rp${refundAmount.toLocaleString("id-ID")} ( < Rp50k).` };
-      }
-      if (res.pending) {
-        return { success: `Refund Rp${refundAmount.toLocaleString("id-ID")} untuk order #${id} menunggu approval admin kedua (≥ Rp50k).` };
-      }
-      return { success: `Refund diproses.` };
+      const done = Number(res?.amount ?? refundAmount);
+      return {
+        success: `Order #${id} di-refund Rp${done.toLocaleString("id-ID")} langsung ke saldo konsumen.`,
+      };
     } catch (e: any) {
       return fail(400, { error: e?.message ?? "Gagal request refund." });
     }

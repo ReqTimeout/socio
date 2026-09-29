@@ -22,10 +22,10 @@
       <h1 class="font-display text-xl font-extrabold">Refund Requests</h1>
       <p class="mt-1 text-sm text-ink-500">
         {#if data.pendingCount > 0}
-          <span class="font-semibold text-amber-700">{data.pendingCount} pending</span> · butuh approval
-          admin kedua (≥ Rp50k)
+          <span class="font-semibold text-amber-700">{data.pendingCount} pending lama</span> · refund
+          baru langsung dieksekusi (tanpa approval)
         {:else}
-          Tidak ada pending — refund &lt; Rp50k auto-execute
+          Refund langsung dieksekusi ke saldo konsumen — tanpa approval kedua
         {/if}
       </p>
     </div>
@@ -84,7 +84,9 @@
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <p class="font-mono text-xs font-bold">Order #{r.orderId}</p>
-              <p class="truncate text-xs text-ink-500">{r.orderService ?? "-"} · @{r.username ?? r.userId}</p>
+              <p class="truncate text-xs text-ink-500">
+                {r.orderService ?? "-"} · @{r.username ?? r.userId}
+              </p>
               <p class="mt-0.5 text-[11px] text-ink-400">{fmtDate(r.createdAt)}</p>
             </div>
             <span
@@ -122,7 +124,9 @@
             {/if}
           </div>
           {#if r.reason}
-            <p class="mt-1.5 border-t border-ink-50 pt-1.5 text-xs text-ink-500">Alasan: {r.reason}</p>
+            <p class="mt-1.5 border-t border-ink-50 pt-1.5 text-xs text-ink-500">
+              Alasan: {r.reason}
+            </p>
           {/if}
         </li>
       {/each}

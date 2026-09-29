@@ -4,8 +4,6 @@ import { eq, and, sql } from "drizzle-orm";
 import { logAudit } from "./admin";
 import { notifyOrderUpdate } from "./notification";
 
-const THRESHOLD = 50000;
-
 export async function requestRefund(params: {
   orderId: number;
   amount: number;
@@ -29,68 +27,27 @@ export async function requestRefund(params: {
   if (o.isRefund) throw new Error(`Order #${orderId} sudah di-refund.`);
   if (!o.userId) throw new Error("Order tidak punya user.");
 
-  // Auto-execute if below threshold
-  if (amount < THRESHOLD) {
-    const res = await executeRefund({ orderId, amount, requestedBy, reason, ip, auto: true });
-    return { ...res, auto: true as const };
-  }
+  // Auto-execute langsung — TANPA approval admin kedua.
+  // Refund dari status provider (Error/Partial/Canceled) sudah otomatis via cron;
+  // refund manual admin pun harus LANGSUNG sampai ke saldo konsumen tanpa klik approve.
+  const res = await executeRefund({ orderId, amount, requestedBy, reason, ip });
 
-  // Create pending request (check duplicate pending)
-  const [existing] = await db
-    .select({ id: refundRequests.id })
-    .from(refundRequests)
-    .where(and(eq(refundRequests.orderId, orderId), eq(refundRequests.status, "pending")))
-    .limit(1);
-  if (existing) throw new Error(`Refund untuk order #${orderId} sudah pending approval.`);
-
-  const [row] = (await db
-    .insert(refundRequests)
-    .values({
-      orderId,
-      userId: Number(o.userId),
-      amount,
-      reason: reason.trim(),
-      requestedBy,
-      status: "pending",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .$returningId?.()) as any;
-
-  // Drizzle mysql may not return id via $returningId — fallback select
-  const insertedId =
-    row?.id ??
-    (await db
-      .select({ id: refundRequests.id })
-      .from(refundRequests)
-      .where(eq(refundRequests.orderId, orderId))
-      .orderBy(sql`${refundRequests.id} DESC`)
-      .limit(1)
-      .then((r) => r[0]?.id));
-
-  await logAudit({
-    adminId: requestedBy,
-    action: "request_refund",
-    entity: "order",
-    entityId: orderId,
-    detail: { amount, reason, requiresApproval: true },
-    ip,
+  // Catat di ledger refund_requests (status 'executed') supaya ada riwayat di
+  // /admin/refunds — BUKAN sebagai antrean approval.
+  await db.insert(refundRequests).values({
+    orderId,
+    userId: Number(o.userId),
+    amount: res.amount,
+    reason: reason.trim(),
+    requestedBy,
+    status: "executed",
+    approvedBy: requestedBy,
+    executedAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   });
 
-  // Alert admin: refund ≥ threshold butuh approval kedua.
-  try {
-    const { notifyAdmins } = await import("./email-templates");
-    const rupiah = "Rp" + Math.round(amount).toLocaleString("id-ID");
-    await notifyAdmins({
-      subject: `Refund ${rupiah} butuh approval — order #${orderId}`,
-      body: `Refund ${rupiah} untuk order #${orderId} menunggu approval admin kedua.\nAlasan: ${reason}`,
-      ctaText: "Buka approval",
-      ctaUrl: "https://app.socio.id/admin/refunds",
-      templateName: "admin-refund-request",
-    });
-  } catch {}
-
-  return { pending: true as const, requestId: insertedId, amount };
+  return { ...res, auto: true as const };
 }
 
 export async function executeRefund(params: {
@@ -150,7 +107,9 @@ export async function executeRefund(params: {
 
   try {
     await notifyOrderUpdate(o.userId, orderId, "Dana order dikembalikan admin");
-  } catch {}
+  } catch {
+    /* notif best-effort */
+  }
 
   return { executed: true as const, amount: refundAmount };
 }
