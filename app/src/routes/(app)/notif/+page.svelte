@@ -4,7 +4,6 @@
   import { copy } from "@socio/core/copy";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import { onMount } from "svelte";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
@@ -70,34 +69,6 @@
 
   let markAllBusy = $state(false);
 
-  // M12 — indicator mango di bawah chip filter aktif (diukur DOM, ikut filter/resize)
-  let chipRow: HTMLElement | null = $state(null);
-  let chipInd = $state({ left: 0, width: 0, show: false });
-  function placeChipInd() {
-    if (!chipRow) return;
-    const active = chipRow.querySelector<HTMLElement>('[data-active="true"]');
-    if (!active) {
-      chipInd.show = false;
-      return;
-    }
-    chipInd = { left: active.offsetLeft, width: active.offsetWidth, show: true };
-  }
-  onMount(() => {
-    placeChipInd();
-    const t = setTimeout(placeChipInd, 300);
-    const onRs = () => placeChipInd();
-    addEventListener("resize", onRs);
-    return () => {
-      clearTimeout(t);
-      removeEventListener("resize", onRs);
-    };
-  });
-  $effect(() => {
-    data.type; // track → reposisi tiap ganti filter
-    const t = setTimeout(placeChipInd, 60);
-    return () => clearTimeout(t);
-  });
-
   function markAll() {
     markAllBusy = true;
     // optimistic: semua tandai read
@@ -130,28 +101,22 @@
     {/if}
   </div>
 
-  <!-- Filter chips — min-h 44 for thumb; indicator mango M12 -->
+  <!-- Filter chips — min-h 44 for thumb; pop/neo-brutalist (border-2 + offset shadow) -->
   <div class="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-    <div class="relative flex w-fit gap-2" bind:this={chipRow}>
+    <div class="flex w-fit gap-2">
       {#each filters as f}
         <button
           onclick={() => selectType(f.v)}
           data-active={data.type === f.v ? "true" : undefined}
-          class="min-h-[44px] shrink-0 rounded-full px-3.5 py-2 pb-3 text-xs font-bold transition-all duration-200 active:scale-95
+          aria-pressed={data.type === f.v}
+          class="min-h-[44px] shrink-0 rounded-full border-2 px-4 py-2 text-xs font-bold transition-all duration-200 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
             {data.type === f.v
-            ? 'bg-primary text-white shadow-sm'
-            : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
+            ? 'border-ink-900 bg-primary text-white shadow-[2px_2px_0_var(--color-ink-900)]'
+            : 'border-ink-900 bg-surface text-ink-700 shadow-[2px_2px_0_var(--color-ink-900)] hover:bg-ink-50'}"
         >
           {f.label}
         </button>
       {/each}
-      <span
-        class="pointer-events-none absolute bottom-0 left-0 h-[3px] rounded-full motion-safe:transition-all motion-safe:duration-200"
-        style="transform: translateX({chipInd.left}px); width: {chipInd.width}px; opacity: {chipInd.show
-          ? 1
-          : 0}; background: var(--color-mango-500);"
-        aria-hidden="true"
-      ></span>
     </div>
   </div>
 

@@ -1,5 +1,5 @@
 import { db } from "@socio/db";
-import { orders, deposits, categories, promotionBanners, services } from "@socio/db/schema";
+import { orders, deposits, categories, promotionBanners, services, news } from "@socio/db/schema";
 import { eq, desc, and, gte, sql, lte, or, isNull, asc, inArray } from "drizzle-orm";
 import { getSetting } from "$lib/server/admin";
 import type { PageServerLoad } from "./$types";
@@ -51,7 +51,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   start.setDate(start.getDate() - 13);
   start.setHours(0, 0, 0, 0);
 
-  const [recent, statOrders, statDeposit, orderSeries, depositSeries, statActive] =
+  const [recent, statOrders, statDeposit, orderSeries, depositSeries, statActive, recentNews] =
     await Promise.all([
       db
         .select({
@@ -127,6 +127,24 @@ export const load: PageServerLoad = async ({ locals }) => {
             sql`lower(${orders.status}) in ('pending','proses','processing','in progress','refilling')`,
           ),
         ),
+
+      // Widget "Update" — 5 berita layanan terbaru dalam 14 hari (PRD Service Sync v2 §10).
+      // Campur source='sync' (event layanan) + 'manual' (pengumuman admin) supaya user
+      // tetap lihat pengumuman manual di tempat yang sama.
+      db
+        .select({
+          id: news.id,
+          kategori: news.kategori,
+          content: news.content,
+          eventType: news.eventType,
+          serviceId: news.serviceId,
+          source: news.source,
+          createdAt: news.createdAt,
+        })
+        .from(news)
+        .where(and(eq(news.isHidden, 0), sql`${news.createdAt} > DATE_SUB(NOW(), INTERVAL 14 DAY)`))
+        .orderBy(desc(news.createdAt), desc(news.id))
+        .limit(5),
     ]);
 
   // Isi 14 hari (0=paling lama, 13=hari ini) supaya chart selalu penuh.
@@ -294,6 +312,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     categories: catRows,
     activeOrders: Number(statActive[0]?.count ?? 0),
     quickOrders,
+    newsFeed: recentNews,
 
     stats: {
       totalOrders: Number(statOrders[0]?.count ?? 0),

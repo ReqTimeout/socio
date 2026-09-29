@@ -19,7 +19,9 @@ async function tryExec(stmt: ReturnType<typeof sql>) {
     await db.execute(stmt);
   } catch (e) {
     // Drizzle wraps MySQL errors in DrizzleQueryError → kode asli ada di e.cause.code.
-    const code = (e as { code?: string })?.code ?? (e as { cause?: { code?: string } })?.cause?.code;
+    const code =
+      (e as { code?: string })?.code ??
+      (e as { cause?: { code?: string } })?.cause?.code;
     // 1060 dup column, 1061 dup key, 1826 dup FK, 1091 can't drop
     if (
       code &&
@@ -233,6 +235,59 @@ export async function ensureAdminSchema() {
       end_at DATETIME DEFAULT NULL,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       INDEX banner_pos_idx (position, is_active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  // ─── PRD Service Sync v2 — kolom audit + raw + flag API provider ───
+  await tryExec(
+    sql`ALTER TABLE categories ADD COLUMN name_raw VARCHAR(512) NOT NULL DEFAULT ''`,
+  );
+  await tryExec(
+    sql`ALTER TABLE services ADD COLUMN service_name_raw VARCHAR(255) NOT NULL DEFAULT ''`,
+  );
+  await tryExec(sql`ALTER TABLE services ADD COLUMN description TEXT NULL`);
+  await tryExec(
+    sql`ALTER TABLE services ADD COLUMN description_locked TINYINT NOT NULL DEFAULT 0`,
+  );
+  await tryExec(
+    sql`ALTER TABLE services ADD COLUMN allow_cancel TINYINT NOT NULL DEFAULT 0`,
+  );
+  await tryExec(
+    sql`ALTER TABLE services ADD COLUMN is_dripfeed TINYINT NOT NULL DEFAULT 0`,
+  );
+  await tryExec(sql`ALTER TABLE services ADD COLUMN created_at DATETIME NULL`);
+  await tryExec(sql`ALTER TABLE services ADD COLUMN updated_at DATETIME NULL`);
+  await tryExec(
+    sql`ALTER TABLE services ADD COLUMN price_changed_at DATETIME NULL`,
+  );
+
+  // news integrasi sync (PRD §10)
+  await tryExec(
+    sql`ALTER TABLE news ADD COLUMN event_type VARCHAR(32) NOT NULL DEFAULT 'manual'`,
+  );
+  await tryExec(
+    sql`ALTER TABLE news ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT 'manual'`,
+  );
+  await tryExec(
+    sql`ALTER TABLE news ADD COLUMN service_id INT NOT NULL DEFAULT 0`,
+  );
+  await tryExec(
+    sql`ALTER TABLE news ADD COLUMN is_hidden TINYINT NOT NULL DEFAULT 0`,
+  );
+
+  // service_changelog (PRD §6.3) — tabel baru
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS service_changelog (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      provider_id INT NOT NULL,
+      service_id INT NOT NULL DEFAULT 0,
+      event ENUM('created','name_changed','category_changed','price_up','price_down','minmax_changed','type_changed','refill_changed','cancel_changed','dripfeed_changed','enabled','disabled') NOT NULL,
+      field VARCHAR(32) DEFAULT NULL,
+      old_value TEXT DEFAULT NULL,
+      new_value TEXT DEFAULT NULL,
+      detected_at DATETIME NOT NULL,
+      INDEX scl_service_idx (service_id, detected_at),
+      INDEX scl_event_idx (event, detected_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
 }

@@ -20,6 +20,7 @@
   import { copy } from "@socio/core/copy";
   import { onMount } from "svelte";
   import { formatRupiah, serviceDisplayName } from "$lib/format";
+  import { newsMeta, isOrderableEvent, cleanNewsText } from "$lib/news-meta";
 
   let { data } = $props();
 
@@ -137,6 +138,8 @@
     if (days < 30) return `${days} hari lalu`;
     return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
   }
+
+  // Widget "Update" memakai newsMeta() dari $lib/news-meta (dipakai bersama /berita).
 
   const hasActivity = $derived(
     data.chart.orders.some((v: number) => v > 0) || data.chart.deposits.some((v: number) => v > 0),
@@ -437,6 +440,59 @@
       </div>
     {/if}
   </div>
+
+  <!-- Widget "Update" — berita layanan terbaru 14 hari (PRD Service Sync v2 §10).
+       Klik baris orderable (layanan baru/harga) → /pesan?service=<id>.
+       Dihentikan/manual → /berita. Section TIDAK dirender saat list kosong. -->
+  {#if data.newsFeed?.length}
+    <div class="reveal" style={revealDelay(0, 120)}>
+      <div class="mb-2.5 flex items-center justify-between">
+        <h2 class="sec-title font-display text-base font-extrabold tracking-tight lg:text-[17px]">
+          Update
+        </h2>
+        <a
+          href="/berita"
+          class="inline-flex items-center gap-0.5 text-xs font-semibold text-ink-500 transition-colors hover:text-ink-800"
+        >
+          Semua <Icon name="chevron_right" size={12} stroke={2.5} />
+        </a>
+      </div>
+      <div
+        class="overflow-hidden rounded-2xl border-2 border-ink-900 bg-surface shadow-[2px_2px_0_var(--color-ink-900)]"
+      >
+        <ul class="divide-y divide-ink-100">
+          {#each data.newsFeed as n (n.id)}
+            {@const meta = newsMeta(n.eventType)}
+            {@const orderable = n.serviceId > 0 && isOrderableEvent(n.eventType)}
+            <li>
+              <a
+                href={orderable ? `/pesan?service=${n.serviceId}` : "/berita"}
+                onclick={() => haptic(8)}
+                class="group flex items-center gap-3 px-3.5 py-2.5 transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 lg:px-4 lg:py-3"
+              >
+                <span
+                  class="grid h-9 w-9 shrink-0 place-items-center rounded-xl {meta.chipBg} {meta.chipInk} transition-transform group-hover:scale-105"
+                >
+                  <Icon name={meta.icon} size={16} stroke={2} />
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-sm font-bold leading-tight text-ink-800">
+                    {cleanNewsText(n.kategori) || meta.label}
+                  </span>
+                  <span class="mt-0.5 block line-clamp-2 text-xs leading-snug text-ink-500">
+                    {cleanNewsText(n.content)}
+                  </span>
+                </span>
+                <span class="shrink-0 text-[11px] tabular-nums text-ink-400">
+                  {timeAgo(n.createdAt)}
+                </span>
+              </a>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    </div>
+  {/if}
 
   <!-- INLINE-STAT (P3-04): mobile = ledger rows (label kiri · angka kanan, tidak
        pernah cramped), desktop (sm+) = 3 kolom. VIP ribbon berdiri sendiri di atas

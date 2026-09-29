@@ -233,10 +233,10 @@
           onclick={() => select(t.f)}
           data-active={isActive ? "true" : undefined}
           aria-current={isActive ? "true" : undefined}
-          class="min-h-[44px] shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all duration-200 active:scale-95
+          class="min-h-[44px] shrink-0 rounded-full border-2 px-4 py-2 text-xs font-bold transition-all duration-200 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
             {isActive
-            ? 'bg-primary text-white shadow-sm'
-            : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
+            ? 'border-ink-900 bg-primary text-white shadow-[2px_2px_0_var(--color-ink-900)]'
+            : 'border-ink-900 bg-surface text-ink-700 shadow-[2px_2px_0_var(--color-ink-900)] hover:bg-ink-50'}"
         >
           {t.label}
           {#if c > 0}

@@ -1,4 +1,5 @@
 import {
+  datetime,
   double,
   int,
   mysqlTable,
@@ -12,6 +13,8 @@ import {
 export const categories = mysqlTable("categories", {
   id: int("id").autoincrement().primaryKey(),
   name: text("name").notNull(),
+  /** PRD Service Sync v2 — nama kategori MENTAH dari provider (admin-only). */
+  nameRaw: varchar("name_raw", { length: 512 }).notNull().default(""),
 });
 
 export type Category = typeof categories.$inferSelect;
@@ -55,6 +58,17 @@ export const services = mysqlTable(
     providerServiceId: int("provider_service_id").notNull(),
     waktu: text("waktu").notNull(),
     isRefill: tinyint("is_refill").notNull().default(0),
+    /** PRD Service Sync v2 — kolom audit + raw + flag API provider. */
+    serviceNameRaw: varchar("service_name_raw", { length: 255 })
+      .notNull()
+      .default(""),
+    description: text("description"),
+    descriptionLocked: tinyint("description_locked").notNull().default(0),
+    allowCancel: tinyint("allow_cancel").notNull().default(0),
+    isDripfeed: tinyint("is_dripfeed").notNull().default(0),
+    createdAt: datetime("created_at"),
+    updatedAt: datetime("updated_at"),
+    priceChangedAt: datetime("price_changed_at"),
   },
   (t) => ({
     categoryIdx: index("category_id_idx").on(t.categoryId),
