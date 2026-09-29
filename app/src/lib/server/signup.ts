@@ -130,6 +130,13 @@ export async function sendMemberVerificationEmail(userId: number): Promise<boole
     subject: "Verifikasi email — Socio.id",
     ...verificationEmail(link),
   });
+  // U-11: catat hasil kirim supaya bisa diaudit per-user (kolom sent_mail) dan
+  // halaman /verifikasi bisa menampilkan status kegagalan alih-alih diam-diam.
+  if (sent) {
+    await db.update(users).set({ sentMail: true }).where(eq(users.id, userId));
+  } else {
+    console.error(`[signup] verification email NOT delivered userId=${userId} email=${u.email}`);
+  }
   return sent;
 }
 

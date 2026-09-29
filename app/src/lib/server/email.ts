@@ -31,9 +31,12 @@ interface SendArgs {
 /**
  * Send transactional email.
  *
- * Provider priority:
- *   1. SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS (self-hosted, default)
- *   2. RESEND_API_KEY (legacy fallback for staging without mailserver)
+ * Provider priority (2026-09-29, keputusan deliverability):
+ *   1. RESEND_API_KEY — IP pool bersih + PTR/DMARC sehat. IP Contabo sendiri
+ *      (130.254.47.93) di-block Gmail (550 5.7.25 missing PTR + 421 4.7.28
+ *      rate-limit) sehingga email verifikasi user hilang tanpa kabar.
+ *   2. SMTP_HOST/PORT/USER/PASS (self-hosted) — fallback kalau Resend tidak
+ *      tersedia / gagal.
  *
  * If no provider is configured, the email is logged to the server console
  * (dev / pre-email-setup). This keeps auth flows functional before the
@@ -41,8 +44,9 @@ interface SendArgs {
  */
 export async function sendEmail({ to, subject, html, text }: SendArgs): Promise<boolean> {
   const useSmtp = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
+  const useResend = Boolean(RESEND_API_KEY);
 
-  if (!useSmtp && !RESEND_API_KEY) {
+  if (!useSmtp && !useResend) {
     if (dev) {
       console.info(`[email:dev] to=${to} subject="${subject}"\n${text ?? html}`);
     }
@@ -50,10 +54,13 @@ export async function sendEmail({ to, subject, html, text }: SendArgs): Promise<
   }
 
   try {
-    if (useSmtp) {
+    if (useResend) {
+      const ok = await sendViaResend({ to, subject, html, text });
+      if (ok) return true;
+      if (!useSmtp) return false;
       return await sendViaSmtp({ to, subject, html, text });
     }
-    return await sendViaResend({ to, subject, html, text });
+    return await sendViaSmtp({ to, subject, html, text });
   } catch (e) {
     console.error("[email] exception", e);
     return false;

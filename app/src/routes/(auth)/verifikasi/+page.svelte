@@ -33,24 +33,56 @@
         >Masuk ke akun →</a
       >
     {:else if data.resent}
-      <div
-        class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-primary-100 text-primary animate-[popIn_380ms_var(--ease-out-soft)_both]"
-      >
-        <Icon name="mail" size={30} stroke={2} />
-      </div>
-      <h1
-        class="font-display font-bold text-2xl text-ink-900 animate-[authIn_380ms_var(--ease-out-soft)_80ms_both]"
-      >
-        Link terkirim
-      </h1>
-      <p class="text-ink-500 mt-2 text-sm">
-        Jika email <b>{data.email || "tersebut"}</b> terdaftar, link verifikasi baru sudah dikirim. Cek
-        inbox &amp; spam.
-      </p>
-      <p class="text-ink-500 mt-1 text-[11px]">Berlaku 24 jam.</p>
-      <a href="/login" class="mt-6 inline-block font-semibold text-primary hover:text-primary-700"
-        >Kembali ke masuk →</a
-      >
+      {#if data.sendFailed}
+        <div
+          class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-danger-soft text-danger animate-[popIn_380ms_var(--ease-out-soft)_both]"
+        >
+          <Icon name="alert" size={30} stroke={2} />
+        </div>
+        <h1
+          class="font-display font-bold text-2xl text-ink-900 animate-[authIn_380ms_var(--ease-out-soft)_80ms_both]"
+        >
+          Email gagal dikirim
+        </h1>
+        <p class="text-ink-500 mt-2 text-sm">
+          Sistem kami menolak mengirim link verifikasi ke <b>{data.email || "email tersebut"}</b>.
+          Akun Anda tetap aktif — silakan <b>coba kirim ulang</b> beberapa saat lagi, atau pakai
+          email dari penyedia lain (mis. Gmail) lewat menu <b>Ubah Email</b> setelah masuk.
+        </p>
+        <form
+          method="GET"
+          action="/verifikasi"
+          class="mt-6 space-y-3 rounded-2xl border border-ink-100 bg-surface p-4 text-left"
+        >
+          <input type="hidden" name="resend" value="1" />
+          <input type="hidden" name="email" value={data.email ?? ""} />
+          <Button type="submit" full><span class="btn-arrow">Coba kirim ulang</span></Button>
+        </form>
+        <a
+          href="/login"
+          class="mt-4 inline-block text-xs font-medium text-ink-500 hover:text-ink-600"
+          >← Masuk dulu (ubah email di profil)</a
+        >
+      {:else}
+        <div
+          class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-primary-100 text-primary animate-[popIn_380ms_var(--ease-out-soft)_both]"
+        >
+          <Icon name="mail" size={30} stroke={2} />
+        </div>
+        <h1
+          class="font-display font-bold text-2xl text-ink-900 animate-[authIn_380ms_var(--ease-out-soft)_80ms_both]"
+        >
+          Link terkirim
+        </h1>
+        <p class="text-ink-500 mt-2 text-sm">
+          Jika email <b>{data.email || "tersebut"}</b> terdaftar, link verifikasi baru sudah dikirim.
+          Cek inbox &amp; spam.
+        </p>
+        <p class="text-ink-500 mt-1 text-[11px]">Berlaku 24 jam.</p>
+        <a href="/login" class="mt-6 inline-block font-semibold text-primary hover:text-primary-700"
+          >Kembali ke masuk →</a
+        >
+      {/if}
     {:else}
       <div
         class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-warning-soft text-warning animate-[popIn_380ms_var(--ease-out-soft)_both]"

@@ -10,6 +10,7 @@ export const load: PageServerLoad = async ({ url }) => {
 
   // Kirim ulang verifikasi (jika user gagal login & klik "Kirim ulang").
   if (url.searchParams.get("resend") === "1" && email) {
+    let sent: boolean | null = null;
     try {
       const [u] = await db
         .select({ id: users.id })
@@ -18,12 +19,15 @@ export const load: PageServerLoad = async ({ url }) => {
         .limit(1);
       if (u) {
         const { sendMemberVerificationEmail } = await import("$lib/server/signup");
-        await sendMemberVerificationEmail(Number(u.id));
+        sent = await sendMemberVerificationEmail(Number(u.id));
       }
-    } catch {
-      // best-effort — silent
+    } catch (e) {
+      console.error("[verifikasi] resend failed", (e as Error)?.message);
+      sent = false;
     }
-    return { ok: null as boolean | null, resent: true, email };
+    // U-11: `sent=false` → email ditolak mailserver; UI menampilkan banner
+    // pemulihan alih-alih pura-pura "link terkirim".
+    return { ok: null as boolean | null, resent: true, sendFailed: sent === false, email };
   }
 
   if (!token) throw redirect(303, "/login");
@@ -46,7 +50,7 @@ export const load: PageServerLoad = async ({ url }) => {
     .limit(1);
 
   if (!row) {
-    return { ok: false as boolean | null, resent: false, email };
+    return { ok: false as boolean | null, resent: false, sendFailed: false, email };
   }
 
   const userEmail = row.identifier.slice("email-verification:".length);
@@ -63,5 +67,5 @@ export const load: PageServerLoad = async ({ url }) => {
     .delete(verifications)
     .where(like(verifications.identifier, `email-verification:${userEmail}`));
 
-  return { ok: true as boolean | null, resent: false, email: userEmail };
+  return { ok: true as boolean | null, resent: false, sendFailed: false, email: userEmail };
 };
