@@ -82,7 +82,8 @@ export function whitelabel(raw: string): string {
   s = s.replace(/[:,\-\u2013]\s*[^|]*\bSMMT[UÜ]RK\b[^|]*$/gi, "");
   s = s.replace(/SMMT[UÜ]RK/gi, "Socio");
   s = s.replace(/(^|\||,|\s)\s*(Special Update|Own|Exclusive)\b/gi, "$1");
-  s = s.replace(/[ ,]+$/, "").replace(/^[ ,]+/, "");
   s = s.replace(/\s{2,}/g, " ").trim();
+  // buang pemisah menggantung di ujung hasil penghapusan (mis. "... -", "... |")
+  s = s.replace(/^(?:[-|,:;]\s*)+/, "").replace(/(?:\s*[-|,:;])+$/, "").trim();
   return s;
 }
