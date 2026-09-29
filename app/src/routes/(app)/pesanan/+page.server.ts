@@ -200,10 +200,12 @@ export const actions: Actions = {
       }
     }
 
-    // Update status + refund saldo (CAS: hanya 1 cancel yang lolos → idempotent)
+    // Update status + refund saldo (CAS: hanya 1 cancel yang lolos → idempotent).
+    // Sekaligus set is_refund=1 supaya cron auto-refund TIDAK refund dua kali
+    // (refund manual di sini sudah menandai order selesai-nya-refund).
     const res: any = await db
       .update(orders)
-      .set({ status: "Canceled", updatedAt: new Date() })
+      .set({ status: "Canceled", isRefund: 1, updatedAt: new Date() })
       .where(and(eq(orders.id, orderId), eq(orders.status, "Pending")));
     const claimed = Array.isArray(res) ? res[0]?.affectedRows : res?.affectedRows;
     if (Number(claimed ?? 1) === 0)
@@ -265,8 +267,8 @@ export const actions: Actions = {
       }
       await db
         .update(orders)
-        .set({ status: "Canceled", updatedAt: new Date() })
-        .where(eq(orders.id, o.id));
+        .set({ status: "Canceled", isRefund: 1, updatedAt: new Date() })
+        .where(and(eq(orders.id, o.id), eq(orders.status, "Pending")));
       refunded += Number(o.price);
     }
 

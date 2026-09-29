@@ -36,30 +36,37 @@ export async function runAutoRefund(): Promise<void> {
         continue;
       }
 
-      // CAS supaya 2 proses tidak refund ganda
-      const [claim]: any[] = await db
-        .update(orders)
-        .set({ isRefund: 1, price: sql`GREATEST(${orders.price} - ${refundAmount}, 0)` })
-        .where(and(eq(orders.id, o.id), eq(orders.isRefund, 0)));
-      const affected = Number(claim?.affectedRows ?? 1);
-      if (affected === 0) continue; // sudah di-refund proses lain
-
-      await db
-        .update(users)
-        .set({ balance: sql`${users.balance} + ${refundAmount}` })
-        .where(eq(users.id, o.userId));
-      await db.insert(balanceLogs).values({
-        userId: o.userId,
-        type: "ref",
-        amount: refundAmount,
-        note: `Pengembalian dana otomatis (${o.status}) — order #${o.id}`,
-        createdAt: new Date(),
+      // Klaim CAS + kredit saldo + catat log dalam SATU transaksi. Kalau salah
+      // satu gagal (mis. DB transient), seluruhnya rollback sehingga is_refund
+      // tetap 0 → order ini dicoba lagi di run berikutnya (tidak under-refund).
+      let credited = 0;
+      await db.transaction(async (tx) => {
+        const [claim]: any[] = await tx
+          .update(orders)
+          .set({ isRefund: 1, price: sql`GREATEST(${orders.price} - ${refundAmount}, 0)` })
+          .where(and(eq(orders.id, o.id), eq(orders.isRefund, 0)));
+        const affected = Number(claim?.affectedRows ?? 1);
+        if (affected === 0) return; // sudah di-refund proses lain
+        await tx
+          .update(users)
+          .set({ balance: sql`${users.balance} + ${refundAmount}` })
+          .where(eq(users.id, o.userId));
+        await tx.insert(balanceLogs).values({
+          userId: o.userId,
+          type: "ref",
+          amount: refundAmount,
+          note: `Pengembalian dana otomatis (${o.status}) - order #${o.id}`,
+          createdAt: new Date(),
+        });
+        credited = refundAmount;
       });
-      refunded++;
-      try {
-        await notifyOrderUpdate(o.userId, o.id, `${o.status} (dananya dikembalikan)`);
-      } catch {
-        // notif best-effort
+      if (credited > 0) {
+        refunded++;
+        try {
+          await notifyOrderUpdate(o.userId, o.id, `${o.status} (dananya dikembalikan)`);
+        } catch {
+          // notif best-effort
+        }
       }
     } catch (e) {
       console.error(`[cron] auto-refund order ${o.id} failed:`, e);
