@@ -54,6 +54,11 @@ import { whitelabel } from "$lib/format";
 const MANUAL_OFF_TAG = "[manual-off]";
 const NEWS_CAP_PER_SYNC = 20;
 const NEWS_DEDUPE_HOURS = 24;
+// Ambang berita harga: perubahan lebih kecil dari INI = noise kurs/pembulatan →
+// tidak dijadikan berita (tetap dicatat di service_changelog). Harus lolos
+// keduanya: ≥ 2% DAN ≥ Rp 100 /1k.
+const PRICE_NEWS_MIN_PCT = 2;
+const PRICE_NEWS_MIN_ABS = 100;
 
 type ChangelogEvent =
   | "created"
@@ -272,7 +277,7 @@ export async function runServiceSync(providerId: number): Promise<void> {
           });
           newsCandidates.push({
             kategori: "Layanan Baru",
-            content: `Layanan baru tersedia: ${dispName}`,
+            content: `Layanan baru tersedia: ${dispName} — Rp ${rpFmt.format(priceMember)} /1k`,
             eventType: "new_service",
             serviceId: newSvcId,
           });
@@ -403,6 +408,12 @@ export async function runServiceSync(providerId: number): Promise<void> {
             });
             if (d.event === "price_up" || d.event === "price_down") {
               priceChanges[d.event === "price_up" ? "up" : "down"]++;
+              // Berita hanya untuk perubahan harga signifikan (filter noise kurs).
+              const oldP = Number(d.old);
+              const curP = Number(d.cur);
+              const deltaAbs = Math.abs(curP - oldP);
+              const deltaPct = oldP > 0 ? (deltaAbs / oldP) * 100 : 100;
+              if (deltaPct < PRICE_NEWS_MIN_PCT || deltaAbs < PRICE_NEWS_MIN_ABS) continue;
               const isUp = d.event === "price_up";
               newsCandidates.push({
                 kategori: isUp ? "Harga Naik" : "Harga Turun",
