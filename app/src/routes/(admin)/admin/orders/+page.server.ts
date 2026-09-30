@@ -67,13 +67,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       })
       .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
-      .leftJoin(
-        services,
-        and(
-          eq(services.providerId, orders.providerId),
-          eq(services.providerServiceId, orders.serviceId),
-        ),
-      )
+      // orders.service_id menyimpan services.id (internal PK row), bukan
+      // services.provider_service_id (external SMMturk id). Cek pesan/+page
+      // .server.ts L311 & api/v1/+server.ts L264 insert `serviceId: svc.id`.
+      .leftJoin(services, eq(services.id, orders.serviceId))
       .where(where)
       .orderBy(desc(orders.id))
       .limit(limit)
