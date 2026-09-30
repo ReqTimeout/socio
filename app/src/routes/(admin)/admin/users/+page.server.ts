@@ -1,5 +1,5 @@
 import { db } from "@socio/db";
-import { users, balanceLogs } from "@socio/db/schema";
+import { users, balanceLogs, balanceRequests } from "@socio/db/schema";
 import { sql, eq, ne, and, desc, inArray } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
@@ -77,6 +77,31 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     balance: Number(s.balance),
   };
 
+  // P2.1 (G3): dual-control — daftar request adjust saldo > cap menunggu approval.
+  const pend = await db
+    .select()
+    .from(balanceRequests)
+    .where(eq(balanceRequests.status, "pending"))
+    .orderBy(desc(balanceRequests.createdAt))
+    .limit(50);
+  const nameIds = [...new Set(pend.flatMap((r) => [r.userId, r.requestedBy]))];
+  const nameRows = nameIds.length
+    ? await db
+        .select({ id: users.id, username: users.username })
+        .from(users)
+        .where(inArray(users.id, nameIds))
+    : [];
+  const nameMap = new Map(nameRows.map((n) => [n.id, n.username]));
+  const pendingBalance = pend.map((r) => ({
+    id: r.id,
+    userId: r.userId,
+    amount: r.amount,
+    reason: r.reason,
+    createdAt: r.createdAt,
+    username: nameMap.get(r.userId) ?? `#${r.userId}`,
+    requestedByName: nameMap.get(r.requestedBy) ?? `#${r.requestedBy}`,
+  }));
+
   return {
     users: rows,
     q,
@@ -88,6 +113,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     total,
     pages: Math.ceil(total / limit),
     stats,
+    pendingBalance,
   };
 };
 
@@ -119,12 +145,32 @@ export const actions: Actions = {
     if (!Number.isFinite(amount) || amount === 0)
       return fail(400, { error: "Nominal tidak valid (bukan 0)." });
     if (reason.length < 5) return fail(400, { error: "Alasan minimal 5 karakter (audit trail)." });
-    if (Math.abs(amount) > ADJUST_HARD_CAP)
-      return fail(400, {
-        error: `Penyesuaian > Rp${ADJUST_HARD_CAP.toLocaleString(
-          "id-ID",
-        )} butuh dual-control (belum tersedia). Gunakan deposit resmi atau pecah nominal.`,
+    if (Math.abs(amount) > ADJUST_HARD_CAP) {
+      // P2.1 (G3): > cap tidak langsung blokir — diajukan sebagai request
+      // dual-control, baru dieksekusi setelah admin KEDUA menyetujui.
+      await db.insert(balanceRequests).values({
+        userId: id,
+        amount,
+        reason,
+        requestedBy: Number(locals.user!.id),
+        status: "pending",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
+      await logAudit({
+        adminId: Number(locals.user!.id),
+        action: "request_balance_adjust",
+        entity: "user",
+        entityId: id,
+        detail: { amount, reason, overCap: true },
+        ip: (locals as any).ip,
+      });
+      return {
+        success: `Nominal di atas cap Rp${ADJUST_HARD_CAP.toLocaleString(
+          "id-ID",
+        )} — diajukan sebagai request dual-control, menunggu approval admin kedua.`,
+      };
+    }
 
     // A-P0a: ATOMIK `balance+amount` (bukan read-then-write) anti race.
     let username = "";
@@ -169,6 +215,117 @@ export const actions: Actions = {
     return {
       success: `Saldo ${username} ${amount >= 0 ? "+" : ""}${amount.toLocaleString("id-ID")}.`,
     };
+  },
+
+  /**
+   * P2.1 (G3): setujui request adjust saldo dual-control. Admin kedua harus
+   * berbeda dari pemohon (four-eyes). Eksekusi atomik sama seperti adjust.
+   */
+  approveBalance: async ({ request, locals }) => {
+    assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "users:edit");
+    if (_g) return _g;
+    const _rate = await assertAdminRate(
+      "user-approve-balance",
+      (locals as any).ip ?? "0.0.0.0",
+      10,
+      60,
+    );
+    if (_rate) return _rate;
+    const form = await request.formData();
+    const rid = Number(form.get("rid"));
+    if (!Number.isFinite(rid) || rid <= 0) return fail(400, { error: "ID request tidak valid." });
+    const adminId = Number(locals.user!.id);
+    const [req] = await db
+      .select()
+      .from(balanceRequests)
+      .where(eq(balanceRequests.id, rid))
+      .limit(1);
+    if (!req) return fail(404, { error: "Request tidak ditemukan." });
+    if (req.status !== "pending") return fail(409, { error: "Request sudah diproses." });
+    if (req.requestedBy === adminId)
+      return fail(403, { error: "Dual-control: admin kedua harus berbeda dari pemohon." });
+    let username = "";
+    try {
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT id FROM users WHERE id = ${req.userId} FOR UPDATE`);
+        const [u] = await tx
+          .select({ username: users.username })
+          .from(users)
+          .where(eq(users.id, req.userId))
+          .limit(1);
+        if (!u) throw new Error("USER_NOT_FOUND");
+        username = u.username;
+        await tx
+          .update(users)
+          .set({ balance: sql`${users.balance} + ${req.amount}` })
+          .where(eq(users.id, req.userId));
+        await tx.insert(balanceLogs).values({
+          userId: req.userId,
+          type: req.amount > 0 ? "plus" : "minus",
+          amount: req.amount,
+          note: `Adjust dual-control disetujui: ${req.reason}`,
+          createdAt: new Date(),
+        });
+        await tx
+          .update(balanceRequests)
+          .set({ status: "approved", reviewedBy: adminId, updatedAt: new Date() })
+          .where(eq(balanceRequests.id, rid));
+      });
+    } catch (e) {
+      if ((e as Error)?.message === "USER_NOT_FOUND")
+        return fail(404, { error: "User tidak ditemukan." });
+      console.error("[users.approveBalance] failed", (e as Error)?.message);
+      return fail(500, { error: "Gagal menyetujui request." });
+    }
+    await logAudit({
+      adminId,
+      action: "approve_balance_adjust",
+      entity: "balance_request",
+      entityId: rid,
+      detail: { userId: req.userId, amount: req.amount },
+      ip: (locals as any).ip,
+    });
+    return {
+      success: `Request adjust ${req.amount.toLocaleString("id-ID")} untuk ${username} disetujui.`,
+    };
+  },
+
+  /** P2.1 (G3): tolak request adjust dual-control (catatan opsional). */
+  rejectBalance: async ({ request, locals }) => {
+    assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "users:edit");
+    if (_g) return _g;
+    const form = await request.formData();
+    const rid = Number(form.get("rid"));
+    const note = String(form.get("note") ?? "").trim();
+    if (!Number.isFinite(rid) || rid <= 0) return fail(400, { error: "ID request tidak valid." });
+    const adminId = Number(locals.user!.id);
+    const [req] = await db
+      .select()
+      .from(balanceRequests)
+      .where(eq(balanceRequests.id, rid))
+      .limit(1);
+    if (!req) return fail(404, { error: "Request tidak ditemukan." });
+    if (req.status !== "pending") return fail(409, { error: "Request sudah diproses." });
+    await db
+      .update(balanceRequests)
+      .set({
+        status: "rejected",
+        reviewedBy: adminId,
+        reviewNote: note || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(balanceRequests.id, rid));
+    await logAudit({
+      adminId,
+      action: "reject_balance_adjust",
+      entity: "balance_request",
+      entityId: rid,
+      detail: { userId: req.userId, amount: req.amount, note },
+      ip: (locals as any).ip,
+    });
+    return { success: "Request adjust ditolak." };
   },
 
   suspend: async ({ request, locals }) => {

@@ -194,6 +194,8 @@ export const actions: Actions = {
    */
   encryptAll: async ({ locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "providers:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "provider-encrypt-all",
       (locals as any).ip ?? "0.0.0.0",

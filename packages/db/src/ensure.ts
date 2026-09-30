@@ -326,6 +326,39 @@ export async function ensureAdminSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
 
+  // ── balance_requests (G3 dual-control): penyesuaian saldo admin > hard cap
+  // butuh approval admin kedua sebelum dieksekusi. Pola reuse refund_requests.
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS balance_requests (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      amount DOUBLE NOT NULL,
+      reason VARCHAR(255) NOT NULL DEFAULT '',
+      requested_by INT NOT NULL,
+      status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+      reviewed_by INT DEFAULT NULL,
+      review_note VARCHAR(255) DEFAULT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX br_user_idx (user_id),
+      INDEX br_status_idx (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  // ── api_usage (G20): rekam pemakaian API publik /api/v1 per user/key/action.
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS api_usage (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT DEFAULT NULL,
+      action VARCHAR(32) NOT NULL DEFAULT '',
+      ok TINYINT NOT NULL DEFAULT 1,
+      ip VARCHAR(64) DEFAULT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX au_user_idx (user_id, created_at),
+      INDEX au_created_idx (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
   // ── Charset: tabel penampung teks MENTAH provider (bisa ada emoji 4-byte,
   // mis. kategori "IMPOSSIBLE SERVICES ❤️"). ADD COLUMN service-sync v2 mewarisi
   // charset tabel lama (latin1/utf8mb3) → INSERT/UPDATE "Incorrect string value"

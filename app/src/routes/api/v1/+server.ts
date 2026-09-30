@@ -1,6 +1,14 @@
 import { json } from "@sveltejs/kit";
 import { db } from "@socio/db";
-import { users, services, categories, orders, provider, balanceLogs } from "@socio/db/schema";
+import {
+  users,
+  services,
+  categories,
+  orders,
+  provider,
+  balanceLogs,
+  apiUsage,
+} from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { smmturkAddFor, smmturkRefill } from "@socio/core/smmturk";
 import { baseForLevel, effectivePer1k, computePrice, type UserLevel } from "@socio/core/pricing";
@@ -31,6 +39,34 @@ async function authByKey(apiKey: string) {
   return u;
 }
 
+/**
+ * P2.3 (G20): catat pemakaian API ke tabel api_usage secara best-effort.
+ * Fire-and-forget (tak di-await pemanggil), resolve userId dari api_key,
+ * tak pernah melempar error ke jalur request utama.
+ */
+function recordApiUsage(args: { action: string; apiKey: string; ip: string; ok: boolean }) {
+  void (async () => {
+    try {
+      const [u] = args.apiKey
+        ? await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.apiKey, args.apiKey))
+            .limit(1)
+        : [];
+      await db.insert(apiUsage).values({
+        userId: u?.id ?? null,
+        action: args.action.slice(0, 32),
+        ok: args.ok ? 1 : 0,
+        ip: args.ip.slice(0, 64),
+        createdAt: new Date(),
+      });
+    } catch (e) {
+      console.error("[api/v1] usage log failed:", (e as Error)?.message);
+    }
+  })();
+}
+
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   try {
     // Parse body: accept both JSON and form-encoded (JSON bypasses CSRF for cross-origin API clients)
@@ -50,20 +86,36 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     const allowed = await rateLimit(`api-v1:${ip}`, { limit: 60, windowSec: 60 });
     if (!allowed) return fail("Rate limit exceeded. Max 60 requests/minute.");
 
+    let res: Response;
+    let validAction = false;
     switch (action) {
       case "services":
-        return handleServices(apiKey);
+        res = await handleServices(apiKey);
+        validAction = true;
+        break;
       case "order":
-        return handleOrder(apiKey, params);
+        res = await handleOrder(apiKey, params);
+        validAction = true;
+        break;
       case "status":
-        return handleStatus(apiKey, params);
+        res = await handleStatus(apiKey, params);
+        validAction = true;
+        break;
       case "refill":
-        return handleRefill(apiKey, params);
+        res = await handleRefill(apiKey, params);
+        validAction = true;
+        break;
       case "profile":
-        return handleProfile(apiKey);
+        res = await handleProfile(apiKey);
+        validAction = true;
+        break;
       default:
-        return fail("Wrong Action, Read API Documentation First");
+        res = fail("Wrong Action, Read API Documentation First");
     }
+    // P2.3 (G20): usage monitoring best-effort — fire-and-forget, tak menambah
+    // latensi & tak pernah gagal-kan respons ke klien.
+    recordApiUsage({ action, apiKey, ip, ok: validAction });
+    return res;
   } catch (e: any) {
     console.error("[api/v1] error:", e);
     return fail(`Internal error: ${e?.message ?? String(e)}`);

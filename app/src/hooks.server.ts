@@ -141,8 +141,16 @@ async function maintenanceHook({ event, resolve }: Parameters<Handle>[0]) {
         });
       }
     }
-  } catch {
-    // getSetting may fail (DB unavailable) — fail open, don't block app.
+  } catch (e) {
+    // P2.4 (G8): FAIL-CLOSED. Bila getSetting error (DB unavailable), kita tidak
+    // bisa memastikan status maintenance. Route user tetap butuh DB untuk fungsi
+    // normal — jadi sajikan 503 ramah daripada 500 kacau. Admin + static sudah
+    // bypass di atas, jadi ops tetap bisa masuk /admin untuk memperbaiki.
+    console.error("[maintenance] getSetting failed → fail-closed 503:", (e as Error)?.message);
+    return new Response("Sistem sedang maintenance. Silakan coba beberapa saat lagi.", {
+      status: 503,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   }
   return resolve(event);
 }

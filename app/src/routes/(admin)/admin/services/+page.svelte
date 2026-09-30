@@ -82,7 +82,7 @@
   let f_serviceName = $state("");
   let f_note = $state("");
   let f_type = $state("Default");
-  let f_profit = $state(0);
+  let f_basePrice = $state(0);
   let f_min = $state(1);
   let f_max = $state(1000);
   let f_status = $state(1);
@@ -104,7 +104,7 @@
     f_serviceName = "";
     f_note = "";
     f_type = "Default";
-    f_profit = 0;
+    f_basePrice = 0;
     f_min = 1;
     f_max = 1000;
     f_status = 1;
@@ -118,9 +118,9 @@
     f_note = s.note ?? "";
     f_type = s.type;
     // Post-rebase Sep-2026: kolom s.price = MODAL murni (bukan harga jual).
-    // Field f_profit = Base Price input = modal → ambil langsung, jangan
+    // Field f_basePrice = Base Price input = modal → ambil langsung, jangan
     // bagi markup lagi (itu sumber bug double-markup lama).
-    f_profit = Math.round(Number(s.price));
+    f_basePrice = Math.round(Number(s.price));
     f_min = s.min;
     f_max = s.max;
     f_status = s.status;
@@ -936,17 +936,17 @@
             >
             <input
               id="add-base"
-              name="profit"
+              name="basePrice"
               type="number"
-              bind:value={f_profit}
+              bind:value={f_basePrice}
               required
               min="1"
               class="h-10 w-full rounded-xl border border-ink-200 bg-surface px-3 text-sm"
             />
             <p class="mt-1 text-[11px] text-ink-400">
-              Harga jual: {formatRupiah(f_profit * (1 + pct("Member") / 100))} Member · {formatRupiah(
-                f_profit * (1 + pct("Reseller") / 100),
-              )} Reseller · {formatRupiah(f_profit * (1 + pct("Agen") / 100))} Agen
+              Harga jual: {formatRupiah(f_basePrice * (1 + pct("Member") / 100))} Member · {formatRupiah(
+                f_basePrice * (1 + pct("Reseller") / 100),
+              )} Reseller · {formatRupiah(f_basePrice * (1 + pct("Agen") / 100))} Agen
             </p>
           </div>
           <div>
@@ -1101,17 +1101,17 @@
             >
             <input
               id="edit-base"
-              name="profit"
+              name="basePrice"
               type="number"
-              bind:value={f_profit}
+              bind:value={f_basePrice}
               required
               min="1"
               class="h-10 w-full rounded-xl border border-ink-200 bg-surface px-3 text-sm"
             />
             <p class="mt-1 text-[11px] text-ink-400">
-              Harga jual: {formatRupiah(f_profit * (1 + pct("Member") / 100))} Member · {formatRupiah(
-                f_profit * (1 + pct("Reseller") / 100),
-              )} Reseller · {formatRupiah(f_profit * (1 + pct("Agen") / 100))} Agen
+              Harga jual: {formatRupiah(f_basePrice * (1 + pct("Member") / 100))} Member · {formatRupiah(
+                f_basePrice * (1 + pct("Reseller") / 100),
+              )} Reseller · {formatRupiah(f_basePrice * (1 + pct("Agen") / 100))} Agen
             </p>
           </div>
           <div>

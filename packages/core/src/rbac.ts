@@ -63,6 +63,7 @@ export const ROUTE_PERMISSION: Record<string, string | null> = {
   "/admin/coupons": "coupons:read",
   "/admin/affiliate": "affiliate:read",
   "/admin/reporting": "reporting:read",
+  "/admin/api-usage": "reporting:read",
   "/admin/audit": "audit:read",
   "/admin/refunds": "refund:request",
 };

@@ -113,6 +113,7 @@
     { href: "/admin/audit", label: "Audit Log", icon: "shield", group: "Konten & Sistem" },
     { href: "/admin/backup", label: "Backup", icon: "database", group: "Konten & Sistem" },
     { href: "/admin/health", label: "System Health", icon: "activity", group: "Konten & Sistem" },
+    { href: "/admin/api-usage", label: "API Usage", icon: "activity", group: "Konten & Sistem" },
     { href: "/admin/cron", label: "Cron Jobs", icon: "clock", group: "Konten & Sistem" },
     {
       href: "/admin/settings",
@@ -484,7 +485,9 @@
               role="menu"
               aria-label="Notifikasi sistem"
             >
-              <div class="border-b border-ink-100 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-ink-500">
+              <div
+                class="border-b border-ink-100 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-ink-500"
+              >
                 Notifikasi Sistem
               </div>
               <ul class="max-h-80 divide-y divide-ink-50 overflow-y-auto">
@@ -516,7 +519,11 @@
           {/if}
         </div>
         <NotifBell count={data.unreadCount ?? 0} href="/notif" />
-        <a href="/akun" class="inline-flex min-h-[24px] max-w-[90px] items-center truncate text-sm font-medium text-ink-500">@{data.admin.username}</a>
+        <a
+          href="/akun"
+          class="inline-flex min-h-[24px] max-w-[90px] items-center truncate text-sm font-medium text-ink-500"
+          >@{data.admin.username}</a
+        >
       </div>
     </header>
 
@@ -561,7 +568,9 @@
               class="absolute right-0 top-11 z-50 w-80 rounded-2xl border border-ink-100 bg-surface shadow-xl"
               role="menu"
             >
-              <div class="border-b border-ink-100 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-ink-500">
+              <div
+                class="border-b border-ink-100 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-ink-500"
+              >
                 Notifikasi Sistem
               </div>
               <ul class="max-h-80 divide-y divide-ink-50 overflow-y-auto">
@@ -759,7 +768,9 @@
         <div class="mx-auto mb-1 mt-2 h-1 w-10 shrink-0 rounded-full bg-ink-200"></div>
         <div class="flex shrink-0 items-center gap-2 px-3 pb-2">
           <div class="relative flex-1">
-            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-400">
+            <span
+              class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-400"
+            >
               <Icon name="search" size={14} />
             </span>
             <input
@@ -842,13 +853,13 @@
               </div>
             {/if}
           {/each}
-          {#if menuQuery.trim() !== "" && visibleMoreNav.filter(
-            (n) =>
-              n.label.toLowerCase().includes(menuQuery.trim().toLowerCase()) ||
-              (n.keywords ?? []).some((k: string) =>
-                k.toLowerCase().includes(menuQuery.trim().toLowerCase()),
-              ),
-          ).length === 0}
+          {#if menuQuery.trim() !== "" && visibleMoreNav.filter((n) => n.label
+                  .toLowerCase()
+                  .includes(menuQuery
+                      .trim()
+                      .toLowerCase()) || (n.keywords ?? []).some((k: string) => k
+                    .toLowerCase()
+                    .includes(menuQuery.trim().toLowerCase()))).length === 0}
             <p class="px-3 py-6 text-center text-sm text-ink-400">
               Tidak ada menu "{menuQuery.trim()}".
             </p>

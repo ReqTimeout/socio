@@ -152,7 +152,7 @@ export const actions: Actions = {
     const min = Number(form.get("min")) || 1;
     const max = Number(form.get("max")) || 1000;
     const type = String(form.get("type") ?? "Default");
-    const basePrice = Number(form.get("profit")) || 0;
+    const basePrice = Number(form.get("basePrice")) || 0;
 
     if (!categoryId || !providerId || !providerServiceId || !serviceName || basePrice <= 0)
       return fail(400, { error: "Semua field wajib diisi." });
@@ -219,7 +219,7 @@ export const actions: Actions = {
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID layanan tidak valid." });
 
-    const basePrice = Number(form.get("profit")) || 0;
+    const basePrice = Number(form.get("basePrice")) || 0;
     const min = Number(form.get("min")) || 1;
     const max = Number(form.get("max")) || 1000;
     const serviceName = String(form.get("serviceName") ?? "").trim();
@@ -228,7 +228,7 @@ export const actions: Actions = {
     const type = String(form.get("type") ?? "Default");
 
     if (!serviceName) return fail(400, { error: "Nama layanan wajib." });
-    if (basePrice <= 0) return fail(400, { error: "Profit/harga harus > 0." });
+    if (basePrice <= 0) return fail(400, { error: "Modal/harga dasar harus > 0." });
     if (min > max) return fail(400, { error: "Min tidak boleh > Max." });
 
     const p = await computePricing(basePrice);

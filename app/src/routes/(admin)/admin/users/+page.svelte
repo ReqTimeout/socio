@@ -374,6 +374,57 @@
     </div>
   {/if}
 
+  <!-- P2.1 (G3): antrian dual-control — adjust saldo > cap menunggu admin kedua -->
+  {#if data.pendingBalance.length > 0}
+    <section class="rounded-2xl border border-warning/30 bg-warning-soft/40 p-4">
+      <h2 class="mb-1 text-sm font-bold text-ink-700">
+        Menunggu approval admin kedua
+        <span class="ml-1 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning"
+          >{data.pendingBalance.length}</span
+        >
+      </h2>
+      <p class="mb-3 text-xs text-ink-500">
+        Penyesuaian saldo di atas cap harus disetujui admin berbeda (four-eyes) sebelum saldo
+        berubah.
+      </p>
+      <div class="space-y-2">
+        {#each data.pendingBalance as r (r.id)}
+          <div
+            class="flex flex-wrap items-center gap-2 rounded-xl border border-ink-200 bg-surface px-3 py-2"
+          >
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-sm font-semibold text-ink-700">
+                {r.username}
+                <span class="font-bold {r.amount >= 0 ? 'text-success' : 'text-danger'}">
+                  {r.amount >= 0 ? "+" : ""}{formatRupiah(r.amount)}</span
+                >
+              </div>
+              <div class="truncate text-xs text-ink-500">
+                Alas: {r.reason} · Dipohon {r.requestedByName}
+              </div>
+            </div>
+            <form method="POST" action="?/approveBalance" use:enhance={onResult} class="contents">
+              <input type="hidden" name="rid" value={r.id} />
+              <button
+                type="submit"
+                class="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white"
+                >Setujui</button
+              >
+            </form>
+            <form method="POST" action="?/rejectBalance" use:enhance={onResult} class="contents">
+              <input type="hidden" name="rid" value={r.id} />
+              <button
+                type="submit"
+                class="rounded-lg border border-danger/40 px-3 py-1.5 text-xs font-semibold text-danger"
+                >Tolak</button
+              >
+            </form>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+
   {#if data.users.length === 0}
     <EmptyState
       art="users"
@@ -953,6 +1004,10 @@
             <Icon name="arrow_down" size={16} stroke={2.75} />
           </button>
         </div>
+        <p class="text-[11px] text-ink-400">
+          Nominal &gt; Rp1.000.000 otomatis diajukan sebagai request dual-control (perlu approval
+          admin kedua).
+        </p>
         <input
           name="reason"
           bind:value={reason}
