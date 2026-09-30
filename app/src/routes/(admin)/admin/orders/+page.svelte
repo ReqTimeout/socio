@@ -416,8 +416,19 @@
             <th class="px-3 py-3 font-semibold">User</th>
             <th class="px-3 py-3 font-semibold">Layanan</th>
             <th class="px-3 py-3 font-semibold text-right">Qty</th>
-            <th class="px-3 py-3 font-semibold text-right">Harga</th>
-            <th class="px-3 py-3 font-semibold text-right">Profit</th>
+            <th
+              class="px-3 py-3 font-semibold text-right"
+              title="Total dibayar user (harga jual × qty)">Jual</th
+            >
+            <th
+              class="px-3 py-3 font-semibold text-right"
+              title="Total modal provider (rate × qty); source: services.price_api">Modal</th
+            >
+            <th
+              class="px-3 py-3 font-semibold text-right"
+              title="Profit = Jual - Modal (dr DB orders.profit); chip % = rasio jual/modal"
+              >Profit</th
+            >
             <th class="px-3 py-3 font-semibold">Status</th>
             <th class="px-3 py-3 font-semibold">Waktu</th>
             <th class="px-3 py-3 font-semibold text-right">Aksi</th>
@@ -452,9 +463,24 @@
               <td class="px-3 py-3 text-right font-semibold tabular-nums text-ink-900"
                 >{formatRupiah(o.price)}</td
               >
-              <td class="px-3 py-3 text-right tabular-nums text-success font-semibold"
-                >{formatRupiah(o.profit)}</td
+              <td class="px-3 py-3 text-right tabular-nums text-ink-500"
+                >{o.modalTotal > 0 ? formatRupiah(o.modalTotal) : "—"}</td
               >
+              <td class="px-3 py-3 text-right tabular-nums font-semibold text-success">
+                <div class="flex flex-col items-end gap-0.5">
+                  <span>{formatRupiah(o.profit)}</span>
+                  {#if o.modalTotal > 0}
+                    <span
+                      class="rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums {o.profitMismatch
+                        ? 'bg-rose-50 text-rose-700'
+                        : 'bg-emerald-50 text-emerald-700'}"
+                      title={"jual ÷ modal = ×" + (o.ratioPct / 100 + 1).toFixed(3)}
+                    >
+                      +{o.ratioPct.toFixed(1)}%
+                    </span>
+                  {/if}
+                </div>
+              </td>
               <td class="px-3 py-3"><StatusBadge status={o.status} /></td>
               <td class="whitespace-nowrap px-3 py-3 text-xs text-ink-500"
                 >{fmtDate(o.createdAt)}</td
@@ -509,15 +535,21 @@
                   </p>
                 </div>
               </div>
-              <!-- Order ladder: qty / harga / profit -->
-              <dl class="mt-2.5 grid grid-cols-3 gap-2 text-xs">
+              <!-- Order ladder: qty / jual / modal / profit -->
+              <dl class="mt-2.5 grid grid-cols-4 gap-2 text-xs">
                 <div>
                   <dt class="text-ink-400">Qty</dt>
                   <dd class="tabular-nums font-bold text-ink-900">{fmt(o.quantity)}</dd>
                 </div>
                 <div>
-                  <dt class="text-ink-400">Harga</dt>
+                  <dt class="text-ink-400">Jual</dt>
                   <dd class="tabular-nums font-bold text-ink-900">{formatRupiah(o.price)}</dd>
+                </div>
+                <div>
+                  <dt class="text-ink-400">Modal</dt>
+                  <dd class="tabular-nums font-bold text-ink-500">
+                    {o.modalTotal > 0 ? formatRupiah(o.modalTotal) : "—"}
+                  </dd>
                 </div>
                 <div>
                   <dt class="text-ink-400">Profit</dt>
@@ -651,7 +683,7 @@
             {detail.link}
           </span>
         </div>
-        <div class="grid grid-cols-3 gap-2 rounded-lg bg-ink-50/40 p-2.5">
+        <div class="grid grid-cols-2 gap-2 rounded-lg bg-ink-50/40 p-2.5 sm:grid-cols-4">
           <div>
             <dt class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Qty</dt>
             <dd class="tabular-nums text-base font-extrabold text-ink-900">
@@ -659,13 +691,33 @@
             </dd>
           </div>
           <div>
-            <dt class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Harga</dt>
+            <dt class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Jual</dt>
             <dd class="tabular-nums text-sm font-extrabold text-ink-900">
               {formatRupiah(detail.price)}
             </dd>
           </div>
           <div>
-            <dt class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Profit</dt>
+            <dt class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Modal</dt>
+            <dd class="tabular-nums text-sm font-extrabold text-ink-500">
+              {detail.modalTotal > 0 ? formatRupiah(detail.modalTotal) : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt
+              class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-ink-400"
+            >
+              Profit
+              {#if detail.modalTotal > 0}
+                <span
+                  class="rounded-full px-1.5 py-px text-[9px] tabular-nums {detail.profitMismatch
+                    ? 'bg-rose-100 text-rose-700'
+                    : 'bg-emerald-100 text-emerald-700'}"
+                  title={"jual ÷ modal = ×" + (detail.ratioPct / 100 + 1).toFixed(3)}
+                >
+                  +{detail.ratioPct.toFixed(1)}%
+                </span>
+              {/if}
+            </dt>
             <dd class="tabular-nums text-sm font-extrabold text-success">
               +{formatRupiah(detail.profit)}
             </dd>

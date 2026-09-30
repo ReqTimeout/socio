@@ -1,5 +1,5 @@
 import { db } from "@socio/db";
-import { orders, users } from "@socio/db/schema";
+import { orders, users, services } from "@socio/db/schema";
 import { sql, eq, ne, and, desc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
@@ -47,6 +47,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         quantity: orders.quantity,
         price: orders.price,
         profit: orders.profit,
+        // MODAL per-1k dari katalog SMMturk (services.price_api = rate provider
+        // IDR/1k pasca rebase Sep-2026). ModalTotal = modalPer1k × qty / 1000.
+        // Dipakai admin utk sanity-check: hargaJual - modalTotal harus ≈ profit
+        // dan jual:modal ratio ≈ (1 + markupPctLevel/100).
+        modalPer1k: services.priceApi,
         status: orders.status,
         startCount: orders.startCount,
         remains: orders.remains,
@@ -62,6 +67,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       })
       .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
+      .leftJoin(
+        services,
+        and(
+          eq(services.providerId, orders.providerId),
+          eq(services.providerServiceId, orders.serviceId),
+        ),
+      )
       .where(where)
       .orderBy(desc(orders.id))
       .limit(limit)
@@ -90,8 +102,30 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const total = Number(totalRow[0]?.total ?? 0);
   const s = statRow[0];
 
+  // Kaya-row utk admin: hitung total modal + margin riil per order.
+  //   modalTotal = services.price_api (IDR/1k) × qty / 1000
+  //   jual:modal ratio = price / modalTotal — harus ≈ (1 + markup%/100) kalau
+  //   pricing rules tidak berubah sejak order dibuat.
+  const ordersView = rows.map((o) => {
+    const modal = Number((o as any).modalPer1k ?? 0);
+    const qty = Number(o.quantity) || 0;
+    const modalTotal = Math.round((modal * qty) / 1000);
+    const paid = Number(o.price) || 0;
+    const profitActual = Number(o.profit) || 0;
+    const profitExpected = paid - modalTotal;
+    const ratio = modalTotal > 0 ? paid / modalTotal : 0;
+    return {
+      ...o,
+      modalTotal,
+      profitActual,
+      profitExpected,
+      ratioPct: Math.round((ratio - 1) * 1000) / 10,
+      profitMismatch: Math.abs(profitActual - profitExpected) > 1,
+    };
+  });
+
   return {
-    orders: rows,
+    orders: ordersView,
     status,
     q,
     hideAdmin,
