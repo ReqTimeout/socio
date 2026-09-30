@@ -100,6 +100,7 @@ const PERMISSIONS: Record<AdminRole, Set<string>> = {
     "coupons:read",
     "coupons:edit",
     "affiliate:read",
+    "affiliate:edit",
     "reporting:read",
     "audit:read",
     "refund:request",
@@ -107,6 +108,7 @@ const PERMISSIONS: Record<AdminRole, Set<string>> = {
     "refund:reject",
     "backup:manage",
     "health:read",
+    "cron:run",
   ]),
   operator: new Set([
     "orders:read",
@@ -130,7 +132,10 @@ const PERMISSIONS: Record<AdminRole, Set<string>> = {
   ]),
 };
 
-export function can(roleRaw: string | null | undefined, permission: string): boolean {
+export function can(
+  roleRaw: string | null | undefined,
+  permission: string,
+): boolean {
   const role = normalizeRole(roleRaw);
   const set = PERMISSIONS[role];
   if (!set) return false;
@@ -153,4 +158,9 @@ export function requiredPermissionForPath(pathname: string): string | null {
   return best;
 }
 
-export const ALL_ROLES: AdminRole[] = ["super_admin", "admin", "operator", "finance"];
+export const ALL_ROLES: AdminRole[] = [
+  "super_admin",
+  "admin",
+  "operator",
+  "finance",
+];

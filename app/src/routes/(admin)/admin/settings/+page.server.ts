@@ -2,7 +2,14 @@ import { db } from "@socio/db";
 import { adminRoles, pricingRules } from "@socio/db/schema";
 import { sql, eq, asc, inArray } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { getSetting, setSetting, logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import {
+  getSetting,
+  setSetting,
+  logAudit,
+  assertAdmin,
+  assertAdminRate,
+  assertAdminCan,
+} from "$lib/server/admin";
 import { env } from "$env/dynamic/private";
 import { DEFAULT_PRICING_RULES } from "$lib/server/pricing-defaults";
 import type { Actions, PageServerLoad } from "./$types";
@@ -15,7 +22,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   // Settings umum
   const maintenance = (await getSetting("maintenance_mode")) === "1";
-  const api2fa = false; // TODO M3.5: (await getSetting("admin_2fa_required")) === "1" — saat enforcement ada
+  const require2fa = (await getSetting("require_2fa_for_admin")) === "1"; // G7: enforce di (admin) layout
   const apiPublic = (await getSetting("public_api_enabled")) === "1";
   const signupVerify = (await getSetting("signup_verify_required")) === "1";
 
@@ -75,7 +82,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   return {
     maintenance,
-    api2fa,
+    require2fa,
     apiPublic,
     signupVerify,
     pricing: pricingList.map((p) => ({
@@ -112,6 +119,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
   maintenance: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "settings:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "settings-maintenance",
       (locals as any).ip ?? "0.0.0.0",
@@ -135,6 +144,8 @@ export const actions: Actions = {
 
   togglePublicApi: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "settings:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "settings-public-api",
       (locals as any).ip ?? "0.0.0.0",
@@ -156,6 +167,8 @@ export const actions: Actions = {
 
   toggleSignupVerify: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "settings:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "settings-signup-verify",
       (locals as any).ip ?? "0.0.0.0",
@@ -175,8 +188,39 @@ export const actions: Actions = {
     return { success: on ? "Verifikasi signup AKTIF." : "Verifikasi signup nonaktif." };
   },
 
+  // G7: paksa semua admin enroll 2FA. Saat AKTIF, admin dengan totp_enabled=0
+  // akan dialihkan ke /admin/2fa/setup oleh (admin) layout sampai mereka enroll.
+  toggleRequire2fa: async ({ request, locals }) => {
+    assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "settings:edit");
+    if (_g) return _g;
+    const _rate = await assertAdminRate(
+      "settings-require-2fa",
+      (locals as any).ip ?? "0.0.0.0",
+      10,
+      60,
+    );
+    if (_rate) return _rate;
+    const form = await request.formData();
+    const on = form.get("on") === "1";
+    await setSetting("require_2fa_for_admin", on ? "1" : "0");
+    await logAudit({
+      adminId: Number(locals.user!.id),
+      action: on ? "enable_require_2fa" : "disable_require_2fa",
+      entity: "auth",
+      ip: (locals as any).ip,
+    });
+    return {
+      success: on
+        ? "2FA wajib AKTIF — admin tanpa 2FA akan dipaksa enroll."
+        : "2FA wajib nonaktif.",
+    };
+  },
+
   updatePricing: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "pricing:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "settings-pricing",
       (locals as any).ip ?? "0.0.0.0",
@@ -273,6 +317,8 @@ export const actions: Actions = {
   /** Salin markup Member ke semua level lain (rollback cepat). */
   bulkApply: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "pricing:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "settings-bulk-apply",
       (locals as any).ip ?? "0.0.0.0",
@@ -303,6 +349,8 @@ export const actions: Actions = {
 
   assignRole: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "roles:assign");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "settings-assign-role",
       (locals as any).ip ?? "0.0.0.0",

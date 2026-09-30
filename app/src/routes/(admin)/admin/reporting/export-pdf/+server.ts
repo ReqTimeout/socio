@@ -4,7 +4,7 @@
 import { db } from "@socio/db";
 import { sql } from "drizzle-orm";
 import { redirect } from "@sveltejs/kit";
-import { assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { assertAdmin, assertAdminRate, guardAdminCan } from "$lib/server/admin";
 import { baseDoc, sendPdf, idr, fmtDateTime } from "$lib/server/pdf";
 import type { RequestHandler } from "./$types";
 
@@ -30,10 +30,13 @@ export const GET: RequestHandler = async (event) => {
   const { locals, url } = event;
   if (!locals.user) throw redirect(303, "/login");
   assertAdmin(locals);
+  await guardAdminCan(locals, "reporting:read");
   await assertAdminRate("reporting-export-pdf", (locals as any).ip ?? "0.0.0.0", 5, 60);
 
   const rangeRaw = String(url.searchParams.get("range") ?? "7d");
-  const range: Range = (RANGES as readonly string[]).includes(rangeRaw) ? (rangeRaw as Range) : "7d";
+  const range: Range = (RANGES as readonly string[]).includes(rangeRaw)
+    ? (rangeRaw as Range)
+    : "7d";
   const since = startOfRange(range);
 
   const [overviewRows, statusRows, topServices, topUsers] = await Promise.all([
@@ -70,15 +73,20 @@ export const GET: RequestHandler = async (event) => {
     `),
   ]);
 
-  const ovRows: any[] = Array.isArray((overviewRows as any)[0]) ? (overviewRows as any)[0] : (overviewRows as any);
+  const ovRows: any[] = Array.isArray((overviewRows as any)[0])
+    ? (overviewRows as any)[0]
+    : (overviewRows as any);
   const o = ovRows[0] ?? {};
   const totalOrders = Number(o.total_orders ?? 0);
   const successOrders = Number(o.success_orders ?? 0);
   const successRate = totalOrders > 0 ? (successOrders / totalOrders) * 100 : 0;
 
-  const statusData = (Array.isArray((statusRows as any)[0]) ? (statusRows as any)[0] : (statusRows as any)) ?? [];
-  const servicesData = (Array.isArray((topServices as any)[0]) ? (topServices as any)[0] : (topServices as any)) ?? [];
-  const usersData = (Array.isArray((topUsers as any)[0]) ? (topUsers as any)[0] : (topUsers as any)) ?? [];
+  const statusData =
+    (Array.isArray((statusRows as any)[0]) ? (statusRows as any)[0] : (statusRows as any)) ?? [];
+  const servicesData =
+    (Array.isArray((topServices as any)[0]) ? (topServices as any)[0] : (topServices as any)) ?? [];
+  const usersData =
+    (Array.isArray((topUsers as any)[0]) ? (topUsers as any)[0] : (topUsers as any)) ?? [];
 
   const tableLayout = {
     hLineWidth: (i: number, node: any) => (i === 0 || i === node.table.body.length ? 0.75 : 0),

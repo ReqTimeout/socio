@@ -8,7 +8,7 @@ import { users } from "@socio/db/schema";
 import { sql, eq, ne, and, desc, inArray } from "drizzle-orm";
 import { redirect } from "@sveltejs/kit";
 import { dateStamp, sendCsv, toCsvUtf8, type CsvColumn } from "$lib/server/csv";
-import { assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { assertAdmin, assertAdminRate, guardAdminCan } from "$lib/server/admin";
 import type { RequestHandler } from "./$types";
 
 const MAX_EXPORT = 10_000;
@@ -17,6 +17,7 @@ export const GET: RequestHandler = async (event) => {
   const { locals, url } = event;
   if (!locals.user) throw redirect(303, "/login");
   assertAdmin(locals);
+  await guardAdminCan(locals, "users:read");
 
   // Rate-limit export per-IP (10/min) — export mahal
   await assertAdminRate("users-export", (locals as any).ip ?? "0.0.0.0", 10, 60);

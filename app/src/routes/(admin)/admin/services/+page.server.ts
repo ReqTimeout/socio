@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { services, categories, provider, pricingRules } from "@socio/db/schema";
 import { sql, eq, and, or, desc, asc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
 
 const PAGE_SIZE = 25;
@@ -139,6 +139,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 export const actions: Actions = {
   addService: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "services:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("service-add", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -209,6 +211,8 @@ export const actions: Actions = {
 
   editService: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "services:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("service-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -261,6 +265,8 @@ export const actions: Actions = {
 
   deleteService: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "services:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("service-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -285,6 +291,8 @@ export const actions: Actions = {
 
   bulkDelete: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "services:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("service-bulk", (locals as any).ip ?? "0.0.0.0", 5, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -320,6 +328,8 @@ export const actions: Actions = {
    */
   bulkCategoryPrice: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "services:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "service-bulk-price",
       (locals as any).ip ?? "0.0.0.0",
@@ -432,6 +442,8 @@ export const actions: Actions = {
 
   toggleStatus: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "services:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("service-toggle", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -458,6 +470,8 @@ export const actions: Actions = {
 
   addCategory: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "services:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("category-add", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -477,6 +491,8 @@ export const actions: Actions = {
 
   editCategory: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "services:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("category-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -497,6 +513,8 @@ export const actions: Actions = {
 
   deleteCategory: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "services:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("category-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
     if (_rate) return _rate;
     const form = await request.formData();

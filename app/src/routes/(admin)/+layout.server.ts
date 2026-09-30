@@ -1,7 +1,14 @@
 import { redirect, error } from "@sveltejs/kit";
 import { ensureAdminSchema } from "@socio/db/ensure";
 import { db } from "@socio/db";
-import { notifications, deposits, orders, adminRoles, adminNotifications } from "@socio/db/schema";
+import {
+  notifications,
+  deposits,
+  orders,
+  adminRoles,
+  adminNotifications,
+  users,
+} from "@socio/db/schema";
 import { eq, sql, and } from "drizzle-orm";
 import { getSetting } from "$lib/server/admin";
 import { getClientIp } from "$lib/server/ip";
@@ -14,6 +21,19 @@ export const load: LayoutServerLoad = async (event) => {
   if ((locals.user as any).level !== "Admin") throw redirect(303, "/");
 
   await ensureAdminSchema();
+
+  // G7: 2FA wajib. Bila flag on dan admin ini belum enroll TOTP, paksa ke
+  // halaman setup (kecuali memang sedang di halaman 2FA) sampai selesai.
+  if (url.pathname !== "/admin/2fa/setup" && url.pathname !== "/admin/2fa/verify") {
+    if ((await getSetting("require_2fa_for_admin")) === "1") {
+      const [totpRow] = await db
+        .select({ totpEnabled: users.totpEnabled })
+        .from(users)
+        .where(eq(users.id, Number(locals.user.id)))
+        .limit(1);
+      if (!totpRow?.totpEnabled) throw redirect(303, "/admin/2fa/setup");
+    }
+  }
 
   // P3-01 RBAC: resolve role (admin_roles overrides, fallback to "admin")
   const [roleRow] = await db
@@ -34,41 +54,48 @@ export const load: LayoutServerLoad = async (event) => {
   // P2-03: Pakai centralized IP resolver (cf-connecting-ip > x-forwarded-for > x-real-ip)
   const ip = getClientIp(event) ?? "0.0.0.0";
 
-  const [unreadRow, pendingDepositRow, pendingOrderRow, adminNotifRow, latestAdminNotifs] = await Promise.all([
-    db
-      .select({ unreadAdmin: sql<number>`COUNT(*)` })
-      .from(notifications)
-      .where(
-        and(eq(notifications.userId, Number(locals.user.id)), sql`${notifications.readAt} IS NULL`),
-      ),
-    db
-      .select({ c: sql<number>`COUNT(*)` })
-      .from(deposits)
-      .where(eq(deposits.status, "Pending")),
-    db
-      .select({ c: sql<number>`COUNT(*)` })
-      .from(orders)
-      .where(sql`${orders.status} IN ('Pending','Processing')`),
-    db
-      .select({ c: sql<number>`COUNT(*)` })
-      .from(adminNotifications)
-      .where(
-        and(eq(adminNotifications.adminId, Number(locals.user.id)), sql`${adminNotifications.readAt} IS NULL`),
-      ),
-    db
-      .select({
-        id: adminNotifications.id,
-        title: adminNotifications.title,
-        message: adminNotifications.message,
-        actionUrl: adminNotifications.actionUrl,
-        priority: adminNotifications.priority,
-        createdAt: adminNotifications.createdAt,
-      })
-      .from(adminNotifications)
-      .where(eq(adminNotifications.adminId, Number(locals.user.id)))
-      .orderBy(sql`${adminNotifications.createdAt} DESC`)
-      .limit(10),
-  ]);
+  const [unreadRow, pendingDepositRow, pendingOrderRow, adminNotifRow, latestAdminNotifs] =
+    await Promise.all([
+      db
+        .select({ unreadAdmin: sql<number>`COUNT(*)` })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, Number(locals.user.id)),
+            sql`${notifications.readAt} IS NULL`,
+          ),
+        ),
+      db
+        .select({ c: sql<number>`COUNT(*)` })
+        .from(deposits)
+        .where(eq(deposits.status, "Pending")),
+      db
+        .select({ c: sql<number>`COUNT(*)` })
+        .from(orders)
+        .where(sql`${orders.status} IN ('Pending','Processing')`),
+      db
+        .select({ c: sql<number>`COUNT(*)` })
+        .from(adminNotifications)
+        .where(
+          and(
+            eq(adminNotifications.adminId, Number(locals.user.id)),
+            sql`${adminNotifications.readAt} IS NULL`,
+          ),
+        ),
+      db
+        .select({
+          id: adminNotifications.id,
+          title: adminNotifications.title,
+          message: adminNotifications.message,
+          actionUrl: adminNotifications.actionUrl,
+          priority: adminNotifications.priority,
+          createdAt: adminNotifications.createdAt,
+        })
+        .from(adminNotifications)
+        .where(eq(adminNotifications.adminId, Number(locals.user.id)))
+        .orderBy(sql`${adminNotifications.createdAt} DESC`)
+        .limit(10),
+    ]);
   const unreadAdmin = unreadRow[0]?.unreadAdmin ?? 0;
   const pendingDeposits = pendingDepositRow[0]?.c ?? 0;
   const pendingOrders = pendingOrderRow[0]?.c ?? 0;

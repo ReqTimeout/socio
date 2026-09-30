@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { provider, services } from "@socio/db/schema";
 import { sql, eq } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import { env } from "$env/dynamic/private";
 import { triggerProviderSync } from "$lib/server/cron";
 import { encryptSecret, decryptSecret, isEncrypted } from "$lib/server/crypto";
@@ -97,6 +97,8 @@ export const actions: Actions = {
 
   add: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "providers:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("provider-add", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -123,6 +125,8 @@ export const actions: Actions = {
 
   edit: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "providers:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("provider-edit", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -155,6 +159,8 @@ export const actions: Actions = {
 
   delete: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "providers:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("provider-delete", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -224,6 +230,8 @@ export const actions: Actions = {
   /** Sync katalog provider sekarang (manual trigger dari UI). */
   sync: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "providers:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("provider-sync", (locals as any).ip ?? "0.0.0.0", 5, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -247,6 +255,8 @@ export const actions: Actions = {
   /** Test koneksi provider — fetch balance via API key + URL-nya */
   testConnection: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "providers:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("provider-test", (locals as any).ip ?? "0.0.0.0", 5, 60);
     if (_rate) return _rate;
     const form = await request.formData();

@@ -45,6 +45,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         postAmount: deposits.postAmount,
         status: deposits.status,
         img: deposits.img,
+        type: deposits.type,
         untukApa: deposits.untukApa,
         note: deposits.note,
         createdAt: deposits.createdAt,
@@ -98,8 +99,13 @@ export const actions: Actions = {
   confirm: async ({ request, locals }) => {
     // A-02/A-03 defense-in-depth
     assertAdmin(locals);
-    const [roleRow] = await db.select({ role: adminRoles.role }).from(adminRoles).where(eq(adminRoles.userId, Number(locals.user!.id))).limit(1);
-    if (!can(normalizeRole(roleRow?.role ?? "admin"), "deposits:approve")) return fail(403, { error: "Role kamu tidak bisa konfirmasi deposit." });
+    const [roleRow] = await db
+      .select({ role: adminRoles.role })
+      .from(adminRoles)
+      .where(eq(adminRoles.userId, Number(locals.user!.id)))
+      .limit(1);
+    if (!can(normalizeRole(roleRow?.role ?? "admin"), "deposits:approve"))
+      return fail(403, { error: "Role kamu tidak bisa konfirmasi deposit." });
     const _rate = await assertAdminRate("deposit-confirm", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -113,6 +119,22 @@ export const actions: Actions = {
     if (d.status === "Success") return fail(409, { error: "Deposit sudah dikonfirmasi." });
     if (d.status !== "Pending")
       return fail(409, { error: `Deposit berstatus ${d.status} — tidak bisa dikonfirmasi.` });
+
+    // G4: deposit manual (transfer bank, user upload bukti) WAJIB punya bukti
+    // transfer. Deposit auto/VA sudah ter-reconcile webhook payment → lewati.
+    // Approve manual tanpa bukti hanya boleh via override beralasan (ter-audit).
+    const isManualNoProof = d.type === "manual" && !(d.img ?? "").trim();
+    const forceApprove = form.get("force") === "1";
+    const overrideReason = String(form.get("reason") ?? "").trim();
+    if (isManualNoProof && (!forceApprove || overrideReason.length < 5)) {
+      return fail(400, {
+        error:
+          'Deposit manual tanpa bukti transfer tidak bisa dikonfirmasi. Centang "Setujui paksa" dan isi alasan (min. 5 karakter) — alasan tercatat di audit log.',
+      });
+    }
+    const verificationNotes = isManualNoProof
+      ? `OVERRIDE tanpa bukti: ${overrideReason}`
+      : overrideReason || null;
 
     // A-05: transaksi atomik — kredit saldo + log + flip status. Kalau satu
     // gagal, semua rollback. Pakai `where status="Pending"` untuk idempotency
@@ -140,7 +162,7 @@ export const actions: Actions = {
 
         // affectedRows cek via raw SQL (Drizzle MySQL UPDATE belum support .returning)
         const upd = await tx.execute(sql`
-          UPDATE deposits SET status = 'Success', verified_by = ${Number(locals.user!.id)}, verified_at = NOW()
+          UPDATE deposits SET status = 'Success', verified_by = ${Number(locals.user!.id)}, verified_at = NOW(), verification_notes = ${verificationNotes}
           WHERE id = ${id} AND status = 'Pending'
         `);
         // mysql2 ResultSetHeader.affectedRows — drizzle bisa return array [header, fields]
@@ -181,7 +203,13 @@ export const actions: Actions = {
       action: "confirm_deposit",
       entity: "deposit",
       entityId: id,
-      detail: { amount: Number(d.amount), method: d.methodName, untukApa: d.untukApa },
+      detail: {
+        amount: Number(d.amount),
+        method: d.methodName,
+        untukApa: d.untukApa,
+        overrideNoProof: isManualNoProof || undefined,
+        reason: overrideReason || undefined,
+      },
       ip: (locals as any).ip,
     });
 
@@ -221,8 +249,13 @@ export const actions: Actions = {
   },
   reject: async ({ request, locals }) => {
     assertAdmin(locals);
-    const [roleRow2] = await db.select({ role: adminRoles.role }).from(adminRoles).where(eq(adminRoles.userId, Number(locals.user!.id))).limit(1);
-    if (!can(normalizeRole(roleRow2?.role ?? "admin"), "deposits:approve")) return fail(403, { error: "Role kamu tidak bisa menolak deposit." });
+    const [roleRow2] = await db
+      .select({ role: adminRoles.role })
+      .from(adminRoles)
+      .where(eq(adminRoles.userId, Number(locals.user!.id)))
+      .limit(1);
+    if (!can(normalizeRole(roleRow2?.role ?? "admin"), "deposits:approve"))
+      return fail(403, { error: "Role kamu tidak bisa menolak deposit." });
     const _rate = await assertAdminRate("deposit-reject", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();

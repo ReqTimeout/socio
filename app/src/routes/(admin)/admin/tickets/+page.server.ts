@@ -1,7 +1,7 @@
 import { db } from "@socio/db";
 import { sql } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import { notifyTicketReply } from "$lib/server/notification";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -139,6 +139,8 @@ export const actions: Actions = {
   /** A-13: explicit POST action to mark admin view; replaces side-effect in load. */
   markRead: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "tickets:read");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "ticket-mark-read",
       (locals as any).ip ?? "0.0.0.0",
@@ -158,6 +160,8 @@ export const actions: Actions = {
 
   reply: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "tickets:reply");
+    if (_g) return _g;
     const _rate = await assertAdminRate("ticket-reply", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -199,6 +203,8 @@ export const actions: Actions = {
 
   close: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "tickets:close");
+    if (_g) return _g;
     const _rate = await assertAdminRate("ticket-close", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -218,6 +224,8 @@ export const actions: Actions = {
 
   reopen: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "tickets:close");
+    if (_g) return _g;
     const _rate = await assertAdminRate("ticket-reopen", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();

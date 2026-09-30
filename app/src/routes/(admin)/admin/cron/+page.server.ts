@@ -1,5 +1,5 @@
 import { redirect, fail } from "@sveltejs/kit";
-import { assertAdmin, assertAdminRate, logAudit } from "$lib/server/admin";
+import { assertAdmin, assertAdminRate, assertAdminCan, logAudit } from "$lib/server/admin";
 import { getCronStatus } from "$lib/server/cron-runs";
 import { triggerCronJob } from "../../../../cron";
 import type { PageServerLoad, Actions } from "./$types";
@@ -14,6 +14,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
   run: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "cron:run");
+    if (_g) return _g;
     const r = await assertAdminRate("cron-run", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (r) return r;
     const form = await request.formData();

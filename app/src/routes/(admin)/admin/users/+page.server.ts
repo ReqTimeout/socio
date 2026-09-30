@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { users, balanceLogs } from "@socio/db/schema";
 import { sql, eq, ne, and, desc, inArray } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -107,6 +107,8 @@ function parseIds(form: FormData): number[] {
 export const actions: Actions = {
   adjust: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "users:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("user-adjust", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -171,6 +173,8 @@ export const actions: Actions = {
 
   suspend: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "users:suspend");
+    if (_g) return _g;
     const _rate = await assertAdminRate("user-suspend", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -197,6 +201,8 @@ export const actions: Actions = {
 
   setLevel: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "users:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("user-setlevel", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -234,6 +240,8 @@ export const actions: Actions = {
    */
   bulkSuspend: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "users:suspend");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "user-bulk-suspend",
       (locals as any).ip ?? "0.0.0.0",
@@ -276,6 +284,8 @@ export const actions: Actions = {
 
   bulkActivate: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "users:suspend");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "user-bulk-activate",
       (locals as any).ip ?? "0.0.0.0",

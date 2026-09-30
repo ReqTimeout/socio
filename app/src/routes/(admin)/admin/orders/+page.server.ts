@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { orders, users, services } from "@socio/db/schema";
 import { sql, eq, ne, and, desc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import { notifyOrderUpdate } from "$lib/server/notification";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -142,6 +142,8 @@ export const actions: Actions = {
   // ubah status order manual (hanya dari status non-final) + notif user + audit
   updateStatus: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "orders:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("order-status", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -178,6 +180,8 @@ export const actions: Actions = {
   // edit detail provider (provider_order_id, start_count, remains) + audit
   editProvider: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "orders:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("order-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -218,6 +222,8 @@ export const actions: Actions = {
    */
   refund: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "refund:approve");
+    if (_g) return _g;
     const _rate = await assertAdminRate("order-refund", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();

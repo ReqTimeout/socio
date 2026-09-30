@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { affiliate, users, balanceLogs } from "@socio/db/schema";
 import { sql, eq, and } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
 
 const LIMIT = 50;
@@ -148,6 +148,8 @@ export const actions: Actions = {
    */
   approve: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "affiliate:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "affiliate-approve",
       (locals as any).ip ?? "0.0.0.0",
@@ -241,6 +243,8 @@ export const actions: Actions = {
   /** Reject withdrawal: Requested → Pending (komisi balik, saldo tidak disentuh). */
   reject: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "affiliate:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate(
       "affiliate-reject",
       (locals as any).ip ?? "0.0.0.0",

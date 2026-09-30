@@ -8,7 +8,7 @@ import {
 } from "@socio/db/schema";
 import { desc, eq, sql, count } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
-import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import { listSystemTemplates } from "$lib/server/email-templates";
 import type { Actions, PageServerLoad } from "./$types";
 import type { RowDataPacket } from "mysql2";
@@ -20,7 +20,15 @@ const TEMPLATE_TYPES = [
   "engagement",
   "transactional",
 ] as const;
-const AUDIENCES = ["all", "active", "inactive", "high_spender", "new_user", "churn_risk", "xls_list"] as const;
+const AUDIENCES = [
+  "all",
+  "active",
+  "inactive",
+  "high_spender",
+  "new_user",
+  "churn_risk",
+  "xls_list",
+] as const;
 const STATUSES = ["draft", "scheduled", "sent", "paused", "cancelled"] as const;
 
 type TemplateType = (typeof TEMPLATE_TYPES)[number];
@@ -143,9 +151,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       attempts: Number(r.attempts ?? 0),
       error: r.error ? String(r.error).slice(0, 120) : null,
       at: r.sentAt
-        ? (r.sentAt instanceof Date ? r.sentAt.toISOString() : String(r.sentAt))
+        ? r.sentAt instanceof Date
+          ? r.sentAt.toISOString()
+          : String(r.sentAt)
         : r.createdAt
-          ? (r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt))
+          ? r.createdAt instanceof Date
+            ? r.createdAt.toISOString()
+            : String(r.createdAt)
           : null,
     })),
     templateTypes: TEMPLATE_TYPES,
@@ -176,6 +188,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 export const actions: Actions = {
   save: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "email:send");
+    if (_g) return _g;
     const _rate = await assertAdminRate("email-save", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -254,6 +268,8 @@ export const actions: Actions = {
 
   send: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "email:send");
+    if (_g) return _g;
     const _rate = await assertAdminRate("email-send", (locals as any).ip ?? "0.0.0.0", 5, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -291,7 +307,9 @@ export const actions: Actions = {
         .from(mailingList)
         .where(eq(mailingList.subscribed, 1))
         .limit(5000);
-      rows = xlsRows.map((x) => ({ id: 0, email: x.email }) as RowDataPacket & { id: number; email: string });
+      rows = xlsRows.map(
+        (x) => ({ id: 0, email: x.email }) as RowDataPacket & { id: number; email: string },
+      );
     } else {
       const recipients = await db.execute(
         sql`SELECT u.id, u.email FROM users u
@@ -361,6 +379,8 @@ export const actions: Actions = {
 
   cancel: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "email:send");
+    if (_g) return _g;
     const _rate = await assertAdminRate("email-cancel", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -388,6 +408,8 @@ export const actions: Actions = {
 
   delete: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "email:send");
+    if (_g) return _g;
     const _rate = await assertAdminRate("email-delete", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -422,14 +444,20 @@ export const actions: Actions = {
    */
   importXls: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "email:send");
+    if (_g) return _g;
     const _rate = await assertAdminRate("email-import", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();
     const file = form.get("file") as File | null;
-    const source = String(form.get("source") ?? "xls-import").trim().slice(0, 50) || "xls-import";
+    const source =
+      String(form.get("source") ?? "xls-import")
+        .trim()
+        .slice(0, 50) || "xls-import";
     if (!file || file.size === 0) return fail(400, { error: "File XLS/CSV wajib diupload." });
     if (file.size > 5_000_000) return fail(400, { error: "Max ukuran file 5MB." });
-    if (!/\.(xlsx?|csv)$/i.test(file.name)) return fail(400, { error: "Format harus .xlsx/.xls/.csv." });
+    if (!/\.(xlsx?|csv)$/i.test(file.name))
+      return fail(400, { error: "Format harus .xlsx/.xls/.csv." });
 
     const buf = Buffer.from(await file.arrayBuffer());
     let rows: any[][];
@@ -461,7 +489,9 @@ export const actions: Actions = {
     const valid: { email: string; name: string }[] = [];
     let invalid = 0;
     for (let i = startRow; i < rows.length; i++) {
-      const email = String(rows[i]?.[emailCol] ?? "").trim().toLowerCase();
+      const email = String(rows[i]?.[emailCol] ?? "")
+        .trim()
+        .toLowerCase();
       if (!email) continue;
       if (!EMAIL_RE.test(email)) {
         invalid++;
@@ -469,9 +499,15 @@ export const actions: Actions = {
       }
       if (seen.has(email)) continue;
       seen.add(email);
-      valid.push({ email, name: String(rows[i]?.[nameCol] ?? "").trim().slice(0, 150) });
+      valid.push({
+        email,
+        name: String(rows[i]?.[nameCol] ?? "")
+          .trim()
+          .slice(0, 150),
+      });
     }
-    if (valid.length === 0) return fail(400, { error: `Tidak ada email valid (baris tidak valid: ${invalid}).` });
+    if (valid.length === 0)
+      return fail(400, { error: `Tidak ada email valid (baris tidak valid: ${invalid}).` });
 
     // Insert batch 500 (ignore duplikat via unique email).
     let inserted = 0;

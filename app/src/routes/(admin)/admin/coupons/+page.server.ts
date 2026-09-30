@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { coupons } from "@socio/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -50,6 +50,8 @@ function parseDate(v: string): Date | null {
 export const actions: Actions = {
   save: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "coupons:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("coupon-save", (locals as any).ip ?? "0.0.0.0", 20, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -118,6 +120,8 @@ export const actions: Actions = {
 
   toggle: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "coupons:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("coupon-toggle", (locals as any).ip ?? "0.0.0.0", 20, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -144,6 +148,8 @@ export const actions: Actions = {
 
   delete: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "coupons:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("coupon-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
     if (_rate) return _rate;
     const form = await request.formData();

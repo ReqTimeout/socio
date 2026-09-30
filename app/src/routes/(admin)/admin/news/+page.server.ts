@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { news } from "@socio/db/schema";
 import { desc, eq, sql, count, like, or } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
-import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -51,6 +51,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 export const actions: Actions = {
   save: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "news:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("news-save", (locals as any).ip ?? "0.0.0.0", 20, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -111,6 +113,8 @@ export const actions: Actions = {
 
   delete: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "news:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("news-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
     if (_rate) return _rate;
     const form = await request.formData();

@@ -2,7 +2,7 @@ import { db } from "@socio/db";
 import { pricingRules, services } from "@socio/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
-import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import { DEFAULT_PRICING_RULES } from "$lib/server/pricing-defaults";
 import { invalidatePricingCache, upsertPricingRule } from "$lib/server/pricing";
 import { getFxInfo, setFxFloor } from "$lib/server/fx";
@@ -131,6 +131,8 @@ type Level = (typeof LEVELS)[number];
 export const actions: Actions = {
   save: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "pricing:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("pricing-save", (locals as any).ip ?? "0.0.0.0", 20, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -188,6 +190,8 @@ export const actions: Actions = {
    */
   setFloor: async ({ request, locals }) => {
     assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "pricing:edit");
+    if (_g) return _g;
     const _rate = await assertAdminRate("pricing-floor", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();

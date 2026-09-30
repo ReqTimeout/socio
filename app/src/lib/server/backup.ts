@@ -33,12 +33,21 @@ function escape(v: any): string {
   if (typeof v === "number") return String(v);
   if (typeof v === "bigint") return String(v);
   if (Buffer.isBuffer(v)) return `'${v.toString("binary").replace(/'/g, "''")}'`;
-  const s = Buffer.from(String(v), "utf8").toString("binary").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\0/g, "\\0");
+  const s = Buffer.from(String(v), "utf8")
+    .toString("binary")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\0/g, "\\0");
   return `'${s}'`;
 }
 
 /** Run logical backup via mysql2 client + gzip via zlib. */
-export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id: number; filename: string; sizeBytes: number }> {
+export async function runBackup(
+  triggeredBy: number,
+  ip?: string,
+): Promise<{ id: number; filename: string; sizeBytes: number }> {
   const url = process.env.SOCIO_DB_URL;
   if (!url) throw new Error("SOCIO_DB_URL not set");
 
@@ -49,8 +58,21 @@ export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id:
   const filename = `${process.env.SOCIO_DB_NAME ?? "socio_smm"}-${stamp}.sql.gz`;
   const filepath = path.join(BACKUP_DIR, filename);
 
-  await db.insert(backupLogs).values({ filename, sizeBytes: 0, status: "running", triggeredBy, startedAt: new Date(), finishedAt: null } as any);
-  const last = await db.select({ id: backupLogs.id }).from(backupLogs).orderBy(sql`${backupLogs.id} DESC`).limit(1);
+  await db
+    .insert(backupLogs)
+    .values({
+      filename,
+      sizeBytes: 0,
+      status: "running",
+      triggeredBy,
+      startedAt: new Date(),
+      finishedAt: null,
+    } as any);
+  const last = await db
+    .select({ id: backupLogs.id })
+    .from(backupLogs)
+    .orderBy(sql`${backupLogs.id} DESC`)
+    .limit(1);
   const logId: number = last[0]?.id ?? 0;
 
   try {
@@ -107,7 +129,9 @@ export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id:
       const colNames: string[] = (cols[0] as any[]).map((c: any) => c.Field);
 
       for (let offset = 0; offset < count; offset += batchSize) {
-        const [rows] = (await conn.query(`SELECT * FROM ${q(table)} LIMIT ${batchSize} OFFSET ${offset}`)) as any;
+        const [rows] = (await conn.query(
+          `SELECT * FROM ${q(table)} LIMIT ${batchSize} OFFSET ${offset}`,
+        )) as any;
         if (!rows.length) continue;
         const colList = colNames.map(q).join(",");
         const head = `INSERT INTO ${q(table)} (${colList}) VALUES\n`;
@@ -154,7 +178,11 @@ export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id:
   } catch (e: any) {
     await db
       .update(backupLogs)
-      .set({ status: "failed", error: String(e?.message ?? e).slice(0, 500), finishedAt: new Date() })
+      .set({
+        status: "failed",
+        error: String(e?.message ?? e).slice(0, 500),
+        finishedAt: new Date(),
+      })
       .where(eq(backupLogs.id, logId));
     throw e;
   }
@@ -163,16 +191,23 @@ export async function runBackup(triggeredBy: number, ip?: string): Promise<{ id:
 export async function rotateBackups() {
   try {
     const entries = await readdir(BACKUP_DIR);
-    const sqlGzs = entries.filter((e) => e.endsWith(".sql.gz")).sort().reverse();
+    const sqlGzs = entries
+      .filter((e) => e.endsWith(".sql.gz"))
+      .sort()
+      .reverse();
     const toDelete = sqlGzs.slice(KEEP);
     for (const f of toDelete) {
       try {
         await unlink(path.join(BACKUP_DIR, f));
-      } catch {}
+      } catch {
+        /* file mungkin sudah hilang — abaikan */
+      }
     }
     // Also prune database log rows older than 90 days
     const cutoff = new Date(Date.now() - 90 * 86400_000);
-    await db.execute(sql`DELETE FROM ${backupLogs} WHERE ${backupLogs.startedAt} < ${cutoff} AND ${backupLogs.status} = 'success'`);
+    await db.execute(
+      sql`DELETE FROM ${backupLogs} WHERE ${backupLogs.startedAt} < ${cutoff} AND ${backupLogs.status} = 'success'`,
+    );
   } catch (e) {
     console.error("[backup] rotate failed:", e);
   }
@@ -183,13 +218,26 @@ export async function listBackups() {
   return rows as any;
 }
 
-export async function deleteBackup(id: number) {
+export async function deleteBackup(id: number, adminId?: number, ip?: string) {
   const [row] = (await db.select().from(backupLogs).where(eq(backupLogs.id, id)).limit(1)) as any;
   if (!row) return null;
   try {
     await unlink(path.join(BACKUP_DIR, row.filename));
-  } catch {}
+  } catch {
+    /* file mungkin sudah hilang — tetap hapus baris log */
+  }
   await db.delete(backupLogs).where(eq(backupLogs.id, id));
+  // G1: operasi destruktif (hapus dump DB) wajib ter-forensik.
+  if (adminId) {
+    await logAudit({
+      adminId,
+      action: "backup_delete",
+      entity: "backup_log",
+      entityId: id,
+      detail: { filename: row.filename },
+      ip,
+    });
+  }
   return { filename: row.filename };
 }
 

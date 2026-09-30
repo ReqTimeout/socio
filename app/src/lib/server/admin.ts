@@ -1,9 +1,10 @@
 import { db } from "@socio/db";
-import { auditLog, adminSettings } from "@socio/db/schema";
+import { auditLog, adminSettings, adminRoles } from "@socio/db/schema";
 import { eq } from "drizzle-orm";
 import { fail, error } from "@sveltejs/kit";
 import type { ActionFailure } from "@sveltejs/kit";
 import { rateLimit } from "./rate-limit";
+import { can, normalizeRole, type AdminRole } from "@socio/core/rbac";
 
 export type LocalUser = {
   id: string | number;
@@ -34,6 +35,56 @@ export async function assertAdminRate(
     return fail(429, { error: "Terlalu banyak aksi. Coba lagi dalam 1 menit." });
   }
   return null;
+}
+
+/**
+ * P0 RBAC (fix ADMIN_FULL_AUDIT §1.2): resolve role admin dari `admin_roles`
+ * (fallback "admin"). Layout load sudah resolve, TAPI action POST harus tetap
+ * resolve sendiri — `assertAdmin` hanya cek level==="Admin".
+ */
+export async function resolveAdminRole(userId: number): Promise<AdminRole> {
+  const [row] = await db
+    .select({ role: adminRoles.role })
+    .from(adminRoles)
+    .where(eq(adminRoles.userId, userId))
+    .limit(1);
+  return normalizeRole(row?.role ?? "admin");
+}
+
+/**
+ * P0 RBAC action enforcement. Pasang SETELAH `assertAdmin(locals)` di setiap
+ * aksi mutasi/destruktif. Return `null` kalau boleh, `fail(403)` kalau role
+ * tidak punya `permission`. Pola sama `assertAdminRate` — caller `return`-nya:
+ *   const g = await assertAdminCan(locals, "services:edit"); if (g) return g;
+ */
+export async function assertAdminCan(
+  locals: { user?: LocalUser | null },
+  permission: string,
+): Promise<ActionFailure<{ error: string }> | null> {
+  const uid = Number(locals.user?.id ?? 0);
+  if (!uid) return fail(403, { error: "Sesi admin tidak valid." });
+  const role = await resolveAdminRole(uid);
+  if (!can(role, permission)) {
+    return fail(403, { error: `Role ${role} tidak punya izin "${permission}".` });
+  }
+  return null;
+}
+
+/**
+ * Varian melempar (throw) dari `assertAdminCan` untuk endpoint `+server.ts`
+ * (CSV/PDF export, download). `+server.ts` TIDAK melewati `(admin)` layout,
+ * jadi guard read harus di-inline di sini.
+ */
+export async function guardAdminCan(
+  locals: { user?: LocalUser | null },
+  permission: string,
+): Promise<void> {
+  const uid = Number(locals.user?.id ?? 0);
+  if (!uid) throw error(403, "Sesi admin tidak valid.");
+  const role = await resolveAdminRole(uid);
+  if (!can(role, permission)) {
+    throw error(403, `Role ${role} tidak punya izin "${permission}".`);
+  }
 }
 
 export async function logAudit(params: {

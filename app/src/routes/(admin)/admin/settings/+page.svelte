@@ -146,18 +146,36 @@
     <div class="flex items-center justify-between rounded-2xl border border-ink-100 bg-surface p-4">
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2">
-          <span class="grid h-8 w-8 place-items-center rounded-lg bg-ink-100 text-ink-500">
+          <span
+            class="grid h-8 w-8 place-items-center rounded-lg {data.require2fa
+              ? 'bg-success-soft text-success'
+              : 'bg-ink-100 text-ink-500'}"
+          >
             <Icon name="shield" size={14} stroke={2.5} />
           </span>
-          <h2 class="text-sm font-semibold">2FA Admin (TOTP)</h2>
+          <h2 class="text-sm font-semibold">2FA Admin Wajib (TOTP)</h2>
         </div>
         <p class="mt-1 text-xs text-ink-500">
-          Wajibkan kode TOTP saat login admin. Belum di-enforce — menunggu implementasi M3.5.
+          Paksa semua admin enroll 2FA. Saat aktif, admin tanpa TOTP dialihkan ke halaman setup
+          sebelum bisa akses panel.
         </p>
       </div>
-      <Button type="button" variant="ghost" disabled title="Belum diimplementasi (M3.5)">
-        Segera
-      </Button>
+      <form
+        method="POST"
+        action="?/toggleRequire2fa"
+        use:enhance={() =>
+          async ({ result }) => {
+            const r = result as any;
+            if (result.type === "failure") toast(r.data?.error ?? "Gagal", "error");
+            else toast(extractActionMsg(r.data) ?? "OK", "success");
+            await applyAction(result);
+          }}
+      >
+        <input type="hidden" name="on" value={data.require2fa ? "0" : "1"} />
+        <Button type="submit" variant={data.require2fa ? "ghost" : "primary"}>
+          {data.require2fa ? "Nonaktifkan" : "Aktifkan"}
+        </Button>
+      </form>
     </div>
 
     <!-- Public API -->

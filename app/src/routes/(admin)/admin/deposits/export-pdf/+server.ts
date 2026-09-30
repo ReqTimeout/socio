@@ -5,7 +5,7 @@ import { db } from "@socio/db";
 import { deposits, users } from "@socio/db/schema";
 import { sql, eq, and, desc, ne } from "drizzle-orm";
 import { redirect } from "@sveltejs/kit";
-import { assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { assertAdmin, assertAdminRate, guardAdminCan } from "$lib/server/admin";
 import { baseDoc, sendPdf, idr, fmtDateTime } from "$lib/server/pdf";
 import type { RequestHandler } from "./$types";
 
@@ -16,6 +16,7 @@ export const GET: RequestHandler = async (event) => {
   const { locals, url } = event;
   if (!locals.user) throw redirect(303, "/login");
   assertAdmin(locals);
+  await guardAdminCan(locals, "deposits:read");
   await assertAdminRate("deposits-export-pdf", (locals as any).ip ?? "0.0.0.0", 5, 60);
 
   const q = String(url.searchParams.get("q") ?? "").trim();
@@ -47,8 +48,12 @@ export const GET: RequestHandler = async (event) => {
     .orderBy(desc(deposits.id))
     .limit(MAX_EXPORT);
 
-  const totalSuccess = rows.filter((r) => r.status === "Success").reduce((a, r) => a + Number(r.amount ?? 0), 0);
-  const totalPending = rows.filter((r) => r.status === "Pending").reduce((a, r) => a + Number(r.amount ?? 0), 0);
+  const totalSuccess = rows
+    .filter((r) => r.status === "Success")
+    .reduce((a, r) => a + Number(r.amount ?? 0), 0);
+  const totalPending = rows
+    .filter((r) => r.status === "Pending")
+    .reduce((a, r) => a + Number(r.amount ?? 0), 0);
 
   const doc = baseDoc(
     [
@@ -81,7 +86,8 @@ export const GET: RequestHandler = async (event) => {
           ],
         },
         layout: {
-          hLineWidth: (i: number, node: any) => (i === 0 || i === node.table.body.length ? 0.75 : 0),
+          hLineWidth: (i: number, node: any) =>
+            i === 0 || i === node.table.body.length ? 0.75 : 0,
           vLineWidth: () => 0,
           fillColor: (i: number) => (i === 0 ? "#1f2a44" : i % 2 === 1 ? "#f6f8fb" : null),
           paddingLeft: () => 4,
