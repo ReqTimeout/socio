@@ -8,9 +8,12 @@ import type { Actions, PageServerLoad } from "./$types";
 const PAGE_SIZE = 25;
 
 /**
- * Hitung harga jual per level dari `pricing_rules` (sumber kebenaran markup).
- * Mapping legacy: services.price = Member, services.priceApi = Agen,
- * services.priceReseller = Reseller. `base` = modal per 1000 (price_api provider).
+ * Hitung preview harga jual per level dari `pricing_rules` utk display admin.
+ * PENTING (fix double-markup Sep-2026): kolom `price / priceApi / priceReseller`
+ * di DB menyimpan MODAL murni (rate provider) — markup diterapkan SEKALI saat
+ * checkout (pesan / api/v1) membaca pricing_rules. Fungsi ini mengembalikan
+ * harga jual hanya utk preview UI + kolom profit informatif, JANGAN ditulis
+ * ke kolom harga.
  */
 async function computePricing(base: number) {
   const rules = await db.select().from(pricingRules);
@@ -21,16 +24,22 @@ async function computePricing(base: number) {
     if (!r) return base * (1 + fallback / 100);
     return base * (1 + Number(r.markupPercent) / 100) + Number(r.flatPer1k);
   };
-  const price = mk("Member", 200); // retail
-  const priceApi = mk("Agen", 150); // agen (price_api legacy)
-  const priceReseller = mk("Reseller", 180); // reseller
+  const price = mk("Member", 200); // retail (hanya utk preview)
+  const priceApi = mk("Agen", 150); // agen (preview)
+  const priceReseller = mk("Reseller", 180); // reseller (preview)
   return {
-    price,
-    priceApi,
-    priceReseller,
-    profit: price - base,
-    profitReseller: priceReseller - base,
-    profitAgen: priceApi - base,
+    // Kolom harga = MODAL (base), bukan harga jual.
+    price: base,
+    priceApi: base,
+    priceReseller: base,
+    // Margin informatif per level (selisih jual - modal); boleh dilihat admin.
+    profit: Math.round(price - base),
+    profitReseller: Math.round(priceReseller - base),
+    profitAgen: Math.round(priceApi - base),
+    // Preview jual utk UI (tidak ditulis ke DB).
+    sellMember: price,
+    sellAgen: priceApi,
+    sellReseller: priceReseller,
   };
 }
 

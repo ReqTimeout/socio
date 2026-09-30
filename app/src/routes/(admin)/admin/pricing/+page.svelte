@@ -82,9 +82,12 @@
     }
   });
 
-  // Sample base = MEDIAN harga Member dari data riil (bukan hardcode)
+  // Sample base = MEDIAN modal murni dari service aktif (katalog = rate provider).
+  // Post-rebase Sep-2026, kolom `price` dan `priceApi` identik = MODAL. Pakai
+  // angka yang sama utk base & modal supaya preview markup/profit self-consistent
+  // dan tidak pernah negatif saat markup ≥ 0.
   const sampleBase = $derived(data.stats.medianBase > 0 ? data.stats.medianBase : 2000);
-  const sampleModal = $derived(data.stats.sample[0]?.modal ?? Math.round(sampleBase * 0.7));
+  const sampleModal = $derived(sampleBase);
 
   // Slider range 0-400% (lebih ketat, 200% jadi titik tengah)
   const SLIDER_MIN = 0;

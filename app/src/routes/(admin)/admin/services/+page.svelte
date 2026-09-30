@@ -117,8 +117,10 @@
     f_serviceName = s.serviceName;
     f_note = s.note ?? "";
     f_type = s.type;
-    // base (modal) price = Member price / (1 + markup% Member), pakai pricing_rules
-    f_profit = Math.round(s.price / (1 + pct("Member") / 100));
+    // Post-rebase Sep-2026: kolom s.price = MODAL murni (bukan harga jual).
+    // Field f_profit = Base Price input = modal → ambil langsung, jangan
+    // bagi markup lagi (itu sumber bug double-markup lama).
+    f_profit = Math.round(Number(s.price));
     f_min = s.min;
     f_max = s.max;
     f_status = s.status;
@@ -455,8 +457,11 @@
             <th class="w-12 p-3 font-semibold">ID</th><th class="w-32 p-3 font-semibold"
               >Kategori</th
             ><th class="p-3 font-semibold">Layanan</th>
-            <th class="w-36 p-3 text-right font-semibold" title="Harga Member / Reseller / API"
-              >Harga</th
+            <th
+              class="w-36 p-3 text-right font-semibold"
+              title="Modal (rate provider) + preview harga jual per level"
+            >
+              Modal / Jual</th
             ><th class="w-20 p-3 font-semibold">Provider</th>
             <th class="w-20 p-3 font-semibold">Status</th><th
               class="w-24 p-3 text-right font-semibold">Aksi</th
@@ -495,7 +500,9 @@
               <td class="p-3 text-right tabular-nums">
                 <div class="font-bold text-ink-900">{formatRupiah(s.price)}</div>
                 <div class="whitespace-nowrap text-[11px] text-ink-400">
-                  R {formatRupiah(s.priceReseller)} · A {formatRupiah(s.priceApi)}
+                  M {formatRupiah(s.price * (1 + pct("Member") / 100))} · R
+                  {formatRupiah(s.price * (1 + pct("Reseller") / 100))} · A
+                  {formatRupiah(s.price * (1 + pct("Agen") / 100))}
                 </div>
               </td>
               <td class="p-3">
@@ -588,22 +595,22 @@
                   </div>
                 </div>
               </div>
-              <!-- Margin ladder: Member / Reseller / Agen -->
+              <!-- Modal (rate provider) + preview harga jual per level dari pricing_rules -->
               <dl class="mt-2.5 grid grid-cols-3 gap-2 text-xs">
                 <div>
-                  <dt class="text-ink-400">Member</dt>
+                  <dt class="text-ink-400">Modal</dt>
                   <dd class="tabular-nums font-bold text-ink-900">{formatRupiah(s.price)}</dd>
                 </div>
                 <div>
-                  <dt class="text-ink-400">Reseller</dt>
+                  <dt class="text-ink-400">Jual Member</dt>
                   <dd class="tabular-nums font-bold text-ink-700">
-                    {formatRupiah(s.priceReseller)}
+                    {formatRupiah(s.price * (1 + pct("Member") / 100))}
                   </dd>
                 </div>
                 <div>
-                  <dt class="text-ink-400">Agen</dt>
+                  <dt class="text-ink-400">Jual Reseller</dt>
                   <dd class="tabular-nums font-bold text-ink-700">
-                    {formatRupiah(s.priceApi)}
+                    {formatRupiah(s.price * (1 + pct("Reseller") / 100))}
                   </dd>
                 </div>
               </dl>
@@ -925,7 +932,7 @@
           </div>
           <div>
             <label class="mb-1 block text-xs font-semibold text-ink-500" for="add-base"
-              >Base Price (Rp)</label
+              >Modal provider (Rp/1k)</label
             >
             <input
               id="add-base"
@@ -1090,7 +1097,7 @@
           </div>
           <div>
             <label class="mb-1 block text-xs font-semibold text-ink-500" for="edit-base"
-              >Base Price (Rp)</label
+              >Modal provider (Rp/1k)</label
             >
             <input
               id="edit-base"
@@ -1259,22 +1266,22 @@
         <hr class="border-ink-100" />
         <div class="text-xs font-semibold text-ink-500">Harga per 1.000</div>
         <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="rounded-xl bg-primary-50 px-2 py-2">
-            <div class="text-[10px] font-semibold uppercase text-ink-500">Member</div>
-            <div class="text-sm font-bold tabular-nums text-primary-ink">
+          <div class="rounded-xl bg-ink-50 px-2 py-2">
+            <div class="text-[10px] font-semibold uppercase text-ink-500">Modal</div>
+            <div class="text-sm font-bold tabular-nums text-ink-900">
               {formatRupiah(viewSvc.price)}
             </div>
           </div>
-          <div class="rounded-xl bg-accent-50 px-2 py-2">
-            <div class="text-[10px] font-semibold uppercase text-ink-500">Reseller</div>
-            <div class="text-sm font-bold tabular-nums text-accent-ink">
-              {formatRupiah(viewSvc.priceReseller)}
+          <div class="rounded-xl bg-primary-50 px-2 py-2">
+            <div class="text-[10px] font-semibold uppercase text-ink-500">Jual Member</div>
+            <div class="text-sm font-bold tabular-nums text-primary-ink">
+              {formatRupiah(viewSvc.price * (1 + pct("Member") / 100))}
             </div>
           </div>
-          <div class="rounded-xl bg-warning-50 px-2 py-2">
-            <div class="text-[10px] font-semibold uppercase text-ink-500">Agen</div>
-            <div class="text-sm font-bold tabular-nums text-warning-700">
-              {formatRupiah(viewSvc.priceApi)}
+          <div class="rounded-xl bg-accent-50 px-2 py-2">
+            <div class="text-[10px] font-semibold uppercase text-ink-500">Jual Reseller</div>
+            <div class="text-sm font-bold tabular-nums text-accent-ink">
+              {formatRupiah(viewSvc.price * (1 + pct("Reseller") / 100))}
             </div>
           </div>
         </div>

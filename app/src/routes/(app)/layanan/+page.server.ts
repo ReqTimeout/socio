@@ -2,7 +2,8 @@ import { db } from "@socio/db";
 import { services, categories, favorites } from "@socio/db/schema";
 import { eq, like, desc, asc, sql, and, inArray } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
-import { baseForLevel, type UserLevel } from "@socio/core/pricing";
+import { baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
+import { getPricingRules } from "$lib/server/pricing";
 import { whitelabel } from "$lib/format";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -62,21 +63,36 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE);
 
-  const withLevelPrice = rows.map((s) => ({
-    ...s,
-    categoryName: whitelabel((s as any).categoryName ?? ""),
-    fav: favIds.includes(s.id),
-    levelPrice: Math.round(
-      baseForLevel(
+  const withLevelPrice = await (async () => {
+    const rules = await getPricingRules();
+    const rule = rules[level];
+    return rows.map((s) => {
+      const modal = Math.max(Number(s.priceApi ?? 0), 0);
+      const base = baseForLevel(
         {
           price: Number(s.price),
           priceApi: Number((s as any).priceApi ?? 0),
           priceReseller: Number((s as any).priceReseller ?? 0),
         },
         level,
-      ),
-    ),
-  }));
+      );
+      return {
+        id: s.id,
+        serviceName: s.serviceName,
+        type: s.type,
+        min: s.min,
+        max: s.max,
+        isRefill: s.isRefill,
+        categoryId: s.categoryId,
+        categoryName: whitelabel((s as any).categoryName ?? ""),
+        providerId: s.providerId,
+        fav: favIds.includes(s.id),
+        // Harga jual efektif per 1k (sudah markup per level) — satu-satunya
+        // angka yang dikirim ke client supaya modal tidak bocor.
+        levelPrice: Math.round(effectivePer1k(base, level, rule, modal)),
+      };
+    });
+  })();
 
   const [{ total }] = await db
     .select({ total: sql<number>`count(*)` })

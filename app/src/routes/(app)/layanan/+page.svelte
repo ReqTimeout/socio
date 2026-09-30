@@ -233,7 +233,7 @@
             name={s.serviceName}
             category={s.type && s.type !== "Default" ? s.type : (s.categoryName ?? "")}
             platform={s.categoryName ?? s.serviceName}
-            pricePer1k={s.price}
+            pricePer1k={s.levelPrice}
             min={s.min}
             max={s.max}
             refill={s.isRefill === 1}

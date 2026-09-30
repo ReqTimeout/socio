@@ -53,12 +53,15 @@ export const load: PageServerLoad = async ({ locals }) => {
     }[],
   };
   try {
+    // Median diambil dari service AKTIF saja (status=1) supaya baris lama
+    // yang belum ke-rebase (disabled dgn harga marked-up legacy) tidak
+    // mendistorsi preview markup.
     const medianResult = (await db.execute(sql`
       SELECT AVG(price) AS median FROM (
         SELECT price, ROW_NUMBER() OVER (ORDER BY price ASC) AS rn,
                COUNT(*) OVER () AS total
         FROM services
-        WHERE price > 0
+        WHERE price > 0 AND status = 1
       ) t
       WHERE rn IN (FLOOR((total + 1) / 2), CEIL((total + 1) / 2))
     `)) as unknown as [{ median: number }[], unknown];

@@ -3,6 +3,8 @@ import { orders, services, users, balanceLogs } from "@socio/db/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import { smmturkRefill, smmturkCancel } from "@socio/core/smmturk";
+import { baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
+import { getPricingRules } from "$lib/server/pricing";
 import { notifyOrderCancel } from "$lib/server/notification";
 import { notifyAdmins } from "$lib/server/email-templates";
 import type { PageServerLoad, Actions } from "./$types";
@@ -96,6 +98,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
             id: services.id,
             serviceName: services.serviceName,
             price: services.price,
+            priceApi: services.priceApi,
+            priceReseller: services.priceReseller,
             providerServiceId: services.providerServiceId,
           })
           .from(services)
@@ -109,11 +113,31 @@ export const load: PageServerLoad = async ({ url, locals }) => {
         const order: Record<number, number> = {};
         pids.forEach((id, i) => (order[id] = i));
         const byPid = new Map(svc.map((s) => [Number((s as any).providerServiceId ?? 0), s]));
+        // Harga populer = harga JUAL efektif per level user (bukan modal mentah),
+        // supaya widget konsisten dgn apa yang dibayar saat order.
+        const lvl = ((locals.user?.level as UserLevel) ?? "Member") as UserLevel;
+        const rules = await getPricingRules();
+        const rule = rules[lvl];
         popular = pids
           .map((pid) => byPid.get(pid))
           .filter((s): s is NonNullable<typeof s> => !!s)
           .slice(0, 3)
-          .map((s) => ({ id: s.id, serviceName: s.serviceName, price: Number(s.price) }));
+          .map((s) => {
+            const base = baseForLevel(
+              {
+                price: Number(s.price),
+                priceApi: Number((s as any).priceApi ?? 0),
+                priceReseller: Number((s as any).priceReseller ?? 0),
+              },
+              lvl,
+            );
+            const modal = Math.max(Number((s as any).priceApi ?? 0), 0);
+            return {
+              id: s.id,
+              serviceName: s.serviceName,
+              price: Math.round(effectivePer1k(base, lvl, rule, modal)),
+            };
+          });
       }
     } catch {}
   }

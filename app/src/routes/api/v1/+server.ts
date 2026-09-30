@@ -3,7 +3,7 @@ import { db } from "@socio/db";
 import { users, services, categories, orders, provider, balanceLogs } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { smmturkAddFor, smmturkRefill } from "@socio/core/smmturk";
-import { baseForLevel, computePrice, type UserLevel } from "@socio/core/pricing";
+import { baseForLevel, effectivePer1k, computePrice, type UserLevel } from "@socio/core/pricing";
 import { getPricingRules } from "$lib/server/pricing";
 import { decryptSecret } from "$lib/server/crypto";
 import { rateLimit } from "$lib/server/rate-limit";
@@ -90,9 +90,14 @@ async function handleServices(apiKey: string): Promise<Response> {
       name: services.serviceName,
       status: services.status,
       refill: services.isRefill,
+      // Kolom price/priceReseller/priceApi di DB = MODAL murni (rate provider).
+      // Untuk API publik kita kembalikan harga JUAL per level (sudah markup),
+      // supaya konsumen API tidak pernah melihat modal & tetap cocok dgn
+      // nominal yang akan dipotong saat order (lihat handleOrder).
       price: services.price,
       priceReseller: services.priceReseller,
       priceAgen: services.priceApi,
+      modalForCalc: services.priceApi,
       type: services.type,
       min: services.min,
       max: services.max,
@@ -103,7 +108,37 @@ async function handleServices(apiKey: string): Promise<Response> {
     .innerJoin(categories, eq(categories.id, services.categoryId))
     .where(eq(services.status, 1));
 
-  return ok("Access Allowed", rows);
+  const level = (
+    ["Member", "Agen", "Reseller", "Admin"].includes(user.level ?? "") ? user.level : "Member"
+  ) as UserLevel;
+  const rules = await getPricingRules();
+  const rule = rules[level];
+  const out = rows.map((r) => {
+    const base = baseForLevel(
+      {
+        price: Number(r.price),
+        priceApi: Number(r.priceAgen ?? 0),
+        priceReseller: Number(r.priceReseller ?? 0),
+      },
+      level,
+    );
+    const modal = Math.max(Number(r.modalForCalc ?? 0), 0);
+    const jual = Math.round(effectivePer1k(base, level, rule, modal));
+    return {
+      service: r.id,
+      name: r.name,
+      type: r.type,
+      category: r.category,
+      min: r.min,
+      max: r.max,
+      refill: r.refill,
+      note: r.note,
+      // Kompatibel dgn format legacy SMMturk (`price` = selling utk caller).
+      price: jual,
+    };
+  });
+
+  return ok("Access Allowed", out);
 }
 
 /** Deduct saldo atomik: 0 row terdampak = saldo kurang (fix P0-1). */
