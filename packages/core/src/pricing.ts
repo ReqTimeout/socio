@@ -18,19 +18,26 @@ export const ZERO_RULE = (level: UserLevel): PricingRule => ({
 });
 
 /**
- * Markup rules per member level — port 1:1 dari `app.socio.id/lib/pricing.php`.
+ * Markup rules per member level — single source of truth dari `pricing_rules` DB.
  *
- * Konvensi data (legacy dump, 6044 layanan):
- *  - `services.price`          = base harga per 1000 untuk **Member**
- *  - `services.price_reseller` = base harga per 1000 untuk **Reseller**
- *  - `services.price_api`      = base harga per 1000 untuk **Agen** (+ modal provider)
+ * ⚠ KONVENSI KATALOG (fix double-markup Sep-2026, keputusan pemilik):
+ *   `services.price`, `services.price_api`, `services.price_reseller`
+ *   KETIGANYA menyimpan **MODAL MURNI** (rate provider SMMturk) per 1000.
+ *   Ketiganya identik post-rebase; perbedaan level TIDAK lagi di-encode ke
+ *   kolom DB — cukup dari `pricing_rules.markup_percent`.
  *
- * Harga jual per 1000 untuk satu level:
- *    effective = base(level) × (1 + markup%/100) + flatPer1k,
- *    dibatasi minimal = price_api + minProfitPer1k (floor anti-jual-rugi).
+ * Harga JUAL per 1000 untuk satu level (dihitung SEKALI saat checkout):
+ *   jual = baseForLevel(svc, level) × (1 + markup%/100) + flatPer1k,
+ *   floor: max(jual, modal + minProfitPer1k) — anti-jual-rugi.
  *
- * Default markup = 0% (identitas) → harga tersimpan TIDAK berubah.
- * Admin mengatur markup % per level via /admin/pricing (sumber kebenaran = DB).
+ * ANTI-PATTERN HARAM (sebabkan bug fatal double-markup order #37735):
+ *   ✘ service-sync menulis `price = rateIdr × (1 + markup)` ke DB
+ *   ✘ admin /admin/services computePricing menulis marked-up ke `price`
+ *   ✘ applyToCatalog "Terapkan ke Katalog" menulis marked-up ke `price`
+ *   ✘ bulkCategoryPrice menulis marked-up ke `price`
+ *   ✘ API /layanan /api/v1 /pesanan mengirim `s.price` mentah ke client
+ *   Semua itu membuat harga efektif = modal × (1+markup)² atau bocor modal.
+ *   JANGAN reintroduce. Setiap route baru WAJIB wrap `effectivePer1k`.
  */
 export function baseForLevel(
   svc: { price: number; priceApi: number; priceReseller: number },
