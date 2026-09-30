@@ -26,7 +26,15 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     : [];
   const favIds = favRows.map((r) => r.serviceId);
 
-  const filters = [eq(services.status, 1)];
+  // Tampilkan hanya service aktif yang layak order: punya modal > 0 dan range
+  // min/max valid. Ini menyaring 4 baris legacy (provider_id=0 / placeholder)
+  // yang muncul sebagai "Min 0 · Max 0 · Rp0" di sort termurah.
+  const filters = [
+    eq(services.status, 1),
+    sql`${services.price} > 0`,
+    sql`${services.min} > 0`,
+    sql`${services.max} > 0`,
+  ];
   if (cat) filters.push(eq(services.categoryId, cat));
   if (q) filters.push(like(services.serviceName, `%${q}%`));
   if (fav) {

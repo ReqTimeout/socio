@@ -303,17 +303,20 @@
       </div>
     {/if}
 
-    <!-- Sample preview (3 layanan riil) -->
+    <!-- Sample preview (3 layanan riil) — harga jual dihitung live dari slider markup
+         yang sedang aktif, bukan dari kolom services.profit yang statis/sisa rebase. -->
     {#if data.stats.sample.length > 0}
       <div class="mt-3 grid gap-1.5 sm:grid-cols-3">
         {#each data.stats.sample as s}
+          {@const jual = Math.round(s.modal * (1 + Number(markup.Member ?? 0) / 100))}
+          {@const margin = jual - s.modal}
           <div class="min-w-0 rounded-lg border border-ink-100 bg-ink-50/50 p-2 text-[11px]">
             <p class="truncate font-semibold text-ink-800">#{s.id} {s.serviceName}</p>
             <p class="truncate text-ink-500">
               Modal <span class="font-bold tabular-nums text-ink-700">{fmtRp(s.modal)}</span>
-              {#if s.profit > 0}
+              {#if margin > 0}
                 <Icon name="arrow_right" size={10} stroke={2.5} class="mx-0.5 text-ink-400" />
-                <span class="font-bold tabular-nums text-success">{fmtRp(s.modal + s.profit)}</span>
+                <span class="font-bold tabular-nums text-success">{fmtRp(jual)}</span>
               {/if}
             </p>
           </div>
