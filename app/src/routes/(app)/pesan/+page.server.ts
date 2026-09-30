@@ -238,11 +238,12 @@ export const actions: Actions = {
 
     // Pre-check saldo provider (cached hourly di provider.balance_provider)
     // supaya tidak deduct user lalu gagal di provider.
-    // Estimasi modal USD = (priceApi - profitAgen) / kurs_efektif.
+    // Katalog menyimpan modal murni (price_api = rate provider IDR/1k), jadi
+    // estimasi modal USD = price_api / kurs efektif.
     if (s.providerId !== 1) {
       try {
         const [pv] = await db.select().from(provider).where(eq(provider.id, s.providerId)).limit(1);
-        const modalIdr = Math.max(Number(s.priceApi) - Number((s as any).profitAgen ?? 0), 0);
+        const modalIdr = Math.max(Number(s.priceApi), 0);
         const { getUsdToIdr } = await import("$lib/server/fx");
         const usdRate = await getUsdToIdr();
         const needUsd = (modalIdr / usdRate) * (finalQty / 1000);
@@ -314,7 +315,9 @@ export const actions: Actions = {
         remains: finalQty,
         startCount: 0,
         price: payable,
-        profit: 0,
+        // Profit riil = dibayar (pasca-kupon) − modal provider untuk qty ini.
+        // Katalog menyimpan modal murni di price_api (lihat service-sync).
+        profit: Math.round(payable - (Math.max(Number(s.priceApi), 0) * finalQty) / 1000),
         status: "Pending",
         date: new Date().toISOString().slice(0, 10),
         time: new Date().toISOString().slice(11, 19),

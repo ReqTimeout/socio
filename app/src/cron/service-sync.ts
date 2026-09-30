@@ -199,6 +199,11 @@ export async function runServiceSync(providerId: number): Promise<void> {
     for (const ps of psRows) {
       const pid = String(ps.providerServiceId);
       const rateIdr = Number(ps.rate ?? 0); // sudah IDR dari provider-sync
+      // SEMANTIK KATALOG (fix double-markup Sep-2026): kolom price / price_api /
+      // price_reseller menyimpan MODAL MURNI (rateIdr). Harga jual = modal ×
+      // (1 + markup level) diterapkan SEKALI saat checkout oleh pesan/api/v1 via
+      // pricing_rules. priceMember dkk. di bawah HANYA untuk berita + kolom
+      // profit informatif — jangan ditulis ke kolom harga.
       const priceMember = Math.ceil(rateIdr * (1 + mm / 100));
       const priceReseller = Math.ceil(rateIdr * (1 + mr / 100));
       const priceAgen = Math.ceil(rateIdr * (1 + ma / 100));
@@ -232,9 +237,9 @@ export async function runServiceSync(providerId: number): Promise<void> {
           serviceName: dispName,
           serviceNameRaw: rawName,
           note: "",
-          price: priceMember,
-          priceApi: priceAgen,
-          priceReseller: priceReseller,
+          price: rateIdr,
+          priceApi: rateIdr,
+          priceReseller: rateIdr,
           profit: priceMember - rateIdr,
           profitReseller: priceReseller - rateIdr,
           profitAgen: priceAgen - rateIdr,
@@ -296,9 +301,9 @@ export async function runServiceSync(providerId: number): Promise<void> {
           type: apiType,
           serviceName: dispName,
           serviceNameRaw: rawName,
-          price: priceMember,
-          priceApi: priceAgen,
-          priceReseller: priceReseller,
+          price: rateIdr,
+          priceApi: rateIdr,
+          priceReseller: rateIdr,
           profit: priceMember - rateIdr,
           profitReseller: priceReseller - rateIdr,
           profitAgen: priceAgen - rateIdr,
@@ -358,13 +363,13 @@ export async function runServiceSync(providerId: number): Promise<void> {
             old: String(svc.isDripfeed),
             cur: String(apiDrip),
           });
-        if (svc.price !== priceMember) {
+        if (svc.price !== rateIdr) {
           patch.priceChangedAt = now;
           diffs.push({
-            event: priceMember > svc.price ? "price_up" : "price_down",
+            event: rateIdr > svc.price ? "price_up" : "price_down",
             field: "price",
             old: String(svc.price),
-            cur: String(priceMember),
+            cur: String(rateIdr),
           });
         }
 
@@ -409,17 +414,19 @@ export async function runServiceSync(providerId: number): Promise<void> {
             });
             if (d.event === "price_up" || d.event === "price_down") {
               priceChanges[d.event === "price_up" ? "up" : "down"]++;
+              // Changelog menyimpan MODAL; berita ditampilkan dalam HARGA JUAL
+              // Member (modal × rule) supaya yang user lihat sama dengan feed.
+              const sellOld = Math.ceil(Number(d.old) * (1 + mm / 100));
+              const sellCur = Math.ceil(Number(d.cur) * (1 + mm / 100));
               // Berita hanya untuk perubahan harga signifikan (filter noise kurs).
-              const oldP = Number(d.old);
-              const curP = Number(d.cur);
-              const deltaAbs = Math.abs(curP - oldP);
-              const deltaPct = oldP > 0 ? (deltaAbs / oldP) * 100 : 100;
+              const deltaAbs = Math.abs(sellCur - sellOld);
+              const deltaPct = sellOld > 0 ? (deltaAbs / sellOld) * 100 : 100;
               if (deltaPct < PRICE_NEWS_MIN_PCT || deltaAbs < PRICE_NEWS_MIN_ABS) continue;
               const isUp = d.event === "price_up";
               newsCandidates.push({
                 kategori: isUp ? "Harga Naik" : "Harga Turun",
-                content: `${dispName} — Rp ${rpFmt.format(Number(d.old))} → Rp ${rpFmt.format(
-                  Number(d.cur),
+                content: `${dispName} — Rp ${rpFmt.format(sellOld)} → Rp ${rpFmt.format(
+                  sellCur,
                 )} /1k`,
                 eventType: d.event,
                 serviceId: svc.id,

@@ -1,10 +1,10 @@
 import { db } from "@socio/db";
-import { pricingRules, services, auditLog } from "@socio/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { pricingRules, services } from "@socio/db/schema";
+import { eq, sql } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import { DEFAULT_PRICING_RULES } from "$lib/server/pricing-defaults";
-import { getPricingRules, invalidatePricingCache, upsertPricingRule } from "$lib/server/pricing";
+import { invalidatePricingCache, upsertPricingRule } from "$lib/server/pricing";
 import { getFxInfo, setFxFloor } from "$lib/server/fx";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -44,7 +44,13 @@ export const load: PageServerLoad = async ({ locals }) => {
     minBase: 0,
     maxBase: 0,
     distribution: [] as { range: string; count: number }[],
-    sample: [] as { id: number; serviceName: string; base: number; modal: number }[],
+    sample: [] as {
+      id: number;
+      serviceName: string;
+      base: number;
+      modal: number;
+      profit: number;
+    }[],
   };
   try {
     const medianResult = (await db.execute(sql`
@@ -87,6 +93,7 @@ export const load: PageServerLoad = async ({ locals }) => {
         serviceName: services.serviceName,
         base: services.price,
         modal: services.priceApi,
+        profit: services.profit,
       })
       .from(services)
       .where(eq(services.status, 1))
@@ -105,6 +112,7 @@ export const load: PageServerLoad = async ({ locals }) => {
         serviceName: r.serviceName,
         base: Number(r.base),
         modal: Number(r.modal),
+        profit: Number(r.profit),
       })),
     };
   } catch (e) {
@@ -134,7 +142,8 @@ export const actions: Actions = {
       // Field kosong ("") = user menghapus isi (bukan 0). Tolak supaya tidak silent-reset ke 0.
       // Checkbox unchecked / field tidak ada (level nonaktif) = null → pakai 0 + isActive 0.
       const rawMarkup = form.get(`markup_${level}`);
-      if (rawMarkup === "") return fail(400, { error: `Markup ${level} wajib diisi (0 untuk gratis).` });
+      if (rawMarkup === "")
+        return fail(400, { error: `Markup ${level} wajib diisi (0 untuk gratis).` });
       const markupPercent = Number(rawMarkup ?? 0);
       const isActive = form.get(`active_${level}`) === "1" ? 1 : 0;
 
@@ -195,97 +204,8 @@ export const actions: Actions = {
       detail: { floor: Math.round(floor) },
       ip: (locals as any).ip,
     });
-    return { success: `Floor kurs disimpan: Rp${Math.round(floor).toLocaleString("id-ID")} per $1.` };
-  },
-
-  /**
-   * A-07: idempotent — base `price_api` (bukan `price` saat ini, supaya klik
-   * berulang tidak mengalikan markup). Kalau `price_api = 0`, fallback ke `price`
-   * (legacy service). Tolak double-klik < 30 detik via `audit_log` last-run.
-   *
-   * A-08 fix: `profit_agen` dihitung `price - price_api` (margin agen),
-   * bukan `price_api - price_api` (selalu 0, bug sebelumnya).
-   */
-  applyToCatalog: async ({ locals }) => {
-    assertAdmin(locals);
-    const _rate = await assertAdminRate("pricing-apply", (locals as any).ip ?? "0.0.0.0", 5, 60);
-    if (_rate) return _rate;
-
-    // Idempotency: tolak kalau admin sudah apply dalam 30 detik terakhir.
-    const [recent] = await db
-      .select({ at: auditLog.createdAt })
-      .from(auditLog)
-      .where(eq(auditLog.action, "apply_pricing_to_catalog"))
-      .orderBy(desc(auditLog.createdAt))
-      .limit(1);
-    if (recent && Date.now() - new Date(recent.at).getTime() < 30_000) {
-      return fail(429, {
-        error:
-          "Penerapan baru saja dilakukan < 30 detik lalu. Tunggu sebentar untuk mencegah double-klik.",
-      });
-    }
-
-    const rules = await getPricingRules();
-    const m = (lv: "Member" | "Agen" | "Reseller" | "Admin") =>
-      rules[lv]?.isActive ? Number(rules[lv].markupPercent) : 0;
-
-    const member = m("Member");
-    const agen = m("Agen");
-    const reseller = m("Reseller");
-
-    if (member === 0 && agen === 0 && reseller === 0) {
-      return fail(400, {
-        error:
-          "Semua markup 0% — tidak ada yang berubah. Set minimal satu level markup > 0 dulu, lalu simpan (Step 1).",
-      });
-    }
-
-    const [totalRow] = await db.select({ n: sql<number>`COUNT(*)` }).from(services);
-    const total = Number(totalRow?.n ?? 0);
-
-    // Base = price_api (modal) kalau > 0, fallback price. Stabil lintas multi-klik.
-    const base = sql`COALESCE(NULLIF(${services.priceApi}, 0), ${services.price})`;
-    if (member !== 0) {
-      await db.execute(sql`
-        UPDATE services SET price = ROUND(${base} * (1 + ${member} / 100))
-      `);
-    }
-    if (reseller !== 0) {
-      await db.execute(sql`
-        UPDATE services SET price_reseller = ROUND(${base} * (1 + ${reseller} / 100))
-      `);
-    }
-    if (agen !== 0) {
-      await db.execute(sql`
-        UPDATE services SET price_api = ROUND(${base} * (1 + ${agen} / 100))
-      `);
-    }
-
-    // A-08 fix: profit_agen = price - price_api (margin agen), bukan price_api - price_api.
-    await db.execute(sql`
-      UPDATE services
-      SET
-        profit          = ROUND(price - price_api),
-        profit_reseller = ROUND(price_reseller - price_api),
-        profit_agen     = ROUND(price - price_api)
-    `);
-
-    invalidatePricingCache();
-
-    await logAudit({
-      adminId: Number(locals.user.id),
-      action: "apply_pricing_to_catalog",
-      entity: "services",
-      detail: {
-        markup: { Member: member, Agen: agen, Reseller: reseller },
-        total,
-      },
-      ip: (locals as any).ip,
-    });
-
     return {
-      success: `${total.toLocaleString("id-ID")} layanan di-update. Member ×${(1 + member / 100).toFixed(2)} (${member >= 0 ? "+" : ""}${member}%) · Agen ×${(1 + agen / 100).toFixed(2)} (${agen >= 0 ? "+" : ""}${agen}%) · Reseller ×${(1 + reseller / 100).toFixed(2)} (${reseller >= 0 ? "+" : ""}${reseller}%).`,
-      total,
+      success: `Floor kurs disimpan: Rp${Math.round(floor).toLocaleString("id-ID")} per $1.`,
     };
   },
 };

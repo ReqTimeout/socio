@@ -302,10 +302,12 @@ export const actions: Actions = {
   },
 
   /**
-   * Bulk price per kategori (G16): set ulang harga semua layanan dalam satu
-   * kategori. Mode `set_base` = modal baru nominal per 1k; mode `adjust` =
-   * geser modal sebesar ±%. Harga jual per level dihitung ulang via
-   * computePricing (pricing_rules tetap sumber kebenaran markup).
+   * Bulk price per kategori (G16) — geser MODAL. Semua layanan dalam satu
+   * kategori: mode `set_base` = modal baru nominal per 1k; mode `adjust` =
+   * geser modal sebesar ±%. Kolom price/price_api/price_reseller SELALU diisi
+   * modal murni (selaras service-sync); markup per level hanya dipakai untuk
+   * kolom profit informatif, BUKAN ditulis ke kolom harga (harga jual dihitung
+   * sekali saat checkout via pricing_rules — hindari double-markup).
    */
   bulkCategoryPrice: async ({ request, locals }) => {
     assertAdmin(locals);
@@ -345,39 +347,42 @@ export const actions: Actions = {
       .from(services)
       .where(eq(services.categoryId, categoryId));
 
-    // Layanan tanpa modal rekonstruksi yang sehat di-skip (harga 0 / profit aneh)
-    const targets = rows.filter((r) => r.price > 0 && r.price > r.profit && r.profit >= 0);
+    // Modal = kolom price (semantik katalog: price = rate provider IDR/1k).
+    // Hanya skip layanan bermodal <= 0.
+    const targets = rows.filter((r) => r.price > 0);
     if (!targets.length)
-      return fail(400, { error: "Tidak ada layanan dengan harga valid di kategori ini." });
+      return fail(400, { error: "Tidak ada layanan dengan modal valid di kategori ini." });
 
     const rules = await db.select().from(pricingRules);
     const by: Record<string, any> = {};
     for (const r of rules) by[r.level] = r;
+    // base = MODAL. Kolom harga disimpan apa adanya (modal); profit = margin markup
+    // per level sebagai info. flatPer1k hanya menambah profit, tidak ke modal.
     const prices = (base: number) => {
-      const mk = (level: string, fallback: number) => {
+      const mkProfit = (level: string, fallbackMarkup: number) => {
         const r = by[level];
         const v = r
-          ? base * (1 + Number(r.markupPercent) / 100) + Number(r.flatPer1k)
-          : base * (1 + fallback / 100);
-        return Math.round(v * 100) / 100;
+          ? base * (Number(r.markupPercent) / 100) + Number(r.flatPer1k)
+          : base * (fallbackMarkup / 100);
+        return Math.max(Math.round(v), 0);
       };
-      const price = mk("Member", 200);
-      const priceApi = mk("Agen", 150);
-      const priceReseller = mk("Reseller", 180);
+      const profit = mkProfit("Member", 200);
+      const profitAgen = mkProfit("Agen", 150);
+      const profitReseller = mkProfit("Reseller", 180);
       return {
-        price,
-        priceApi,
-        priceReseller,
-        profit: price - base,
-        profitReseller: priceReseller - base,
-        profitAgen: priceApi - base,
+        price: base,
+        priceApi: base,
+        priceReseller: base,
+        profit,
+        profitReseller,
+        profitAgen,
       };
     };
 
     const updated = await db.transaction(async (tx) => {
       let n = 0;
       for (const r of targets) {
-        const baseOld = r.price - r.profit;
+        const baseOld = r.price;
         const base =
           mode === "set_base" ? value : Math.round(baseOld * (1 + value / 100) * 100) / 100;
         if (base <= 0) continue;

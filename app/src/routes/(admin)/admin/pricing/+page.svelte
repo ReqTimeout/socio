@@ -145,7 +145,7 @@
     LEVEL_ORDER.some((lv) => markup[lv] !== initialMarkup[lv] || active[lv] !== initialActive[lv]),
   );
 
-  // Apply-to-catalog derived (untuk Step 2)
+  // Ringkasan multiplier aktif (dipakai kartu info "markup berlaku otomatis")
   const anyMarkup = $derived(
     Number(markup.Member) > 0 || Number(markup.Agen) > 0 || Number(markup.Reseller) > 0,
   );
@@ -176,10 +176,11 @@
         Markup per Level
       </h1>
       <p class="mt-1.5 text-sm text-ink-500">
-        Masukkan <strong class="text-ink-700">persentase</strong> per level — terapkan ke
+        Atur <strong class="text-ink-700">persentase markup</strong> per level — berlaku otomatis
+        saat checkout untuk
         <span class="font-bold text-ink-700"
           >{data.stats.total.toLocaleString("id-ID")} layanan</span
-        > dengan satu klik.
+        >. Katalog menyimpan harga modal, bukan harga jual.
       </p>
     </div>
   </header>
@@ -231,20 +232,16 @@
             $1 = Rp{data.fx.effective.toLocaleString("id-ID")}
           </p>
           <p class="text-[11px] text-ink-500">
-            Live {data.fx.live ? `Rp${data.fx.live.rate.toLocaleString("id-ID")}` : "—"} ·
-            Floor Rp{data.fx.floor.toLocaleString("id-ID")} ·
+            Live {data.fx.live ? `Rp${data.fx.live.rate.toLocaleString("id-ID")}` : "—"} · Floor Rp{data.fx.floor.toLocaleString(
+              "id-ID",
+            )} ·
             {data.fx.live && data.fx.live.at
               ? `update ${new Date(data.fx.live.at as string).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
               : "belum pernah fetch"}
           </p>
         </div>
       </div>
-      <form
-        method="POST"
-        action="?/setFloor"
-        use:enhance
-        class="flex items-center gap-2"
-      >
+      <form method="POST" action="?/setFloor" use:enhance class="flex items-center gap-2">
         <label for="fx-floor" class="text-xs font-bold text-ink-500">Floor</label>
         <input
           id="fx-floor"
@@ -260,8 +257,8 @@
       </form>
     </div>
     <p class="mt-2 text-[11px] text-ink-400">
-      Efektif = nilai terbesar (live vs floor) — harga modal tidak pernah di bawah floor.
-      Live di-fetch otomatis tiap hari 00:05. Berlaku di sync katalog berikutnya.
+      Efektif = nilai terbesar (live vs floor) — harga modal tidak pernah di bawah floor. Live
+      di-fetch otomatis tiap hari 00:05. Berlaku di sync katalog berikutnya.
     </p>
   </div>
 
@@ -310,8 +307,11 @@
           <div class="min-w-0 rounded-lg border border-ink-100 bg-ink-50/50 p-2 text-[11px]">
             <p class="truncate font-semibold text-ink-800">#{s.id} {s.serviceName}</p>
             <p class="truncate text-ink-500">
-              Base <span class="font-bold tabular-nums text-ink-700">{fmtRp(s.base)}</span>
-              · Modal {fmtRp(s.modal)}
+              Modal <span class="font-bold tabular-nums text-ink-700">{fmtRp(s.modal)}</span>
+              {#if s.profit > 0}
+                <Icon name="arrow_right" size={10} stroke={2.5} class="mx-0.5 text-ink-400" />
+                <span class="font-bold tabular-nums text-success">{fmtRp(s.modal + s.profit)}</span>
+              {/if}
             </p>
           </div>
         {/each}
@@ -472,7 +472,7 @@
               class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-ink-50/60 px-3 py-2 text-xs"
             >
               <div class="flex items-center gap-1.5">
-                <span class="text-ink-500">Base</span>
+                <span class="text-ink-500">Modal</span>
                 <span class="font-mono text-ink-700">{fmtRp(sampleBase)}</span>
                 <Icon name="arrow_right" size={10} stroke={2.5} class="text-ink-400" />
                 <span
@@ -522,7 +522,7 @@
           {/if}
         </p>
         <p class="mt-0.5 text-[11px] text-ink-500">
-          Step 1 — simpan persentase. Order flow pakai rule baru di request berikutnya.
+          Simpan persentase — order flow langsung pakai rule baru di request berikutnya.
         </p>
       </div>
       <div class="flex gap-2">
@@ -546,153 +546,45 @@
     </div>
   </form>
 
-  <!-- Step 2: Terapkan ke Katalog -->
-  <form
-    method="POST"
-    action="?/applyToCatalog"
-    use:enhance={() =>
-      async ({ result, update }) => {
-        const msg =
-          extractActionMsg((result as any).data) ??
-          (result.type === "success" ? "Tersimpan" : "Gagal");
-        if (result.type === "failure") toast(msg, "error");
-        else toast(msg, "success");
-        // Refresh server data supaya stats.total & distribution update di UI
-        await update({ reset: false });
-      }}
+  <!-- Auto-apply info (markup diterapkan saat checkout, bukan ditulis ke katalog) -->
+  <div
+    class="rounded-2xl border {anyMarkup
+      ? 'border-accent-500/30 bg-gradient-to-br from-accent-50/40 via-surface to-primary-50/30'
+      : 'border-ink-200 bg-ink-50/40'} p-4"
   >
-    <div
-      class="rounded-2xl border-2 {anyMarkup
-        ? 'border-accent-500/30 bg-gradient-to-br from-accent-50/40 via-surface to-primary-50/30'
-        : 'border-ink-200 bg-ink-50/40'} p-4 transition-colors"
-    >
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex min-w-0 items-center gap-3">
-          <span
-            class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-white shadow-md bg-gradient-to-br {anyMarkup
-              ? 'from-accent-500 to-primary-500'
-              : 'from-ink-400 to-ink-600'}"
-          >
-            <Icon name="zap" size={18} stroke={2.75} />
-          </span>
-          <div>
-            <p class="font-display text-base font-extrabold leading-tight">Terapkan ke Katalog</p>
-            <p class="text-[11px] text-ink-500">
-              Step 2 — recompute
-              <strong class="text-ink-700"
-                >{data.stats.total.toLocaleString("id-ID")} layanan</strong
-              >
-              {#if anyMarkup}
-                dengan markup ×
-                <span class="font-mono text-success">{memberMul.toFixed(2)}</span>
-                (Member) ·
-                <span class="font-mono text-success">{agenMul.toFixed(2)}</span>
-                (Agen) ·
-                <span class="font-mono text-success">{resellerMul.toFixed(2)}</span>
-                (Reseller)
-              {:else}
-                <span class="font-semibold text-warning"
-                  >— set minimal satu markup &gt; 0 dulu, lalu Simpan (Step 1)</span
-                >
-              {/if}
-            </p>
-          </div>
-        </div>
-        <button
-          type="submit"
-          disabled={!anyMarkup}
-          class="inline-flex h-11 items-center gap-1.5 rounded-full px-5 text-sm font-bold text-white shadow-sm transition-all {anyMarkup
-            ? 'bg-ink-900 hover:-translate-y-0.5 hover:bg-ink-800 hover:shadow-md active:scale-95'
-            : 'cursor-not-allowed bg-ink-300'}"
-        >
-          <Icon name="refresh" size={14} stroke={2.75} />
-          {anyMarkup
-            ? `Update ${data.stats.total.toLocaleString("id-ID")} Layanan`
-            : "Belum ada markup aktif"}
-        </button>
+    <div class="flex items-start gap-3">
+      <span
+        class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-white shadow-md bg-gradient-to-br {anyMarkup
+          ? 'from-accent-500 to-primary-500'
+          : 'from-ink-400 to-ink-600'}"
+      >
+        <Icon name="zap" size={18} stroke={2.75} />
+      </span>
+      <div class="min-w-0">
+        <p class="font-display text-base font-extrabold leading-tight">markup berlaku otomatis</p>
+        <p class="mt-1 text-[11px] leading-relaxed text-ink-600">
+          Catalog menyimpan <strong class="text-ink-800">harga modal murni</strong> (rate provider).
+          Markup per level yang Anda simpan di atas diterapkan
+          <strong class="text-ink-800">sekali saja saat checkout</strong> (halaman pesan & API
+          publik), sehingga pelanggan selalu melihat harga jual = modal × markup, bukan harga modal.
+          Tidak ada tombol "terapkan ke catalog" lagi — itu dulu menyebabkan
+          <strong class="text-danger">markup berbunga dua kali</strong>.
+        </p>
+        {#if anyMarkup}
+          <p class="mt-1.5 text-[11px] font-semibold text-success">
+            Aktif sekarang: Member ×{memberMul.toFixed(2)} · Agen ×{agenMul.toFixed(2)} · Reseller ×{resellerMul.toFixed(
+              2,
+            )} — langsung berlaku di order berikutnya.
+          </p>
+        {:else}
+          <p class="mt-1.5 text-[11px] font-semibold text-warning">
+            Semua markup 0% — pelanggan saat ini hanya membayar harga modal. Set minimal satu level
+            markup &gt; 0 lalu Simpan.
+          </p>
+        {/if}
       </div>
-
-      <!-- Live before/after multiplier per level (decorative preview,
-           aria-hidden karena nilai aktual sudah ditampilkan di slider/input) -->
-      <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3" aria-hidden="true">
-        <div
-          class="rounded-lg border {Number(markup.Member) > 0
-            ? 'border-ink-900 bg-ink-900/5'
-            : 'border-ink-100 bg-ink-50/50'} px-3 py-2 text-xs"
-        >
-          <p class="flex items-center gap-1 font-bold text-ink-700">
-            <Icon name="user" size={11} stroke={2.75} /> Member
-          </p>
-          <p class="text-ink-500">
-            <span class="font-mono">price × {memberMul.toFixed(2)}</span>
-          </p>
-          <p
-            class="text-[10px] font-bold {Number(markup.Member) > 0
-              ? 'text-success'
-              : 'text-ink-400'}"
-          >
-            {Number(markup.Member) > 0
-              ? `+${Number(markup.Member).toFixed(0)}% dari harga sekarang`
-              : "tidak berubah"}
-          </p>
-        </div>
-        <div
-          class="rounded-lg border {Number(markup.Agen) > 0
-            ? 'border-success bg-success/5'
-            : 'border-ink-100 bg-ink-50/50'} px-3 py-2 text-xs"
-        >
-          <p class="flex items-center gap-1 font-bold text-ink-700">
-            <Icon name="shield" size={11} stroke={2.75} /> Agen
-          </p>
-          <p class="text-ink-500">
-            <span class="font-mono">price_api × {agenMul.toFixed(2)}</span>
-          </p>
-          <p
-            class="text-[10px] font-bold {Number(markup.Agen) > 0
-              ? 'text-success'
-              : 'text-ink-400'}"
-          >
-            {Number(markup.Agen) > 0
-              ? `+${Number(markup.Agen).toFixed(0)}% dari harga sekarang`
-              : "tidak berubah"}
-          </p>
-        </div>
-        <div
-          class="rounded-lg border {Number(markup.Reseller) > 0
-            ? 'border-accent-600 bg-accent-50/50'
-            : 'border-ink-100 bg-ink-50/50'} px-3 py-2 text-xs"
-        >
-          <p class="flex items-center gap-1 font-bold text-ink-700">
-            <Icon name="crown" size={11} stroke={2.75} /> Reseller
-          </p>
-          <p class="text-ink-500">
-            <span class="font-mono">price_reseller × {resellerMul.toFixed(2)}</span>
-          </p>
-          <p
-            class="text-[10px] font-bold {Number(markup.Reseller) > 0
-              ? 'text-success'
-              : 'text-ink-400'}"
-          >
-            {Number(markup.Reseller) > 0
-              ? `+${Number(markup.Reseller).toFixed(0)}% dari harga sekarang`
-              : "tidak berubah"}
-          </p>
-        </div>
-      </div>
-
-      <p class="mt-3 flex items-start gap-1.5 text-[11px] text-ink-500">
-        <Icon name="alert" size={11} stroke={2.5} class="mt-0.5 shrink-0 text-warning" />
-        <span>
-          Aksi ini menulis ulang
-          <code class="font-mono text-[10px]">price</code>,
-          <code class="font-mono text-[10px]">price_api</code>,
-          <code class="font-mono text-[10px]">price_reseller</code>
-          untuk semua layanan. Tercatat di audit log. Tidak bisa di-undo otomatis — backup DB dulu kalau
-          ragu.
-        </span>
-      </p>
     </div>
-  </form>
+  </div>
 
   <!-- Formula explainer -->
   <div
@@ -705,23 +597,21 @@
         <Icon name="info" size={17} stroke={2.5} />
       </span>
       <div class="min-w-0 text-xs leading-relaxed">
-        <p class="font-bold text-ink-800">Cara kerja 2-step</p>
+        <p class="font-bold text-ink-800">Cara kerja</p>
         <p class="mt-1 text-ink-600">
-          <strong>Step 1:</strong> Simpan persentase markup per level (di form atas).
+          <strong>Simpan</strong> persentase markup per level di form atas. Selesai — tidak perlu tombol
+          lain.
         </p>
         <p class="mt-1 text-ink-600">
-          <strong>Step 2:</strong> Klik "Terapkan ke Katalog" untuk recompute harga semua layanan di
-          tabel <code class="font-mono text-[10px]">services</code>. Aksi ini menulis ulang
-          <code class="font-mono text-[10px]">price</code>,
-          <code class="font-mono text-[10px]">price_api</code>,
-          <code class="font-mono text-[10px]">price_reseller</code> untuk semua
-          {data.stats.total.toLocaleString("id-ID")} baris.
+          Katalog (<code class="font-mono text-[10px]">services</code>) selalu menyimpan
+          <strong>harga modal murni</strong> yang disinkron dari provider. Saat ada order, harga
+          jual dihitung: <span class="font-mono text-[10px]">modal × (1 + markup%)</span> sesuai level
+          pembeli.
         </p>
         <p class="mt-1 text-ink-500">
-          Order flow: baca markup dari tabel
-          <code class="font-mono text-[10px]">pricing_rules</code> + harga katalog dari
-          <code class="font-mono text-[10px]">services</code>. Keduanya harus sinkron — Step 2
-          memastikan sinkronisasi.
+          Markup dibaca dari tabel <code class="font-mono text-[10px]">pricing_rules</code> saat checkout,
+          sehingga perubahan di sini langsung berlaku di order berikutnya tanpa menulis ulang catalog
+          — dan markup tidak pernah berbunga dua kali.
         </p>
       </div>
     </div>

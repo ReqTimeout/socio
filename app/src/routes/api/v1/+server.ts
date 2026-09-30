@@ -216,7 +216,9 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
   // create order
   const now = new Date();
   const oid = String(Date.now());
-  const profit = Math.round(((svc.profit ?? 0) / 1000) * qty);
+  // Profit riil = dibayar − modal provider (katalog menyimpan modal murni di
+  // price_api; svc.profit hanyalah margin informatif level Member).
+  const profit = Math.round(totalPrice - (Math.max(Number(svc.priceApi) || 0, 0) * qty) / 1000);
   await db.insert(orders).values({
     userId: user.id,
     oid,
