@@ -4,10 +4,14 @@
  * Setelah provider_services ter-mirror (provider-sync.ts), cron ini:
  *  1. Auto-create kategori (resolve_category PHP) dari nama kategori provider
  *  2. Auto-create layanan baru ke `services` (status=1 aktif)
- *  3. Update harga + field lain layanan aktif yang berubah:
- *     price (Member) = ceil(rate_idr * (1 + markup_member/100))
- *     price_reseller = ceil(rate_idr * (1 + markup_reseller/100))
- *     price_api (Agen base) = ceil(rate_idr * (1 + markup_agen/100))
+ *  3. Update harga + field lain layanan aktif yang berubah — SEMANTIK KATALOG
+ *     (fix double-markup Sep-2026, lihat packages/core/src/pricing.ts):
+ *     price = price_api = price_reseller = rate_idr  (MODAL MURNI provider)
+ *     Kolom harga TIDAK pernah di-markup di sini. Markup per level diterapkan
+ *     SEKALI saat checkout (pesan / api/v1) baca pricing_rules. `profit`,
+ *     `profit_reseller`, `profit_agen` = margin informatif (sell - rate) utk
+ *     admin; konten berita "Harga Naik/Turun" menampilkan harga JUAL
+ *     (rate_idr × (1 + markup_level/100)), bukan modal mentah.
  *  4. Auto-disable (status=0) layanan aktif yang sudah tidak ada di provider
  *     dan auto-enable (status=1) yang kembali muncul (kalau tidak di-disable manual).
  *
