@@ -120,26 +120,8 @@ export const actions: Actions = {
     if (d.status !== "Pending")
       return fail(409, { error: `Deposit berstatus ${d.status} — tidak bisa dikonfirmasi.` });
 
-    // G4: deposit manual (transfer bank, user upload bukti) WAJIB punya bukti
-    // transfer. Deposit auto/VA sudah ter-reconcile webhook payment → lewati.
-    // Approve manual tanpa bukti hanya boleh via override beralasan (ter-audit).
-    // NOTE 2026-10-02: kolom prod `img` = LONGBLOB (legacy) → mysql2 balikin
-    // Buffer, bukan string. Panggil .trim() langsung = TypeError → 500 setiap
-    // confirm deposit manual. Normalisasi dulu (Buffer kosong = tanpa bukti).
-    const imgText =
-      typeof d.img === "string" ? d.img : d.img == null ? "" : String(d.img);
-    const isManualNoProof = d.type === "manual" && !imgText.trim();
-    const forceApprove = form.get("force") === "1";
-    const overrideReason = String(form.get("reason") ?? "").trim();
-    if (isManualNoProof && (!forceApprove || overrideReason.length < 5)) {
-      return fail(400, {
-        error:
-          'Deposit manual tanpa bukti transfer tidak bisa dikonfirmasi. Centang "Setujui paksa" dan isi alasan (min. 5 karakter) — alasan tercatat di audit log.',
-      });
-    }
-    const verificationNotes = isManualNoProof
-      ? `OVERRIDE tanpa bukti: ${overrideReason}`
-      : overrideReason || null;
+    // Confirm = sekali klik (perilaku lama). Tidak ada syarat bukti transfer:
+    // gate G4 "Setujui paksa" (af5c1f7) dicabut 2026-10-02 atas permintaan user.
 
     // A-05: transaksi atomik — kredit saldo + log + flip status. Kalau satu
     // gagal, semua rollback. Pakai `where status="Pending"` untuk idempotency
@@ -167,7 +149,7 @@ export const actions: Actions = {
 
         // affectedRows cek via raw SQL (Drizzle MySQL UPDATE belum support .returning)
         const upd = await tx.execute(sql`
-          UPDATE deposits SET status = 'Success', verified_by = ${Number(locals.user!.id)}, verified_at = NOW(), verification_notes = ${verificationNotes}
+          UPDATE deposits SET status = 'Success', verified_by = ${Number(locals.user!.id)}, verified_at = NOW()
           WHERE id = ${id} AND status = 'Pending'
         `);
         // mysql2 ResultSetHeader.affectedRows — drizzle bisa return array [header, fields]
@@ -208,13 +190,7 @@ export const actions: Actions = {
       action: "confirm_deposit",
       entity: "deposit",
       entityId: id,
-      detail: {
-        amount: Number(d.amount),
-        method: d.methodName,
-        untukApa: d.untukApa,
-        overrideNoProof: isManualNoProof || undefined,
-        reason: overrideReason || undefined,
-      },
+      detail: { amount: Number(d.amount), method: d.methodName, untukApa: d.untukApa },
       ip: (locals as any).ip,
     });
 
