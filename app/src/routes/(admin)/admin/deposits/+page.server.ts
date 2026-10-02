@@ -123,7 +123,12 @@ export const actions: Actions = {
     // G4: deposit manual (transfer bank, user upload bukti) WAJIB punya bukti
     // transfer. Deposit auto/VA sudah ter-reconcile webhook payment → lewati.
     // Approve manual tanpa bukti hanya boleh via override beralasan (ter-audit).
-    const isManualNoProof = d.type === "manual" && !(d.img ?? "").trim();
+    // NOTE 2026-10-02: kolom prod `img` = LONGBLOB (legacy) → mysql2 balikin
+    // Buffer, bukan string. Panggil .trim() langsung = TypeError → 500 setiap
+    // confirm deposit manual. Normalisasi dulu (Buffer kosong = tanpa bukti).
+    const imgText =
+      typeof d.img === "string" ? d.img : d.img == null ? "" : String(d.img);
+    const isManualNoProof = d.type === "manual" && !imgText.trim();
     const forceApprove = form.get("force") === "1";
     const overrideReason = String(form.get("reason") ?? "").trim();
     if (isManualNoProof && (!forceApprove || overrideReason.length < 5)) {
