@@ -17,6 +17,10 @@
 10. Kalau ragu **mana yang benar** → tanya user, jangan asumsi.
 11. Selalu jalankan `pnpm lint && pnpm typecheck && pnpm test` (kalau ada) selesai kerja per modul.
 12. **Sebelum bilang route selesai**, wajib load skill `web-design-guidelines` + `review-animations` + audit 8 anti-pattern `looks-expensive` (lihat §7).
+13. **⚠️ Push ke `main` bisa me-rebuild `app.socio.id` yang sedang dipakai user.** Auto-deploy Coolify AKTIF, tapi `watch_paths` sudah diisi (diisi 2-Okt-2026): `app/**`, `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`. Jadi `landing/`, `docs/`, `seo/`, `sparko/`, `scripts/`, `*.md` **aman** dipush tanpa deploy app.
+    - **Push >20 commit sekaligus bisa TERLEWAT deploy** (GitHub memotong payload push di 20 commit pertama). Setelah push besar → cek status deploy; kalau tertinggal, deploy manual.
+    - Cara ubah/rollback + semantik glob: `docs/AGENT_MEMORY.md §1b`. **Baca sebelum deploy.**
+    - `landing/` (`socio.id`) **tidak** dideploy Coolify (manual `npx wrangler pages deploy`), jadi push konten tidak menyentuh landing juga.
 
 ## 1. Source of truth (urutan prioritas)
 
