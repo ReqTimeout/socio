@@ -40,6 +40,23 @@ Artinya: `landing/`, `docs/`, `seo/`, `sparko/`, `scripts/`, `*.md`, `app.socio.
 Verified 2026-10-02: commit `9d570bd` (docs/ saja) → **0 deployment**, container app
 tidak restart, `GET /` tetap 303 dalam 0,13s. Bukti: `docs/WATCHPATHS_TEST.md`.
 
+### ⚠️ PENTING: auto-deploy webhook NYATA-NYATA TIDAK AKTIF (verified 2-Okt-2026)
+`is_auto_deploy_enabled = t`, tapi **GitHub webhook tidak terpasang di repo**. Bukti:
+`SELECT COUNT(*) FILTER (WHERE is_webhook) FROM application_deployment_queues` =
+**0 dari 130 deployment** `socio-app` (2 Sep – 2 Okt). Semuanya `is_api = t` (manual).
+
+Konsekuensi:
+- Push ke `main` **tidak** me-rebuild app. App dilindungi karena webhook mati, bukan
+  karena `watch_paths`.
+- `watch_paths` = **jaring pengaman**, belum terbukti bekerja pada jalur webhook
+  sungguhan. Uji `docs/` di atas **belum membuktikan apa-apa** soal gate-nya.
+- **Jangan auto-deploy**. Alur wajib tetap §2: manual trigger API + verifikasi +
+  smoke test. Jangan pernah menyalakan webhook tanpa重复 review dengan user —
+  auto-deploy menghapus langkah verifikasi yang selama ini melindungi app.
+- Kalau nanti webhook mau dinyalakan: (1) set watch_paths dulu, (2) uji commit di
+  `app/` memang deploy, (3) uji commit di `docs/` memang tidak, (4) ingatkan batas
+  20 commit di bawah.
+
 **4 app lain aman otomatis** — webhook Coolify memfilter per repo, dan tiap app punya
 repo sendiri: `seo-pipe-app` (`seo-pipeline.git`), `sgb-dashboard`, `capi-gateway`,
 `socio-seo-runner` (`socio-seo-runner.git`). Tidak pernah ikut deploy dari monorepo.
