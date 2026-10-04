@@ -43,10 +43,18 @@ function parseArgs() {
   const opts = { count: configuredDailyCount(), noDeploy: false, slug: null, countExplicit: false, skipUniqueness: false };
   for (const a of args) {
     if (a.startsWith('--count=')) {
-      opts.count = parseInt(a.slice(10));
+      // Panjang '--count=' = 8 karakter. Versi lama pakai slice(10) sehingga
+      // `--count=1` jadi '' -> parseInt NaN -> pickDrafts melakukan slice(0, NaN)
+      // yang hasilnya array KOSONG. Akibatnya --count=N tidak pernah membatasi
+      // publish; selalu jatuh ke "Tidak ada draft siap publish" (4 Okt 2026).
+      const n = parseInt(a.slice('--count='.length), 10);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new Error(`--count= tidak valid: ${JSON.stringify(a)} (harus angka >= 0)`);
+      }
+      opts.count = n;
       opts.countExplicit = true;
     } else if (a === '--no-deploy') opts.noDeploy = true;
-    else if (a.startsWith('--slug=')) opts.slug = a.slice(7);
+    else if (a.startsWith('--slug=')) opts.slug = a.slice('--slug='.length);
   }
   if (!opts.countExplicit) console.log(`publish: daily_count dari config.json = ${opts.count} (--count= untuk override)`);
   return opts;

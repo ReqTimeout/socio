@@ -103,13 +103,13 @@
       "keyword": "cara daftar smm panel",
       "priority": 90,
       "category": "definisi",
-      "status": "draft",
+      "status": "published",
       "slug": "cara-daftar-smm-panel",
       "cluster": "smm-panel",
       "demand_signal": "aeo",
       "autocomplete_count": 0,
       "kd_estimate": "low",
-      "notes": "How-to daftar. CTA langsung ke /daftar?mode=reseller. | template-agent 2026-10-01",
+      "notes": "How-to daftar. CTA langsung ke /daftar?mode=reseller. | template-agent 2026-10-01 | published 2026-10-04",
       "added_by": "seed"
     },
     {

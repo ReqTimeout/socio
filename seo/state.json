@@ -10,35 +10,35 @@
       "url": "https://socio.id/blog/apa-itu-smm-panel/",
       "firstSeen": "2026-08-24",
       "indexed": "not_discovered",
-      "lastChecked": "2026-10-01T09:45:49.924Z"
+      "lastChecked": "2026-10-04T11:36:50.932Z"
     },
     {
       "slug": "smm-panel",
       "url": "https://socio.id/blog/smm-panel/",
       "firstSeen": "2026-09-02",
       "indexed": "not_indexed",
-      "lastChecked": "2026-10-01T16:32:41.778Z"
+      "lastChecked": "2026-10-04T11:36:58.083Z"
     },
     {
       "slug": "smm-panel-indonesia",
       "url": "https://socio.id/blog/smm-panel-indonesia/",
       "firstSeen": "2026-09-02",
-      "indexed": "not_discovered",
-      "lastChecked": "2026-10-01T09:46:04.661Z"
+      "indexed": "not_indexed",
+      "lastChecked": "2026-10-04T11:37:05.380Z"
     },
     {
       "slug": "cara-menambah-followers-instagram",
       "url": "https://socio.id/blog/cara-menambah-followers-instagram/",
       "firstSeen": "2026-08-26",
-      "indexed": "not_discovered",
-      "lastChecked": "2026-10-01T09:46:12.142Z"
+      "indexed": "not_indexed",
+      "lastChecked": "2026-10-04T11:37:12.504Z"
     },
     {
       "slug": "modal-jualan-followers",
       "url": "https://socio.id/blog/modal-jualan-followers/",
       "firstSeen": "2026-08-28",
-      "indexed": "not_discovered",
-      "lastChecked": "2026-10-01T09:46:19.171Z"
+      "indexed": "not_indexed",
+      "lastChecked": "2026-10-04T11:37:19.639Z"
     }
   ],
   "indexnow": {
@@ -59,7 +59,7 @@
         "indexingState": "INDEXING_STATE_UNSPECIFIED",
         "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
         "pageFetchState": "PAGE_FETCH_STATE_UNSPECIFIED",
-        "checkedAt": "2026-10-01T09:45:49.924Z"
+        "checkedAt": "2026-10-04T11:36:50.932Z"
       },
       "https://socio.id/blog/smm-panel/": {
         "verdict": "NEUTRAL",
@@ -68,31 +68,34 @@
         "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
         "pageFetchState": "PAGE_FETCH_STATE_UNSPECIFIED",
         "crawledAs": "CRAWLING_USER_AGENT_UNSPECIFIED",
-        "checkedAt": "2026-10-01T16:32:41.778Z"
+        "checkedAt": "2026-10-04T11:36:58.083Z"
       },
       "https://socio.id/blog/smm-panel-indonesia/": {
         "verdict": "NEUTRAL",
-        "coverageState": "URL is unknown to Google",
+        "coverageState": "Discovered - currently not indexed",
         "indexingState": "INDEXING_STATE_UNSPECIFIED",
         "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
         "pageFetchState": "PAGE_FETCH_STATE_UNSPECIFIED",
-        "checkedAt": "2026-10-01T09:46:04.661Z"
+        "crawledAs": "CRAWLING_USER_AGENT_UNSPECIFIED",
+        "checkedAt": "2026-10-04T11:37:05.380Z"
       },
       "https://socio.id/blog/cara-menambah-followers-instagram/": {
         "verdict": "NEUTRAL",
-        "coverageState": "URL is unknown to Google",
+        "coverageState": "Discovered - currently not indexed",
         "indexingState": "INDEXING_STATE_UNSPECIFIED",
         "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
         "pageFetchState": "PAGE_FETCH_STATE_UNSPECIFIED",
-        "checkedAt": "2026-10-01T09:46:12.142Z"
+        "crawledAs": "CRAWLING_USER_AGENT_UNSPECIFIED",
+        "checkedAt": "2026-10-04T11:37:12.504Z"
       },
       "https://socio.id/blog/modal-jualan-followers/": {
         "verdict": "NEUTRAL",
-        "coverageState": "URL is unknown to Google",
+        "coverageState": "Discovered - currently not indexed",
         "indexingState": "INDEXING_STATE_UNSPECIFIED",
         "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
         "pageFetchState": "PAGE_FETCH_STATE_UNSPECIFIED",
-        "checkedAt": "2026-10-01T09:46:19.171Z"
+        "crawledAs": "CRAWLING_USER_AGENT_UNSPECIFIED",
+        "checkedAt": "2026-10-04T11:37:19.639Z"
       },
       "https://socio.id/": {
         "verdict": "PASS",
@@ -154,8 +157,8 @@
       }
     },
     "lastRun": {
-      "at": "2026-10-02T02:34:27.133Z",
-      "inspected": 1,
+      "at": "2026-10-04T11:37:19.639Z",
+      "inspected": 5,
       "indexed": 0,
       "indexRate": 0,
       "failures": 0
