@@ -89,7 +89,86 @@ ${related.map((r) => `- ${r.slug}`).join('\n')}
 Layanan terkait (sebut natural di body, JANGAN tulis harga):
 ${pricesBlock}
 
-TULIS ARTIKEL SEKARANG. Mulai dari definisi 1 kalimat, lalu TEPAT 4 section H2 dengan body naratif (4-6 paragraf per section), akhiri dengan section FAQ 5 Q+A. CHECKLIST SEBELUM SUBMIT (wajib centang mental): [1] total 1200-1400 kata di luar FAQ [2] keyword fokus muncul ≥8x di body [3] H2 pertama mengandung keyword [4] TEPAT 1 link eksternal help-center resmi [5] TIDAK ADA angka Rp karangan (harga hanya dari daftar layanan di atas) [6] tanpa heading Kesimpulan. Output body markdown saja.`;
+  TULIS ARTIKEL SEKARANG. Mulai dari definisi 1 kalimat, lalu TEPAT 4 section H2 dengan body naratif (4-6 paragraf per section), akhiri dengan section FAQ 5 Q+A. CHECKLIST SEBELUM SUBMIT (wajib centang mental): [1] total 1200-1400 kata di luar FAQ [2] keyword fokus muncul ≥8x di body [3] H2 pertama mengandung keyword [4] TEPAT 1 link eksternal help-center resmi [5] TIDAK ADA angka Rp karangan (harga hanya dari daftar layanan di atas) [6] tanpa heading Kesimpulan. Output body markdown saja.`;
+  }
+
+/**
+ * Prompt SATU BAGIAN — dipakai mode `--split`.
+ *
+ * Kenapa perlu: model gratis (opencode/big-pickle, nemotron-3-ultra-free) tidak
+ * sanggup satu tugas 1200-1400 kata. Diuji 4 Okt: 4 artikel paralel menghasilkan
+ * 1957-2924 karakter (~400 kata) dan 0/4 lolos gate, semuanya gagal di
+ * "FAQ hanya 0/5" karena tidak pernah sampai ke section FAQ. Satu permintaan
+ * besar = 0% success rate.
+ *
+ * Model kecil jauh lebih andal untuk tugas sempit. Dipecah jadi 3 panggilan
+ * (body 1-2, body 3-4, FAQ), lalu dirakit. Setiap bagian punya target kata
+ * eksplisit supaya tidak undershoot.
+ *
+ * `part`:
+ *   'intro+1+2' — paragraf pembuka + H2 #1 + H2 #2  → target 500-600 kata
+ *   '3+4'       — H2 #3 + H2 #4                    → target 500-600 kata
+ *   'faq'       — 5 pasang Q+A                     → target 250-350 kata
+ */
+export function buildPartPrompt(part, ctx) {
+  const { keyword, category, related, pricesBlock, localAnchor, localBuyer, sectionTitles } = ctx;
+  const geoBlock = localAnchor
+    ? `
+KONTEKS LOKAL (WAJIB dipakai):
+- Fakta ekonomi ${keyword.includes('umkm') ? 'daerah' : 'kota'}: ${localAnchor}
+- Pembeli yang paling mungkin: ${localBuyer}`
+    : '';
+
+  if (part === 'faq') {
+    return `Tulis 5 PASANG TANYA-JAWAB (Q+A) dalam bahasa Indonesia untuk artikel dengan keyword utama: "${keyword}".
+${geoBlock}
+
+Aturan:
+- TEPAT 5 pasangan, bernomor 1-5.
+- Format persis tiap pasang: satu baris "1. <pertanyaan>" lalu baris berikutnya "Jawaban: <jawaban>".
+- Pertanyaan singkat (maks 12 kata), jawaban 3-4 kalimat (40-60 kata).
+- Jawaban konkret dan spesifik, bukan basa-basi. Boleh sebut proses, garansi, minimal order.
+- JANGAN tulis harga (harga tidak ditampilkan di sini). JANGAN kata "Rp" dengan angka.
+- Bahasa Indonesia natural, bukan terjemahan kaku.`;
+  }
+
+  const isFirst = part === 'intro+1+2';
+  const titles = sectionTitles || [];
+  const t1 = titles[0] || `Mengapa layanan ${keyword} penting`;
+  const t2 = titles[1] || `Cara kerja dan langkah memakai ${keyword}`;
+  const t3 = titles[2] || `Kecepatan, garansi, dan dukungan setelah order`;
+  const t4 = titles[3] || `Pilihan paket dan cara memakai layanan ini`;
+
+  const head = isFirst
+    ? `Tulis BAGIAN AWAL artikel (1 dari 2 bagian) untuk keyword: "${keyword}"
+Kategori: ${category}
+${geoBlock}
+
+WAJIB berisi:
+1. Satu paragraf pembuka definisi (maks 40 kata) yang langsung menjawab apa itu.
+2. Section H2 dengan judul: "${t1}" — 4-6 paragraf.
+3. Section H2 dengan judul: "${t2}" — 4-6 paragraf.`
+    : `Tulis BAGIAN AKHIR artikel (2 dari 2 bagian) untuk keyword: "${keyword}"
+Kategori: ${category}
+${geoBlock}
+
+WAJIB berisi:
+1. Section H2 dengan judul: "${t3}" — 4-6 paragraf.
+2. Section H2 dengan judul: "${t4}" — 4-6 paragraf.
+3. Ditutup 1-2 paragraf penutup TANPA heading (jangan pakai "Kesimpulan"/"Ringkasan").`;
+
+  return `${head}
+
+ATURAN KUAT:
+- TOTAL ${isFirst ? '500-600' : '480-560'} KATA untuk bagian ini. Ini batas keras, minimum 450 kata.
+  Model gratis cenderung menulis terlalu pendek — karena itu angka ini wajib dicapai.
+- 3-5 kalimat per paragraf, kalimat varied (pendek + panjang campur).
+- Setidaknya 1 contoh konkret (sektor usaha, langkah, atau angka non-harga) per section.
+- ${isFirst ? `H2 pertama WAJIB memuat kata "${keyword.split(' ').slice(0, 3).join(' ')}".` : 'Sebut kata kunci fokus minimal 3x secara natural.'}
+- ${isFirst ? 'Sertakan TEPAT 1 link internal ke /beli- atau /smm-panel- dan 2 link ke slug artikel terkait.' : 'Sertakan 0-1 link internal saja, jangan berlebihan.'}
+- TEPAT 1 link eksternal ke halaman bantuan RESMI platform (help.instagram.com, support.tiktok.com, support.google.com/youtube).
+- JANGAN tulis harga / angka "Rp..." dari kepalamu. JANGAN pakai emoji. JANGAN pakai heading Kesimpulan.
+- Output HANYA markdown bagian ini.`;
 }
 
 /**

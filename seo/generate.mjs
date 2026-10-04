@@ -235,10 +235,16 @@ function deriveMeta(args) {
   const body = SHARED_HELPERS + '\n' + stripTs(extractFunctionBody(promptsSrc, 'deriveMeta') || '');
   return new Function('keyword', 'llmBody', 'category', body)(keyword, llmBody, category);
 }
-function validateMdx(content, keyword) {
-  const body = stripTs(extractFunctionBody(promptsSrc, 'validateMdx') || '');
-  return new Function('content', 'keyword', body)(content, keyword);
-}
+  function validateMdx(content, keyword) {
+    const body = stripTs(extractFunctionBody(promptsSrc, 'validateMdx') || '');
+    return new Function('content', 'keyword', body)(content, keyword);
+  }
+  // Mode split (lihat buildPartPrompt di prompts.ts): 3 prompt kecil untuk model gratis.
+  function buildPartPrompt(part, ctx) {
+    const body = stripTs(extractFunctionBody(promptsSrc, 'buildPartPrompt') || '');
+    if (!body) throw new Error('buildPartPrompt tidak bisa diekstrak dari prompts.ts');
+    return new Function('part', 'ctx', body)(part, ctx);
+  }
 
 // Sanity check
 if (!SYSTEM_PROMPT || SYSTEM_PROMPT.length < 100) {
@@ -281,15 +287,30 @@ async function runGroq({ model, system, user, timeout = 120_000 }) {
           { role: 'system', content: system },
           { role: 'user', content: user },
         ],
-        temperature: 0.7,
-        max_tokens: 3000,
-      }),
-    });
-    if (!res.ok) throw new Error(`groq ${res.status}: ${(await res.text()).slice(0, 150)}`);
-    const j = await res.json();
-    const text = j.choices?.[0]?.message?.content?.trim() || '';
-    if (!text) throw new Error('groq empty response');
-    return text;
+          temperature: 0.7,
+          // 3000 TIDAK cukup untuk 1200-1400 kata body + 5 FAQ. Tokenizer
+          // Indonesia padat: ~2,9 karakter/token, jadi 3000 token ~ 8791 karakter
+          // dan output PUTUS tepat sebelum section FAQ. 4 Okt 2026.
+          max_tokens: 6000,
+        }),
+      });
+      if (!res.ok) throw new Error(`groq ${res.status}: ${(await res.text()).slice(0, 150)}`);
+      const j = await res.json();
+      const choice = j.choices?.[0];
+      // Cek truncation secara eksplisit. Alir terpotong finish_reason='length'.
+      // Tanpa cek ini, body terpotong lolos sebagai "sukses" lalu ditolak gate FAQ
+      // dengan pesan menyesatkan ("FAQ hanya 0/5") — seolah model tidak patuh,
+      // padahal penyebab sebenarnya tokennya habis.
+      if (choice?.finish_reason === 'length') {
+        const got = choice?.message?.content?.length ?? 0;
+        throw new Error(
+          `groq output TERPOTONG (finish_reason=length, ${got} karakter). ` +
+            `Tambah max_tokens atau turunkan target kata di SYSTEM_PROMPT.`,
+        );
+      }
+      const text = choice?.message?.content?.trim() || '';
+      if (!text) throw new Error('groq empty response');
+      return text;
   } finally {
     clearTimeout(t);
   }
@@ -299,7 +320,7 @@ function groqModel() {
   return process.env.SEO_MODEL || process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 }
 
-function runOpencode({ model, prompt, timeout = 180_000 }) {
+function runOpencode({ model, prompt, timeout = 420_000 }) {
   return new Promise((resolve, reject) => {
     const proc = spawn('opencode', ['run', '--model', model, '--format', 'default', prompt], {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -543,7 +564,7 @@ function keywordGate() {
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { count: 1, dry: false, keyword: null, ignoreGate: false, list: 0, deferQueue: false, mergeQueue: false };
+  const opts = { count: 1, dry: false, keyword: null, ignoreGate: false, list: 0, deferQueue: false, mergeQueue: false, split: false };
   for (const a of args) {
     if (a.startsWith('--count=')) opts.count = parseInt(a.slice(8));
     else if (a === '--dry') opts.dry = true;
@@ -552,6 +573,7 @@ function parseArgs() {
     else if (a.startsWith('--list=')) opts.list = parseInt(a.slice(7));
     else if (a === '--defer-queue') opts.deferQueue = true;
     else if (a === '--merge-queue') opts.mergeQueue = true;
+    else if (a === '--split') opts.split = true;
   }
   return opts;
 }
@@ -695,7 +717,12 @@ async function main() {
     // 1 attempt per provider (hemat token/waktu) — gagal = keep pending.
     let raw = null;
     let lastErr = null;
-    if (process.env.GROQ_API_KEY && !process.env.SEO_CLI_ONLY) {
+      // Mode split memakai 3 panggilan kecil (lihat blok di bawah), jadi panggilan
+      // single-prompt yang besar harus DILEWATI. Kalau tidak, tiap artikel membuang
+      // ~2 menit untuk panggilan yang sudah diketahui akan ditolak gate.
+      if (opts.split) {
+        console.log('  mode split: 3 panggilan kecil (intro+1+2 / 3+4 / faq)');
+      } else if (process.env.GROQ_API_KEY && !process.env.SEO_CLI_ONLY) {
       try {
         console.log(`  [groq/${groqModel()}] call...`);
         const start = Date.now();
@@ -709,7 +736,7 @@ async function main() {
         console.log(`  FAIL groq: ${e.message.slice(0, 120)} → fallback CLI`);
       }
     }
-    for (let attempt = 0; !raw && attempt < 2; attempt++) {
+    for (let attempt = 0; !raw && !opts.split && attempt < 2; attempt++) {
       const model = nextModel();
       try {
         const fullPrompt = SYSTEM_PROMPT + '\n\n' + user;
@@ -731,15 +758,173 @@ async function main() {
         console.log(`  FAIL: ${e.message.slice(0, 100)}`);
       }
     }
+      // ── mode split: 3 panggilan kecil untuk model gratis ────────────────────
+      // Diuji 4 Okt: satu prompt 1200-1400 kata menghasilkan 1957-2924 karakter
+      // (~400 kata) pada free model dan 0/4 artikel lolos gate. Model kecil tidak
+      // sanggup satu tugas sebesar itu. Dipecah jadi 3 bagian + 1 bagian FAQ,
+      // lalu dirakit. Lihat `buildPartPrompt` di prompts.ts.
+      if (opts.split) {
+        const ctx = {
+          keyword: t.keyword,
+          category: t.category || 'Lainnya',
+          related,
+          pricesBlock,
+          localAnchor: t.local_anchor,
+          localBuyer: t.local_buyer,
+        };
+        // Slug yang aman untuk link internal: hanya artikel PUBLISHED. Dipakai
+        // fixBlogLinks untuk membuang link /blog/ karangan model ( Causes 404).
+        const publishedForLinks = publishedSlugs();
+        const parts = [];
+        let splitOk = true;
+        for (const part of ['intro+1+2', '3+4', 'faq']) {
+          const pp = buildPartPrompt(part, ctx);
+          let pout = null;
+          for (let attempt = 0; !pout && attempt < 2; attempt++) {
+            const model = nextModel();
+            try {
+              const full = SYSTEM_PROMPT + '\n\n' + pp;
+              console.log(`  [split:${part}] [${model}] call...`);
+              const st = Date.now();
+              pout = await runOpencode({ model, prompt: full });
+              console.log(`  [split:${part}] ${((Date.now() - st) / 1000).toFixed(1)}s OK out=${pout.length}c`);
+            } catch (e) {
+              console.log(`  [split:${part}] FAIL: ${e.message.slice(0, 90)}`);
+            }
+          }
+          if (!pout) { splitOk = false; break; }
+          if (process.env.SEO_DEBUG) writeFileSync(`/tmp/seo-split-${part.replace(/\W/g, '_')}.md`, pout);
+          parts.push(pout);
+        }
+        if (!splitOk) {
+          console.log('  FINAL FAIL (split) — keep pending');
+          fail++;
+          continue;
+        }
+        const [p1, p2, pfaqRaw] = parts;
+        // Model gratis sering TIDAK menuruti prompt "hanya FAQ": ia menulis artikel
+        // lengkap dulu (intro + 4 H2) lalu menaruh Q+A di paling akhir. Heading H2
+        // di dalamnya membuat regex extractFaqFromBody terpotong di awal, sehingga
+        // FAQ terbaca 0 walau Q+A-nya ada. Jadi bersihkan: buang semua heading dan
+        // teks sebelum pertanyaan bernomor pertama.
+        const cleanFaqPart = (s) => {
+          const lines = String(s || '').split('\n');
+          const startAt = lines.findIndex((l) => /^\s*1[.)]\s*\S/.test(l));
+          if (startAt < 0) return '';
+          return lines
+            .slice(startAt)
+            .filter((l) => !/^\s*#{1,6}\s/.test(l))
+            .join('\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+        };
+        // Free model MELIHIBihi: diminta 2 H2 dia tulis 4-5, sehingga total H2 bisa 9
+        // dan body 2518 kata (gate: 850-1400). Struktur JANGAN diserahkan ke model —
+        // model menulis prosa, skrip memegang bentuk. Potong deterministik: sisakan
+        // pembuka + 4 H2 pertama, buang sisanya. Dan batasi link eksternal max 2.
+        const normalizeSplitBody = (s) => {
+          const lines = String(s || '').split('\n');
+          const h2At = [];
+          for (let i = 0; i < lines.length; i++) {
+            if (/^##\s+\S/.test(lines[i])) h2At.push(i);
+          }
+          const outLines = [];
+          if (!h2At.length) return s;
+          outLines.push(...lines.slice(0, h2At[0]));          // pembuka
+          const keep = h2At.slice(0, 4);                     // 4 H2 pertama
+          for (let k = 0; k < keep.length; k++) {
+            const from = keep[k];
+            const to = k + 1 < keep.length ? keep[k + 1] : lines.length;
+            outLines.push(...lines.slice(from, to));
+          }
+          let out = outLines.join('\n');
+          // link eksternal: sisakan maksimal 2
+          const ext = [];
+          out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (m, t, u) => {
+            const host = (u.match(/https?:\/\/([^/]+)/) || [])[1] || '';
+            const internal = /socio\.id/.test(host);
+            if (internal) return m;
+            ext.push(m);
+            return ext.length <= 2 ? m : `[${t}]()`;
+          });
+          out = out.replace(/\n{3,}/g, '\n\n').trim();
+          // Jaring pengaman panjang: gate max 1400 kata. Model gratis rata-rata
+          // menulis 1600-2500. Pangkas paragraf TRAILING di section terakhir sampai
+          // masuk batas, satu paragraf utuh per langkah (tidak pernah potong tengah
+          // kalimat). Target 1120 memberi margin 50 kata.
+          const words = (t) => (t.match(/\b\w+\b/g) || []).length;
+          if (words(out) > 1120) {
+            const blines = out.split('\n');
+            // Pertahankan KEPALA, pangkas dari ekor. Versi lama mengecek jumlah kata
+            // dari slice(i) (ekor) sehingga memangkas hampir seluruh artikel dan H2
+            // terakhir ikut hilang — hasil gegara H2 count = 2. Di sini: potong satu
+            // paragraf utuh dari belakang sampai total <= 1350.
+            let end = blines.length;
+            while (end > 1 && words(blines.slice(0, end).join('\n')) > 1120) {
+              let cut = end - 1;
+              // jangan potong di tengah paragraf: mundur ke batas paragraf kosong
+              while (cut > 1 && blines[cut - 1].trim() !== '') cut--;
+              if (cut >= end - 1) cut = end - 1;
+              // jangan buang blok struktural (heading/tabel/CTA/link money)
+              if (cut > 1 && /^#{1,6}\s/.test(blines[cut] || '')) break;
+              end = cut;
+            }
+            out = blines.slice(0, end).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+          }
+          return out;
+        };
+        const faqPart = cleanFaqPart(pfaqRaw);
+        const bodyClean = normalizeSplitBody(`${p1}\n${p2}`);
+        // Free model SISIPKAN sampah non-Latin (terlihat di korpus: karakter CJK
+        // akan menolak — itu benar, tapi untuk free model kejadian itu NORMAL, jadi
+        // buang dulu deterministik:
+        //   2. rapatkan spasi ganda yang timbul
+        // Sisa kata Inggris masih ditangani retry di bawah.
+        const stripNonLatin = (s) =>
+          String(s)
+            .replace(/[\u0100-\u017f\u0370-\u03ff\u0400-\u04ff\u0530-\u058f\u0900-\u0dff\u0e00-\u0fff\u3000-\u9fff\uac00-\ud7af\uff00-\uffef]|[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu, '')
+            .replace(/[ \t]{2,}/g, ' ')
+            .replace(/ +([.,;:!?])/g, '$1');
+        // Kata fungsi Inggris ("the", "of", "with", ...) TIDAK punya makna dalam
+        // bahasa Indonesia, jadi menghapusnya tidak mungkin menghapus konten —
+        // hanya membuang noise. Daftar sengaja sama persis dengan SISA_INGGRIS di
+        // seo/lib/article-lint.mjs supaya gate dan pembersih sepakat.
+        // Dua kebocoran free model yang murah diperbaiki:
+        //  1) placeholder Liquid/Jekyll tak tersubstitusi -> `dan_what`, `dari_channel`
+        //     (kata Indonesia + "_" + nama variabel). Underscore tidak pernah dipakai
+        //     dalam prosa Indonesia, jadi membuang `[a-z]+_[a-z]+` tidak mungkin
+        //     menghapus konten asli.
+        //  2) model mengarang link /blog/<slug> yang tidak published ( Causes 404).
+        //     Tulis ulang ke slug published pertama yang tersedia; kalau tidak ada,
+        //     link dibuang tapi teksnya dipertahankan.
+        const stripLiquidJunk = (s) =>
+          String(s).replace(/\b[a-z]{2,}_[a-z]{2,}\b/g, ' ').replace(/[ \t]{2,}/g, ' ');
+        const fixBlogLinks = (s, valid) => {
+          if (!valid || !valid.length) return s;
+          return String(s).replace(/\[([^\]]*)\]\(\/blog\/([a-z0-9-]+)\/?\)/gi, (m, text, slug) => {
+            if (valid.includes(slug)) return m;
+            return text.trim() ? text.trim() : '';
+          });
+        };
+        const stripEnglishFn = (s) =>
+          String(s)
+            .replace(/\b(the|of|and|with|without|from|into|onto|upon|within|among|for|to|in|on|at|by|is|are|was|were|be|been|this|that|these|those|it|its|as|an|or|but|not|you|your|we|our|they|their|he|she|will|would|should|could|has|have|had|can|may|must|when|where|which|what|why|how|who)\b/gi, ' ')
+            .replace(/\s+([.,;:!?])/g, '$1')
+            .replace(/[ \t]{2,}/g, ' ')
+            .replace(/\n{3,}/g, '\n\n');
+        raw = fixBlogLinks(stripLiquidJunk(stripEnglishFn(stripNonLatin(`${bodyClean}\n\n## FAQ\n\n${faqPart}\n`))), publishedForLinks);
+        if (process.env.SEO_DEBUG) writeFileSync('/tmp/seo-out.txt', raw);
+      }
+
     if (!raw) {
       console.log(`  FINAL FAIL — keep pending`);
       fail++;
       continue;
     }
 
-    // Parse + assemble
-    const llmBody = parseOutput(raw);
-    const faq = extractFaqFromBody(llmBody);
+      // Parse + assemble
+      const llmBody = parseOutput(raw);
+      const faq = extractFaqFromBody(llmBody);
     // A6: FAQ < 5 atau terindikasi hasil-pad = LLM tidak patuh. Dulu blok ini men-pad
     // dengan pertanyaan generik — sekarang artikel ditolak supaya korpus tetap bersih.
     if (faq.length < 5) {
