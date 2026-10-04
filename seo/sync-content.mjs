@@ -14,9 +14,9 @@
  * Env:
  *   SEO_CONTENT_DIR  path ke folder berisi *.mdx (isi repo socio-seo-content-id/blog).
  *                    Kosong / tidak ada → script keluar 0 tanpa mengubah apa pun.
- *   SEO_CONTENT_MIRROR  '1' (default) untuk JADIKAN sumber benar-benar mirror —
- *                    hapus MDX di tujuan yang tidak ada di sumber. Default 0 (aman:
- *                    tidak menghapus file lokal).
+ *   SEO_CONTENT_MIRROR  '1' untuk JADIKAN sumber benar-benar mirror — hapus MDX di
+ *                    tujuan yang tidak ada di sumber. Default 0 (aman: tidak
+ *                    menghapus file lokal). Kode: process.env.SEO_CONTENT_MIRROR === '1'.
  *
  * Usage: node seo/sync-content.mjs [--dry-run]
  */
