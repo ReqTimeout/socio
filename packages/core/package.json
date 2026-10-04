@@ -7,9 +7,11 @@
     "./smmturk": "./src/smmturk.ts",
     "./copy": "./src/copy.ts",
     "./rbac": "./src/rbac.ts",
-    "./totp": "./src/totp.ts"
+    "./totp": "./src/totp.ts",
+    "./order-status": "./src/order-status.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types test/order-status.test.ts"
   }
 }

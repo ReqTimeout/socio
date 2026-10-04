@@ -2,35 +2,11 @@ import { db } from "@socio/db";
 import { orders, provider } from "@socio/db/schema";
 import { eq, and, inArray, lt, or, isNull, sql } from "drizzle-orm";
 import { smmturkStatusFor, smmturkRefillStatusFor } from "@socio/core/smmturk";
+import { mapProviderStatus, nextPollIntervalMs, isFinalStatus } from "@socio/core/order-status";
 import { decryptSecret } from "$lib/server/crypto";
 import { notifyOrderUpdate } from "$lib/server/notification";
 
-/** Map SMMturk status string to our order status enum. */
-function mapStatus(s?: string): string | null {
-  if (!s) return null;
-  const v = s.toLowerCase();
-  if (v.includes("complete") || v.includes("success")) return "Success";
-  if (v.includes("cancel")) return "Canceled";
-  if (v.includes("partial")) return "Partial";
-  if (v.includes("progress") || v.includes("in progress")) return "In progress";
-  if (v.includes("pending")) return "Pending";
-  if (v.includes("error")) return "Error";
-  return null;
-}
-
-function nextPollInterval(status: string, createdAt: Date): number {
-  const ageMs = Date.now() - createdAt.getTime();
-  const hour = 60 * 60 * 1000;
-  if (status === "Success" || status === "Canceled" || status === "Partial" || status === "Error")
-    return 0; // final, skip
-  if (status === "In progress") return 5 * 60 * 1000;
-  if (ageMs < hour) return 1 * 60 * 1000;
-  if (ageMs < 6 * hour) return 5 * 60 * 1000;
-  return 30 * 60 * 1000;
-}
-
-/**
- * Tick: claim up to 200 orders needing a poll, batch status check
+/** Tick: claim up to 200 orders needing a poll, batch status check
  * (multi-order endpoint) PER-PROVIDER via each provider's own API URL + key,
  * update, schedule next poll, notify on final.
  * Orders tanpa provider_order_id dianggap Error (port PHP status.php).
@@ -102,28 +78,22 @@ export async function runStatusPolling(): Promise<void> {
       for (const o of list) {
         const r: any = result[o.providerOrderId];
         if (!r || typeof r === "string") continue;
-        const newStatus = mapStatus(r.status);
+        const newStatus = mapProviderStatus(r.status);
         const remains = Number(r.remains ?? o.remains);
         const startCount = Number(r.start_count ?? o.startCount);
-        const wasFinal =
-          o.status === "Success" ||
-          o.status === "Canceled" ||
-          o.status === "Partial" ||
-          o.status === "Error";
-        const isFinal =
-          newStatus === "Success" ||
-          newStatus === "Canceled" ||
-          newStatus === "Partial" ||
-          newStatus === "Error";
+        const wasFinal = isFinalStatus(o.status);
+        // Status yang tak dikenali provider (map → null) TIDAK boleh(dicta) ditulis;
+        // order tetap pada status terakhir yang valid & tetap dijadwal poll ulang.
+        const isFinal = isFinalStatus(newStatus);
         const update: any = {
           remains,
           startCount,
           updatedAt: new Date(),
         };
-        if (newStatus) update.status = newStatus as any;
+        if (newStatus) update.status = newStatus;
         if (!isFinal) {
           update.nextPollAt = new Date(
-            Date.now() + nextPollInterval(newStatus ?? o.status, o.createdAt),
+            Date.now() + nextPollIntervalMs(newStatus ?? o.status, o.createdAt),
           );
         } else {
           update.nextPollAt = null;

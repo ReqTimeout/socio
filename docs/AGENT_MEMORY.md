@@ -21,9 +21,78 @@
 - Password DB: ambil dari container app — `docker exec $APP printenv SOCIO_DB_URL | sed -n 's|.*://[^:]*:\([^@]*\)@.*|\1|p'`. **JANGAN hardcode/tulis password di file/repo.**
 - Secret lain (API key dsb): hanya via env/Coolify, tidak pernah di kode.
 
+## 1b. Auto-deploy Coolify + `watch_paths` (WAJIB PAHAM, diubah 2026-10-02)
+
+`socio-app` (app.socio.id) **auto-deploy ON** dan `watch_paths` **sudah diisi** —
+sebelum ini kosong, artinya push apa pun ke `main` me-rebuild app yang sedang dipakai user.
+
+```
+app/**
+packages/**
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+```
+
+Artinya: `landing/`, `docs/`, `seo/`, `sparko/`, `scripts/`, `*.md`, `app.socio.id/`,
+`socio.id/` **TIDAK** memicu deploy app → aman buat push dokumen/SEO.
+
+Verified 2026-10-02: commit `9d570bd` (docs/ saja) → **0 deployment**, container app
+tidak restart, `GET /` tetap 303 dalam 0,13s. Bukti: `docs/WATCHPATHS_TEST.md`.
+
+### ⚠️ PENTING: auto-deploy webhook NYATA-NYATA TIDAK AKTIF (verified 2-Okt-2026)
+`is_auto_deploy_enabled = t`, tapi **GitHub webhook tidak terpasang di repo**. Bukti:
+`SELECT COUNT(*) FILTER (WHERE is_webhook) FROM application_deployment_queues` =
+**0 dari 130 deployment** `socio-app` (2 Sep – 2 Okt). Semuanya `is_api = t` (manual).
+
+Konsekuensi:
+- Push ke `main` **tidak** me-rebuild app. App dilindungi karena webhook mati, bukan
+  karena `watch_paths`.
+- `watch_paths` = **jaring pengaman**, belum terbukti bekerja pada jalur webhook
+  sungguhan. Uji `docs/` di atas **belum membuktikan apa-apa** soal gate-nya.
+- **Jangan auto-deploy**. Alur wajib tetap §2: manual trigger API + verifikasi +
+  smoke test. Jangan pernah menyalakan webhook tanpa重复 review dengan user —
+  auto-deploy menghapus langkah verifikasi yang selama ini melindungi app.
+- Kalau nanti webhook mau dinyalakan: (1) set watch_paths dulu, (2) uji commit di
+  `app/` memang deploy, (3) uji commit di `docs/` memang tidak, (4) ingatkan batas
+  20 commit di bawah.
+
+**4 app lain aman otomatis** — webhook Coolify memfilter per repo, dan tiap app punya
+repo sendiri: `seo-pipe-app` (`seo-pipeline.git`), `sgb-dashboard`, `capi-gateway`,
+`socio-seo-runner` (`socio-seo-runner.git`). Tidak pernah ikut deploy dari monorepo.
+
+### ⚠️ BAWAHAN: GitHub memotong payload push di 20 commit
+`changed_files` diambil dari `commits.*.added/removed/modified` di payload push
+(`Coolify: app/Http/Controllers/Webhook/Github.php`). Kalau `changed_files` kosong →
+`isWatchPathsTriggered()` = false → **app TIDAK di-deploy**.
+
+Konsekuensi: **push >20 commit sekaligus bisa terlewat deploy**, walau kodenya berubah.
+Mitigasi wajib: setelah push besar → cek status deploy; kalau tertinggal, deploy manual
+(langkah 3–6 di §2). Kalau ragu, pecah push jadi beberapa.
+
+### Cara ubah / rollback `watch_paths`
+Nilai lama (rollback) = `NULL`. Ubah via API resmi, **jangan UPDATE SQL manual**:
+```bash
+# token sekali pakai, lalu PATCH
+curl -X PATCH -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
+  --data '{"watch_paths":"app/**\npackages/**\npackage.json\npnpm-lock.yaml\npnpm-workspace.yaml"}' \
+  http://127.0.0.1:8000/api/v1/applications/nqsjafrei6k8dkup1pxkcuwf
+```
+**Wajib pakai newline asli (`\n` di JSON), bukan teks literal `\n`.** Kalau `\n` masuk
+sebagai teks biasa, 5 pola jadi satu baris dan **tidak match apa pun** → app tidak akan
+lagi pernah deploy. Verifikasi setelah set:
+```bash
+docker exec coolify-db psql -U coolify -d coolify -t -A \
+  -c "SELECT watch_paths FROM applications WHERE id=1;" | cat -A   # harus 5 baris, tiap baris diakhiri $
+```
+Semantik (Coolify 4.3.23, `app/Models/Application.php`): satu pola per baris; `!` =
+exclusion; `*` = satu level; `**` = semua level; **pola yang match terakhir menang**.
+
 ## 2. Alur deploy standar (Wajib urut)
 1. `git pull --rebase origin main` DULU (multi-sesi paralel di repo ini — push tanpa
    fetch = rejected; JANGAN force-push, JANGAN merge blind; cek `git log origin/main`).
+1. Kalau total commit yang akan di-push ke `main` **>20**, ingat batas §1b — cek
+   status deploy setelah push, deploy manual kalau tertinggal.
 1. `pnpm --filter app check` (0 error) + `pnpm --filter app build` sukses.
 2. `git add -A && git commit --no-verify -m "feat(M{X}): ..."` (`--no-verify` karena pre-existing lint errors, bukan dari kerjaan ini) + `git push origin main`.
 3. SSH VPS → generate token Coolify: `docker exec coolify php artisan tinker --execute="session(['currentTeam' => App\Models\Team::find(1)]); echo App\Models\User::find(1)->createToken('<nama-unik>', ['*'])->plainTextToken;"` → ambil baris terakhir.
@@ -31,6 +100,12 @@
 5. Hapus token (tinker `tokens()->where('id',$PID)->delete()`), tidur 240–600s.
 6. Cek `docker exec coolify-db psql -U coolify -d coolify -t -c "SELECT status FROM application_deployment_queues ORDER BY id DESC LIMIT 1;"` = `finished`.
 7. Verifikasi live (lihat §3), cleanup session.
+
+### Deploy yang TIDAK boleh auto (harus manual & disengaja)
+- `landing/` → `socio.id`. Bukan Coolify: `npx wrangler pages deploy`. Push ke monorepo
+  **tidak** mendeploy landing, jadi publish konten SEO = deploy manual tersendiri.
+- `socio-seo-runner` → Coolify **Scheduled Task** (`seo-daily-index` 06:00 WIB,
+  `seo-weekly` Senin 09:00), bukan webhook.
 
 ## 3. Verifikasi live (pola baku)
 - Buat session: `INSERT INTO sessions (id,user_id,token,expires_at,ip_address,user_agent,created_at,updated_at) VALUES ('$SID','2395','$TOK',NOW()+INTERVAL 15 MINUTE,'127.0.0.1','<nama-test-unik>',NOW(),NOW())`.

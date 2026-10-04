@@ -621,31 +621,6 @@
     }}
   >
     <input type="hidden" name="id" value={confirmId ?? 0} />
-    {#if confirmDep && confirmDep.type === "manual" && !confirmDep.img}
-      <div class="mb-3 rounded-xl border border-danger/30 bg-danger-soft/50 p-3">
-        <label class="flex items-start gap-2 text-xs font-semibold text-ink-800">
-          <input
-            type="checkbox"
-            name="force"
-            value="1"
-            class="mt-0.5 size-4 shrink-0 accent-[var(--danger)]"
-            required
-          />
-          <span
-            >Setujui paksa deposit manual <b>tanpa bukti transfer</b>. Tindakan + alasan tercatat di
-            audit log.</span
-          >
-        </label>
-        <textarea
-          name="reason"
-          required
-          minlength="5"
-          rows="2"
-          class="mt-2 w-full rounded-lg border border-ink-200 bg-surface p-2.5 text-xs outline-none focus:border-primary-300"
-          placeholder="Alasan override (min. 5 karakter) — mis. sudah cek mutasi rekening manual"
-        ></textarea>
-      </div>
-    {/if}
     <div class="flex gap-2">
       <Button type="submit" class="flex-1">Ya, Konfirmasi</Button>
       <Button type="button" variant="ghost" onclick={() => (modalOpen = false)}>Batal</Button>

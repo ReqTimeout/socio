@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && node ../seo/fix-sitemap.mjs",
+    "build": "node ../seo/sync-content.mjs && astro build && node ../seo/fix-sitemap.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "lint": "prettier --check .",
