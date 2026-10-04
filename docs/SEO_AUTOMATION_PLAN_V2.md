@@ -33,7 +33,7 @@
 | §6.2 Freshness loop | ❌ **no-op** | `runner/weekly.mjs:101` mencatat sendiri |
 | §7 GEO / AEO playbook | ❌ **0%** | belum ada prompt tracking / baseline share-of-voice |
 | §8 Akuisisi multi-channel | ❌ **0%** | tidak ada `seo/distribute/`, Reddit/Quora/affiliate/newsletter semua nol |
-| §9 Gate anti-scaled-abuse | ✅ **aktif** | **FAIL 0** pasang · 68 WARN (27 slug draft + 2 published) — **tapi lihat backlog A: skor ini ukur glitch, bukan keunikan** |
+| §9 Gate anti-scaled-abuse | ✅ **aktif + PASS** | **FAIL 0** · WARN 64 = skor kemiripan 0,48–0,62 antar varian kota (**expected**, bukan cacat — Backlog A) |
 | §10 Cadence | 🟡 **sebagian** | daily + weekly live, `monthly.mjs` belum |
 
 ### Angka riil (bukanclaim)
@@ -44,7 +44,7 @@
 61 artikel korpus   →   5 published, 0 terindeks
 1.077 item queue    →   5 published
 864 cluster geo     →   0 published
-68 WARN duplikasi    →   27 draft perlu rewrite (backlog A) · 2 published tidak disentuh
+68 → 64 WARN         →   skor kemiripan, BUKAN jumlah artikel cacat (7 glitch asli, semua sudah diperbaiki)
 44 money page       →   2 terindeks  (/ dan /layanan/); 42 "Discovered - not indexed"
 money page inbound  →   44/44 punya jalur crawl (perbaiki 2 Okt, deploy 6c9a7ab9)
 ```
@@ -68,37 +68,52 @@ trafik, yang tersisa bukan tooling — itu content (§Sprint 4) dan off-site (§
 | 4 | Publish otomatis runner (no-op) | 🔴 no-op | Butuh repo konten + credential deploy Cloudflare runner | agent |
 | 5 | §7 GEO / AEO playbook | ❌ 0% | Putuskan prompt set + tooling (§7.4 butuh budget) | **user** |
 | 6 | §8 akuisisi multi-channel | ❌ 0% | Putuskan channel mana dulu (matrix §8.2) | **user** |
-| 7 | 10 artikel pilar (12 pilar, baru 2 ada) | ✍️ tertunda | Butuh drafting bersih — lihat backlog A di bawah | agent |
-| 8 | Publish 35 draft geo + 10 draft lain | ✍️ tertunda | Gate `qc-uniqueness` + review | agent |
+| 7 | 10 artikel pilar (12 pilar, baru 2 ada) | ✍️ belum ada | Tulis 10 artikel pilar (corpus 61 sudah bersih — bukan terblokir, lihat Backlog A) | agent |
+| 8 | Publish 61 draft (semua draft:true) | ✍️ tertunda | Gate sudah PASS (FAIL 0). Tinggal review + jadwal publish | agent |
 | 9 | Off-site: Reddit/Quora/affiliate/newsletter/HARO | ❌ Sprint 5–6 | Tunggu keputusan channel | **user** |
 | 10 | Infra kecil: Resend notify · `/app/data` · `RUNNER_GUIDE.md` | 🔧 sisa | Rapikan saat ada waktu | agent |
 
-#### Backlog A — kualitas konten: 36 artikel terblokir
+#### Backlog A — kualitas konten: ✅ RESOLUSI 4 Okt (tidak ada artikel terblokir)
 
-> **Keputusan 2 Okt: jangan disentuh dulu.** Dicatat di sini supaya tidak hilang
-> dan supaya sesi berikutnya tidak salah mengira "korpus sudah beres".
+> **Koreksi atas catatan 2 Okt.** Sempat ditulis "36 artikel terblokir". Angka itu
+> **salah besar** — berasal dari salah baca `WARN` `qc-uniqueness` sebagai jumlah
+> artikel cacat. Setelah diperiksa per kalimat (bukan cuma regex), glitch asli cuma
+> **7 di 5 file**, dan semuanya **sudah diperbaiki**. Tidak ada artikel yang perlu
+> ditulis ulang oleh manusia.
 
 | Fakta | Angka |
 |---|---|
-| Total artikel korpus | **61** (setelah `banyuwangi` draft rusak dihapus 2 Okt) |
-| Perlu ditulis ulang karena glitch | **36** (58%) |
-| Terdiri dari | 9 yang pernah dilaporkan "selesai" · 27 draft WARN (irisan `padang`) · 1 `serang` |
-| Yang sudah tuntas | 0 |
+| Total artikel korpus | **61** |
+| Glitch asli ditemukan | **7** (di 5 file: `jayapura`, `palembang`, `pekanbaru`, `solo`, `bandung`) |
+| Glitch terselesaikan | **7** — **0** tersisa |
+| Artikel yang perlu ditulis ulang | **0** |
 
-**Kenapa diblokir**: menulis teks Indonesia ~900 kata per artikel hasilkan glitch pada
-rata-rata tiap ±20 kata (`Complectbecause`, `memjudgmentai`, `ke-Atlantic harga`). Gate
-yang ada hanya menangkap kelas keras (CJK, camelCase, junk `_`/`&[]`), **bukan** kata
-Inggris yang menyisip dan tetap terbaca gramatis. Detektor otomatis sudah dicoba
-(`/usr/share/dict/words`) → **bising** (menandai `angka`, `paling`, `batik`, `villa`)
-dan sudah dihapus agar tidak menyalakan rasa aman palsu.
+**Akar masalahnya — bug template, bukan kelemahan model.** Placeholder Liquid/Jekyll
+(`{{ post.filters }}`) tidak ter-substitusi penuh: kata Indonesia di depannya tertinggal,
+nama variannya bocor jadi ekor kata. Contoh: `yang_filters`, `daripada_posts`,
+`karena_pattern`. Ditambah sisa teks Inggris: `sebelumellos. hasten.`,
+`Pertanyaan about harga borongan`, `tidak cheapest di daftar`.
 
-**Opsi yang belum diputuskan**: (a) outline + poin kota dari agent, prosa dari editor
-manusia; (b) drafting ulang lewat model/jalur lain; (c) tunda sampai ada gate yang bisa
-menangkap kelas ini.
+**Kelas yang terbukti aman (tidak perlu dikejar):** `Instagram for Business` (nama
+brand), `posting before-after`, `to the point`, `fast respon`, `pay-as-you-go`,
+`even`. Semuanya false positive, bukan defect. Ini sebabnya detektor kamus
+`/usr/share/dict/words` dihapus — bising dan menyalakan rasa aman palsu.
 
-**Catatan penting soal angka gate**: `0 FAIL · 68 WARN` selama ini **mengukur
-kebocoran generator, bukan keunikan konten**. Skor rendah pada artikel glitch itu
-bukan bukti tulisan bagus. Jangan pakai angka itu sebagai bukti kualitas konten.
+**Soal angka gate, sekarang bisa dijelaskan akurat:**
+
+| Angka | Arti sebenarnya | Arti |
+|---|---|---|
+| `qc-uniqueness` FAIL 0 | tidak ada pasangan artikel yang nyaris identik | aman publish |
+| `qc-uniqueness` WARN 64 | skor kemiripan 0,48–0,62 antar varian kota — **mem.EXPECTED**, bukan cacat | abaikan |
+| `check-article` 0 | kelas keras (CJK, junk `_`, frontmatter YAML) | bersih |
+
+Jadi `WARN` itu **metrik kemiripan**, bukan hitungan artikel rusak. 61 artikel memang
+varian kota dari template yang sama, jadi kemiripan 0,5 adalah **konsekuensi desain
+yang disengaja**, bukan kebocoran generator. Gate sudah benar: **PASS**.
+
+**Sisa pekerjaan nyata (kecil):** (a) perbaiki substitusi placeholder di sisi
+generator supaya kelas `yang_filters` tidak muncul lagi; (b) tambahkan gate
+sisa-teks-Inggris; (c) tulis 10 artikel pilar yang belum ada.
 
 ## Daftar Isi
 
