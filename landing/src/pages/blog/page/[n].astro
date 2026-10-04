@@ -1,0 +1,224 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../../layouts/Layout.astro';
+import Navbar from '../../../components/Navbar.svelte';
+import Footer from '../../../components/Footer.astro';
+import BlogCard from '../../../components/BlogCard.astro';
+import BlogSidebar from '../../../components/BlogSidebar.astro';
+
+// /blog/page/[n] — layout portal sama dengan index (grid + sidebar).
+// PER_PAGE sinkron dengan index.astro (3 dari `rest` non-featured).
+export async function getStaticPaths() {
+  const PER_PAGE = 3;
+  const all = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+    (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+  );
+  const featured = all.find((a) => a.data.category === 'Reseller') ?? all[0];
+  const rest = all.filter((a) => a.id !== featured?.id);
+  const totalPages = Math.max(1, Math.ceil(rest.length / PER_PAGE));
+  return Array.from({ length: totalPages - 1 }, (_, i) => {
+    const n = i + 2;
+    return {
+      params: { n: String(n) },
+      props: {
+        page: n,
+        totalPages,
+        items: rest.slice((n - 1) * PER_PAGE, n * PER_PAGE),
+      },
+    };
+  });
+}
+
+const { page, totalPages, items } = Astro.props;
+
+const readMin = (body?: string) =>
+  Math.max(3, Math.round((body ?? '').split(/\s+/).length / 200));
+
+function windowed(current: number, total: number): (number | '…')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const set = new Set<number>([1, 2, current - 1, current, current + 1, total - 1, total]);
+  const nums = [...set].filter((x) => x >= 1 && x <= total).sort((a, b) => a - b);
+  const out: (number | '…')[] = [];
+  let prev = 0;
+  for (const x of nums) {
+    if (x - prev > 1) out.push('…');
+    out.push(x);
+    prev = x;
+  }
+  return out;
+}
+const pages = windowed(page, totalPages);
+const pageUrl = (p: number) => (p === 1 ? '/blog' : `/blog/page/${p}`);
+const categories = ['Semua', 'Followers', 'TikTok', 'Reseller', 'Lainnya'];
+
+const allPosts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+const sidebarPosts = allPosts.map((a) => ({ id: a.id, title: a.data.title, category: a.data.category, pubDate: a.data.pubDate }));
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: `Arsip Blog Socio.id — Halaman ${page}`,
+  url: `https://socio.id/blog/page/${page}`,
+  numberOfItems: items.length,
+  itemListElement: items.map((a, i) => ({
+    '@type': 'ListItem',
+    position: (page - 1) * 3 + i + 1,
+    url: `https://socio.id/blog/${a.id}`,
+    name: a.data.title,
+  })),
+};
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://socio.id' },
+    { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://socio.id/blog' },
+    { '@type': 'ListItem', position: 3, name: `Halaman ${page}`, item: `https://socio.id/blog/page/${page}` },
+  ],
+};
+---
+
+<Layout
+  title={`Arsip Blog Socio.id — Halaman ${page}`}
+  description={`Arsip artikel SMM Socio.id halaman ${page}: panduan aman beli followers, harga layanan terkini, dan tips bisnis reseller.`}
+>
+  <Navbar client:load />
+
+  <header class="bg-[var(--paper)] pb-8 pt-28 md:pb-10 md:pt-36">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <nav aria-label="Breadcrumb" class="reveal mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-4 py-2 text-[12px] font-semibold text-ink-3">
+        <a href="/" class="hover:text-ink hover:underline underline-offset-2">Beranda</a>
+        <span aria-hidden="true">→</span>
+        <a href="/blog" class="hover:text-ink hover:underline underline-offset-2">Blog</a>
+        <span aria-hidden="true">→</span>
+        <span aria-current="page" class="text-ink-2">Halaman {page}</span>
+      </nav>
+      <h1 class="reveal font-display text-[34px] font-extrabold tracking-tight text-ink md:text-[52px]">
+        Arsip artikel <span class="text-ink-3">— hal. {page}</span>
+      </h1>
+    </div>
+  </header>
+
+  <main class="bg-[var(--paper)] pb-16 md:pb-24">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-12">
+        <div class="min-w-0">
+          <p id="blog-count" class="mb-5 text-[13px] font-semibold text-ink-3" aria-live="polite"></p>
+          <div id="blog-grid" class="grid gap-6 sm:grid-cols-2">
+            {items.map((a) => (
+              <BlogCard
+                id={a.id}
+                title={a.data.title}
+                description={a.data.description}
+                category={a.data.category}
+                pubDate={a.data.pubDate}
+                readMin={readMin(a.body)}
+              />
+            ))}
+          </div>
+          <p id="blog-empty" hidden class="rounded-2xl border border-dashed border-[var(--hairline-strong)] p-8 text-center text-[14px] font-medium text-ink-3">
+            Nggak ketemu artikel yang cocok. Coba kata kunci atau topik lain.
+          </p>
+
+          <nav class="mt-10 flex items-center justify-center gap-1.5" aria-label="Navigasi halaman blog">
+            {page > 1 && (
+              <a
+                href={pageUrl(page - 1)}
+                aria-label="Halaman sebelumnya"
+                class="grid h-11 min-w-11 place-items-center rounded-full border-2 border-transparent px-3 text-[14px] font-bold text-ink-2 transition-all hover:border-[var(--ink)]"
+              >
+                ‹
+              </a>
+            )}
+            {pages.map((p) =>
+              p === '…' ? (
+                <span aria-hidden="true" class="px-1 text-[14px] text-ink-3">…</span>
+              ) : (
+                <a
+                  href={pageUrl(p)}
+                  aria-current={p === page ? 'page' : undefined}
+                  aria-label={`Halaman ${p}`}
+                  class="grid h-11 min-w-11 place-items-center rounded-full border-2 border-transparent px-3 text-[14px] font-bold text-ink-2 transition-all hover:border-[var(--ink)]
+                    aria-[current=page]:border-[var(--ink)] aria-[current=page]:bg-[var(--ink)] aria-[current=page]:text-white aria-[current=page]:shadow-[2px_2px_0_var(--pop-mango)]"
+                >
+                  {p}
+                </a>
+              ),
+            )}
+            {page < totalPages && (
+              <a
+                href={pageUrl(page + 1)}
+                aria-label="Halaman berikutnya"
+                class="grid h-11 min-w-11 place-items-center rounded-full border-2 border-transparent px-3 text-[14px] font-bold text-ink-2 transition-all hover:border-[var(--ink)]"
+              >
+                ›
+              </a>
+            )}
+          </nav>
+        </div>
+
+        <BlogSidebar posts={sidebarPosts} categories={categories} />
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+
+  <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+
+  <script is:inline>
+    (function () {
+      const grid = document.getElementById('blog-grid');
+      const items = grid ? Array.from(grid.querySelectorAll(':scope > a[data-cat]')) : [];
+      const count = document.getElementById('blog-count');
+      const empty = document.getElementById('blog-empty');
+      const search = document.getElementById('blog-search');
+      let topic = 'Semua';
+      let cat = 'Semua';
+      let q = '';
+      function apply() {
+        let n = 0;
+        items.forEach((el) => {
+          const elTopic = (el.getAttribute('data-tags') || '').split(',');
+          const okT = topic === 'Semua' || elTopic.includes(topic);
+          const okC = cat === 'Semua' || el.getAttribute('data-cat') === cat;
+          const okQ = !q || (el.getAttribute('data-title') || '').includes(q);
+          const show = okT && okC && okQ;
+          el.style.display = show ? '' : 'none';
+          if (show) n++;
+        });
+        if (count) count.textContent = n + ' artikel di halaman ini';
+        if (empty) empty.hidden = n !== 0;
+      }
+      document.querySelectorAll('.topic-chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          topic = btn.getAttribute('data-topic') || 'Semua';
+          document.querySelectorAll('.topic-chip').forEach((b) => {
+            const on = b === btn;
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            b.classList.toggle('bg-[var(--ink)]', on);
+            b.classList.toggle('text-white', on);
+            b.classList.toggle('bg-[var(--paper-2)]', !on);
+          });
+          apply();
+        });
+      });
+      document.querySelectorAll('[data-cat-link]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          cat = btn.getAttribute('data-cat-link') || 'Semua';
+          apply();
+        });
+      });
+      if (search) {
+        search.addEventListener('input', () => {
+          q = search.value.trim().toLowerCase();
+          apply();
+        });
+      }
+      apply();
+    })();
+  </script>
+</Layout>

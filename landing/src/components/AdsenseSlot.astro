@@ -1,0 +1,48 @@
+---
+/**
+ * B2: Slot iklan AdSense — HANYA render jika PUBLIC_ADSENSE_CLIENT terisi.
+ * Tanpa client ID = tidak ada markup sama sekali (build bersih, 0 CLS).
+ * Reserve min-height per posisi (anti layout shift saat iklan mengisi).
+ * Pengisian (push) dilakukan lazy oleh loader di Layout (scroll/idle).
+ */
+interface Props {
+  /** Ad unit slot ID dari dashboard AdSense (data-ad-slot) */
+  slot?: string;
+  /** Format unit: fluid (in-article native) atau autorelaxed */
+  format?: 'fluid' | 'autorelaxed';
+  /** Posisi untuk reserve tinggi: top | mid | bottom */
+  placement?: 'top' | 'mid' | 'bottom';
+  /** id opsional — dipakai slot mid untuk relokasi setelah H2 ke-2 */
+  id?: string;
+  class?: string;
+}
+
+const { slot = '', format = 'fluid', placement = 'mid', id, class: cls = '' } = Astro.props;
+const client = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
+
+const reserve =
+  placement === 'top'
+    ? 'min-h-[280px]'
+    : placement === 'bottom'
+      ? 'min-h-[280px] md:min-h-[120px]'
+      : 'min-h-[250px]';
+
+if (!client || !slot) return null;
+---
+
+<div
+  id={id}
+  class={`ads-slot my-8 flex items-center justify-center overflow-hidden rounded-xl border border-[var(--hairline)] bg-[var(--paper-2)] ${reserve} ${cls}`.trim()}
+  data-ad-placement={placement}
+  role="complementary"
+  aria-label="Iklan"
+>
+  <ins
+    class="adsbygoogle block h-full w-full"
+    style="display:block"
+    data-ad-client={client}
+    data-ad-slot={slot}
+    data-ad-format={format}
+    data-full-width-responsive="true"
+  ></ins>
+</div>

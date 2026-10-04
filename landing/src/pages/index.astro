@@ -1,5 +1,14 @@
 ---
 import { totalLayanan, totalKategori } from '../data/siteStats';
+import ArticleRow from '../components/ArticleRow.astro';
+import { getCollection } from 'astro:content';
+
+// W2 (1 Okt 2026): homepage sebelumnya TIDAK punya jalur sama sekali ke artikel
+// (cuma navbar). Tambahkan 3 artikel terbaru + link ke /blog — jalur crawl dari
+// halaman paling otoritatif ke artikel.
+const latestPosts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 3);
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.svelte';
 import FloatingTabDock from '../components/FloatingTabDock.svelte';
@@ -25,6 +34,19 @@ const regBase = 'https://app.socio.id/daftar';
 // V2 §3.3: title ≤70 char (keyword + benefit), desc ≤160 char (keyword + harga + CTA).
 const pageTitle = 'SMM Panel Indonesia: Harga Grosir + Garansi Refill | Socio.id';
 const pageDesc = `SMM panel Indonesia: ${totalLayanan} layanan IG, TikTok, YouTube & lainnya. Daftar reseller Rp50rb (saldo Rp20rb), proses otomatis 24 jam, garansi refill 30 hari.`;
+
+// WebPage schema untuk homepage (lihat emit di bawah).
+const webPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'Socio.id — Panel SMM Termurah & Tercepat di Indonesia',
+  description: 'Panel SMM reseller terpercaya: follower, like, dan view Instagram, TikTok, YouTube dengan CS 24 jam dan garansi refill.',
+  url: 'https://socio.id/',
+  inLanguage: 'id-ID',
+  isPartOf: { '@type': 'WebSite', name: 'Socio.id', url: 'https://socio.id' },
+  about: { '@type': 'Organization', name: 'Socio.id', url: 'https://socio.id' },
+  primaryImageOfPage: { '@type': 'ImageObject', url: 'https://socio.id/og-image.png', width: '1200', height: '630' },
+};
 ---
 
 <Layout title={pageTitle} description={pageDesc}>
@@ -164,6 +186,42 @@ const pageDesc = `SMM panel Indonesia: ${totalLayanan} layanan IG, TikTok, YouTu
 
   <ResellerBand client:visible />
 
+  {latestPosts.length > 0 && (
+    <section class="py-14 md:py-20 bg-[var(--paper-2)]" aria-labelledby="latest-art-title">
+      <div class="container mx-auto px-5 md:px-6">
+        <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="latest-art-title" class="reveal font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+              Artikel terbaru
+            </h2>
+            <p class="mt-1.5 text-[14px] text-ink-2">
+              Panduan SMM dari data harga katalog kami — bukan artikel generik.
+            </p>
+          </div>
+          <a
+            href="/blog"
+            class="inline-flex items-center gap-1.5 text-[14px] font-bold text-ink underline decoration-2 underline-offset-4 transition-colors hover:text-[var(--accent-ink)]"
+          >
+            Semua artikel
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+        <div class="divide-y divide-[var(--hairline)] border-y border-[var(--hairline)]">
+          {latestPosts.map((p, i) => (
+            <ArticleRow
+              id={p.id}
+              title={p.data.title}
+              description={p.data.description}
+              category={p.data.category}
+              pubDate={p.data.pubDate}
+              index={i}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
   <section id="faq" class="py-16 md:py-20 bg-white">
     <div class="container mx-auto px-5 md:px-6">
       <div class="mb-10 md:mb-12 text-center">
@@ -234,6 +292,11 @@ const pageDesc = `SMM panel Indonesia: ${totalLayanan} layanan IG, TikTok, YouTu
       }
     }
   </script>
+
+  <!-- WebPage untuk homepage: menandai dokumen ini sebagai halaman (bukan cuma
+       situs). Tanpa ini consumer schema hanya melihat WebSite di root URL.
+       plan v2 §5.1 "Home" + SEO_AUTOMATION_PLAN §14.1 sitemap-index. -->
+  <script type="application/ld+json" set:html={JSON.stringify(webPageSchema)} />
 </Layout>
 
 <style>

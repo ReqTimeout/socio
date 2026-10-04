@@ -1,5 +1,8 @@
 ---
 import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
+// Import langsung dari sumber tunggal (seo/cities.json) supaya tidak ada duplikasi
+// yang bisa drift. Astro/Vite mengizinkan import file di luar root landing.
+import cities from '../../../seo/cities.json';
 // D8: BeliPage — template tunggal untuk 10 money pages /beli-* + /smm-panel-*.
 // Spec LANDING_DESIGN_PLAN §4.4: 7 section + schema Product/Offer + BreadcrumbList.
 // Harga SELALU dari prices.json — tidak ada angka hardcode di template.
@@ -12,6 +15,7 @@ import Doodle from '../components/Doodle.astro';
 import prices from '../data/prices.json';
 import { beliBySlug } from '../data/beli-pages';
 import type { BeliPageData } from '../data/beli-pages';
+import RelatedArticles from '../components/RelatedArticles.astro';
 
 interface Props {
   page: BeliPageData;
@@ -29,7 +33,10 @@ const all = prices.top as Array<{
   min: number;
   refill: boolean;
 }>;
-const main = all.find((s) => s.name.includes(page.serviceMatch)) ?? all[0];
+const main =
+  all.find((s) => s.name.includes(page.serviceMatch)) ??
+  all.find((s) => s.platform === page.platform) ??
+  all[0];
 const related = all
   .filter((s) => s.name !== main.name)
   .sort((a, b) => {
@@ -75,6 +82,42 @@ const productSchema = {
     seller: { '@type': 'Organization', name: 'Socio.id' },
   },
 };
+/* Service + AreaServed (plan v2 §5.1): money page adalah halaman PENAWARAN
+   jasa, jadi schema Service paling tepat. Untuk varian geo kita isi AreaServed
+   = City + provinsi (dari cities.json yang sudah user-review), untuk yang
+   non-geo = Country Indonesia. `aggregateRating` SENGAJA tidak ada — rating
+   palsu adalah pelanggaran pedoman Google dan tidak boleh kita karang. */
+const cityEntry = (() => {
+  const tail = page.slug.split('-').slice(-1)[0];
+  const twoTail = page.slug.split('-').slice(-2).join('-');
+  return (cities.cities || []).find((c) => c.slug === tail) || (cities.cities || []).find((c) => c.slug === twoTail) || null;
+})();
+const areaServed = cityEntry
+  ? { '@type': 'City', name: cityEntry.city, containedInPlace: { '@type': 'AdministrativeArea', name: cityEntry.provinsi } }
+  : { '@type': 'Country', name: 'Indonesia' };
+const serviceSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Service',
+  name: page.keyword,
+  description: page.description,
+  serviceType: page.category || 'Layanan social media (followers, likes, views)',
+  provider: {
+    '@type': 'Organization',
+    name: 'Socio.id',
+    url: 'https://socio.id',
+    logo: 'https://socio.id/logo.png',
+  },
+  areaServed,
+  url,
+  offers: {
+    '@type': 'AggregateOffer',
+    priceCurrency: 'IDR',
+    lowPrice: String(main.price),
+    highPrice: String(rows[rows.length - 1].price),
+    offerCount: String(rows.length),
+    availability: 'https://schema.org/InStock',
+  },
+};
 const faqSchema = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
@@ -90,6 +133,18 @@ const breadcrumbSchema = {
   itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Layanan', item: 'https://socio.id/layanan' },
     { '@type': 'ListItem', position: 2, name: page.keyword, item: url },
+  ],
+};
+// HowTo (cara order 3 langkah — dipakai Google + dikutip AI answer).
+const howToSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'HowTo',
+  name: `Cara order ${page.keyword.split('—')[0].trim()}`,
+  inLanguage: 'id-ID',
+  step: [
+    { '@type': 'HowToStep', position: 1, name: 'Daftar & isi saldo', text: 'Daftar gratis di app.socio.id, top up via transfer bank. Saldo masuk otomatis.' },
+    { '@type': 'HowToStep', position: 2, name: 'Pilih layanan & tempel link', text: `Cari layanan ${page.platform} di katalog, tempel link post/profil/konten — tanpa password.` },
+    { '@type': 'HowToStep', position: 3, name: 'Order jalan otomatis', text: 'Pesanan masuk antrean provider dan mulai berjalan. Status bisa dilacak live di dashboard.' },
   ],
 };
 ---
@@ -281,6 +336,9 @@ const breadcrumbSchema = {
     </div>
   </section>
 
+  <!-- B11: mesh money page → artikel blog (build-time, max 3 per platform) -->
+  <RelatedArticles platform={page.platform} />
+
   <!-- #7 CTA final dark full-bleed -->
   <section class="bg-[var(--dark-panel)] py-20 text-[var(--on-dark)] isolate md:py-24" aria-labelledby="cta-beli-title">
     <div class="mx-auto max-w-3xl px-5 space-y-6 text-center md:px-8">
@@ -305,6 +363,8 @@ const breadcrumbSchema = {
   <Footer />
 
   <script type="application/ld+json" set:html={JSON.stringify(productSchema)} />
+  <script type="application/ld+json" set:html={JSON.stringify(serviceSchema)} />
   <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+  <script type="application/ld+json" set:html={JSON.stringify(howToSchema)} />
   <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 </Layout>

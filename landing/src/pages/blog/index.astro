@@ -1,29 +1,37 @@
 ---
-import { totalLayanan, totalKategori, hargaMulai } from '../../data/siteStats';
+import { totalLayanan } from '../../data/siteStats';
+import { heroFor } from '../../data/blogHeroes';
+import { tagsFor } from '../../data/blogTags';
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.svelte';
 import Footer from '../../components/Footer.astro';
-import ArtThumb from '../../components/ArtThumb.astro';
+import BlogCard from '../../components/BlogCard.astro';
+import BlogSidebar from '../../components/BlogSidebar.astro';
 
-// D7: /blog index — editorial list (bukan card grid), featured di atas,
-// ledger rows + hairline, chip filter client via radio CSS-only (no JS island),
-// newsletter inline + pagination windowed. Spec §3e + §4.3.
+// /blog — portal berita DNA Socio: hero kompak, featured sticker, grid kartu
+// 2 kolom + sidebar sticky (cari, topik, kategori, terbaru, CTA).
 const all = (await getCollection('blog', ({ data }) => !data.draft)).sort(
   (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
 
-const PER_PAGE = 6;
-const totalPages = Math.max(1, Math.ceil(all.length / PER_PAGE));
+const PER_PAGE = 3;
 const featured = all.find((a) => a.data.category === 'Reseller') ?? all[0];
 const rest = all.filter((a) => a.id !== featured?.id);
+const totalPages = Math.max(1, Math.ceil(rest.length / PER_PAGE));
+const pageItems = rest.slice(0, PER_PAGE);
+const featuredHero = featured ? heroFor(featured.id, featured.data.category) : null;
+const featuredTags = featured ? tagsFor(featured.id, featured.data.title, featured.data.category) : [];
+
+const readMin = (body?: string) =>
+  Math.max(3, Math.round((body ?? '').split(/\s+/).length / 200));
 
 const fmtDate = (d: Date) =>
-  new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(d);
+  new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
 
 const categories = ['Semua', 'Followers', 'TikTok', 'Reseller', 'Lainnya'];
+const sidebarPosts = all.map((a) => ({ id: a.id, title: a.data.title, category: a.data.category, pubDate: a.data.pubDate }));
 
-// DOI-friendly date untuk schema
 const schema = {
   '@context': 'https://schema.org',
   '@type': 'Blog',
@@ -36,6 +44,22 @@ const schema = {
     headline: a.data.title,
     datePublished: a.data.pubDate.toISOString(),
     url: `https://socio.id/blog/${a.id}`,
+  })),
+};
+// ItemList: hub artikel. page/2 sudah punya ini, page 1 belum → inkonsisten
+// dan plan §5.1 menyebut ItemList wajib untuk halaman daftar/pilar.
+const itemListSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Artikel Blog Socio.id',
+  description: 'Daftar artikel panduan SMM, harga layanan, dan bisnis reseller.',
+  numberOfItems: all.length,
+  itemListOrder: 'https://schema.org/ItemListOrderDescending',
+  itemListElement: all.map((a, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    url: `https://socio.id/blog/${a.id}`,
+    name: a.data.title,
   })),
 };
 const breadcrumbSchema = {
@@ -54,124 +78,145 @@ const breadcrumbSchema = {
 >
   <Navbar client:load />
 
-  <!-- #1 Hero + chip filter -->
-  <header class="bg-[var(--paper)] pb-8 pt-32 md:pb-10 md:pt-40">
-    <div class="mx-auto max-w-6xl px-5 md:px-8">
-      <nav aria-label="Breadcrumb" class="reveal mb-6 text-[12px] font-medium text-ink-3">
-        <a href="/" class="hover:text-ink underline-offset-2 hover:underline">Beranda</a>
-        <span aria-hidden="true"> / </span>
+  <!-- Hero kompak portal -->
+  <header class="relative overflow-hidden bg-[var(--paper)] pb-8 pt-28 md:pb-10 md:pt-36">
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+      <div class="absolute right-[-8%] top-[-30%] h-72 w-72 rounded-full bg-[var(--accent-tint)] blur-2xl"></div>
+      <div class="absolute bottom-[-40%] left-[-6%] h-64 w-64 rounded-full bg-[var(--accent-2-tint)] blur-2xl"></div>
+    </div>
+    <div class="relative mx-auto max-w-6xl px-5 md:px-8">
+      <nav aria-label="Breadcrumb" class="reveal mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-4 py-2 text-[12px] font-semibold text-ink-3">
+        <a href="/" class="hover:text-ink hover:underline underline-offset-2">Beranda</a>
+        <span aria-hidden="true">→</span>
         <span aria-current="page" class="text-ink-2">Blog</span>
       </nav>
-      <div class="reveal">
-        <h1 class="font-display text-[length:var(--text-hero)] font-bold leading-[1.05] tracking-tight text-ink">
-          Belajar jualan jasa sosmed.
-        </h1>
-        <p class="mt-4 max-w-xl text-[length:var(--text-body)] leading-relaxed text-ink-2 md:text-[17px]">
-          Harga real dari katalog, panduan aman, dan hitung-hitung bisnis — ditulis dari
-          data, bukan tebakan.
-        </p>
-      </div>
-
-      <!-- Chip filter: CSS-only radio hack — a11y native, 0 JS -->
-      <fieldset class="reveal mt-8" style="--d: 60ms">
-        <legend class="sr-only">Filter kategori artikel</legend>
-        <div class="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {categories.map((c, i) => (
-            <label class="shrink-0">
-              <input
-                type="radio"
-                name="cat"
-                value={c}
-                checked={i === 0}
-                class="peer sr-only"
-              />
-              <span
-                class="inline-flex min-h-[40px] cursor-pointer items-center rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-4 text-[13px] font-semibold text-ink-2 transition-colors
-                  peer-checked:border-[var(--accent-ink)] peer-checked:bg-[var(--accent-ink)] peer-checked:text-white
-                  hover:border-[var(--accent-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-focus-ring)]"
-              >
-                {c}
-              </span>
-            </label>
-          ))}
+      <div class="reveal flex flex-wrap items-end justify-between gap-4">
+        <div class="min-w-0">
+          <p class="inline-block -rotate-1 rounded-xl border-2 border-[var(--ink)] bg-[var(--paper)] px-3 py-1 text-[12px] font-extrabold uppercase tracking-widest text-ink shadow-[2px_2px_0_var(--ink)]">
+            Blog Socio.id
+          </p>
+          <h1 class="mt-4 font-display text-[34px] font-extrabold leading-[1.02] tracking-tight text-ink md:text-[52px]">
+            Kabar & trik <span class="marker-swipe">jualan sosmed.</span>
+          </h1>
         </div>
-      </fieldset>
+        <dl class="flex gap-x-7 gap-y-2 pb-1">
+          <div class="flex items-baseline gap-2">
+            <dd class="num font-display text-2xl font-extrabold text-ink md:text-3xl">{all.length}</dd>
+            <dt class="text-[13px] font-semibold text-ink-3">artikel</dt>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <dd class="num font-display text-2xl font-extrabold text-ink md:text-3xl">{totalLayanan}</dd>
+            <dt class="text-[13px] font-semibold text-ink-3">layanan</dt>
+          </div>
+        </dl>
+      </div>
+      <p class="reveal mt-3 max-w-xl text-[15px] leading-relaxed text-ink-2" style="--d: 60ms">
+        Harga real dari katalog, panduan aman, dan hitung-hitung bisnis — ditulis dari data, bukan tebakan.
+      </p>
     </div>
   </header>
 
-  <!-- #2 Featured + #3 ledger rows -->
   <main class="bg-[var(--paper)] pb-16 md:pb-24">
     <div class="mx-auto max-w-6xl px-5 md:px-8">
-      {featured && (
+      {featured && featuredHero && (
         <a
           href={`/blog/${featured.id}`}
-          class="reveal group mt-2 block"
+          class="reveal group mb-10 block"
           data-cat={featured.data.category}
+          data-tags={featuredTags.join(',')}
+          data-title={featured.data.title.toLowerCase()}
         >
-          <article class="tilt-l-sm grid gap-5 rounded-2xl border-2 border-[var(--ink)] bg-[var(--paper)] p-5 shadow-[4px_4px_0_var(--ink)] transition-shadow hover:shadow-[6px_6px_0_var(--ink)] md:grid-cols-[2fr_3fr] md:gap-8 md:p-8">
-            <div class="min-w-0">
-              <ArtThumb seed={featured.id} size="lg" class="aspect-[16/9] w-full" />
+          <article class="grid gap-0 overflow-hidden rounded-[28px] border-2 border-[var(--ink)] bg-[var(--paper)] shadow-[6px_6px_0_var(--ink)] transition-shadow hover:shadow-[8px_8px_0_var(--ink)] md:grid-cols-2">
+            <div class="relative min-h-56 overflow-hidden md:min-h-full">
+              <img
+                src={featuredHero.src}
+                alt={featuredHero.alt}
+                width="1200"
+                height="675"
+                fetchpriority="high"
+                decoding="async"
+                class="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+              />
+              <span class="absolute left-4 top-4 -rotate-2 rounded-xl border-2 border-[var(--ink)] bg-[var(--pop-mango)] px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-[var(--ink)] shadow-[2px_2px_0_var(--ink)]">Unggulan</span>
             </div>
-            <div class="min-w-0 self-center">
+            <div class="min-w-0 p-6 self-center md:p-10">
               <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-semibold text-ink-3">
-                <span class="rounded-full bg-[var(--accent-tint)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--accent-ink)]">Unggulan</span>
                 <span>{featured.data.category}</span>
                 <span aria-hidden="true">·</span>
                 <time datetime={featured.data.pubDate.toISOString()}>{fmtDate(featured.data.pubDate)}</time>
               </p>
-              <h2 class="mt-3 font-display text-2xl font-bold leading-tight tracking-tight text-ink md:text-3xl group-hover:underline group-hover:decoration-2 group-hover:underline-offset-4">
+              <h2 class="mt-3 font-display text-2xl font-extrabold leading-tight tracking-tight text-ink md:text-[32px] md:leading-[1.12] group-hover:underline group-hover:decoration-[var(--pop-mango)] group-hover:decoration-[3px] group-hover:underline-offset-[6px]">
                 {featured.data.title}
               </h2>
               <p class="mt-3 text-[15px] leading-relaxed text-ink-2 line-clamp-3">
                 {featured.data.description}
               </p>
+              <span class="mt-5 inline-flex min-h-[48px] items-center gap-2 rounded-full bg-[var(--ink)] px-6 text-[14px] font-bold text-white">
+                Baca artikel <span aria-hidden="true">→</span>
+              </span>
             </div>
           </article>
         </a>
       )}
 
-      <!-- Ledger rows: hairline antar row, thumb 96px kiri -->
-      <div class="mt-8 divide-y divide-[var(--hairline)] border-t border-[var(--hairline)] md:mt-12">
-        {rest.map((a, i) => (
-          <a
-            href={`/blog/${a.id}`}
-            class="reveal group block py-5 md:py-6"
-            data-cat={a.data.category}
-            style={`--d: ${(i % 3) * 60}ms`}
-          >
-            <article class="flex items-start gap-4 md:gap-6">
-              <div class="w-24 shrink-0 md:w-28">
-                <ArtThumb seed={a.id} class="aspect-[16/10] w-full" />
-              </div>
-              <div class="min-w-0 flex-1">
-                <h3 class="font-display text-[16px] font-bold leading-snug text-ink group-hover:underline group-hover:decoration-2 group-hover:underline-offset-4 md:text-[18px]">
-                  {a.data.title}
-                </h3>
-                <p class="mt-1 hidden text-[14px] leading-relaxed text-ink-2 line-clamp-2 sm:block">
-                  {a.data.description}
-                </p>
-                <p class="mt-2 flex items-center gap-2 text-[12px] font-medium text-ink-3">
-                  <span class="rounded-full bg-[var(--paper-2)] px-2 py-0.5 font-semibold">{a.data.category}</span>
-                  <time datetime={a.data.pubDate.toISOString()}>{fmtDate(a.data.pubDate)}</time>
-                </p>
-              </div>
-            </article>
-          </a>
-        ))}
+      <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-12">
+        <div class="min-w-0">
+          <div class="mb-5 flex items-center justify-between gap-3">
+            <h2 class="font-display text-xl font-extrabold tracking-tight text-ink">Artikel terbaru</h2>
+            <p id="blog-count" class="text-[13px] font-semibold text-ink-3" aria-live="polite"></p>
+          </div>
+          <div id="blog-grid" class="grid gap-6 sm:grid-cols-2">
+            {pageItems.map((a) => (
+              <BlogCard
+                id={a.id}
+                title={a.data.title}
+                description={a.data.description}
+                category={a.data.category}
+                pubDate={a.data.pubDate}
+                readMin={readMin(a.body)}
+              />
+            ))}
+          </div>
+          <p id="blog-empty" hidden class="rounded-2xl border border-dashed border-[var(--hairline-strong)] p-8 text-center text-[14px] font-medium text-ink-3">
+            Nggak ketemu artikel yang cocok. Coba kata kunci atau topik lain.
+          </p>
+
+          {totalPages > 1 && (
+            <nav class="mt-10 flex items-center justify-center gap-1.5" aria-label="Navigasi halaman blog">
+              {Array.from({ length: totalPages }, (_, i) => (
+                <a
+                  href={i === 0 ? '/blog' : `/blog/page/${i + 1}`}
+                  aria-current={i === 0 ? 'page' : undefined}
+                  aria-label={`Halaman ${i + 1}`}
+                  class="grid h-11 min-w-11 place-items-center rounded-full border-2 border-transparent px-3 text-[14px] font-bold text-ink-2 transition-all hover:border-[var(--ink)]
+                    aria-[current=page]:border-[var(--ink)] aria-[current=page]:bg-[var(--ink)] aria-[current=page]:text-white aria-[current=page]:shadow-[2px_2px_0_var(--pop-mango)]"
+                >
+                  {i + 1}
+                </a>
+              ))}
+              <a
+                href="/blog/page/2"
+                aria-label="Halaman berikutnya"
+                class="grid h-11 min-w-11 place-items-center rounded-full border-2 border-transparent px-3 text-[14px] font-bold text-ink-2 transition-all hover:border-[var(--ink)]"
+              >
+                ›
+              </a>
+            </nav>
+          )}
+        </div>
+
+        <BlogSidebar posts={sidebarPosts} categories={categories} />
       </div>
 
-      <!-- #4 Newsletter inline (stub simpan lokal dulu — Resend via app API nanti) -->
-      <section class="reveal mt-12 rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)] p-6 md:mt-16 md:p-8" aria-labelledby="nl-title">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <!-- Newsletter -->
+      <section class="reveal mt-14 overflow-hidden rounded-[28px] border-2 border-[var(--ink)] bg-[var(--ink)] p-6 shadow-[6px_6px_0_var(--pop-mango)] md:p-10" aria-labelledby="nl-title">
+        <div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div class="min-w-0">
-            <h2 id="nl-title" class="font-display text-lg font-bold text-ink">Dapat update artikel?</h2>
-            <p class="mt-1 text-[14px] text-ink-2">Satu email tiap ada artikel baru. No spam.</p>
+            <p class="inline-block -rotate-1 rounded-lg bg-[var(--pop-mango)] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-[var(--ink)]">Gratis, no spam</p>
+            <h2 id="nl-title" class="mt-3 font-display text-2xl font-extrabold text-white md:text-3xl">Artikel baru, langsung ke email.</h2>
+            <p class="mt-2 max-w-md text-[14px] leading-relaxed text-white/70">Satu email tiap ada artikel baru soal harga & trik jualan jasa sosmed. Berhenti kapan aja.</p>
           </div>
-          <form
-            class="flex w-full max-w-md gap-2"
-            method="POST"
-            action="https://app.socio.id/newsletter"
-          >
+          <form class="flex w-full max-w-md flex-col gap-2 sm:flex-row" method="POST" action="https://app.socio.id/newsletter">
             <label for="nl-email" class="sr-only">Email</label>
             <input
               id="nl-email"
@@ -179,52 +224,79 @@ const breadcrumbSchema = {
               name="email"
               required
               placeholder="email@kamu.com"
-              class="min-h-[48px] min-w-0 flex-1 rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-5 text-[14px] text-ink placeholder:text-ink-3 focus:border-[var(--accent-ink)] focus:outline-none"
+              class="min-h-[52px] min-w-0 flex-1 rounded-full border-2 border-white/20 bg-white/10 px-5 text-[14px] font-medium text-white placeholder:text-white/40 focus:border-[var(--pop-mango)] focus:outline-none"
             />
             <button
               type="submit"
-              class="inline-flex min-h-[48px] shrink-0 items-center rounded-full bg-[var(--accent-ink)] px-6 text-[14px] font-bold text-white transition-transform duration-150 hover:scale-[1.03] active:scale-[0.97]"
+              class="inline-flex min-h-[52px] shrink-0 items-center justify-center rounded-full bg-[var(--pop-mango)] px-7 text-[14px] font-extrabold text-[var(--ink)] transition-transform duration-150 hover:scale-[1.03] active:scale-[0.97]"
             >
               Langganan
             </button>
           </form>
         </div>
       </section>
-
-      <!-- #5 Pagination windowed (statis — halaman index penuh saat artikel < PER_PAGE) -->
-      {totalPages > 1 && (
-        <nav class="mt-10 flex items-center justify-center gap-1" aria-label="Navigasi halaman blog">
-          {Array.from({ length: totalPages }, (_, i) => (
-            <a
-              href={i === 0 ? '/blog' : `/blog/page/${i + 1}`}
-              aria-current={i === 0 ? 'page' : undefined}
-              class="grid h-10 min-w-10 place-items-center rounded-full px-3 text-[14px] font-semibold text-ink-2 transition-colors hover:bg-[var(--paper-2)]
-                aria-[current=page]:bg-[var(--accent-ink)] aria-[current=page]:text-white"
-            >
-              {i + 1}
-            </a>
-          ))}
-        </nav>
-      )}
     </div>
   </main>
 
   <Footer />
 
   <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  <script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} />
   <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 
-  <!-- Chip filter: show/hide rows via data-cat. Vanilla, no island. -->
-  <script>
-    const inputs = document.querySelectorAll<HTMLInputElement>('input[name="cat"]');
-    const rows = document.querySelectorAll<HTMLElement>('[data-cat]');
-    inputs.forEach((input) => {
-      input.addEventListener('change', () => {
-        const v = input.value;
-        rows.forEach((r) => {
-          r.style.display = v === 'Semua' || r.dataset.cat === v ? '' : 'none';
+  <script is:inline>
+    // Filter portal: topik + kategori + cari — kombinasi AND di halaman aktif.
+    (function () {
+      const grid = document.getElementById('blog-grid');
+      const items = grid ? Array.from(grid.querySelectorAll(':scope > a[data-cat]')) : [];
+      const featured = document.querySelector('main > div > a[data-cat]');
+      const all = featured ? [featured, ...items] : items;
+      const count = document.getElementById('blog-count');
+      const empty = document.getElementById('blog-empty');
+      const search = document.getElementById('blog-search');
+      let topic = 'Semua';
+      let cat = 'Semua';
+      let q = '';
+      function apply() {
+        let n = 0;
+        all.forEach((el) => {
+          const elTopic = (el.getAttribute('data-tags') || '').split(',');
+          const okT = topic === 'Semua' || elTopic.includes(topic);
+          const okC = cat === 'Semua' || el.getAttribute('data-cat') === cat;
+          const okQ = !q || (el.getAttribute('data-title') || '').includes(q);
+          const show = okT && okC && okQ;
+          el.style.display = show ? '' : 'none';
+          if (show) n++;
+        });
+        if (count) count.textContent = n + ' artikel';
+        if (empty) empty.hidden = n !== 0;
+      }
+      document.querySelectorAll('.topic-chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          topic = btn.getAttribute('data-topic') || 'Semua';
+          document.querySelectorAll('.topic-chip').forEach((b) => {
+            const on = b === btn;
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            b.classList.toggle('bg-[var(--ink)]', on);
+            b.classList.toggle('text-white', on);
+            b.classList.toggle('bg-[var(--paper-2)]', !on);
+          });
+          apply();
         });
       });
-    });
+      document.querySelectorAll('[data-cat-link]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          cat = btn.getAttribute('data-cat-link') || 'Semua';
+          apply();
+        });
+      });
+      if (search) {
+        search.addEventListener('input', () => {
+          q = search.value.trim().toLowerCase();
+          apply();
+        });
+      }
+      apply();
+    })();
   </script>
 </Layout>

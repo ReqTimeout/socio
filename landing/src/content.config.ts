@@ -1,9 +1,16 @@
 import { defineCollection, reference, z } from "astro:content";
 import { glob } from "astro/loaders";
+import { resolve } from "node:path";
 
 // D7: content collection blog — draft:true dikecualikan dari build (gate SEO §1)
+// SEO_CONTENT_DIR env: path absolut ke repo konten terpisah (Sprint 0 plan).
+// Default: landing/src/content/blog (monorepo mode, backward compatible).
+const blogDir = process.env.SEO_CONTENT_DIR
+  ? resolve(process.env.SEO_CONTENT_DIR)
+  : "./src/content/blog";
+
 const blog = defineCollection({
-  loader: glob({ pattern: "**/*.mdx", base: "./src/content/blog" }),
+  loader: glob({ pattern: "**/*.mdx", base: blogDir }),
   schema: z.object({
     title: z.string().max(70, "Judul ≤70 karakter (CTR SERP)"),
     description: z.string().max(160),

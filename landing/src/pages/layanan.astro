@@ -8,10 +8,47 @@ import TopLayananTable from '../components/TopLayananTable.svelte';
 import KategoriExplainer from '../components/KategoriExplainer.astro';
 import prices from '../data/prices.json';
 import { hargaMulai } from '../data/siteStats';
+import { moneyPagesByPlatform } from '../lib/money-links';
 
 // D6: /layanan — katalog directory (SEO hub). Data dari prices.json, bukan hardcode.
 const total = prices.totalServices.toLocaleString('id-ID');
 const cats = prices.totalCategories.toLocaleString('id-ID');
+
+// ItemList katalog: /layanan adalah indeks layanan, BUKAN satu product.
+// Menempel Product di sini akan salah merepresentasi isi halaman (validator
+// juga akan menandainya). Jadi yang tepat ItemList + CollectionPage.
+/*
+ * ItemList diubah ke money page sungguhan.
+ *
+ * Versi lama mengisi `mainEntity itemListElement` dengan 50 anchor
+ * kategori (anchor ke /layanan#kategori) — itu bukan "item" dari
+ * viewpoint schema.org dan tidak ada halaman yang mewakili tiap item.
+ * Sekarang daftarnya 44 money page asli: satu item = satu URL yang benar-benar
+ * ada, dan link-nya juga jadi jadi jalur crawl internal untuk halaman yang
+ * selama ini tidak terindeks.
+ */
+const groups = moneyPagesByPlatform();
+const moneyList = groups.flatMap((g) => g.pages);
+const itemList = moneyList.map((p, i) => ({
+  '@type': 'ListItem',
+  position: i + 1,
+  name: p.keyword,
+  url: `https://socio.id/${p.slug}/`,
+}));
+const collectionSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'Semua Layanan SMM Socio.id',
+  description: `Katalog ${total} layanan social media di ${cats} kategori.`,
+  url: 'https://socio.id/layanan',
+  isPartOf: { '@type': 'WebSite', name: 'Socio.id', url: 'https://socio.id' },
+  mainEntity: {
+    '@type': 'ItemList',
+    name: 'Halaman layanan per layanan',
+    numberOfItems: itemList.length,
+    itemListElement: itemList,
+  },
+};
 const daftar = 'https://app.socio.id/daftar?mode=reseller';
 const breadcrumbSchema = {
   '@context': 'https://schema.org',
@@ -61,6 +98,57 @@ const breadcrumbSchema = {
   <!-- #3 Top layanan table (search + sort island) -->
   <TopLayananTable client:visible />
 
+  <!-- #4b Hub money page — SATU-SATUNYA tempat semua 44 halaman /beli-* mendapat
+       link kontekstual dari halaman yang sudah terindeks. Sebelumnya 37 dari 42
+       halaman tidak punya inbound link kontekstual sama sekali. -->
+  <section class="bg-[var(--paper-2)] py-16 md:py-24" aria-labelledby="hub-judul">
+    <div class="mx-auto max-w-6xl px-5 md:px-8">
+      <h2 id="hub-judul" class="font-display text-2xl font-bold tracking-tight text-ink md:text-3xl">
+        Halaman per layanan
+      </h2>
+      <p class="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-2">
+        Tiap layanan punya halaman sendiri: harga real, garansi refill, dan syarat minimumnya.
+        Pilih platform dulu, atau langsung <a href="#katalog" class="font-semibold text-ink underline underline-offset-2 hover:decoration-[var(--pop-mango)]">buka katalog lengkap</a>.
+      </p>
+
+      <div class="mt-8 space-y-9">
+        {groups.map((g) => (
+          <div>
+            <h3 class="text-[12px] font-bold uppercase tracking-[0.08em] text-ink-3">
+              {g.platform} <span class="font-medium normal-case tracking-normal text-ink-3">({g.pages.length})</span>
+            </h3>
+            <ul class="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+              {/*
+                Tanpa `truncate` dan tanpa label platform per link:
+                - Platform SUDAH tertulis di heading grup, jadi span per link
+                  itu redundan.
+                - Dengan truncate, 33 dari 44 judul terpotong ellipsis di 360px
+                  sehingga user tidak bisa baca labelnya. Wrapping jauh lebih
+                  baik di satu kolom; di 2-3 kolom ruangnya tetap cukup karena
+                  judul maksimal 2 baris.
+                CATATAN: komentar harus DI LUAR arrow function `map` — kalau
+                dijadikan saudara langsung <li> di dalam callback, parser Astro
+                gagal dengan `Expected ")" but found "$$render"`.
+              */}
+              {g.pages.map((p) => (
+                <li class="min-w-0 border-b border-[var(--hairline)] sm:[&:nth-last-child(-n+2)]:border-b-0">
+                  <a
+                    href={`/${p.slug}/`}
+                    class="group flex min-h-[44px] items-center py-2.5 text-[14px] leading-snug text-ink transition-colors hover:text-ink-2"
+                  >
+                    <span class="min-w-0 flex-1 font-semibold group-hover:underline group-hover:decoration-[var(--pop-mango)] group-hover:decoration-2 group-hover:underline-offset-4">
+                      {p.keyword}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
   <!-- #5 Kategori explainer -->
   <KategoriExplainer />
 
@@ -85,5 +173,6 @@ const breadcrumbSchema = {
 
   <Footer />
 
+  <script type="application/ld+json" set:html={JSON.stringify(collectionSchema)} />
   <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 </Layout>

@@ -1,0 +1,134 @@
+---
+/**
+ * /privacy — Kebijakan privasi & cookie.
+ *
+ * Wajib ada karena: AdSense (iklan) + GA4 (analitik) + consent banner. Banner
+ * consent menautkan ke halaman ini, jadi halaman harus benar-benar ada (404 di
+ * banner = legalmente bolong).
+ *
+ * Tanggal terakhir diperbarui: 1 Oktober 2026.
+ */
+import Layout from '../layouts/Layout.astro';
+
+// Halaman legal = halaman konten → deserves WebPage (bukan cuma SoftwareApplication
+// global dari Layout). Tanpa ini halaman ini tidak terdeteksi sebagai halaman
+// dokumen oleh consumer schema.
+const webPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'Kebijakan Privasi & Cookie Socio.id',
+  description: 'Bagaimana Socio.id mengumpulkan, memakai, dan melindungi data Anda.',
+  url: 'https://socio.id/privacy/',
+  inLanguage: 'id-ID',
+  isPartOf: { '@type': 'WebSite', name: 'Socio.id', url: 'https://socio.id' },
+  about: { '@type': 'Thing', name: 'Kebijakan privasi' },
+};
+
+const updated = '1 Oktober 2026';
+---
+
+<Layout
+  title="Kebijakan Privasi & Cookie — Socio.id"
+  description="Bagaimana Socio.id mengumpulkan, memakai, dan melindungi data Anda: cookie analitik, cookie iklan, dan data yang tidak kami kumpulkan."
+>
+  <main class="mx-auto max-w-3xl px-5 py-14 md:py-20">
+    <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ink-3)]">Legal</p>
+    <h1 class="mt-2 text-3xl font-bold tracking-tight text-[var(--ink)] md:text-4xl">Kebijakan Privasi & Cookie</h1>
+    <p class="mt-3 text-sm text-[var(--ink-3)]">Terakhir diperbarui {updated}</p>
+
+    <div class="prose-privacy mt-10 space-y-8 text-[15px] leading-relaxed text-[var(--ink-2)]">
+      <section>
+        <h2 class="text-lg font-bold text-[var(--ink)]">Ringkasan</h2>
+        <p class="mt-2">
+          Socio.id tidak menjual atau menyewakan data pribadi Anda. Kami memakai cookie untuk
+          <strong class="text-[var(--ink)]">mengukur trafik</strong> (analitik) dan
+          <strong class="text-[var(--ink)]">menampilkan iklan yang relevan</strong>. Anda memilih
+          sendiri lewat banner consent: terima semua, izinkan analitik saja, atau essential saja.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold text-[var(--ink)]">Data yang Kami Kumpulkan</h2>
+        <ul class="mt-2 list-disc space-y-1.5 pl-5">
+          <li><strong class="text-[var(--ink)]">Diri sendiri (situs):</strong> halaman yang dibuka, sumber trafik, Events (scroll, klik CTA), jenis perangkat, dan negara/kota yang dianonimakan Google Analytics.</li>
+          <li><strong class="text-[var(--ink)]">Akun (app.socio.id):</strong> nama pengguna, email, dan riwayat order — disimpan di server kami, <em>tidak</em> dikirim ke Google Analytics dan tidak pernah ditulis ke halaman ini.</li>
+          <li><strong class="text-[var(--ink)]">Yang tidak kami kirim ke analitik:</strong> nama, email, nomor HP, username, ID pesanan, atau isi pesanan Anda.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold text-[var(--ink)]">Cookie yang Kami Pakai</h2>
+        <div class="mt-3 overflow-hidden rounded-xl border border-[var(--hairline)]">
+          <table class="w-full border-collapse text-left text-sm">
+            <thead class="bg-[var(--paper-2)] text-[var(--ink)]">
+              <tr>
+                <th class="px-4 py-3 font-bold">Kategori</th>
+                <th class="px-4 py-3 font-bold">Fungsi</th>
+                <th class="px-4 py-3 font-bold">Provider</th>
+                <th class="px-4 py-3 font-bold">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-t border-[var(--hairline)]">
+                <td class="px-4 py-3">Essential</td>
+                <td class="px-4 py-3">Menyimpan pilihan consent Anda</td>
+                <td class="px-4 py-3">First-party</td>
+                <td class="px-4 py-3 font-semibold text-[var(--ink-2)]">Selalu aktif</td>
+              </tr>
+              <tr class="border-t border-[var(--hairline)]">
+                <td class="px-4 py-3">Analitik</td>
+                <td class="px-4 py-3">Mengukur trafik, halaman terpopuler, scroll depth</td>
+                <td class="px-4 py-3">Google Analytics</td>
+                <td class="px-4 py-3 font-semibold text-[var(--ink-2)]">Perlu persetujuan</td>
+              </tr>
+              <tr class="border-t border-[var(--hairline)]">
+                <td class="px-4 py-3">Iklan</td>
+                <td class="px-4 py-3">Menampilkan iklan Google AdSense yang relevan</td>
+                <td class="px-4 py-3">Google AdSense</td>
+                <td class="px-4 py-3 font-semibold text-[var(--ink-2)]">Perlu persetujuan</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-3">
+          Memilih <strong class="text-[var(--ink)]">Essential saja</strong> memblokir cookie
+          analitik dan iklan. Iklan tetap bisa muncul dalam bentuk tanpa cookie, namun tidak
+          dipersonalisasi.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold text-[var(--ink)]">Google Analytics & AdSense</h2>
+        <p class="mt-2">
+          Kami memakai Google Analytics untuk mengukur performa situs dan Google AdSense untuk
+          membiayai hosting. Keduanya milik Google LLC dan memproses data sesuai
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" class="underline underline-offset-2">Kebijakan Privasi Google</a>.
+          Kami tidak mengirim data identitas pengguna ke sana.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold text-[var(--ink)]">Berubah Pihan Consent</h2>
+        <p class="mt-2">
+          Untuk mengubah pilihan, hapus cookie situs ini di browser Anda lalu muat ulang halaman —
+          banner akan muncul kembali. Anda juga bisa memblokir cookie pihak ketiga lewat
+          pengaturan browser.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-bold text-[var(--ink)]">Hubungi Kami</h2>
+        <p class="mt-2">
+          Pertanyaan soal data pribadi:
+          <a href="https://wa.me/6281221272016" target="_blank" rel="noopener" class="underline underline-offset-2">WhatsApp +62 812-2127-2016</a>.
+        </p>
+      </section>
+    </div>
+
+    <p class="mt-12 text-xs text-[var(--ink-3)]">
+      Halaman ini bagian dari <a href="/" class="underline underline-offset-2">Socio.id</a>.
+    </p>
+  </main>
+
+  <script type="application/ld+json" set:html={JSON.stringify(webPageSchema)} />
+</Layout>

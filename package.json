@@ -6,13 +6,32 @@
   "scripts": {
     "db:generate": "pnpm --filter @socio/db generate",
     "db:migrate": "pnpm --filter @socio/db migrate",
-    "db:studio": "pnpm --filter @socio/db studio"
+    "db:studio": "pnpm --filter @socio/db studio",
+    "seo:generate": "node seo/generate.mjs --count=3",
+    "seo:mesh": "node seo/mesh-build.mjs",
+    "seo:check-article": "node seo/check-article.mjs",
+    "seo:clusters": "node seo/cluster-manifest.mjs",
+    "seo:qc-uniqueness": "node seo/qc-uniqueness.mjs",
+    "seo:jsonld": "node seo/jsonld-validate.mjs --strict",
+    "seo:batch": "bash seo/generate-batch.sh",
+    "seo:push-drafts": "node seo/push-drafts.mjs",
+    "seo:publish": "node seo/publish.mjs",
+    "seo:indexnow": "node seo/indexnow.mjs",
+    "seo:llms": "node seo/llms.mjs",
+    "seo:geo": "node seo/geo-expand.mjs --expand",
+    "seo:geo:promote": "node seo/geo-expand.mjs --promote",
+    "seo:s2b": "node seo/s2b-expand.mjs",
+    "seo:state": "node seo/bootstrap-state.mjs",
+    "seo:gsc-doctor": "node seo/scripts/gsc-doctor.mjs",
+    "seo:gsc-inspect": "node seo/gsc-inspect.mjs",
+    "seo:bing-submit": "node seo/bing-submit.mjs"
   },
   "packageManager": "pnpm@9.15.9",
   "devDependencies": {
     "@types/node": "^22.10.0"
   },
   "dependencies": {
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "js-yaml": "^4.3.0"
   }
 }

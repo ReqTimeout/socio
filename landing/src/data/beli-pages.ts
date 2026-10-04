@@ -1,8 +1,9 @@
-import { totalLayanan, totalKategori, hargaMulai } from './siteStats';
-// D8: Konfigurasi 10 money pages /beli-* + /smm-panel-* (SEO system §2).
+import { totalLayanan, totalKategori, hargaMulai } from "./siteStats";
+import { generatedPages } from "./beli-pages.generated";
+// D8: Money pages /beli-* + /smm-panel-* — 10 hand-written + generated.
 // Harga real dari prices.json (jangan hardcode harga di sini) — hanya mapping
 // keyword, FAQ, copy spesifik per halaman. Anti-pattern: jangan buat
-// platform×layanan×kota — 10 halaman ini cukup.
+// platform×layanan×kota.
 
 export interface BeliFaq {
   q: string;
@@ -18,6 +19,7 @@ export interface BeliPageData {
   // layanan utama: nama persis di prices.json top[] untuk tabel harga
   serviceMatch: string;
   platform: string; // platform utama
+  category?: string; // opsional — dipakai sebagai serviceType di JSON-LD Service
   reasons: [string, string, string]; // 3 reason ledger
   faq: BeliFaq[]; // 5 item
   crossSell: string[]; // slug 3 money page lain
@@ -25,7 +27,7 @@ export interface BeliPageData {
 
 const DAFTAR = "https://app.socio.id/daftar?mode=reseller";
 
-export const beliPages: BeliPageData[] = [
+const handPages: BeliPageData[] = [
   {
     slug: "beli-followers-instagram",
     keyword: "Beli Followers Instagram Murah & Terpercaya",
@@ -82,7 +84,7 @@ export const beliPages: BeliPageData[] = [
     reasons: [
       "Likes masuk dalam menit — sempat nge-hook di jam emas distribusi algoritma konten baru.",
       "Cukup link post — bukan akun. Bisa untuk post mana pun, termasuk Reels dan carousel.",
-`Harga reseller Rp1.106/1k — naik level sekali, murah di semua ${totalLayanan} layanan.`,
+      `Harga reseller Rp1.106/1k — naik level sekali, murah di semua ${totalLayanan} layanan.`,
     ],
     faq: [
       {
@@ -320,6 +322,24 @@ export const beliPages: BeliPageData[] = [
         q: "Untuk channel private bisa?",
         a: "Tidak. Sistem butuh link publik untuk mengirim member. Jadikan publik dulu selama proses berjalan.",
       },
+      // Empat intent informasi di bawah ini sengaja tidak dijadikan halaman
+      // terpisah: semuanya pertanyaan awal yang muncul sebelum order.
+      {
+        q: "Member Telegram amankah - apakah perlu surrender password?",
+        a: "Aman, dan tidak ada satu pun alur Socio.id yang meminta password akun Telegram kamu. Order cukup lewat link grup atau channel publik, lalu sistem yang mengirim.",
+      },
+      {
+        q: "Kenapa pilih varian gradual dan refill, bukan yang termurah?",
+        a: "Gradual menambah member bertahap dan refill mengisi ulang otomatis saat ada drop. Untuk grup yang sudah punya interaksi, kombinasi ini jauh lebih aman daripada sekali kirim dengan harga paling murah.",
+      },
+      {
+        q: "Saya reseller pemula - mulai dari paket berapa?",
+        a: "Mulai dari paket member biasa dulu, ukur dulu apakah audiens grup kamu aktif. Naik ke harga reseller hanya setelah order berulang dan turnover sudah stabil.",
+      },
+      {
+        q: "Bagaimana cara cek member Telegram asli, bukan bot?",
+        a: "Lihat profil beberapa member secara acak: umur akun, foto profil, dan riwayat aktivitasnya. Varian dengan keterangan last-touch atau negara tertentu cenderung lebih realistis dibanding varian cepat dan murah.",
+      },
     ],
     crossSell: [
       "smm-panel-reseller",
@@ -374,14 +394,13 @@ export const beliPages: BeliPageData[] = [
     slug: "smm-panel-reseller",
     keyword: "SMM Panel Reseller — Jadi Reseller SMM Modal Rp50 Ribu",
     title: "SMM Panel Reseller: Jadi Reseller SMM Modal Rp50.000 | Socio.id",
-    description:
-`SMM panel reseller terpercaya: daftar Rp50.000 → saldo Rp20.000 + harga grosir di ${totalLayanan} layanan. API ready, tanpa biaya bulanan.`,
+    description: `SMM panel reseller terpercaya: daftar Rp50.000 → saldo Rp20.000 + harga grosir di ${totalLayanan} layanan. API ready, tanpa biaya bulanan.`,
     heroSub:
       "Modal Rp50.000 sekali bayar — saldo Rp20.000 langsung bisa order + harga reseller lebih murah di semua layanan.",
     serviceMatch: "TikTok Video Views",
     platform: "TikTok",
     reasons: [
-`Harga grosir: selisih member→reseller di seluruh ${totalLayanan} layanan, menumpuk besar di volume tinggi.`,
+      `Harga grosir: selisih member→reseller di seluruh ${totalLayanan} layanan, menumpuk besar di volume tinggi.`,
       "API ready — order bisa diotomasi dari sistem kamu sendiri (kios, bot, web toko sendiri).",
       "Tanpa biaya bulanan, tanpa kontrak — sekali daftar, harga reseller selamanya.",
     ],
@@ -417,10 +436,8 @@ export const beliPages: BeliPageData[] = [
     slug: "smm-panel-api",
     keyword: "SMM Panel API — Dokumentasi & Integrasi Gratis",
     title: "SMM Panel API: Dokumentasi & Integrasi Order Otomatis | Socio.id",
-    description:
-`API SMM panel Socio.id: order, cek status, saldo, dan katalog ${totalLayanan} layanan via REST. Daftar gratis, dokumentasi lengkap, rate-limit wajar.`,
-    heroSub:
-`REST API untuk semua proses: order, status, saldo, katalog ${totalLayanan} layanan — daftar gratis, langsung dapat API key.`,
+    description: `API SMM panel Socio.id: order, cek status, saldo, dan katalog ${totalLayanan} layanan via REST. Daftar gratis, dokumentasi lengkap, rate-limit wajar.`,
+    heroSub: `REST API untuk semua proses: order, status, saldo, katalog ${totalLayanan} layanan — daftar gratis, langsung dapat API key.`,
     serviceMatch: "Instagram Likes",
     platform: "Instagram",
     reasons: [
@@ -457,5 +474,7 @@ export const beliPages: BeliPageData[] = [
     ],
   },
 ];
+
+export const beliPages: BeliPageData[] = [...handPages, ...generatedPages];
 
 export const beliBySlug = new Map(beliPages.map((p) => [p.slug, p]));

@@ -1,6 +1,7 @@
 ---
 import { totalLayanan, totalKategori, hargaMulai } from '../data/siteStats';
 import '../styles/global.css';
+import ConsentBanner from '../components/ConsentBanner.astro';
 // D0: import font aset → Astro kasih hashed URL stabil untuk preload
 import soraWoff2 from '../fonts/sora-latin.woff2';
 import jakartaWoff2 from '../fonts/plus-jakarta-latin.woff2';
@@ -9,9 +10,19 @@ const {
   title = 'Socio.id — Panel SMM Termurah & Tercepat di Indonesia',
   description = `Panel SMM reseller terpercaya: daftar Rp50.000, saldo Rp20.000 langsung jalan + harga reseller lebih murah di ${totalLayanan} layanan Instagram, TikTok, YouTube. Proses otomatis 24 jam, garansi refill.`,
   dockCta = '',
+  // B4: adsense=true hanya di halaman artikel blog. Render meta account +
+  // loader pagead2 (lazy) HANYA jika PUBLIC_ADSENSE_CLIENT terisi.
+  adsense = false,
+  // OG image per-halaman (artikel blog pakai foto Unsplash — CTR sosmed).
+  ogImageOverride = '',
 } = Astro.props;
+const adsenseClient = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
+// GA4 — landing only (keputusan user 1 Okt 2026: app.socio.id tidak dilacak).
+// Karena hanya 1 host, gtag 'linker' tidak dipakai (tidak ada host kedua).
+const ga4Id = import.meta.env.PUBLIC_GA4_ID as string | undefined;
+const adsenseOn = adsense && !!adsenseClient;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://socio.id').href;
-const ogImage = new URL('/og-image.png', Astro.site ?? 'https://socio.id').href;
+const ogImage = ogImageOverride || new URL('/og-image.png', Astro.site ?? 'https://socio.id').href;
 ---
 
 <!doctype html>
@@ -40,6 +51,118 @@ const ogImage = new URL('/og-image.png', Astro.site ?? 'https://socio.id').href;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
 
+    {/* GA4 (G-MDJCW053XR) — Consent Mode v2 WAJIB: default 'denied' di-push
+         SEBELUM gtag.js dimuat, kalau tidak consent-nya cuma hiasan dan Google
+         tetap mengirim cookie. Loader + event tracking ada di bawah (body),
+         بعد banner consented. Kosong = nol overhead. */}
+    {ga4Id && (
+      <script is:inline define:vars={{ ga4Id }}>
+        // 1) Consent default — WAJIB pertama, sebelum gtag.js masuk.
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { window.dataLayer.push(arguments); }
+        window.gtag = gtag;
+
+        var stored = '';
+        try { stored = localStorage.getItem('socio_consent') || ''; } catch (e) {}
+        if (!stored) {
+          var m = document.cookie.match(/(?:^|;\s*)socio_consent=([^;]+)/);
+          stored = m ? decodeURIComponent(m[1]) : '';
+        }
+        // Kill switch untuk testing/QA: ?consent=off memaksa 'essential' SEBELUM
+        // default dipush. Kalau hanya ditangani di banner, head script ini sudah
+        // lebih dulu membaca storage lama → sempat analytic_storage granted.
+        var forced = false;
+        try {
+          forced = new URLSearchParams(location.search).get('consent') === 'off';
+          if (forced) {
+            stored = 'essential';
+            localStorage.setItem('socio_consent', 'essential');
+            document.cookie = 'socio_consent=essential;path=/;max-age=15552000;samesite=lax';
+          }
+        } catch (e) {}
+        var granted = !forced && (stored === 'all' || stored === 'analytics');
+
+        gtag('consent', 'default', {
+          ad_storage: 'denied',
+          ad_user_data: 'denied',
+          ad_personalization: 'denied',
+          analytics_storage: granted ? 'granted' : 'denied',
+          wait_for_update: 500,
+        });
+
+        // 2) Muat gtag async (tidak blok render/LCP).
+        window.__loadGtag = function () {
+          if (window.__ga4Loaded) return;
+          window.__ga4Loaded = true;
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=' + ga4Id;
+          document.head.appendChild(s);
+        };
+        window.__ga4Loaded = false;
+
+        if (granted) {
+          // Sudah pernah accept → langsung load (tidak perlu banner lagi).
+          window.__loadGtag();
+        }
+
+        // 3) config: page_location dibersihkan query string (privacy), custom
+        //    dimension untuk memisahkan host & tipe halaman.
+        window.__ga4Config = function () {
+          if (!window.gtag || !window.__ga4Loaded) return;
+          gtag('config', ga4Id, {
+            send_page_view: true,
+            page_location: location.origin + location.pathname,
+            page_referrer: document.referrer ? new URL(document.referrer).origin : '',
+            allow_google_signals: true,
+          });
+        };
+
+        // 4) Banner decision → update consent + load (atau blok) gtag.
+        document.addEventListener('socio:consent', function (e) {
+          var v = (e.detail && e.detail.consent) || '';
+          var a = v === 'all' || v === 'analytics';
+          window.gtag('consent', 'update', {
+            analytics_storage: a ? 'granted' : 'denied',
+            ad_storage: v === 'all' ? 'granted' : 'denied',
+            ad_user_data: v === 'all' ? 'granted' : 'denied',
+            ad_personalization: v === 'all' ? 'granted' : 'denied',
+          });
+          if (a) {
+            window.__loadGtag();
+          }
+          window.dispatchEvent(new CustomEvent('socio:ads-consent', { detail: { granted: v === 'all' } }));
+        });
+      </script>
+    )}
+
+    {adsenseOn && (
+      <>
+        <meta name="google-adsense-account" content={adsenseClient} />
+        {/* Loader AdSense DIJEDA: hanya setelah consent 'all'. Dengan Consent
+             Mode, Google tetap serve iklan cookieless saat ads_storage denied,
+             jadi banner tidak mematikan pendapatan — hanya menahan cookie. */}
+        <script is:inline define:vars={{ adsenseClient }}>
+          window.__loadAdSense = function () {
+            if (window.__adsLoaded) return;
+            window.__adsLoaded = true;
+            var s = document.createElement('script');
+            s.async = true;
+            s.crossOrigin = 'anonymous';
+            s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + adsenseClient;
+            document.head.appendChild(s);
+          };
+          window.__adsLoaded = false;
+          var saved = '';
+          try { saved = localStorage.getItem('socio_consent') || ''; } catch (e) {}
+          if (saved === 'all') window.__loadAdSense();
+          document.addEventListener('socio:ads-consent', function (e) {
+            if (e.detail && e.detail.granted) window.__loadAdSense();
+          });
+        </script>
+      </>
+    )}
+
     <script type="application/ld+json" is:inline>
       {
         "@context": "https://schema.org",
@@ -59,36 +182,34 @@ const ogImage = new URL('/og-image.png', Astro.site ?? 'https://socio.id').href;
       }
     </script>
 
-    <!-- S0: Organization (global, semua halaman) — identitas brand konsisten untuk knowledge graph -->
-    <script type="application/ld+json" is:inline>
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "Socio.id",
-        "alternateName": "Socio ID",
-        "url": "https://socio.id",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://socio.id/logo.png",
-          "width": 512,
-          "height": 512
+    {/* S0: Organization (global) — JSON.stringify agar selalu JSON valid */}
+    <script type="application/ld+json" set:html={JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'Socio.id',
+        alternateName: 'Socio ID',
+        url: 'https://socio.id',
+        logo: {
+          '@type': 'ImageObject',
+          url: 'https://socio.id/logo.png',
+          width: 512,
+          height: 512,
         },
-        "description": `Panel SMM reseller termurah dan tercepat di Indonesia. ${totalLayanan} layanan Instagram, TikTok, YouTube, Telegram, Spotify & SEO.`,
-        "sameAs": [
-          "https://socio.id"
-        ],
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "contactType": "customer support",
-          "telephone": "+62-812-2127-2016",
-          "availableLanguage": ["Indonesian", "English"]
-        }
-      }
-    </script>
+        description: `Panel SMM reseller termurah dan tercepat di Indonesia. ${totalLayanan} layanan Instagram, TikTok, YouTube, Telegram, Spotify & SEO.`,
+        sameAs: ['https://socio.id'],
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'customer support',
+          telephone: '+62-812-2127-2016',
+          availableLanguage: ['Indonesian', 'English'],
+        },
+      })}
+    />
 
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="alternate" type="application/rss+xml" title="Blog Socio.id" href="/rss.xml" />
     <meta name="generator" content={Astro.generator} />
 
     <!-- D3: global reveal observer — trigger .reveal/.marker-swipe/.pop-in di
@@ -245,6 +366,140 @@ const ogImage = new URL('/og-image.png', Astro.site ?? 'https://socio.id').href;
   </head>
   <body data-dock-cta={dockCta}>
     <slot />
+    <ConsentBanner />
+
+    {ga4Id && (
+      // is:inline — script Astro akan ter-hoist keluar kondisi, inline menjaga
+      // syarat `ga4Id` dan nol bundle tambahan.
+      <script is:inline>
+        /* Event taxonomy landing (rencana: docs/SEO_AUTOMATION_PLAN_V2.md §14.1).
+           Privasi: TIDAK pernah kirim PII. Query string dibuang dari
+           page_location; tidak ada user_id di domain ini. */
+        (function () {
+          if (!window.gtag) return;
+
+          var sent = {};
+          function track(name, params) {
+            if (sent[name]) return;
+            sent[name] = 1;
+            window.gtag('event', name, params || {});
+          }
+
+          // Jangan track kalau analytics_storage masih denied (GTM tidak kirim
+          // cookieless pings untuk event custom tanpa consent granted).
+          function allowed() {
+            var c = '';
+            try { c = localStorage.getItem('socio_consent') || ''; } catch (e) {}
+            if (!c) {
+              var m = document.cookie.match(/(?:^|;\s*)socio_consent=([^;]+)/);
+              c = m ? decodeURIComponent(m[1]) : '';
+            }
+            return c === 'all' || c === 'analytics';
+          }
+
+          /* 1. CTA → generate_lead. Target: link ke app.socio.id (titik
+                konversi utama) + tombol dengan penanda class cta-glow. */
+          function onClick(e) {
+            if (!allowed()) return;
+            var a = e.target.closest('a[href]');
+            if (!a) return;
+            var href = a.getAttribute('href') || '';
+            var text = (a.textContent || '').trim().slice(0, 60);
+            var toApp = href.indexOf('app.socio.id') !== -1;
+
+            if (toApp) {
+              track('generate_lead', { link_url: href, link_text: text, cta_type: 'to_app' });
+              track('outbound_click', { link_url: href, link_text: text, outbound_to: 'app.socio.id' });
+              return;
+            }
+            if (/wa\.me|api\.whatsapp|t\.me|telegram/i.test(href)) {
+              track('outbound_click', { link_url: href, link_text: text, outbound_to: 'whatsapp_or_telegram' });
+              return;
+            }
+            // CTA internal yang menyorot (tombol utama di hero / section harga)
+            if (/cta-glow/.test(a.className || '')) {
+              track('select_promotion', { link_url: href, link_text: text, creative_name: 'hero_cta' });
+            }
+          }
+          addEventListener('click', onClick, { passive: true, capture: true });
+
+          /* 2. Scroll depth 25/50/75/100 — pakai rAF-throttle, bukan IO, karena
+                yang kita ukur kedalaman dokumen (bukan elemen). */
+          var depths = [25, 50, 75, 100];
+          function onScroll() {
+            if (!allowed()) return;
+            if (window.__scrollPending) return;
+            window.__scrollPending = true;
+            requestAnimationFrame(function () {
+              window.__scrollPending = false;
+              var h = document.documentElement;
+              var max = (h.scrollHeight - h.clientHeight) || 1;
+              var pct = Math.round((h.scrollTop / max) * 100);
+              for (var i = 0; i < depths.length; i++) {
+                // toleransi 1%: di dasar halaman rasio bisa 99.x sehingga event
+                // 100 tidak pernah terkirim (terlihat di uji browser).
+                if (pct >= depths[i] - 1 && !sent['sd' + depths[i]]) {
+                  sent['sd' + depths[i]] = 1;
+                  window.gtag('event', 'scroll_depth', { percent_scrolled: depths[i], page_path: location.pathname });
+                }
+              }
+            });
+          }
+          addEventListener('scroll', onScroll, { passive: true });
+          addEventListener('scroll_end', onScroll, { passive: true });
+
+          /* 3. Config_page_view setelah gtag benar-benar termuat. */
+          document.addEventListener('socio:consent', function () {
+            var tries = 0;
+            var iv = setInterval(function () {
+              if (window.__ga4Loaded && window.__ga4Config) {
+                clearInterval(iv);
+                window.__ga4Config();
+                // page_view otomatis sudah terkirim oleh config; tidak perlu kirim ulang.
+              } else if (++tries > 40) clearInterval(iv);
+            }, 100);
+          });
+        })();
+      </script>
+    )}
+    {adsenseOn && (
+      // is:inline WAJIB — script Astro terproses selalu di-hoist keluar
+      // conditional; inline menjaga kondisi + tanpa bundle tambahan.
+      <script is:inline>
+        // B4: lazy push unit AdSense — isi slot saat user mulai scroll /
+        // sentuh / idle 3 dtk. Pola __loadAdSense (beriklan): hemat LCP + CLS.
+        function pushAds() {
+          const els = document.querySelectorAll('ins.adsbygoogle:not([data-ad-pushed])');
+          els.forEach((el) => {
+            el.setAttribute('data-ad-pushed', '1');
+            try {
+              // @ts-ignore — adsbygoogle global dari pagead2
+              (window.adsbygoogle = window.adsbygoogle || []).push({});
+            } catch {}
+          });
+        }
+        let pushed = false;
+        function kick() {
+          if (pushed) return;
+          pushed = true;
+          // Tunggu pagead2 siap (async) sebelum push pertama
+          if (window.adsbygoogle) pushAds();
+          else {
+            let tries = 0;
+            const t = setInterval(() => {
+              if (window.adsbygoogle || ++tries > 20) {
+                clearInterval(t);
+                pushAds();
+              }
+            }, 250);
+          }
+        }
+        addEventListener('scroll', kick, { passive: true, once: true });
+        addEventListener('touchstart', kick, { passive: true, once: true });
+        addEventListener('click', kick, { once: true });
+        setTimeout(kick, 3000);
+      </script>
+    )}
   </body>
 </html>
 

@@ -1,0 +1,97 @@
+---
+import { getCollection } from 'astro:content';
+import { thumbFor } from '../data/blogHeroes';
+
+/**
+ * B11: mesh 2 arah — money page → artikel blog (build-time).
+ * Cocokkan artikel per platform dari judul/slug/kategori, max 3.
+ * Kosong = tidak render apa pun (tidak ada box kosong).
+ */
+interface Props {
+  platform: string;
+}
+
+const { platform } = Astro.props;
+const key = platform.toLowerCase();
+
+const MAX_POSTS = 3;
+const all = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+
+const posts = all
+  .map((post) => {
+    const hay = `${post.id} ${post.data.title} ${post.data.category}`.toLowerCase();
+    let score = 0;
+    if (hay.includes(key)) score += 2;
+    // Kategori TikTok/Reseller selaras dengan beberapa money page
+    if (post.data.category.toLowerCase() === key) score += 1;
+    if (key === 'tiktok' && hay.includes('tiktok')) score += 1;
+    if ((key === 'instagram' || key === 'facebook') && post.data.category === 'Followers') score += 1;
+    if (key === 'smm' && post.data.category === 'Reseller') score += 2;
+    return { post, score };
+  })
+  .filter((x) => x.score > 0)
+  .sort(
+    (a, b) => b.score - a.score || b.post.data.pubDate.valueOf() - a.post.data.pubDate.valueOf(),
+  )
+  .slice(0, MAX_POSTS)
+  .map((x) => x.post);
+
+// Fallback (W2, 1 Okt 2026): kalau tidak ada artikel yang cocok platform — atau
+// kurang dari 3 — isi dengan artikel terbaru. TUJUANNYA crawl path: setiap money
+// page harus punya minimal 1 link ke artikel + 1 link ke /blog/ (blog hub).
+// Sebelum ini, money page TikTok/YouTube/Telegram render 0 link karena tidak ada
+// artikel published di platform itu → artikel tidak pernah punya inbound link
+// dari money page (只能说 artikel→money, arah sebaliknya bolong).
+const picked = posts.slice();
+if (picked.length < MAX_POSTS) {
+  const newest = all
+    .filter((p) => !picked.some((x) => x.id === p.id))
+    .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+  for (const p of newest) {
+    if (picked.length >= MAX_POSTS) break;
+    picked.push(p);
+  }
+}
+const matched = posts.length; // berapa yang benar-benar relevan (untuk copy)
+---
+
+<section class="mx-auto mt-14 max-w-6xl px-5 md:px-8" aria-labelledby="rel-art-title">
+  <div class="rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)] p-6 md:p-8">
+    <h2 id="rel-art-title" class="font-display text-xl font-bold tracking-tight text-ink">
+      {matched > 0 ? 'Artikel terkait' : 'Baca juga'}
+    </h2>
+    <p class="mt-1 text-[14px] text-ink-2">
+      {matched > 0
+        ? 'Panduan dari blog — ditulis dari data harga katalog real.'
+        : 'Panduan umum dari blog kami.'}
+    </p>
+    <div class="mt-4 divide-y divide-[var(--hairline)] border-t border-[var(--hairline)]">
+      {picked.map((r) => {
+        const t = thumbFor(r.id, r.data.category);
+        return (
+          <a href={`/blog/${r.id}`} class="group flex items-start gap-4 py-4">
+            <div class="w-20 shrink-0 overflow-hidden rounded-xl border border-[var(--hairline-strong)]">
+              <img src={t.src} alt="" width="400" height="300" loading="lazy" decoding="async" class="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
+            </div>
+            <div class="min-w-0">
+              <h3 class="text-[15px] font-bold leading-snug text-ink group-hover:underline group-hover:decoration-[var(--pop-mango)] group-hover:decoration-2 group-hover:underline-offset-4">
+                {r.data.title}
+              </h3>
+              <p class="mt-1 text-[12px] font-medium text-ink-3">{r.data.category}</p>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+    {/* Selalu ada link ke blog hub — jalur crawl utama dari money page ke artikel */}
+    <a
+      href="/blog"
+      class="mt-4 inline-flex items-center gap-1.5 text-[14px] font-bold text-ink underline decoration-2 underline-offset-4 transition-colors hover:text-[var(--accent-ink)]"
+    >
+      Semua artikel
+      <span aria-hidden="true">→</span>
+    </a>
+  </div>
+</section>

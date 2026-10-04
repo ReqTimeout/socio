@@ -1,15 +1,18 @@
 ---
-import { totalLayanan, totalKategori, hargaMulai } from '../../data/siteStats';
+import { totalLayanan } from '../../data/siteStats';
+import { heroFor, thumbFor } from '../../data/blogHeroes';
+import { tagCloud } from '../../data/blogTags';
 import { getCollection, render } from 'astro:content';
+import { moneyLinksFor, FALLBACK_HREF } from '../../lib/money-links';
 import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.svelte';
 import NextArticleDock from '../../components/NextArticleDock.svelte';
 import Footer from '../../components/Footer.astro';
-import ArtThumb from '../../components/ArtThumb.astro';
+import AdsenseSlot from '../../components/AdsenseSlot.astro';
 
-// D7: /blog/[slug] — artikel single. Spec §3e + §4.3:
-// TOC collapsible mobile + sticky desktop, prose 65ch, FAQ + FAQPage schema,
-// CTA inline, related 3, Breadcrumb + Article schema. Dock: next-article CTA.
+// Single post — playful premium: mesh hero, foto Unsplash topikal dalam
+// bingkai sticker, drop-cap + H2 bernomor, FAQ bernomor, tanpa section
+// "Kesimpulan" (artikel ditutup CTA maju, bukan rangkuman kaku).
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft);
   return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
@@ -20,12 +23,9 @@ const { Content, headings } = await render(post);
 const h2s = headings.filter((h) => h.depth === 2);
 const relatedRef = post.data.related ?? [];
 const related = (
-  await Promise.all(
-    relatedRef.map((r) => getEntryById(r.id)),
-  )
+  await Promise.all(relatedRef.map((r) => getEntryById(r.id)))
 ).filter((e) => e !== null);
 
-// Next article (chronologically older) — wrap around
 const allSorted = (await getCollection('blog', ({ data }) => !data.draft)).sort(
   (a, b) => a.data.pubDate.valueOf() - b.data.pubDate.valueOf(),
 );
@@ -33,36 +33,77 @@ const idx = allSorted.findIndex((p) => p.id === post.id);
 const nextPost = idx >= 0 ? allSorted[(idx + 1) % allSorted.length] : null;
 const next = nextPost && nextPost.id !== post.id ? nextPost : null;
 
-const cat = post.data.category;
-const readMin = Math.max(
-  3,
-  Math.round((post.body ?? '').split(/\s+/).length / 200),
-);
-
 async function getEntryById(id: string) {
   const entry = (await getCollection('blog')).find((e) => e.id === id);
   return entry && !entry.data.draft ? entry : null;
 }
 
+const cat = post.data.category;
+const readMin = Math.max(3, Math.round((post.body ?? '').split(/\s+/).length / 200));
+const hero = heroFor(post.id, cat);
+
 const fmtDate = (d: Date) =>
   new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
 const iso = post.data.pubDate.toISOString();
 const url = `https://socio.id/blog/${post.id}`;
+const updatedDate = post.data.updated ?? post.data.pubDate;
+const hasUpdate = !!post.data.updated;
+const waShare = `https://wa.me/?text=${encodeURIComponent(`${post.data.title} ${url}`)}`;
+
+const adTop = import.meta.env.PUBLIC_ADSENSE_SLOT_TOP as string | undefined;
+const adMid = import.meta.env.PUBLIC_ADSENSE_SLOT_MID as string | undefined;
+const adBottom = import.meta.env.PUBLIC_ADSENSE_SLOT_BOTTOM as string | undefined;
+const adSide = import.meta.env.PUBLIC_ADSENSE_SLOT_SIDEBAR as string | undefined;
+
+// Sidebar kanan: terbaru + topik (tanpa artikel aktif).
+const latest = [...allSorted].reverse().filter((p) => p.id !== post.id).slice(0, 4);
+const cloud = tagCloud(
+  allSorted.map((a) => ({ id: a.id, title: a.data.title, category: a.data.category })),
+);
+const fmtShort = (d: Date) =>
+  new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(d);
+
+/*
+ * Link kontekstual artikel -> money page.
+ *
+ * Alasan (temuan GSC 1 Okt 2026): 37 dari 42 money page tidak punya inbound
+ * link kontekstual, dan Google membalas "Discovered - currently not indexed"
+ * untuk hampir semuanya. 0 dari 5 artikel menaut money page di dalam body.
+ *
+ * Dipilih di server (bukan JS client) supaya link-nya ada di HTML statis --
+ * crawler tidak perlu menjalankan JS untuk menemukannya. Kalau tidak ada money
+ * page yang cukup nyambung (mis. artikel umum), jatuhnya ke /layanan/ yang
+ * sudah terindeks: lebih jujur daripada link asal.
+ */
+const moneyMatch = moneyLinksFor(post.data.title, post.data.description, 1)[0] ?? null;
+const moneyCta = moneyMatch
+  ? { href: `/${moneyMatch.page.slug}/`, label: moneyMatch.page.keyword, note: 'harga real + garansi refill' }
+  : { href: FALLBACK_HREF, label: 'katalog lengkap 8.270 layanan', note: 'harga live, tanpa kode promo' };
 
 const articleSchema = {
   '@context': 'https://schema.org',
   '@type': 'Article',
   headline: post.data.title,
   description: post.data.description,
+  image: hero.src,
   datePublished: iso,
-  dateModified: (post.data.updated ?? post.data.pubDate).toISOString(),
+  dateModified: updatedDate.toISOString(),
   inLanguage: 'id-ID',
   mainEntityOfPage: url,
-  author: { '@type': 'Organization', name: 'Socio.id', url: 'https://socio.id' },
+  author: {
+    '@type': 'Person',
+    name: 'Tim Socio.id',
+    url: 'https://socio.id',
+    jobTitle: 'Editor SMM',
+  },
   publisher: {
     '@type': 'Organization',
     name: 'Socio.id',
     logo: { '@type': 'ImageObject', url: 'https://socio.id/logo.png' },
+  },
+  speakable: {
+    '@type': 'SpeakableSpecification',
+    cssSelector: ['h1', '.blog-prose > p:first-of-type'],
   },
 };
 const faqSchema = {
@@ -84,138 +125,335 @@ const breadcrumbSchema = {
 };
 ---
 
-<Layout title={`${post.data.title} | Blog Socio.id`} description={post.data.description}>
+<Layout
+  title={`${post.data.title} | Blog Socio.id`}
+  description={post.data.description}
+  adsense
+  ogImageOverride={hero.src}
+>
   <Navbar client:load />
   {next && <NextArticleDock client:load href={`/blog/${next.id}`} title={next.data.title} />}
 
-  <!-- #1 Header artikel -->
-  <header class="bg-[var(--paper)] pt-28 md:pt-36">
-    <div class="mx-auto max-w-3xl px-5 md:px-8">
-      <nav aria-label="Breadcrumb" class="reveal text-[12px] font-medium text-ink-3">
-        <a href="/blog" class="hover:text-ink underline-offset-2 hover:underline">Blog</a>
-        <span aria-hidden="true"> / </span>
+  <style>
+    /* Editorial prose: drop-cap + H2 bernomor + tabel scroll mobile */
+    .blog-prose {
+      counter-reset: h2n;
+    }
+    .blog-prose > p:first-of-type::first-letter {
+      float: left;
+      font-family: var(--font-display, 'Sora', sans-serif);
+      font-weight: 800;
+      font-size: 3.4em;
+      line-height: 0.85;
+      padding-right: 0.12em;
+      color: var(--ink);
+    }
+    .blog-prose > h2 {
+      counter-increment: h2n;
+    }
+    .blog-prose > h2::before {
+      content: counter(h2n, decimal-leading-zero);
+      display: inline-block;
+      margin-right: 0.6rem;
+      padding: 0.1rem 0.55rem;
+      border-radius: 999px;
+      background: var(--pop-mango-soft);
+      border: 2px solid var(--ink);
+      font-size: 0.55em;
+      font-weight: 800;
+      vertical-align: 0.18em;
+      letter-spacing: 0.02em;
+    }
+    .blog-prose table {
+      display: block;
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+    }
+  </style>
+
+  <!-- #1 Hero: mesh + sticker kategori + H1 + foto Unsplash -->
+  <header class="relative overflow-hidden bg-[var(--paper)] pt-28 md:pt-36">
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+      <div class="absolute -top-24 right-[-10%] h-72 w-72 rounded-full bg-[var(--accent-tint)] blur-2xl"></div>
+      <div class="absolute left-[-8%] top-40 h-64 w-64 rounded-full bg-[var(--accent-2-tint)] blur-2xl"></div>
+    </div>
+    <div class="relative mx-auto max-w-3xl px-5 md:px-8">
+      <nav aria-label="Breadcrumb" class="reveal inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-4 py-2 text-[12px] font-semibold text-ink-3">
+        <a href="/blog" class="hover:text-ink hover:underline underline-offset-2">Blog</a>
+        <span aria-hidden="true">→</span>
         <span aria-current="page" class="text-ink-2">{cat}</span>
       </nav>
-      <p class="reveal mt-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-ink-3" style="--d: 40ms">
-        <span class="rounded-full bg-[var(--accent-tint)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--accent-ink)]">{cat}</span>
-        <span class="num">{readMin} mnt baca</span>
-        <span aria-hidden="true">·</span>
-        <time datetime={iso}>{fmtDate(post.data.pubDate)}</time>
-      </p>
-      <h1
-        class="reveal mt-4 font-display text-3xl font-bold leading-[1.12] tracking-tight text-ink md:text-[40px]"
-        style="--d: 80ms"
-      >
+      <div class="reveal mt-6 flex flex-wrap items-center gap-3" style="--d: 40ms">
+        <span class="inline-block -rotate-2 rounded-xl border-2 border-[var(--ink)] bg-[var(--pop-mango)] px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink)] shadow-[2px_2px_0_var(--ink)]">{cat}</span>
+        <span class="text-[13px] font-semibold text-ink-3"><span class="num">{readMin}</span> menit baca</span>
+        {hasUpdate && (
+          <span class="rounded-full bg-[var(--paper-2)] px-2.5 py-1 text-[11px] font-bold text-ink-2">
+            Diperbarui <time datetime={updatedDate.toISOString()}>{fmtDate(updatedDate)}</time>
+          </span>
+        )}
+      </div>
+      <h1 class="reveal mt-5 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-ink md:text-[52px]" style="--d: 80ms">
         {post.data.title}
       </h1>
-      <div class="reveal mt-8 md:mt-10" style="--d: 120ms">
-        <ArtThumb seed={post.id} size="lg" class="aspect-[16/9] w-full" />
+      <p class="reveal mt-4 max-w-2xl text-[17px] leading-relaxed text-ink-2 md:text-[19px]" style="--d: 100ms">
+        {post.data.description}
+      </p>
+      <div class="reveal mt-6 flex flex-wrap items-center gap-x-4 gap-y-3" style="--d: 120ms">
+        <p class="flex items-center gap-2.5">
+          <span aria-hidden="true" class="grid h-10 w-10 place-items-center rounded-full border-2 border-[var(--ink)] bg-[var(--accent-ink)] font-display text-[15px] font-extrabold text-white">S</span>
+          <span class="leading-tight">
+            <span class="block text-[14px] font-bold text-ink">Tim Socio.id</span>
+            <span class="block text-[12px] font-medium text-ink-3"><time datetime={iso}>{fmtDate(post.data.pubDate)}</time></span>
+          </span>
+        </p>
+        <span class="hidden h-5 w-px bg-[var(--hairline-strong)] sm:block" aria-hidden="true"></span>
+        <p class="flex items-center gap-2">
+          <button
+            type="button"
+            data-copy-link={url}
+            class="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-4 text-[13px] font-bold text-ink transition-all hover:border-[var(--ink)] active:scale-95"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span data-copy-label>Salin link</span>
+          </button>
+          <a
+            href={waShare}
+            target="_blank"
+            rel="noopener"
+            aria-label="Bagikan ke WhatsApp"
+            class="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] text-ink transition-all hover:border-[var(--ink)] active:scale-95"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.9 1.22 3.1.15.2 2.1 3.2 5.1 4.49.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.57-.09 1.76-.72 2.01-1.42.25-.7.25-1.29.17-1.42-.07-.13-.27-.2-.57-.35M12.04 21.79h-.01a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.9-9.88a9.83 9.83 0 0 1 9.88 9.89c0 5.45-4.44 9.88-9.89 9.88M20.5 3.49A11.8 11.8 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.9c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.9 11.9 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.34 11.89-11.9 0-3.18-1.24-6.16-3.44-8.41"/></svg>
+          </a>
+        </p>
       </div>
+      <figure class="reveal mt-8 md:mt-10" style="--d: 140ms">
+        <div class="overflow-hidden rounded-[28px] border-2 border-[var(--ink)] shadow-[6px_6px_0_var(--ink)]">
+          <img
+            src={hero.src}
+            alt={hero.alt}
+            width="1200"
+            height="675"
+            fetchpriority="high"
+            decoding="async"
+            class="aspect-[16/9] w-full object-cover"
+          />
+        </div>
+        <figcaption class="mt-2.5 text-right text-[12px] font-medium text-ink-3">Foto: Unsplash</figcaption>
+      </figure>
+      <AdsenseSlot slot={adTop} placement="top" />
     </div>
   </header>
 
-  <!-- #2-3 Body: TOC sticky kiri (desktop) / collapsible (mobile) + prose -->
-  <main class="bg-[var(--paper)] pb-16 md:pb-24">
-    <div class="mx-auto grid max-w-6xl gap-10 px-5 md:grid-cols-[260px_minmax(0,1fr)] md:px-8 lg:gap-16">
-      <!-- TOC: mobile details / desktop sticky -->
-      <aside class="md:order-first">
-        <details class="reveal rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)] p-4 md:hidden">
-          <summary class="cursor-pointer list-none text-[14px] font-bold text-ink">
-            Daftar isi
-            <span class="float-right text-ink-3" aria-hidden="true">⌄</span>
-          </summary>
-          <nav class="mt-3 space-y-1" aria-label="Daftar isi">
-            {h2s.map((h) => (
-              <a href={`#${h.slug}`} class="block rounded-lg px-2 py-1.5 text-[13px] font-medium text-ink-2 hover:bg-[var(--paper)] hover:text-ink">
-                {h.text}
-              </a>
-            ))}
-          </nav>
-        </details>
-
-        <nav class="sticky top-24 hidden max-h-[70vh] space-y-1 overflow-y-auto md:block" aria-label="Daftar isi">
-          <p class="text-[11px] font-bold uppercase tracking-widest text-ink-3">Daftar isi</p>
+  <!-- #2-3 Body: background + kartu artikel + sidebar kanan sticky -->
+  <main class="relative overflow-hidden bg-[var(--paper-2)] pb-16 md:pb-24">
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+      <div class="absolute left-[-6%] top-24 h-64 w-64 rounded-full bg-[var(--accent-tint)] blur-2xl"></div>
+      <div class="absolute bottom-40 right-[-8%] h-72 w-72 rounded-full bg-[var(--accent-2-tint)] blur-2xl"></div>
+    </div>
+    <div class="relative mx-auto grid max-w-6xl gap-8 px-5 pt-10 md:px-8 md:pt-14 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
+      <!-- TOC mobile -->
+      <details class="reveal rounded-2xl border-2 border-[var(--ink)] bg-[var(--paper)] p-4 shadow-[3px_3px_0_var(--ink)] lg:hidden">
+        <summary class="cursor-pointer list-none text-[14px] font-bold text-ink">
+          Daftar isi
+          <span class="float-right text-ink-3" aria-hidden="true">⌄</span>
+        </summary>
+        <nav class="mt-3 space-y-1" aria-label="Daftar isi">
           {h2s.map((h) => (
-            <a href={`#${h.slug}`} class="block rounded-lg px-3 py-2 text-[13px] font-medium leading-snug text-ink-2 transition-colors hover:bg-[var(--paper-2)] hover:text-ink">
+            <a href={`#${h.slug}`} class="block rounded-lg px-2 py-1.5 text-[13px] font-medium text-ink-2 hover:bg-[var(--paper-2)] hover:text-ink">
               {h.text}
             </a>
           ))}
         </nav>
-      </aside>
+      </details>
 
-      <article class="min-w-0">
+      <article class="min-w-0 rounded-[28px] border border-[var(--hairline-strong)] bg-[var(--paper)] p-5 shadow-[6px_6px_0_var(--hairline-strong)] md:p-10">
         <div
           class="blog-prose mx-auto max-w-[65ch]
-            text-[16px] leading-[1.75] text-ink-2
-            [&_a]:font-semibold [&_a]:text-[var(--accent-ink)] [&_a]:underline [&_a]:decoration-[var(--hairline-strong)] [&_a]:underline-offset-4 [&_a:hover]:decoration-[var(--accent-ink)]
-            [&_h2]:mt-12 [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:text-ink [&_h2_scroll-margin-top]:[120px]
+            text-[17px] leading-[1.8] text-ink-2
+            [&_p]:mb-6
+            [&_a]:font-semibold [&_a]:text-[var(--accent-ink)] [&_a]:underline [&_a]:decoration-[var(--pop-mango)] [&_a]:decoration-2 [&_a]:underline-offset-4
+            [&_h2]:mb-5 [&_h2]:mt-14 [&_h2]:font-display [&_h2]:text-[26px] [&_h2]:font-extrabold [&_h2]:leading-tight [&_h2]:tracking-tight [&_h2]:text-ink
             [&_h2]:scroll-mt-28
-            [&_blockquote]:my-8 [&_blockquote]:rounded-r-xl [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--accent-ink)] [&_blockquote]:bg-[var(--accent-tint)] [&_blockquote]:p-5 [&_blockquote]:text-[15px] [&_blockquote]:leading-relaxed [&_blockquote]:text-ink
-            [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-6
-            [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6
+            [&_h3]:mb-3 [&_h3]:mt-10 [&_h3]:font-display [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-ink
+            [&_blockquote]:relative [&_blockquote]:my-10 [&_blockquote]:rounded-2xl [&_blockquote]:border-2 [&_blockquote]:border-[var(--ink)] [&_blockquote]:bg-[var(--pop-mango-soft)] [&_blockquote]:p-6 [&_blockquote]:pl-14 [&_blockquote]:text-[16px] [&_blockquote]:font-medium [&_blockquote]:leading-relaxed [&_blockquote]:text-ink [&_blockquote]:shadow-[4px_4px_0_var(--ink)]
+            [&_ol]:mb-6 [&_ol]:list-decimal [&_ol]:space-y-2.5 [&_ol]:pl-6
+            [&_ul]:mb-6 [&_ul]:list-disc [&_ul]:space-y-2.5 [&_ul]:pl-6 [&_ul_li]:marker:text-[var(--accent-ink)]
             [&_strong]:font-bold [&_strong]:text-ink
-            [&_table]:my-8 [&_table]:w-full [&_table]:border-collapse [&_table]:text-[14px]
-            [&_th]:border [&_th]:border-[var(--hairline-strong)] [&_th]:bg-[var(--paper-2)] [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-bold [&_th]:text-ink
-            [&_td]:border [&_td]:border-[var(--hairline)] [&_td]:px-3 [&_td]:py-2.5 [&_td]:text-left
-            [&_td]:align-top [&_td]:leading-relaxed
+            [&_table]:my-10 [&_table]:w-full [&_table]:border-collapse [&_table]:overflow-hidden [&_table]:rounded-xl [&_table]:border-2 [&_table]:border-[var(--ink)] [&_table]:text-[14px] [&_table]:shadow-[4px_4px_0_var(--ink)]
+            [&_th]:bg-[var(--ink)] [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:font-bold [&_th]:text-white
+            [&_td]:border-t [&_td]:border-[var(--hairline-strong)] [&_td]:bg-[var(--paper)] [&_td]:px-4 [&_td]:py-3 [&_td]:text-left [&_td]:align-top [&_td]:leading-relaxed
             [&_code]:rounded [&_code]:bg-[var(--paper-2)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px]"
         >
           <Content />
         </div>
 
-        <!-- #4 FAQ accordion + schema (reuse pattern accordion home) -->
+        {/*
+          CTA kontekstual. Ditaruh langsung setelah isi artikel, sebelum blok
+          "Lanjut baca ini" -- jadi sinyalnya jelas milik artikel, bukan
+          navigasi. Styling dibedakan supaya tidak terbaca sebagai iklan.
+        */}
+        <aside
+          class="mx-auto mt-10 max-w-[65ch] rounded-2xl border border-[var(--hairline-strong)] bg-[var(--paper-2)] p-5"
+          aria-label="Layanan terkait"
+        >
+          <p class="text-[12px] font-bold uppercase tracking-[0.06em] text-ink-3">Mau langsung order?</p>
+          <p class="mt-2 text-[15px] leading-relaxed text-ink-2">
+            Lihat <a
+              href={moneyCta.href}
+              class="font-bold text-ink underline decoration-[var(--pop-mango)] decoration-2 underline-offset-4 hover:decoration-[var(--accent-ink)]"
+              >{moneyCta.label}</a> &mdash; {moneyCta.note}.
+          </p>
+        </aside>
+
+        <AdsenseSlot id="ad-mid-slot" slot={adMid} placement="mid" />
+        <script is:inline>
+          const mid = document.getElementById('ad-mid-slot');
+          const prose = document.querySelector('.blog-prose');
+          if (mid && prose) {
+            const h2s = prose.querySelectorAll(':scope > h2');
+            const next = h2s[2];
+            if (next) prose.insertBefore(mid, next);
+            else prose.appendChild(mid);
+            mid.classList.add('mx-auto', 'max-w-[65ch]');
+          }
+        </script>
+
+        <!-- #4 FAQ bernomor + schema -->
         <section class="mx-auto mt-14 max-w-[65ch]" aria-labelledby="faq-title">
-          <h2 id="faq-title" class="font-display text-2xl font-bold tracking-tight text-ink">Pertanyaan seputar topik ini</h2>
-          <div class="mt-6 divide-y divide-[var(--hairline)] border-y border-[var(--hairline)]">
-            {post.data.faq.map((f) => (
-              <details class="group">
-                <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left text-[15px] font-bold text-ink marker:hidden">
-                  {f.q}
+          <p class="text-[11px] font-extrabold uppercase tracking-widest text-ink-3">Masih penasaran?</p>
+          <h2 id="faq-title" class="mt-1 font-display text-2xl font-extrabold tracking-tight text-ink md:text-[28px]">Pertanyaan yang sering masuk</h2>
+          <div class="mt-6 space-y-3">
+            {post.data.faq.map((f, i) => (
+              <details class="group rounded-2xl border border-[var(--hairline-strong)] bg-[var(--paper)] transition-shadow open:border-[var(--ink)] open:shadow-[3px_3px_0_var(--ink)]">
+                <summary class="flex cursor-pointer list-none items-center gap-3 p-4 text-left text-[15px] font-bold text-ink marker:hidden md:p-5">
+                  <span aria-hidden="true" class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--ink)] font-display text-[13px] font-extrabold text-white">{String(i + 1).padStart(2, '0')}</span>
+                  <span class="min-w-0 flex-1">{f.q}</span>
                   <svg class="h-4 w-4 shrink-0 text-ink-3 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                 </summary>
-                <p class="pb-4 text-[14px] leading-relaxed text-ink-2">{f.a}</p>
+                <p class="px-4 pb-5 pl-[60px] text-[14px] leading-relaxed text-ink-2 md:px-5">{f.a}</p>
               </details>
             ))}
           </div>
         </section>
 
-        <!-- #5 CTA inline accent tint -->
-        <aside class="reveal mx-auto mt-10 max-w-[65ch] rounded-2xl border border-[var(--hairline)] bg-[var(--accent-tint)] p-6 md:p-8">
-          <p class="font-display text-lg font-bold text-ink">Mau langsung cek harganya?</p>
+        <!-- #5 CTA sticker -->
+        <aside class="reveal mx-auto mt-12 max-w-[65ch] rounded-[24px] border-2 border-[var(--ink)] bg-[var(--accent-tint)] p-6 shadow-[5px_5px_0_var(--ink)] md:p-8">
+          <p class="inline-block -rotate-1 rounded-lg bg-[var(--pop-mango)] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-[var(--ink)]">Biar nggak cuma baca</p>
+          <p class="mt-3 font-display text-xl font-extrabold text-ink md:text-2xl">Cek harganya langsung, hitung sendiri untungnya.</p>
           <p class="mt-2 text-[14px] leading-relaxed text-ink-2">
-            Katalog {totalLayanan} layanan terbuka untuk semua — daftar reseller Rp50.000 untuk harga
-            lebih murah di setiap layanan.
+            Katalog {totalLayanan} layanan terbuka untuk semua — daftar reseller Rp50.000, saldo Rp20.000 langsung bisa dipakai order.
           </p>
           <div class="mt-5 flex flex-col gap-3 sm:flex-row">
-            <a href="/layanan" class="inline-flex min-h-[48px] items-center justify-center rounded-full bg-[var(--accent-ink)] px-6 text-[14px] font-bold text-white transition-transform duration-150 hover:scale-[1.03] active:scale-[0.97]">
+            <a href="/layanan" class="inline-flex min-h-[52px] items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--accent-ink)] px-7 text-[15px] font-extrabold text-white shadow-[3px_3px_0_var(--ink)] transition-transform duration-150 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_var(--ink)] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none">
               Cek harga layanan
             </a>
-            <a href="/reseller" class="inline-flex min-h-[48px] items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-6 text-[14px] font-bold text-ink transition-colors hover:border-[var(--accent-ink)]">
+            <a href="/reseller" class="inline-flex min-h-[52px] items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--paper)] px-7 text-[15px] font-extrabold text-ink shadow-[3px_3px_0_var(--ink)] transition-transform duration-150 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_var(--ink)] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none">
               Daftar reseller
             </a>
           </div>
         </aside>
 
-        <!-- #6 Related ledger rows -->
+        <div class="mx-auto max-w-[65ch]">
+          <AdsenseSlot slot={adBottom} placement="bottom" />
+        </div>
+
+        <!-- #6 Related + author -->
         {related.length > 0 && (
           <section class="mx-auto mt-14 max-w-[65ch]" aria-labelledby="rel-title">
-            <h2 id="rel-title" class="font-display text-xl font-bold tracking-tight text-ink">Baca juga</h2>
+            <h2 id="rel-title" class="font-display text-xl font-extrabold tracking-tight text-ink">Lanjut baca ini</h2>
             <div class="mt-4 divide-y divide-[var(--hairline)] border-t border-[var(--hairline)]">
-              {related.map((r) => (
-                <a href={`/blog/${r.id}`} class="group flex items-start gap-4 py-4">
-                  <div class="w-16 shrink-0">
-                    <ArtThumb seed={r.id} class="aspect-[16/10] w-full" />
-                  </div>
-                  <div class="min-w-0">
-                    <h3 class="text-[15px] font-bold leading-snug text-ink group-hover:underline group-hover:underline-offset-4">{r.data.title}</h3>
-                    <p class="mt-1 text-[12px] font-medium text-ink-3">{r.data.category}</p>
-                  </div>
-                </a>
-              ))}
+              {related.map((r) => {
+                const t = thumbFor(r.id, r.data.category);
+                return (
+                  <a href={`/blog/${r.id}`} class="group flex items-start gap-4 py-4">
+                    <div class="w-20 shrink-0 overflow-hidden rounded-xl border border-[var(--hairline-strong)]">
+                      <img src={t.src} alt="" width="400" height="300" loading="lazy" decoding="async" class="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
+                    </div>
+                    <div class="min-w-0">
+                      <h3 class="text-[15px] font-bold leading-snug text-ink group-hover:underline group-hover:decoration-[var(--pop-mango)] group-hover:decoration-2 group-hover:underline-offset-4">{r.data.title}</h3>
+                      <p class="mt-1 text-[12px] font-medium text-ink-3">{r.data.category}</p>
+                    </div>
+                  </a>
+                );
+              })}
             </div>
           </section>
         )}
+
+        <section class="mx-auto mt-12 flex max-w-[65ch] items-start gap-4 rounded-2xl border border-[var(--hairline-strong)] bg-[var(--paper-2)] p-5 md:p-6" aria-label="Tentang penulis">
+          <div class="grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 border-[var(--ink)] bg-[var(--pop-mango)] font-display text-lg font-extrabold text-[var(--ink)]" aria-hidden="true">
+            S
+          </div>
+          <div class="min-w-0">
+            <p class="text-[11px] font-extrabold uppercase tracking-widest text-ink-3">Ditulis oleh</p>
+            <p class="mt-0.5 text-[15px] font-bold text-ink">Tim Socio.id</p>
+            <p class="mt-1 text-[13px] leading-relaxed text-ink-2">
+              Kami yang megang katalog {totalLayanan} layanan tiap hari — jadi angka di artikel ini angka beneran, bukan karangan.
+            </p>
+          </div>
+        </section>
       </article>
+
+      <!-- Sidebar kanan sticky: TOC + iklan + terbaru + topik + CTA -->
+      <aside class="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start">
+        <section class="rounded-2xl border-2 border-[var(--ink)] bg-[var(--paper)] p-5 shadow-[4px_4px_0_var(--ink)]" aria-label="Daftar isi">
+          <p class="text-[11px] font-extrabold uppercase tracking-widest text-ink-3">Daftar isi</p>
+          <nav class="mt-3 max-h-[38vh] space-y-1 overflow-y-auto" aria-label="Daftar isi">
+            {h2s.map((h) => (
+              <a href={`#${h.slug}`} class="block rounded-lg px-3 py-2 text-[13px] font-medium leading-snug text-ink-2 transition-colors hover:bg-[var(--accent-tint)] hover:text-ink">
+                {h.text}
+              </a>
+            ))}
+          </nav>
+        </section>
+
+        <AdsenseSlot slot={adSide} placement="mid" />
+
+        <section class="rounded-2xl border-2 border-[var(--ink)] bg-[var(--paper)] p-5 shadow-[4px_4px_0_var(--ink)]" aria-label="Artikel terbaru">
+          <h2 class="font-display text-[15px] font-extrabold text-ink">Terbaru</h2>
+          <ol class="mt-3 space-y-4">
+            {latest.map((p, i) => {
+              const t = thumbFor(p.id, p.data.category);
+              return (
+                <li>
+                  <a href={`/blog/${p.id}`} class="group flex items-start gap-3">
+                    <span aria-hidden="true" class="font-display text-2xl font-extrabold leading-none text-[var(--pop-mango)] [text-shadow:1px_1px_0_var(--ink)]">{String(i + 1).padStart(2, '0')}</span>
+                    <img src={t.src} alt="" width="400" height="300" loading="lazy" decoding="async" class="h-14 w-16 shrink-0 rounded-lg border border-[var(--hairline-strong)] object-cover" />
+                    <span class="min-w-0">
+                      <span class="block text-[13.5px] font-bold leading-snug text-ink group-hover:underline group-hover:decoration-[var(--pop-mango)] group-hover:underline-offset-4 line-clamp-2">{p.data.title}</span>
+                      <span class="mt-1 block text-[11.5px] font-medium text-ink-3">{fmtShort(p.data.pubDate)}</span>
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+
+        <section class="rounded-2xl border border-[var(--hairline-strong)] bg-[var(--paper)] p-5" aria-label="Topik">
+          <h2 class="font-display text-[15px] font-extrabold text-ink">Topik</h2>
+          <div class="mt-3 flex flex-wrap gap-2">
+            {cloud.slice(0, 10).map((c) => (
+              <a
+                href="/blog"
+                class="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-[var(--hairline-strong)] bg-[var(--paper-2)] px-3.5 text-[12.5px] font-bold text-ink-2 transition-all hover:border-[var(--ink)] hover:text-ink active:scale-95"
+              >
+                #{c.tag}
+                <span class="num rounded-full bg-[var(--paper)] px-1.5 text-[11px] text-ink-3">{c.count}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section class="overflow-hidden rounded-2xl border-2 border-[var(--ink)] bg-[var(--ink)] p-5 shadow-[4px_4px_0_var(--pop-mango)]" aria-label="Daftar reseller">
+          <p class="inline-block -rotate-1 rounded-lg bg-[var(--pop-mango)] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-[var(--ink)]">Buat jualan</p>
+          <p class="mt-2.5 font-display text-[17px] font-extrabold leading-snug text-white">Modal Rp50rb, langsung bisa order.</p>
+          <a href="/reseller" class="mt-3 block rounded-full bg-[var(--paper)] px-4 py-3 text-center text-[13.5px] font-extrabold text-ink transition-transform hover:scale-[1.02] active:scale-[0.98]">
+            Jadi reseller →
+          </a>
+        </section>
+      </aside>
     </div>
   </main>
 
@@ -224,6 +462,25 @@ const breadcrumbSchema = {
   <script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
   <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
   <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+
+  <script is:inline>
+    // Salin link artikel
+    document.querySelectorAll('[data-copy-link]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const link = btn.getAttribute('data-copy-link') ?? location.href;
+        const label = btn.querySelector('[data-copy-label]');
+        try {
+          await navigator.clipboard.writeText(link);
+          if (label) label.textContent = 'Tersalin!';
+        } catch {
+          if (label) label.textContent = 'Gagal menyalin';
+        }
+        setTimeout(() => {
+          if (label) label.textContent = 'Salin link';
+        }, 2000);
+      });
+    });
+  </script>
 
   <!-- Reading progress bar (transform scaleX, scroll-linked, GPU-safe) -->
   <script>

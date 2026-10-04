@@ -1,0 +1,260 @@
+---
+/**
+ * ConsentBanner — banner cookie consent + Consent Mode v2.
+ *
+ * Kenapa ada: GA4 butuh default `denied` supaya consent-nya jujur — kalau tidak,
+ * "consent" cuma hiasan. (Adsense belum aktif; lihat PUBLIC_ADSENSE_CLIENT.)
+ *
+ * Perilaku:
+ *   - Render hanya kalau `PUBLIC_GA4_ID` ATAU `PUBLIC_ADSENSE_CLIENT` terisi.
+ *   - Default Consent Mode v2 = denied, di-push SEBELOW gtag.js dimuat
+ *     (lihat Layout.astro). Banner ini hanya memutuskan "update"-nya.
+ *   - Pilihan disimpan di cookie `socio_consent` + localStorage sebagai cadangan.
+ *   - `analytics_storage` & `ads_storage` dibedakan: user bisa terima analytics
+ *     tapi tolak iklan.
+ *
+ * BUG YANG SUDAH DIPERBAIKI (1 Okt 2026):
+ *   Banner TIDAK lagi menutupi konten di bawahnya. Versi lama cuma andalkan
+ *   padding bawah yang sudah ada di halaman (88px), padahal banner-nya 231px
+ *   di mobile dan 187px di desktop — jadi ±143px konten tersembunyi dan
+ *   tombol/CTA di bawah tidak bisa diklik. Sekarang ruang dipesan dengan
+ *   `--consent-h` yang diukur dari tinggi banner asli, dan baru DITERAPKAN
+ *   sebelum paint pertama (script inline body) supaya tidak ada layout shift.
+ */
+interface Props {
+  force?: boolean;
+}
+
+const { force = false } = Astro.props;
+const ga4Id = import.meta.env.PUBLIC_GA4_ID as string | undefined;
+const adsenseClient = import.meta.env.PUBLIC_ADSENSE_CLIENT as string | undefined;
+const enabled = force || Boolean(ga4Id || adsenseClient);
+if (!enabled) return null;
+---
+
+<div
+  id="consent-banner"
+  hidden
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="consent-title"
+  aria-describedby="consent-desc"
+  data-ga4={ga4Id ? '1' : '0'}
+  class="consent-banner fixed inset-x-0 bottom-0 z-50 p-3 print:hidden sm:p-4"
+>
+  <div
+    class="consent-card mx-auto max-w-4xl rounded-2xl border border-[var(--hairline-strong)] bg-[var(--paper)]/95 p-4 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur sm:flex sm:items-center sm:gap-5 sm:p-5"
+  >
+    <div class="min-w-0 flex-1">
+      <p id="consent-title" class="text-[13px] font-bold text-[var(--ink)]">Cookie: analitik &amp; iklan</p>
+      <p id="consent-desc" class="mt-1 text-[12px] leading-relaxed text-[var(--ink-2)]">
+        Kami pakai cookie untuk mengukur trafik dan menampilkan iklan yang lebih relevan. Kamu bisa
+        terima semua, izinkan analitik saja, atau tolak — iklan tetap jalan tanpa cookie. Lihat
+        <a href="/privacy" class="underline underline-offset-2 hover:text-[var(--accent-ink)]">kebijakan privasi</a>.
+      </p>
+    </div>
+
+    {/*
+      Susunan tombol:
+        - mobile : tombol utama "Terima semua" penuh lebar (target sentuh besar),
+                  lalu dua tombol sekunder berdampingan di bawahnya.
+        - desktop: satu baris, tombol utama di kanan.
+      Versi lama menaruh 3 tombol dalam satu baris ~=93px di 360px — sempit,
+      teks membungkus, dan mudah salah tap.
+    */}
+    <div class="consent-actions mt-1 flex flex-col gap-2 sm:mt-0 sm:flex-row sm:items-center sm:gap-2">
+      <button
+        type="button"
+        data-consent="all"
+        class="consent-btn consent-btn--primary min-h-[48px] w-full rounded-full bg-[var(--accent-ink)] px-5 text-[13px] font-bold text-white transition-[transform,background-color] duration-150 hover:bg-[var(--accent-hover)] active:scale-[0.98] sm:min-h-[44px] sm:w-auto sm:px-6"
+      >
+        Terima semua
+      </button>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          data-consent="analytics"
+          class="consent-btn min-h-[44px] flex-1 rounded-full border border-[var(--hairline-strong)] px-3 text-[12px] font-semibold text-[var(--ink)] transition-[transform,background-color] duration-150 hover:bg-[var(--paper-2)] active:scale-[0.98] sm:flex-none sm:px-4"
+        >
+          Hanya analitik
+        </button>
+        <button
+          type="button"
+          data-consent="essential"
+          class="consent-btn min-h-[44px] flex-1 rounded-full border border-[var(--hairline-strong)] px-3 text-[12px] font-semibold text-[var(--ink-2)] transition-[transform,background-color] duration-150 hover:bg-[var(--paper-2)] active:scale-[0.98] sm:flex-none sm:px-4"
+        >
+          Tolak
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{/*
+  Spacer: ruang kosong di akhir flow dokumen, setinggi banner.
+
+  Kenapa spacer, bukan `body { padding-bottom }`? Karena `FloatingTabDock.svelte`
+  sudah menyuntik `body { padding-bottom: calc(88px + safe-area) }` untuk dock
+  CTA mobile, dan banner perlu ruang DI ATAS itu. Kalau banner ikut menulis
+  padding-bottom, keduanya berebut spesifisitas (mana yang menang tergantung
+  urutan DOM) — dan kalau salah, dock atau banner jadi menutupi konten.
+  Spacer di flow menumpuk sendiri secara alami: dock pakai padding, banner pakai
+  spacer. Keduanya aman.
+*/}
+<div id="consent-spacer" aria-hidden="true" style="height: var(--consent-h, 0px);"></div>
+
+<style>
+  /* Hanya transform + opacity: tidak menyentuh layout, jadi tidak expensive. */
+  .consent-banner {
+    transform: translateY(120%);
+    opacity: 0;
+    transition:
+      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 200ms ease-out;
+  }
+  .consent-banner[hidden] {
+    display: none;
+  }
+  .consent-banner[data-show='1'] {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  /* Fokus keyboard harus terlihat jelas — tombol adalah elemen interaktif utama. */
+  .consent-btn:focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .consent-banner {
+      transition: none;
+    }
+    .consent-btn {
+      transition: none;
+    }
+  }
+</style>
+
+<script is:inline>
+  // Konsisten dengan head loader: satu sumber kebenaran untuk bentuk payload.
+  // Jangan pernah eval string dari storage.
+  (function () {
+    var KEY = 'socio_consent';
+    var banner = document.getElementById('consent-banner');
+    if (!banner) return;
+
+    var root = document.documentElement;
+    var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var shown = false;
+    var raf = 0;
+
+    function read() {
+      try {
+        var c = localStorage.getItem(KEY);
+        if (c) return c;
+      } catch (e) {}
+      var m = document.cookie.match(/(?:^|;\s*)socio_consent=([^;]+)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    }
+
+    function write(v) {
+      try {
+        localStorage.setItem(KEY, v);
+      } catch (e) {}
+      // 180 hari
+      document.cookie = KEY + '=' + encodeURIComponent(v) + ';path=/;max-age=15552000;samesite=lax';
+    }
+
+    /* Ukur tinggi banner, lalu pesan ruang sebesar itu supaya tidak ada konten
+       yang tertutup. Dipanggil SEBELUM banner tampil (elemennya ada di DOM
+       walau `hidden`), jadi~\ CSS var siap sebelum paint → tidak ada layout shift. */
+    function reserveSpace() {
+      var prevHidden = banner.hidden;
+      banner.hidden = false;
+      var h = Math.round(banner.getBoundingClientRect().height);
+      banner.hidden = prevHidden;
+      if (h > 0) root.style.setProperty('--consent-h', h + 'px');
+    }
+
+    function releaseSpace() {
+      root.style.removeProperty('--consent-h');
+    }
+
+    function show() {
+      if (shown) return;
+      shown = true;
+      reserveSpace();
+      banner.hidden = false;
+      // satu frame supaya transisi berjalan dari state tersembunyi
+      raf = requestAnimationFrame(function () {
+        banner.setAttribute('data-show', '1');
+      });
+      // Fokuskan tombol UTAMA, bukan yang pertama — itu aksi yang paling mungkin
+      // dipakai user yang hanya mau lanjut baca.
+      var primary = banner.querySelector('[data-consent="all"]');
+      if (primary && !reduced) primary.focus({ preventScroll: true });
+    }
+
+    function hide() {
+      banner.setAttribute('data-show', '0');
+      releaseSpace();
+      var done = function () {
+        banner.hidden = true;
+      };
+      if (reduced) done();
+      else setTimeout(done, 300);
+    }
+
+    /* Kill switch untuk testing/debug: ?consent=off */
+    var forced = false;
+    try {
+      forced = new URLSearchParams(location.search).get('consent') === 'off';
+    } catch (e) {}
+
+    var existing = read();
+    if (!forced && (existing === 'all' || existing === 'analytics' || existing === 'essential')) {
+      // Sudah pernah memutuskan? Jangan ganggu lagi.
+      banner.setAttribute('data-resolved', existing);
+      return;
+    }
+
+    if (forced) {
+      write('essential');
+      banner.setAttribute('data-resolved', 'essential');
+      return;
+    }
+
+    // Pesan ruang lebih dulu, sebelum banner sempat tampil — kalau user langsung
+    // scroll atau menekan CTA di bawah, tidak ada yang tertutup.
+    reserveSpace();
+
+    // Tunda supaya tidak mengganggu LCP / FCP, tapi tidak terlalu lama: 700ms
+    // masih cukup user baca hero, dan banner tidak terasa "tidak muncul".
+    var t = setTimeout(show, reduced ? 60 : 700);
+
+    banner.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-consent]');
+      if (!btn) return;
+      var v = btn.getAttribute('data-consent');
+      clearTimeout(t);
+      cancelAnimationFrame(raf);
+      write(v);
+      banner.setAttribute('data-resolved', v);
+      hide();
+      // Beri tahu loader GA/AdSense (mendengar event ini).
+      document.dispatchEvent(new CustomEvent('socio:consent', { detail: { consent: v } }));
+    });
+
+    // Banner bisa berubah tinggi saat teks wrap / viewport berubah.
+    var t2 = 0;
+    addEventListener(
+      'resize',
+      function () {
+        clearTimeout(t2);
+        t2 = setTimeout(function () {
+          if (shown) reserveSpace();
+        }, 150);
+      },
+      { passive: true }
+    );
+  })();
+</script>

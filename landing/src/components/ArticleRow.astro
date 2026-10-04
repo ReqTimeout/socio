@@ -1,0 +1,51 @@
+---
+import { thumbFor } from '../data/blogHeroes';
+
+// Baris ledger artikel — dipakai /blog index + /blog/page/[n].
+// Foto Unsplash topikal (bukan ArtThumb generik) + headline Sora.
+interface Props {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  pubDate: Date;
+  index?: number;
+}
+
+const { id, title, description, category, pubDate, index = 0 } = Astro.props;
+const thumb = thumbFor(id, category);
+const fmt = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(pubDate);
+---
+
+<a
+  href={`/blog/${id}`}
+  class="reveal group block py-5 md:py-6"
+  data-cat={category}
+  style={`--d: ${(index % 3) * 60}ms`}
+>
+  <article class="flex items-start gap-4 md:gap-6">
+    <div class="w-28 shrink-0 overflow-hidden rounded-xl border border-[var(--hairline-strong)] md:w-36">
+      <img
+        src={thumb.src}
+        alt={thumb.alt}
+        width="400"
+        height="300"
+        loading="lazy"
+        decoding="async"
+        class="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]"
+      />
+    </div>
+    <div class="min-w-0 flex-1">
+      <h3 class="font-display text-[16px] font-bold leading-snug text-ink group-hover:underline group-hover:decoration-[var(--pop-mango)] group-hover:decoration-2 group-hover:underline-offset-4 md:text-[19px]">
+        {title}
+      </h3>
+      <p class="mt-1 hidden text-[14px] leading-relaxed text-ink-2 line-clamp-2 sm:block">
+        {description}
+      </p>
+      <p class="mt-2 flex items-center gap-2 text-[12px] font-medium text-ink-3">
+        <span class="rounded-full bg-[var(--paper-2)] px-2 py-0.5 font-semibold">{category}</span>
+        <time datetime={pubDate.toISOString()}>{fmt}</time>
+      </p>
+    </div>
+  </article>
+</a>
