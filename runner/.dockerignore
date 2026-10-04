@@ -1,0 +1,7 @@
+# Runner image hanya butuh runner/ + seo/ (lihat Dockerfile). File lain
+# di repo ini tidak boleh ikut ter-copy ke image.
+.git
+.gitignore
+*.md
+!runner/README.md
+.github

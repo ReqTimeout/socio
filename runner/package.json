@@ -1,0 +1,10 @@
+{
+  "name": "socio-seo-runner",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "daily": "node runner/daily.mjs",
+    "weekly": "node runner/weekly.mjs"
+  }
+}
