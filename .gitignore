@@ -76,3 +76,6 @@ db-check.mjs
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
 app/vite.config.ts.timestamp-*.mjs
+
+# Screenshot WhatsApp pribadi (jangan masuk repo)
+issue/
