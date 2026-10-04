@@ -848,19 +848,19 @@ async function main() {
             return ext.length <= 2 ? m : `[${t}]()`;
           });
           out = out.replace(/\n{3,}/g, '\n\n').trim();
-          // Jaring pengaman panjang: gate max 1400 kata. Model gratis rata-rata
-          // menulis 1600-2500. Pangkas paragraf TRAILING di section terakhir sampai
-          // masuk batas, satu paragraf utuh per langkah (tidak pernah potong tengah
-          // kalimat). Target 1120 memberi margin 50 kata.
-          const words = (t) => (t.match(/\b\w+\b/g) || []).length;
-          if (words(out) > 1120) {
+          // Jaring pengaman panjang. Gate max 1400 kata; model gratis tulis 1600-2500.
+          // Diukur 4 Okt: overhead assembler ~300 kata (price table, CTA, callout),
+          // bukan 180 sepertiParking dikira awal — target 1120 berakhir di 1423 dan
+          // 1431, gagal hanya oleh 23-31 kata. Target 1000 + 300 = 1300, aman.
+          // Pangkas satu paragraf utuh dari belakang, tidak pernah tengah kalimat.
+          const words = (t) => (String(t).match(/\b\w+\b/g) || []).length;
+          if (words(out) > 1000) {
             const blines = out.split('\n');
-            // Pertahankan KEPALA, pangkas dari ekor. Versi lama mengecek jumlah kata
-            // dari slice(i) (ekor) sehingga memangkas hampir seluruh artikel dan H2
-            // terakhir ikut hilang — hasil gegara H2 count = 2. Di sini: potong satu
-            // paragraf utuh dari belakang sampai total <= 1350.
+            // Pertahankan KEPALA, pangkas dari ekor. Versi lama mengecek kata pada
+            // slice(i) (ekor) sehingga memangkas hampir seluruh artikel dan H2
+            // terakhir ikut hilang — hasil gegara H2 count = 2.
             let end = blines.length;
-            while (end > 1 && words(blines.slice(0, end).join('\n')) > 1120) {
+            while (end > 1 && words(blines.slice(0, end).join('\n')) > 1000) {
               let cut = end - 1;
               // jangan potong di tengah paragraf: mundur ke batas paragraf kosong
               while (cut > 1 && blines[cut - 1].trim() !== '') cut--;
@@ -897,14 +897,26 @@ async function main() {
         //  2) model mengarang link /blog/<slug> yang tidak published ( Causes 404).
         //     Tulis ulang ke slug published pertama yang tersedia; kalau tidak ada,
         //     link dibuang tapi teksnya dipertahankan.
+        // Model free kadang menulis garis horizontal `---` di tengah body. Itu
+        // markdown horizontal rule, bukan frontmatter — tapi gate menghitung
+        // `^---$` dan menyimpulkan "pagar = 3". Aman dibuang dari body.
+        const stripStrayRules = (s) =>
+          String(s).replace(/^---\s*$/gm, '').replace(/\n{3,}/g, '\n\n');
         const stripLiquidJunk = (s) =>
           String(s).replace(/\b[a-z]{2,}_[a-z]{2,}\b/g, ' ').replace(/[ \t]{2,}/g, ' ');
+        // Gate blogLinkBrokenInfo cocokkan pola BASAH `/blog/<slug>` (bukan bentuk
+        // markdown lengkap), jadi bentuk absolut pun kena. Pakai pola yang sama
+        // persis supaya tidak lolos dari [](...)-style.
         const fixBlogLinks = (s, valid) => {
           if (!valid || !valid.length) return s;
-          return String(s).replace(/\[([^\]]*)\]\(\/blog\/([a-z0-9-]+)\/?\)/gi, (m, text, slug) => {
-            if (valid.includes(slug)) return m;
-            return text.trim() ? text.trim() : '';
-          });
+          const set = new Set(valid);
+          return String(s)
+            .replace(/\[([^\]]*)\]\((https?:\/\/socio\.id)?\/blog\/([a-z0-9][a-z0-9-]*)\/?\)/gi, (m, text, abs, slug) => {
+              if (set.has(slug)) return m;
+              const t = String(text).trim();
+              return t ? t : '';
+            })
+            .replace(/https?:\/\/socio\.id\/blog\/([a-z0-9][a-z0-9-]*)\/?/gi, (m, slug) => (set.has(slug) ? m : ''));
         };
         const stripEnglishFn = (s) =>
           String(s)
@@ -912,7 +924,12 @@ async function main() {
             .replace(/\s+([.,;:!?])/g, '$1')
             .replace(/[ \t]{2,}/g, ' ')
             .replace(/\n{3,}/g, '\n\n');
-        raw = fixBlogLinks(stripLiquidJunk(stripEnglishFn(stripNonLatin(`${bodyClean}\n\n## FAQ\n\n${faqPart}\n`))), publishedForLinks);
+        const clean = stripStrayRules(stripLiquidJunk(stripEnglishFn(stripNonLatin(bodyClean + `
+
+## FAQ
+
+` + faqPart))));
+        raw = fixBlogLinks(clean, publishedForLinks);
         if (process.env.SEO_DEBUG) writeFileSync('/tmp/seo-out.txt', raw);
       }
 
