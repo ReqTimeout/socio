@@ -10,6 +10,8 @@
     "seo:generate": "node seo/generate.mjs --count=3",
     "seo:mesh": "node seo/mesh-build.mjs",
     "seo:check-article": "node seo/check-article.mjs",
+    "seo:lint-selftest": "node seo/lib/article-lint.mjs --self-test",
+    "seo:check-all": "node -e \"import('node:fs').then(async fs=>{const b=fs.readdirSync('landing/src/content/blog').filter(f=>f.endsWith('.mdx')).map(f=>f.replace(/\\.mdx$/,''));const {execFileSync}=await import('node:child_process');try{execFileSync('node',['seo/check-article.mjs',...b],{stdio:'inherit'})}catch(e){process.exit(e.status||1)}})\"",
     "seo:clusters": "node seo/cluster-manifest.mjs",
     "seo:qc-uniqueness": "node seo/qc-uniqueness.mjs",
     "seo:jsonld": "node seo/jsonld-validate.mjs --strict",

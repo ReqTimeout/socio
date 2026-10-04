@@ -111,9 +111,34 @@ Jadi `WARN` itu **metrik kemiripan**, bukan hitungan artikel rusak. 61 artikel m
 varian kota dari template yang sama, jadi kemiripan 0,5 adalah **konsekuensi desain
 yang disengaja**, bukan kebocoran generator. Gate sudah benar: **PASS**.
 
-**Sisa pekerjaan nyata (kecil):** (a) perbaiki substitusi placeholder di sisi
-generator supaya kelas `yang_filters` tidak muncul lagi; (b) tambahkan gate
-sisa-teks-Inggris; (c) tulis 10 artikel pilar yang belum ada.
+**✅ (a) dan (b) SELESAI 4 Okt — akar masalahnya di pipeline, bukan di teks.**
+
+Bug aslinya: `check-article.mjs` sudah punya deteksi junk markup, tapi **tidak pernah
+dipanggil pipeline** — cuma skrip manual. `generate.mjs` hanya memanggil `validateMdx`
+yang mengecek **frontmatter saja** (title ≤70, description ≤160, faq = 5), nol
+pemeriksaan isi paragraf. Akibatnya kelas glitch itu tidak pernah punya pagar.
+
+| Yang dikerjakan | Hasil |
+|---|---|
+| `seo/lib/article-lint.mjs` (baru) | satu-satunya implementasi validasi; dipakai `check-article.mjs` **dan** `generate.mjs` |
+| `seo/check-article.mjs` | jadi CLI tipis di atas modul itu (perilaku tidak berubah) |
+| `seo/generate.mjs:806` | gate teks dijalankan **sebelum `writeFileSync`** — artikel cacak tidak pernah sampai disk |
+| kelas baru: `sisa teks Inggris` | menangkap `sebelumellos. hasten.`, `about harga`, `tidak cheapest`, `how attention-nya` |
+| `pnpm seo:lint-selftest` | 12 kasus injeksi sintetis, **12 lulus** |
+| `pnpm seo:check-all` | jalankan gate ke seluruh korpus dalam satu perintah |
+
+**Pelajaran desain gate ini**: detektor **bukan** kamus. Kamus `/usr/share/dict/words`
+sudah dicoba dan dihapus — bising, menandai `angka`, `paling`, `batik`, `villa`.
+Pendekatan yang dipakai: daftar **tertutup** kata fungsi Inggris + morfologi
+(`-est`, `hasten`) yang padanannya di Indonesia jelas, dikurangi daftar frasa pinjam
+sah (`Instagram for Business`, `before-after`, `to the point`, `pay-as-you-go`).
+Kosakata domain situs (`followers`, `order`, `views`, `link`) **sengaja tidak** masuk
+daftar — versi pertama keliru dan menolak 61 dari 61 artikel.
+Konservatif: lebih baik glitch lolos (false negative) daripada tulisan baik ditolak.
+
+**Sisa pekerjaan nyata (kecil):** tulis **10 artikel pilar** yang belum ada.
+Tidak ada lagi pekerjaan perbaikan teks — korpus 61 bersih dan gate-nya sekarang
+berfungsi.
 
 ## Daftar Isi
 

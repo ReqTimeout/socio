@@ -30,6 +30,7 @@ import { pathToFileURL } from 'node:url';
 
 import { ROOT, BLOG_DIR, QUEUE_PATH, PRICES_PATH, PROMPTS_PATH, GEO_OUT_PATH } from './paths.mjs';
 import { injectGeoAnchor } from './lib/geo-anchor.mjs';
+import { lintArticle } from './lib/article-lint.mjs';
 
 const PRICES = JSON.parse(readFileSync(PRICES_PATH, 'utf8'));
 const QUEUE = JSON.parse(readFileSync(QUEUE_PATH, 'utf8'));
@@ -796,6 +797,21 @@ async function main() {
     const dupOf = duplicateDraftInfo(mdx, slug);
     if (dupOf) {
       console.log(`  REJECT: duplikat (Jaccard >= 0.55 vs "${dupOf}")`);
+      fail++;
+      continue;
+    }
+
+    // A6: gate kualitas TEKS. `validateMdx` di atas hanya menyorot frontmatter
+    // (title ≤70, description ≤160, faq = 5) — tidak menyentuh isi paragraf.
+    // Akibatnya kelas glitch `yang_filters`, `sebelumellos. hasten.`,
+    // `Pertanyaan about harga` lolos ke korpus tanpa pernah ditahan (terbukti
+    // 4 Okt 2026: 7 glitch di 5 artikel, semua lolos SEMUA gate yang ada).
+    // Modul yang sama dipakai `check-article.mjs` — satu implementasi, dua pintu.
+    // MENOLAK = tidak ditulis ke disk, sama seperti gate di atasnya.
+    const { err: lintErr } = lintArticle(mdx);
+    if (lintErr.length) {
+      console.log(`  REJECT: gate teks gagal (${lintErr.length})`);
+      for (const e of lintErr) console.log(`      - ${e}`);
       fail++;
       continue;
     }
