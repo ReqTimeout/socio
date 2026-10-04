@@ -51,7 +51,11 @@ export function renderGeoAnchor(geo) {
   p.push(`penjelasannya mengikuti realitas ${city} — bukan sekadar mengganti nama kota di`);
   p.push('templat yang sama. Untuk membandingkan angka yang benar-benar live, buka');
   p.push('[katalog lengkap](/layanan).');
-  return `<!-- ${ANCHOR_MARKER} -->\n${p.join('\n')}\n<!-- /${ANCHOR_MARKER} -->`;
+    // MDX TIDAK menerima komentar HTML `<!-- -->` (harus `{/* */}`), dan Astro
+    // menggagalkan build: "Unexpected character `!` before name". 4 Okt 2026:
+    // 3 artikel gagal build karena marker ini. Nilai penanda tetap 'geo-anchor'
+    // supaya hasGeoAnchor() tetap mendeteksinya.
+    return `{/* ${ANCHOR_MARKER} */}\n${p.join('\n')}\n{/* /${ANCHOR_MARKER} */}`;
 }
 
 /** Sisipkan content tepat setelah blok H2 pertama. Sama seperti injectAfterFirstH2. */
