@@ -14,10 +14,9 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const ROOT = '/Users/maabook/Desktop/socio.id';
+import { ROOT, BLOG_DIR, PUBLIC_DIR, SITEMAP_PATH } from './paths.mjs';
+import yaml from 'js-yaml';
 const SITE = 'https://socio.id';
-const BLOG_DIR = `${ROOT}/landing/src/content/blog`;
-const PUBLIC_DIR = `${ROOT}/landing/public`;
 
 // ===== Helpers =====
 function readFrontmatter(content) {
@@ -26,76 +25,11 @@ function readFrontmatter(content) {
   if (!match) return null;
   const fmText = match[1];
   const body = match[2];
-  // Simple YAML parser untuk tipe dasar
-  const fm = {};
-  const lines = fmText.split('\n');
-  let currentArray = null;
-  let currentObj = null;
-  let arrayKey = null;
-  let objKey = null;
-  let inMultiline = null;
-  let multilineBuffer = [];
-  for (const line of lines) {
-    if (inMultiline) {
-      if (line.match(/^\s{2,}/) || line.trim() === '') {
-        multilineBuffer.push(line.replace(/^\s{2}/, ''));
-        continue;
-      } else {
-        if (inMultiline === 'faq-a') currentObj.a = multilineBuffer.join('\n').trim();
-        else if (inMultiline === 'faq-q') currentObj.q = multilineBuffer.join('\n').trim();
-        else currentArray.push(multilineBuffer.join('\n').trim());
-        inMultiline = null;
-        multilineBuffer = [];
-      }
-    }
-    const arrayMatch = line.match(/^(\w+):\s*$/);
-    if (arrayMatch && !line.includes(': ')) {
-      currentArray = [];
-      fm[arrayMatch[1]] = currentArray;
-      arrayKey = arrayMatch[1];
-      currentObj = null;
-      objKey = null;
-      continue;
-    }
-    const objItemMatch = line.match(/^\s+- (q|a):\s*"?(.*?)"?\s*$/);
-    if (objItemMatch && currentArray) {
-      let v = objItemMatch[2];
-      if (typeof v === 'string' && v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
-      currentObj = { [objItemMatch[1]]: v };
-      currentArray.push(currentObj);
-      objKey = objItemMatch[1];
-      continue;
-    }
-    const objValMatch = line.match(/^\s+(\w+):\s*"?(.+?)"?\s*$/);
-    if (objValMatch && currentObj) {
-      const key = objValMatch[1];
-      let val = objValMatch[2];
-      if (typeof val === 'string' && val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-      currentObj[key] = val;
-      continue;
-    }
-    const objValMultiline = line.match(/^\s+(\w+):\s*\|\s*$/);
-    if (objValMultiline && currentObj) {
-      inMultiline = objValMultiline[1];
-      multilineBuffer = [];
-      continue;
-    }
-    const arrayMultiline = line.match(/^(\w+):\s*\|\s*$/);
-    if (arrayMultiline && currentArray) {
-      inMultiline = 'array';
-      multilineBuffer = [];
-      continue;
-    }
-    const kvMatch = line.match(/^(\w+):\s*"?(.+?)"?\s*$/);
-    if (kvMatch) {
-      const key = kvMatch[1];
-      let val = kvMatch[2];
-      if (val === 'true' || val === 'false') val = val === 'true';
-      if (typeof val === 'string' && val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-      fm[key] = val;
-      currentArray = null;
-      currentObj = null;
-    }
+  let fm = {};
+  try {
+    fm = yaml.load(fmText) || {};
+  } catch {
+    return null; // frontmatter YAML rusak -> skip file (llms tidak crash)
   }
   // Strip inline MDX (##, **, dll) untuk AI ingestion
   const strippedBody = body
@@ -113,7 +47,7 @@ function escapeMd(s) {
 }
 
 function readSitemapUrls() {
-  const sitemap = `${ROOT}/landing/dist/sitemap-0.xml`;
+  const sitemap = SITEMAP_PATH;
   if (!existsSync(sitemap)) return [];
   const xml = readFileSync(sitemap, 'utf8');
   const urls = [];
@@ -153,7 +87,7 @@ const llmsTxt = `# Socio.id
 
 > Panel SMM reseller termurah dan tercepat di Indonesia. 8.270 layanan Instagram, TikTok, YouTube, Telegram, Spotify & SEO. Daftar reseller Rp50.000 include saldo Rp20.000 + harga reseller lebih murah di semua layanan.
 
-## Money pages (10 — commercial intent)
+## Money pages (${sitemapUrls.filter((u) => u.match(/\/(beli|smm-panel)-/)).length} — commercial intent)
 ${sitemapUrls
   .filter((u) => u.match(/\/(beli|smm-panel)-/) || u.match(/\/(layanan|reseller)/))
   .map((u) => `- [${u.replace(SITE, '')}](${u})`)
@@ -187,11 +121,9 @@ sections.push(`# Socio.id — Full Content for LLM ingestion
 `);
 
 // Money pages (ringkas — bukan full body)
-sections.push(`## Money Pages (commercial — 10 high-intent URLs)
-${sitemapUrls
-  .filter((u) => u.match(/\/(beli|smm-panel)-/) || u.match(/\/(layanan|reseller)/))
-  .map((u) => `- ${u}`)
-  .join('\n')}
+const moneyUrls = sitemapUrls.filter((u) => u.match(/\/(beli|smm-panel)-/));
+sections.push(`## Money Pages (commercial — ${moneyUrls.length} high-intent URLs)
+${moneyUrls.map((u) => `- ${u}`).join('\n')}
 
 `);
 

@@ -14,7 +14,15 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const STATE_PATH = `${ROOT}/seo/state.json`;
-const KEY = process.env.SOCIO_INDEXNOW_KEY || readFileSync(`${ROOT}/landing/public/indexnow.txt`, 'utf8').trim();
+// Key: env dulu, lalu file key di repo landing (monorepo), lalu file opsional yang
+// bisa diset ke lokasi lain (image runner tidak punya landing/).
+const KEY =
+  process.env.SOCIO_INDEXNOW_KEY ||
+  (existsSync(`${ROOT}/landing/public/indexnow.txt`)
+    ? readFileSync(`${ROOT}/landing/public/indexnow.txt`, 'utf8').trim()
+    : process.env.INDEXNOW_KEY_FILE && existsSync(process.env.INDEXNOW_KEY_FILE)
+      ? readFileSync(process.env.INDEXNOW_KEY_FILE, 'utf8').trim()
+      : '');
 
 const ENDPOINTS = [
   'https://api.indexnow.org/indexnow', // redistributes ke Bing+Yandex+Seznam
@@ -71,9 +79,23 @@ async function main() {
     process.exit(1);
   }
 
+  if (!KEY) {
+    console.error('FATAL: IndexNow key tidak ditemukan. Set SOCIO_INDEXNOW_KEY atau INDEXNOW_KEY_FILE.');
+    console.error('  Lihat docs/GOOGLE_CLOUD_SETUP.md §3 (key juga ada di https://socio.id/indexnow.txt)');
+    process.exit(1);
+  }
+
   const state = loadState();
   const fresh = urls.filter((u) => !state.indexnow.submitted.includes(u));
   console.log(`IndexNow: ${fresh.length}/${urls.length} URL baru (key ${KEY.slice(0, 8)}…)`);
+
+  // Semua URL sudah pernah dikirim = no-op yang SUKSES, bukan kegagalan.
+  // (Perbaiki 1 Okt 2026: sebelumnya ini exit 1, sehingga seo/remedy.mjs +
+  // publish.mjs salah mengira IndexNow gagal padahal tidak ada yang perlu dikirim.)
+  if (!fresh.length) {
+    console.log('✓ tidak ada URL baru — tidak ada yang perlu dikirim (no-op)');
+    return;
+  }
 
   const { ok, results } = await ping(fresh);
   if (ok) {

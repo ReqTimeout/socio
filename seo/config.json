@@ -1,0 +1,81 @@
+{
+  "_comment": "Ramp gate + batas publish harian. daily_count = berapa artikel yang boleh flip draft→published per hari. Ditulis seo/ramp-gate.mjs tiap Senin (dari index_rate 14 hari). JANGAN edit daily_count manual kecualivia `--set`. Lihat docs/SEO_AUTOMATION_PLAN_V2.md §3 + §14.2 item 1.5.",
+  "daily_count": 3,
+  "daily_count_min": 1,
+  "daily_count_max": 10,
+  "halt": false,
+  "halt_reason": "",
+  "index_window_days": 14,
+  "min_sample": 5,
+  "threshold_up": 0.85,
+  "threshold_down": 0.7,
+  "discovery_gap_alert": 0.5,
+  "updated_at": "2026-10-01T11:17:37.816Z",
+  "updated_by": "ramp-gate.mjs (auto)",
+  "reason": "hold — discovery gap 100% (5 not_discovered / 5)",
+  "history": [
+    {
+      "at": "2026-10-01T09:54:08.976Z",
+      "previous_daily_count": 3,
+      "daily_count": 3,
+      "reason": "hold — discovery gap 100% (5 not_discovered / 5)",
+      "window_days": 14,
+      "metrics": {
+        "total": 5,
+        "discovered": 0,
+        "indexed": 0,
+        "not_indexed": 0,
+        "not_discovered": 5,
+        "blocked": 0,
+        "unknown": 0,
+        "index_rate": null,
+        "discovery_gap_ratio": 1
+      },
+      "alerts": [
+        "discovery_gap"
+      ]
+    },
+    {
+      "at": "2026-10-01T10:04:25.072Z",
+      "previous_daily_count": 3,
+      "daily_count": 3,
+      "reason": "hold — discovery gap 100% (5 not_discovered / 5)",
+      "window_days": 14,
+      "metrics": {
+        "total": 5,
+        "discovered": 0,
+        "indexed": 0,
+        "not_indexed": 0,
+        "not_discovered": 5,
+        "blocked": 0,
+        "unknown": 0,
+        "index_rate": null,
+        "discovery_gap_ratio": 1
+      },
+      "alerts": [
+        "discovery_gap"
+      ]
+    },
+    {
+      "at": "2026-10-01T11:17:37.816Z",
+      "previous_daily_count": 3,
+      "daily_count": 3,
+      "reason": "hold — discovery gap 100% (5 not_discovered / 5)",
+      "window_days": 14,
+      "metrics": {
+        "total": 5,
+        "discovered": 0,
+        "indexed": 0,
+        "not_indexed": 0,
+        "not_discovered": 5,
+        "blocked": 0,
+        "unknown": 0,
+        "index_rate": null,
+        "discovery_gap_ratio": 1
+      },
+      "alerts": [
+        "discovery_gap"
+      ]
+    }
+  ]
+}

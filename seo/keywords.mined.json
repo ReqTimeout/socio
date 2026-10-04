@@ -1,0 +1,709 @@
+{
+  "_meta": {
+    "minedAt": "2026-10-01T11:54:54.822Z",
+    "windowDays": 28,
+    "source": "GSC searchAnalytics (seo/lib/gsc.mjs)"
+  },
+  "queries": [
+    {
+      "query": "smm panel indonesia",
+      "clicks": 0,
+      "impressions": 26,
+      "ctr": 0,
+      "position": 56.27
+    },
+    {
+      "query": "panel sosmed",
+      "clicks": 1,
+      "impressions": 21,
+      "ctr": 0.0476,
+      "position": 49.48
+    },
+    {
+      "query": "smm murah",
+      "clicks": 0,
+      "impressions": 15,
+      "ctr": 0,
+      "position": 57.53
+    },
+    {
+      "query": "panel smm",
+      "clicks": 0,
+      "impressions": 13,
+      "ctr": 0,
+      "position": 59.31
+    },
+    {
+      "query": "panel smm indonesia",
+      "clicks": 0,
+      "impressions": 12,
+      "ctr": 0,
+      "position": 61.25
+    },
+    {
+      "query": "panel sosmed termurah",
+      "clicks": 0,
+      "impressions": 11,
+      "ctr": 0,
+      "position": 54.45
+    },
+    {
+      "query": "panel smm termurah",
+      "clicks": 0,
+      "impressions": 9,
+      "ctr": 0,
+      "position": 58.89
+    },
+    {
+      "query": "reseller smm panel",
+      "clicks": 0,
+      "impressions": 9,
+      "ctr": 0,
+      "position": 42.56
+    },
+    {
+      "query": "smm indonesia",
+      "clicks": 1,
+      "impressions": 8,
+      "ctr": 0.125,
+      "position": 46.13
+    },
+    {
+      "query": "imedia smm",
+      "clicks": 0,
+      "impressions": 8,
+      "ctr": 0,
+      "position": 9.88
+    },
+    {
+      "query": "jasa smm",
+      "clicks": 0,
+      "impressions": 8,
+      "ctr": 0,
+      "position": 55.13
+    },
+    {
+      "query": "socio id",
+      "clicks": 5,
+      "impressions": 7,
+      "ctr": 0.7143,
+      "position": 1.14
+    },
+    {
+      "query": "jasa smm panel",
+      "clicks": 0,
+      "impressions": 7,
+      "ctr": 0,
+      "position": 48
+    },
+    {
+      "query": "beli members telegram",
+      "clicks": 0,
+      "impressions": 6,
+      "ctr": 0,
+      "position": 81
+    },
+    {
+      "query": "panel followers murah",
+      "clicks": 0,
+      "impressions": 6,
+      "ctr": 0,
+      "position": 50.17
+    },
+    {
+      "query": "panel smm murah",
+      "clicks": 0,
+      "impressions": 6,
+      "ctr": 0,
+      "position": 46.67
+    },
+    {
+      "query": "panel sosial media",
+      "clicks": 0,
+      "impressions": 6,
+      "ctr": 0,
+      "position": 74.83
+    },
+    {
+      "query": "smm panel",
+      "clicks": 0,
+      "impressions": 6,
+      "ctr": 0,
+      "position": 82.5
+    },
+    {
+      "query": "beli followers telegram",
+      "clicks": 0,
+      "impressions": 5,
+      "ctr": 0,
+      "position": 35.6
+    },
+    {
+      "query": "panel sosmed murah",
+      "clicks": 0,
+      "impressions": 5,
+      "ctr": 0,
+      "position": 57.4
+    },
+    {
+      "query": "smm panel indonesia termurah",
+      "clicks": 0,
+      "impressions": 5,
+      "ctr": 0,
+      "position": 62.8
+    },
+    {
+      "query": "smm indonesia termurah",
+      "clicks": 1,
+      "impressions": 4,
+      "ctr": 0.25,
+      "position": 52.25
+    },
+    {
+      "query": "beli members channel instagram",
+      "clicks": 0,
+      "impressions": 4,
+      "ctr": 0,
+      "position": 47.5
+    },
+    {
+      "query": "panel followers",
+      "clicks": 0,
+      "impressions": 4,
+      "ctr": 0,
+      "position": 52.75
+    },
+    {
+      "query": "panel ig",
+      "clicks": 0,
+      "impressions": 4,
+      "ctr": 0,
+      "position": 9.75
+    },
+    {
+      "query": "reseller smm",
+      "clicks": 0,
+      "impressions": 4,
+      "ctr": 0,
+      "position": 36
+    },
+    {
+      "query": "alluneed",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 59
+    },
+    {
+      "query": "beli akun sosmed",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 55.67
+    },
+    {
+      "query": "beli member telegram",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 19
+    },
+    {
+      "query": "beli members channel telegram",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 50.67
+    },
+    {
+      "query": "beli members group telegram",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 45.67
+    },
+    {
+      "query": "beli members premium telegram",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 68.67
+    },
+    {
+      "query": "beli views telegram",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 54
+    },
+    {
+      "query": "jasa report media sosial",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 84.67
+    },
+    {
+      "query": "media panel",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 72.67
+    },
+    {
+      "query": "panel instagram",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 42.33
+    },
+    {
+      "query": "panel instagram indonesia",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 55
+    },
+    {
+      "query": "panel termurah",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 60
+    },
+    {
+      "query": "panelsmmindonesia",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 47.33
+    },
+    {
+      "query": "provider smm panel",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 47
+    },
+    {
+      "query": "smm indo",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 52.67
+    },
+    {
+      "query": "smm panel indonesia terbaik",
+      "clicks": 0,
+      "impressions": 3,
+      "ctr": 0,
+      "position": 53.33
+    },
+    {
+      "query": "21panel",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 46
+    },
+    {
+      "query": "beli smm",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 27.5
+    },
+    {
+      "query": "beli sosmed",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 59.5
+    },
+    {
+      "query": "djuragansosmed",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 47.5
+    },
+    {
+      "query": "jasa sosmed",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 63.5
+    },
+    {
+      "query": "jasa suntik sosmed",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 79.5
+    },
+    {
+      "query": "kedai sosmed",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 49.5
+    },
+    {
+      "query": "panel followers ig",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 44
+    },
+    {
+      "query": "panel indo",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 44.5
+    },
+    {
+      "query": "panel smm indo",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 65.5
+    },
+    {
+      "query": "panel sosmed terbaik",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 56
+    },
+    {
+      "query": "panel viral",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 63
+    },
+    {
+      "query": "provider panel smm",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 53
+    },
+    {
+      "query": "pusat panel smm murah",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 50.5
+    },
+    {
+      "query": "pusat smm",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 40
+    },
+    {
+      "query": "server panel smm indonesia",
+      "clicks": 0,
+      "impressions": 2,
+      "ctr": 0,
+      "position": 58.5
+    },
+    {
+      "query": "beli impressions x(twitter)",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 48
+    },
+    {
+      "query": "bisnison",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 31
+    },
+    {
+      "query": "buy smm panel",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 42
+    },
+    {
+      "query": "dunia sosmed",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 67
+    },
+    {
+      "query": "indo smm",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 67
+    },
+    {
+      "query": "indonesia smm panel",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 43
+    },
+    {
+      "query": "indosmm",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 46
+    },
+    {
+      "query": "inferpanel",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 55
+    },
+    {
+      "query": "instagram followers smm panel",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 67
+    },
+    {
+      "query": "jasa kelola sosial media murah",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 97
+    },
+    {
+      "query": "jokerpanel",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 46
+    },
+    {
+      "query": "jual akun sosmed",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 53
+    },
+    {
+      "query": "jual beli akun sosial media",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 76
+    },
+    {
+      "query": "layanan sosmed",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 58
+    },
+    {
+      "query": "order sosmed",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 26
+    },
+    {
+      "query": "panel follower",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 61
+    },
+    {
+      "query": "panel followers instagram",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 46
+    },
+    {
+      "query": "panel followers smm",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 71
+    },
+    {
+      "query": "panel ig followers",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 36
+    },
+    {
+      "query": "panel instagram followers",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 63
+    },
+    {
+      "query": "panel instagram like",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 50
+    },
+    {
+      "query": "panel smm instagram",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 64
+    },
+    {
+      "query": "panel smm termurah di indonesia",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 41
+    },
+    {
+      "query": "panel suntik sosmed",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 28
+    },
+    {
+      "query": "panelsosmed",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 63
+    },
+    {
+      "query": "pasarsosial",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 51
+    },
+    {
+      "query": "profsosmed",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 55
+    },
+    {
+      "query": "provider smm",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 50
+    },
+    {
+      "query": "provider smm panel indonesia",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 42
+    },
+    {
+      "query": "pusat panel indonesia",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 29
+    },
+    {
+      "query": "pusat smm panel",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 42
+    },
+    {
+      "query": "pusat smm panel indonesia",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 42
+    },
+    {
+      "query": "seosatu",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 51
+    },
+    {
+      "query": "sewa smm",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 62
+    },
+    {
+      "query": "sewasmm",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 51
+    },
+    {
+      "query": "smm densviral",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 63
+    },
+    {
+      "query": "smm id",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 45
+    },
+    {
+      "query": "smm panel follower",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 61
+    },
+    {
+      "query": "smm panel followers",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 45
+    },
+    {
+      "query": "smm panel id",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 27
+    },
+    {
+      "query": "smm panel indo",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 76
+    },
+    {
+      "query": "smm panel indonesia terbarik",
+      "clicks": 0,
+      "impressions": 1,
+      "ctr": 0,
+      "position": 52
+    }
+  ]
+}

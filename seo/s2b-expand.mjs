@@ -6,9 +6,9 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const ROOT = '/Users/maabook/Desktop/socio.id';
-const PRICES = JSON.parse(readFileSync(`${ROOT}/landing/src/data/prices.json`, 'utf8'));
-const QUEUE = JSON.parse(readFileSync(`${ROOT}/seo/queue.json`, 'utf8'));
+import { QUEUE_PATH, PRICES_PATH } from './paths.mjs';
+const PRICES = JSON.parse(readFileSync(PRICES_PATH, 'utf8'));
+const QUEUE = JSON.parse(readFileSync(QUEUE_PATH, 'utf8'));
 const DRY = process.argv.includes('--dry');
 
 // ===== Helpers =====
@@ -279,7 +279,7 @@ async function main() {
       gsc: QUEUE.items.filter((i) => i.added_by === 'gsc').length,
     };
     QUEUE._meta.note = `${QUEUE.items.length} keyword total (${stats.seed} seed + ${stats.autocomplete} autocomplete + ${stats.katalog} katalog-expand + ${stats.gsc} gsc). Target fase1 150-300 (spec §0). Update: tambah ekspansi LIVE/viewers/comments/story/reels/spotify/twitter/fb dari prices.json top14 + EXTRA_BASES manual kurasi (koreksi kritik user).`;
-    writeFileSync(`${ROOT}/seo/queue.json`, JSON.stringify(QUEUE, null, 2) + '\n');
+    writeFileSync(QUEUE_PATH, JSON.stringify(QUEUE, null, 2) + '\n');
     console.log(`\nWrote seo/queue.json: total ${QUEUE.items.length} items`);
   }
 }

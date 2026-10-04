@@ -1,0 +1,245 @@
+{
+  "_meta": {
+    "seededAt": "2026-09-30T13:32:02.674Z",
+    "note": "Seed untuk image runner. Di-override oleh /app/data/state.json (volume) saat container start."
+  },
+  "published": [
+    {
+      "slug": "apa-itu-smm-panel",
+      "url": "https://socio.id/blog/apa-itu-smm-panel/",
+      "firstSeen": "2026-08-24",
+      "indexed": "not_discovered",
+      "lastChecked": "2026-10-01T09:45:49.924Z"
+    },
+    {
+      "slug": "smm-panel",
+      "url": "https://socio.id/blog/smm-panel/",
+      "firstSeen": "2026-09-02",
+      "indexed": "not_discovered",
+      "lastChecked": "2026-10-01T09:45:57.072Z"
+    },
+    {
+      "slug": "smm-panel-indonesia",
+      "url": "https://socio.id/blog/smm-panel-indonesia/",
+      "firstSeen": "2026-09-02",
+      "indexed": "not_discovered",
+      "lastChecked": "2026-10-01T09:46:04.661Z"
+    },
+    {
+      "slug": "cara-menambah-followers-instagram",
+      "url": "https://socio.id/blog/cara-menambah-followers-instagram/",
+      "firstSeen": "2026-08-26",
+      "indexed": "not_discovered",
+      "lastChecked": "2026-10-01T09:46:12.142Z"
+    },
+    {
+      "slug": "modal-jualan-followers",
+      "url": "https://socio.id/blog/modal-jualan-followers/",
+      "firstSeen": "2026-08-28",
+      "indexed": "not_discovered",
+      "lastChecked": "2026-10-01T09:46:19.171Z"
+    }
+  ],
+  "indexnow": {
+    "submitted": [
+      "https://socio.id/blog/apa-itu-smm-panel/",
+      "https://socio.id/blog/smm-panel/",
+      "https://socio.id/blog/smm-panel-indonesia/",
+      "https://socio.id/blog/cara-menambah-followers-instagram/",
+      "https://socio.id/blog/modal-jualan-followers/"
+    ],
+    "last": null
+  },
+  "gsc": {
+    "inspections": {
+      "https://socio.id/blog/apa-itu-smm-panel/": {
+        "verdict": "NEUTRAL",
+        "coverageState": "URL is unknown to Google",
+        "indexingState": "INDEXING_STATE_UNSPECIFIED",
+        "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+        "pageFetchState": "PAGE_FETCH_STATE_UNSPECIFIED",
+        "checkedAt": "2026-10-01T09:45:49.924Z"
+      },
+      "https://socio.id/blog/smm-panel/": {
+        "verdict": "NEUTRAL",
+        "coverageState": "URL is unknown to Google",
+        "indexingState": "INDEXING_STATE_UNSPECIFIED",
+        "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+        "pageFetchState": "PAGE_FETCH_STATE_UNSPECIFIED",
+        "checkedAt": "2026-10-01T09:45:57.072Z"
+      },
+      "https://socio.id/blog/smm-panel-indonesia/": {
+        "verdict": "NEUTRAL",
+        "coverageState": "URL is unknown to Google",
+        "indexingState": "INDEXING_STATE_UNSPECIFIED",
+        "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+        "pageFetchState": "PAGE_FETCH_STATE_UNSPECIFIED",
+        "checkedAt": "2026-10-01T09:46:04.661Z"
+      },
+      "https://socio.id/blog/cara-menambah-followers-instagram/": {
+        "verdict": "NEUTRAL",
+        "coverageState": "URL is unknown to Google",
+        "indexingState": "INDEXING_STATE_UNSPECIFIED",
+        "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+        "pageFetchState": "PAGE_FETCH_STATE_UNSPECIFIED",
+        "checkedAt": "2026-10-01T09:46:12.142Z"
+      },
+      "https://socio.id/blog/modal-jualan-followers/": {
+        "verdict": "NEUTRAL",
+        "coverageState": "URL is unknown to Google",
+        "indexingState": "INDEXING_STATE_UNSPECIFIED",
+        "robotsTxtState": "ROBOTS_TXT_STATE_UNSPECIFIED",
+        "pageFetchState": "PAGE_FETCH_STATE_UNSPECIFIED",
+        "checkedAt": "2026-10-01T09:46:19.171Z"
+      }
+    },
+    "lastRun": {
+      "at": "2026-10-01T09:46:19.172Z",
+      "inspected": 5,
+      "indexed": 0,
+      "indexRate": 0,
+      "failures": 0
+    }
+  },
+  "bing": {
+    "submitted": {
+      "https://socio.id/blog/apa-itu-smm-panel/": {
+        "at": "2026-10-01T09:50:18.495Z",
+        "batch": 5
+      },
+      "https://socio.id/blog/smm-panel/": {
+        "at": "2026-10-01T09:50:18.498Z",
+        "batch": 5
+      },
+      "https://socio.id/blog/smm-panel-indonesia/": {
+        "at": "2026-10-01T09:50:18.498Z",
+        "batch": 5
+      },
+      "https://socio.id/blog/cara-menambah-followers-instagram/": {
+        "at": "2026-10-01T09:50:18.498Z",
+        "batch": 5
+      },
+      "https://socio.id/blog/modal-jualan-followers/": {
+        "at": "2026-10-01T09:50:18.498Z",
+        "batch": 5
+      }
+    },
+    "lastRun": {
+      "at": "2026-10-01T09:50:18.848Z",
+      "submitted": 5,
+      "skipped": 0,
+      "overQuota": 0,
+      "quotaBefore": 98,
+      "quotaAfter": 93,
+      "failures": 0
+    }
+  },
+  "remedy": {
+    "https://socio.id/blog/apa-itu-smm-panel/": {
+      "attempts": 0,
+      "lastAction": "2026-10-01T11:17:04.833Z",
+      "actions": [
+        "indexnow",
+        "sitemap"
+      ],
+      "nextCheckAt": "2026-10-08T11:17:04.835Z",
+      "needsHuman": false,
+      "note": "not_discovered — attempts direset 1 Okt (2 siklus sebelumnya hanya uji coba manual)",
+      "progressed": true
+    },
+    "https://socio.id/blog/smm-panel/": {
+      "attempts": 0,
+      "lastAction": "2026-10-01T11:17:04.835Z",
+      "actions": [
+        "indexnow",
+        "sitemap"
+      ],
+      "nextCheckAt": "2026-10-08T11:17:04.835Z",
+      "needsHuman": false,
+      "note": "not_discovered — attempts direset 1 Okt (2 siklus sebelumnya hanya uji coba manual)",
+      "progressed": true
+    },
+    "https://socio.id/blog/smm-panel-indonesia/": {
+      "attempts": 0,
+      "lastAction": "2026-10-01T11:17:04.835Z",
+      "actions": [
+        "indexnow",
+        "sitemap"
+      ],
+      "nextCheckAt": "2026-10-08T11:17:04.835Z",
+      "needsHuman": false,
+      "note": "not_discovered — attempts direset 1 Okt (2 siklus sebelumnya hanya uji coba manual)",
+      "progressed": true
+    },
+    "https://socio.id/blog/cara-menambah-followers-instagram/": {
+      "attempts": 0,
+      "lastAction": "2026-10-01T11:17:04.835Z",
+      "actions": [
+        "indexnow",
+        "sitemap"
+      ],
+      "nextCheckAt": "2026-10-08T11:17:04.835Z",
+      "needsHuman": false,
+      "note": "not_discovered — attempts direset 1 Okt (2 siklus sebelumnya hanya uji coba manual)",
+      "progressed": true
+    },
+    "https://socio.id/blog/modal-jualan-followers/": {
+      "attempts": 0,
+      "lastAction": "2026-10-01T11:17:04.835Z",
+      "actions": [
+        "indexnow",
+        "sitemap"
+      ],
+      "nextCheckAt": "2026-10-08T11:17:04.835Z",
+      "needsHuman": false,
+      "note": "not_discovered — attempts direset 1 Okt (2 siklus sebelumnya hanya uji coba manual)",
+      "progressed": true
+    }
+  },
+  "rampGate": {
+    "lastRun": {
+      "at": "2026-10-01T11:17:37.816Z",
+      "previous_daily_count": 3,
+      "daily_count": 3,
+      "reason": "hold — discovery gap 100% (5 not_discovered / 5)",
+      "window_days": 14,
+      "metrics": {
+        "total": 5,
+        "discovered": 0,
+        "indexed": 0,
+        "not_indexed": 0,
+        "not_discovered": 5,
+        "blocked": 0,
+        "unknown": 0,
+        "index_rate": null,
+        "discovery_gap_ratio": 1
+      },
+      "alerts": [
+        "discovery_gap"
+      ]
+    },
+    "alert": {
+      "level": "warn",
+      "code": "discovery_gap",
+      "msg": "Google belum menemukan 5/5 URL. Perbaiki discovery (sitemap GSC + internal link money→blog) BUKAN turunkan volume publish."
+    }
+  },
+  "indexer": {
+    "lastRun": {
+      "at": "2026-10-01T11:17:38.543Z",
+      "dryRun": false,
+      "windowDays": 1,
+      "rampTriggered": false,
+      "stages": [
+        {
+          "name": "remedy",
+          "status": "ok",
+          "code": 0,
+          "ms": 143
+        }
+      ],
+      "criticalFailed": 0,
+      "warned": 0
+    }
+  }
+}

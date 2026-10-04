@@ -7,8 +7,9 @@
  *      yang file MDX-nya ada + draft:true
  *   2. Flip frontmatter draft:false, set pubDate=now
  *   3. pnpm --filter landing build
- *   4. wrangler pages deploy landing/dist (env CLOUDFLARE_API_TOKEN + ACCOUNT_ID)
- *   5. indexnow.mjs ping URL baru + update state.json
+ *   4. node seo/llms.mjs (regen llms.txt dari dist/sitemap) + salin ke dist
+ *   5. wrangler pages deploy landing/dist (env CLOUDFLARE_API_TOKEN + ACCOUNT_ID)
+ *   6. indexnow.mjs ping URL baru + update state.json
  *
  * Usage:
  *   node seo/publish.mjs --count=1
@@ -16,22 +17,38 @@
  *   node seo/publish.mjs --slug=apa-itu-smm-panel # publish spesifik
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { execSync, spawn } from 'node:child_process';
-
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
-const QUEUE_PATH = `${ROOT}/seo/queue.json`;
-const BLOG_DIR = `${ROOT}/landing/src/content/blog`;
+import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { execSync, spawn, execFileSync } from 'node:child_process';
+import { ROOT, BLOG_DIR, QUEUE_PATH, PUBLIC_DIR } from './paths.mjs';
 const SITE = 'https://socio.id';
+
+/**
+ * daily_count default dari seo/config.json (ditulis ramp-gate.mjs tiap Senin).
+ * `--count=N` eksplisit selalu menang. Kalau config tidak ada → fallback 1
+ * (perilaku lama, supaya publish manual tidak ikut berubah diam-diam).
+ */
+function configuredDailyCount() {
+  try {
+    const cfg = JSON.parse(readFileSync(join(ROOT, 'seo/config.json'), 'utf8'));
+    const n = Number(cfg.daily_count);
+    return Number.isFinite(n) && n >= 0 ? n : 1;
+  } catch {
+    return 1;
+  }
+}
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { count: 1, noDeploy: false, slug: null };
+  const opts = { count: configuredDailyCount(), noDeploy: false, slug: null, countExplicit: false, skipUniqueness: false };
   for (const a of args) {
-    if (a.startsWith('--count=')) opts.count = parseInt(a.slice(10));
-    else if (a === '--no-deploy') opts.noDeploy = true;
+    if (a.startsWith('--count=')) {
+      opts.count = parseInt(a.slice(10));
+      opts.countExplicit = true;
+    } else if (a === '--no-deploy') opts.noDeploy = true;
     else if (a.startsWith('--slug=')) opts.slug = a.slice(7);
   }
+  if (!opts.countExplicit) console.log(`publish: daily_count dari config.json = ${opts.count} (--count= untuk override)`);
   return opts;
 }
 
@@ -45,6 +62,35 @@ function pickDrafts(queue, count, slug) {
   return drafts
     .sort((a, b) => (b.priority || 0) - (a.priority || 0) || (a.notes || '').localeCompare(b.notes || ''))
     .slice(0, count);
+}
+
+/**
+ * Gate anti-duplicate (plan v2 §9 scaled-content-abuse). Dipanggil PER SLUG:
+ * corpus penuh memang punya banyak pasangan mirip warisan, jadi kalau global
+ * gate akan selalu gagal dan memblokir semua publish. Yang kita tolak hanya
+ * slug yang SENDIRI involved dalam pasangan FAIL.
+ */
+function uniquenessGate(slug) {
+  try {
+    execFileSync(process.execPath, [join(ROOT, 'seo/qc-uniqueness.mjs'), '--slug', slug, '--json'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, SEO_NOTIFY_DRYRUN: '1' },
+    });
+    return { ok: true, detail: null };
+  } catch (e) {
+    if (e.status === 1) {
+      let detail = null;
+      try {
+        const j = JSON.parse(e.stdout || '{}');
+        detail = (j.failsDetail || []).slice(0, 3).map((p) => `${p.b} (score ${p.score})`);
+      } catch {}
+      return { ok: false, detail };
+    }
+    // exit 2 = tool error (mis. corpus kosong) → jangan blokir publish, tapi louder
+    return { ok: true, detail: null, warn: e.message?.slice(0, 120) };
+  }
 }
 
 function flipDraft(path) {
@@ -74,8 +120,39 @@ async function main() {
     process.exit(1);
   }
 
+  // Gate anti-duplicate: sisipkan draft yang mirip artikel existing, lalu publish
+  // lagi pakai slot kuota harian dan menjatuhkan index_rate → ramp-gate turun.
+  const cleared = [];
+  const blockedByGate = [];
+  if (!opts.skipUniqueness) {
+    console.log('Gate qc-uniqueness (anti scaled-content-abuse):');
+    for (const t of targets) {
+      const g = uniquenessGate(t.slug);
+      if (g.warn) console.log(`  ⚠ ${t.slug}: gate error (tidak memblokir) — ${g.warn}`);
+      if (g.ok) {
+        cleared.push(t);
+      } else {
+        blockedByGate.push(t);
+        console.log(`  ✗ ${t.slug} DITOLAK — mirip: ${(g.detail || []).join(', ')}`);
+        console.log('    → rombak artikelnya (tambah data unik /_angle berbeda), atau publish manual dengan --skip-uniqueness');
+      }
+    }
+    if (blockedByGate.length) {
+      console.log(`\n${blockedByGate.length} slug diblokir gate, ${cleared.length} lolos.`);
+    }
+  } else {
+    cleared.push(...targets);
+    console.log('Gate qc-uniqueness: DILEWATI (--skip-uniqueness)');
+  }
+
+  if (!cleared.length) {
+    console.log('\nTidak ada draft yang lolos gate — tidak ada yang dipublish.');
+    process.exitCode = 1;
+    return;
+  }
+
   const publishedUrls = [];
-  for (const t of targets) {
+  for (const t of cleared) {
     const path = `${BLOG_DIR}/${t.slug}.mdx`;
     console.log(`\n--- publish ${t.slug} ---`);
     const today = flipDraft(path);
@@ -88,9 +165,38 @@ async function main() {
 
   writeFileSync(QUEUE_PATH, JSON.stringify(queue, null, 2) + '\n');
 
+  // Bangun internal mesh (plan v2 §6.1): menulis related[] ke frontmatter artikel
+  // published. HARUS sebelum build supaya link-nya ikut ter-render di HTML.
+  // Idempoten (jalankan ulang = 0 perubahan) dan fail-closed kalau related[]
+  // menghasilkan duplikat atau pagar frontmatter rusak.
+  console.log('\n=== bangun internal mesh (plan v2 §6.1) ===');
+  run('node seo/mesh-build.mjs --write');
+
   // Build
   console.log('\n=== build landing ===');
   run('pnpm --filter landing build');
+
+  // Validasi schema JSON-LD (plan v2 §5.3 "wire post-build"). Fail-CLOSED:
+  // schema rusak = halaman tidak bisa dapat rich result, jadi lebih baik
+  // deploy tertahan daripada diam-diamiga rusak ke produksi.
+  console.log('\n=== validasi schema JSON-LD ===');
+  try {
+    run('node seo/jsonld-validate.mjs --strict');
+    console.log('  schema OK (0 error, 0 warning)');
+  } catch (e) {
+    console.error('\nFATAL: validasi JSON-LD gagal — deploy DIBATASI (schema rusak akaniphy/damaged produksi).');
+    console.error('  Perbaiki dulu, atau bypass SADARI: --no-deploy lalu deploy manual setelah dicek.');
+    throw e;
+  }
+
+  // Regen llms.txt + llms-full.txt (reads dist/sitemap-0.xml — must run after build)
+  console.log('\n=== llms regen ===');
+  run('node seo/llms.mjs');
+  // Astro copies public/ at build-time; llms wrote AFTER build → copy to dist manually
+  for (const f of ['llms.txt', 'llms-full.txt']) {
+    const src = `${PUBLIC_DIR}/${f}`;
+    if (existsSync(src)) copyFileSync(src, `${ROOT}/landing/dist/${f}`);
+  }
 
   if (opts.noDeploy) {
     console.log('\n--no-deploy: build selesai, deploy manual:');

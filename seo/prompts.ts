@@ -34,30 +34,62 @@ OUTPUT FORMAT (WAJIB — cek sebelum submit):
   * 2 ke slug dari data related
 
 ATURAN KETAT:
-1. 1000-1200 kata total (di luar FAQ). Lebih dari 1200 = FAIL. Kurang dari 1000 = FAIL.
+1. 1200-1400 kata total (di luar FAQ) — targetkan 1300 agar aman di atas batas.
+   Kurang dari 1000 = FAIL. Lebih dari 1500 = FAIL (boros + fluff).
 2. TEPAT 4 H2 (heading level 2 "##"). Tidak boleh 3, tidak boleh 5, TEPAT 4.
+   H2 PERTAMA wajib mengandung keyword fokus (atau kata bendanya) — syarat RankMath.
 3. Bahasa Indonesia natural (bukan translate).
-4. Setiap paragraf kalimat pertama HURUF KAPITAL.
+4. Paragraf PENDEK: 2-4 kalimat per paragraf (readability + hemat token).
+   Setiap paragraf kalimat pertama HURUF KAPITAL.
 5. Link format: [anchor text natural](URL). Anchor harus mengalir di kalimat, bukan dipisah.
 6. NO emoji, NO klise ("di era digital", "seiring perkembangan teknologi"), NO fabricate angka.
+   KHUSUS HARGA: JANGAN tulis angka "Rp..." per 1.000 dari kepalamu — harga HANYA
+   dari data layanan di prompt ("lihat tabel harga di bawah" kalau perlu merujuk).
+   Satu-satunya angka Rp yang boleh disebut: Rp50.000 (daftar) & Rp20.000 (saldo).
 7. NO heading tanpa body (setiap "## Judul" WAJIB ada paragraf isi di bawahnya).
-8. NO link luar socio.id (kecuali FAQ/CTA).
-9. Output body saja — JANGAN tulis ---frontmatter, JANGAN # H1.`;
+8. Internal link socio.id bebas natural. TEPAT 1 link eksternal ke halaman bantuan
+   RESMI platform terkait (mis. help.instagram.com, support.tiktok.com,
+   support.google.com/youtube) — taruh di section yang membahas keamanan/cara.
+9. Output body saja — JANGAN tulis ---frontmatter, JANGAN # H1.
+10. DILARANG heading "Kesimpulan"/"Penutup"/"Ringkasan" — artikel DITUTUP 1-2 paragraf
+    tanpa heading yang merangkum inti + ajakan CTA maju (contoh: "coba hitung sendiri di
+    halaman layanan"). Penutup kaku = FAIL.
+11. TULISAN HARUS TERASA MANUSIA: variasi panjang kalimat (pendek-panjang campur),
+    sesekali kalimat langsung ke pembaca ("kamu", "coba cek"), 1 contoh konkret
+    (angka/nama langkah) per section, hindari pola robot (jangan mulai >2 paragraf
+    dengan kata yang sama, jangan rangkum tiap section di kalimat terakhirnya).
+    Tulis dari sudut pandang PENGGUNA — JANGAN sebut nama tabel/kolom database,
+    cron, API provider, atau istilah internal sistem.
+12. RANKMATH-100 (wajib, murah token karena template-driven):
+    - Keyword fokus disebut 8-15x natural di body (density ~1%) + 3-5 sinonim.
+    - Keyword fokus SUDAH di kalimat pertama (definisi) — jangan ulang definisi lagi.
+    - 1 H2 mengandung keyword fokus (aturan 2). Alt gambar & slug diurus template.
+13. RAMAH SITASI AI (LLM): sebut entitas resmi 1-2x natural (nama platform persis
+    + "Socio.id"); angka selalu konkret dengan satuan (Rp/1.000, menit, %);
+    jangan menulis klaim tanpa angka/contoh — AI mengutip kalimat berdata.`;
 
 /**
  * Build user prompt — minimal, hemat token.
  */
-export function buildUserPrompt({ keyword, category, related, pricesBlock }) {
+export function buildUserPrompt({ keyword, category, related, pricesBlock, localAnchor, localBuyer }) {
+  const geoBlock = localAnchor
+    ? `
+KONTEKS LOKAL (WAJIB dipakai, ini yang membedakan halaman dari doorway page):
+- Fakta ekonomi ${keyword.includes('umkm') ? 'daerah' : 'kota'}: ${localAnchor}
+- Pembeli yang paling mungkin: ${localBuyer}
+Sebut fakta lokal di atas di paragraf pertama dan satu section H2 (contoh konkret: sektor kerjaan apa yang biasanya butuh isi followers/likes). JANGAN karang fakta daerah lain.
+`
+    : '';
   return `Keyword: "${keyword}"
 Kategori: ${category}
-
+${geoBlock}
 Artikel terkait (taruh 2 link internal ke slug ini di body):
 ${related.map((r) => `- ${r.slug}`).join('\n')}
 
 Layanan terkait (sebut natural di body, JANGAN tulis harga):
 ${pricesBlock}
 
-TULIS ARTIKEL SEKARANG. Mulai dari definisi 1 kalimat, lalu 3-5 section H2 dengan body naratif, akhiri dengan section FAQ 5 Q+A. Output body markdown saja.`;
+TULIS ARTIKEL SEKARANG. Mulai dari definisi 1 kalimat, lalu TEPAT 4 section H2 dengan body naratif (4-6 paragraf per section), akhiri dengan section FAQ 5 Q+A. CHECKLIST SEBELUM SUBMIT (wajib centang mental): [1] total 1200-1400 kata di luar FAQ [2] keyword fokus muncul ≥8x di body [3] H2 pertama mengandung keyword [4] TEPAT 1 link eksternal help-center resmi [5] TIDAK ADA angka Rp karangan (harga hanya dari daftar layanan di atas) [6] tanpa heading Kesimpulan. Output body markdown saja.`;
 }
 
 /**
@@ -75,10 +107,22 @@ export function parseOutput(content) {
 export function assembleMdx({ llmBody, prices, moneyLink, related, faq, meta }) {
   const priceTable = renderPriceTable(prices);
   const safetyCallout = renderSafetyCallout();
-  const bodyNoFaq = stripFaqSection(llmBody);
+  const bodyNoFaq = stripFaqSection(linkifyBareUrls(stripFabricatedRp(llmBody)));
   const bodyWithTable = injectAfterFirstH2(bodyNoFaq, priceTable);
-  const bodyFull = bodyWithTable.replace(/(## FAQ|^FAQ)/im, `${safetyCallout}\n\n## FAQ`);
+  const bodyFull = bodyWithTable + '\n\n' + safetyCallout + '\n\n## FAQ\n';
   const bodyWithCta = bodyFull + '\n\n' + renderCtaBlock();
+  // Jaminan mesh: kalau LLM tidak menulis link money page sama sekali,
+  // template sisipkan 1 (bukan mengandalkan LLM).
+  const hasMoneyLink = /(\/beli-|\/smm-panel-|\/layanan\/|\/reseller)/.test(bodyWithCta);
+  const moneyLine = hasMoneyLink
+    ? ''
+    : `\n\nLihat juga: [${moneyLink.anchor}](${moneyLink.url}) untuk harga real per 1.000.`;
+  // A3: deterministic related links — LLM tidak perlu menulis 2 link related sendiri
+  const safeRel = (related || []).filter((r) => r.slug && r.slug !== meta.slug).slice(0, 2);
+  const bacaJuga = safeRel.length >= 2
+    ? '\n\n## Baca juga\n\n' + safeRel.map((r) => `- [${r.title || capitalize(r.slug)}](/blog/${r.slug}/)`).join('\n')
+    : '';
+  const bodyFinal = bodyWithCta + moneyLine + bacaJuga;
   const safeRelated = (related || []).filter((r) => r.slug && r.slug !== meta.slug);
   const today = new Date().toISOString().slice(0, 10);
   const fm = renderFrontmatter({
@@ -90,14 +134,16 @@ export function assembleMdx({ llmBody, prices, moneyLink, related, faq, meta }) 
     faq,
     related: safeRelated,
   });
-  return `${fm}\n${bodyWithCta}\n`;
+  return `${fm}\n${bodyFinal}\n`;
 }
 
 // ===== Template helpers (di-share via Function constructor scope di generate.mjs) =====
 
 function renderFrontmatter({ title, description, pubDate, category, draft, faq, related }) {
   const faqYaml = (faq || []).map((f) => `  - q: "${escapeYaml(f.q)}"\n    a: "${escapeYaml(f.a)}"`).join('\n');
-  const relatedYaml = (related || []).map((r) => `  - id: "${r.slug}"`).join('\n');
+  // related: plain slug list (format reference Astro — BUKAN objek {id},
+  // karena schema reference("blog") menolak objek dan build gagal).
+  const relatedYaml = (related || []).map((r) => `  - ${r.slug}`).join('\n');
   return `---
 title: "${escapeYaml(title)}"
 description: "${escapeYaml(description)}"
@@ -125,11 +171,40 @@ ${rows}`;
 }
 
 function renderSafetyCallout() {
-  return `> **Tips aman pakai SMM panel**: (1) Pilih layanan gradual refill — follower naik bertahap, bukan sekaligus, jadi lebih natural. (2) Jangan beli followers saat akun masih baru (<3 bulan) — algoritma deteksi lebih ketat. (3) Hindari spam massal — maksimal 1-2x order per minggu per akun. (4) Cek garansi refill sebelum bayar — layanan tanpa refill = risiko tinggi.`;
+  return `> **Tips aman pakai SMM panel**: (1) Pilih layanan gradual refill — follower naik bertahap, bukan sekaligus, jadi lebih natural. (2) Jangan beli followers saat akun masih baru (umur di bawah 3 bulan) — algoritma deteksi lebih ketat. (3) Hindari spam massal — maksimal 1-2x order per minggu per akun. (4) Cek garansi refill sebelum bayar — layanan tanpa refill = risiko tinggi.`;
 }
 
 function renderCtaBlock() {
   return `> **Mau langsung cek harganya?** Daftar reseller Socio.id — Rp50.000 include saldo Rp20.000 langsung jalan + harga reseller lebih murah di semua 8.270 layanan Instagram, TikTok, YouTube, Telegram, Spotify & SEO. → [Cek harga & pesan sekarang](https://app.socio.id/daftar?mode=reseller)`;
+}
+
+// Hapus angka Rp karangan LLM (harga layanan HANYA dari tabel template).
+// Fakta reseller (50.000/20.000) dipertahankan. Ganti dengan rujukan tabel
+// supaya kalimat tetap gramatikal.
+function stripFabricatedRp(body) {
+  return body.replace(/Rp\s?(\d[\d.]*)\s?(ribu|juta)?/gi, (m, n, suf) => {
+    let digits = Number(n.replace(/\./g, ''));
+    if (/^ribu/i.test(suf || '')) digits *= 1000;
+    if (/^juta/i.test(suf || '')) digits *= 1000000;
+    if (digits === 50000 || digits === 20000) return m;
+    return 'harga di tabel';
+  });
+}
+
+// Linkify URL telanjang jadi markdown (LLM sering tulis "lihat di halaman layanan"
+// atau "help.instagram.com" sebagai teks polos — jelek + gagal gate link).
+// Hanya untuk domain/path yang dikenal; tidak menyentuh yang sudah markdown.
+function linkifyBareUrls(body) {
+  let out = body;
+  // app.socio.id/daftar (tanpa markdown)
+  out = out.replace(/(?<!\]\()https?:\/\/app\.socio\.id\/daftar[^\s)]*/g, (u) => `[daftar reseller Socio.id](${u})`);
+  // Path internal socio.id telanjang: /layanan, /reseller, /beli-*, /smm-panel-*, /blog/*
+  out = out.replace(/(?<!\]\()(^|[\s(])(\/(?:layanan|reseller|beli-[a-z0-9-]+|smm-panel-[a-z0-9-]+|blog\/[a-z0-9-]+)\/?)/gm,
+    (m, pre, p) => `${pre}[${p.replace(/\//g, ' ').trim()}](${p})`);
+  // Help center resmi telanjang (dengan atau tanpa skema http)
+  out = out.replace(/(?<!\]\()((?:https?:\/\/)?(?:help\.instagram\.com|support\.tiktok\.com|support\.google\.com)[^\s)]*)/g,
+    (u) => `[panduan resmi](${u.startsWith('http') ? u : 'https://' + u})`);
+  return out;
 }
 
 function escapeMd(s) {
@@ -138,7 +213,8 @@ function escapeMd(s) {
 }
 
 function stripFaqSection(body) {
-  return body.replace(/##\s*FAQ[\s\S]*$/i, '').trimEnd();
+  // LLM sering output "## Pertanyaan Umum" bukan "## FAQ" — match both
+  return body.replace(/##\s*(?:FAQ|Pertanyaan[^\n]*)[\s\S]*$/i, '').trimEnd();
 }
 
 function injectAfterFirstH2(body, table) {
@@ -173,11 +249,21 @@ export function validateMdx(content, keyword) {
   const faqCount = (fm.match(/^\s+- q:/gm) || []).length;
   if (faqCount !== 5) errors.push(`FAQ count = ${faqCount} (expected 5)`);
 
+  // Kategori harus lolos enum koleksi Astro (deriveMeta memetakan, ini backstop).
+  const cm = fm.match(/^category:\s*"?([^"\n]+?)"?\s*$/m);
+  const catV = cm ? cm[1].replace(/^"|"$/g, '') : '';
+  if (!['Followers', 'TikTok', 'Reseller', 'Lainnya'].includes(catV))
+    errors.push(`Category invalid ("${catV}")`);
+
   const words = body.split(/\s+/).filter(Boolean).length;
   if (words < 850) errors.push(`Body too short (${words}/850)`);
   if (words > 1400) errors.push(`Body too long (${words}/1400)`);
 
-  const h2Count = (body.match(/^##\s/gm) || []).length;
+  // H2 naratif saja. Section template yang ditambahkan assembler (## FAQ,
+  // ## Baca juga) TIDAK dihitung — tidak termasuk yang diminta ke LLM.
+  const h2All = (body.match(/^##\s/gm) || []).length;
+  const h2Template = (body.match(/^##\s*(?:FAQ|Baca juga)\s*$/gm) || []).length;
+  const h2Count = h2All - h2Template;
   if (h2Count < 3 || h2Count > 5) errors.push(`H2 count = ${h2Count} (expected 3-5)`);
 
   // Accept both relative `/(beli|smm-panel|blog|layanan|reseller)` and absolute
@@ -194,6 +280,51 @@ export function validateMdx(content, keyword) {
 
   if (/[💸🤖🚀💬✨🎯📈♻⚡👑♾]/u.test(body)) errors.push('Emoji found');
   if (/\d+\s*%\s*(lebih murah|diskon|off)/i.test(body)) errors.push('Fabricated % discount');
+  if (/^##\s*(kesimpulan|penutup|ringkasan|closing)\s*$/gim.test(body))
+    errors.push('Banned closing heading (kesimpulan/penutup)');
+
+  // Anti-fabricate harga: satu-satunya angka Rp yang boleh muncul di PROSA
+  // adalah fakta reseller (Rp50.000 daftar / Rp20.000 saldo). Tabel harga
+  // template dikecualikan dari cek (baris `| ... |` = data real prices.json).
+  // Harga layanan WAJIB dari tabel — LLM dilarang mengarang "Rp sekian per 1.000".
+  const bodyNoTable = body.replace(/^\|.*\|$/gm, '');
+  // "Rp50 ribu" = 50000 (fakta reseller yang sah) — normalisasi dulu.
+  const rpHits = [...bodyNoTable.matchAll(/Rp\s?(\d[\d.]*)\s?(ribu|juta)?/gi)].map((m) => {
+    let n = Number(m[1].replace(/\./g, ''));
+    if (/^ribu/i.test(m[2] || '')) n *= 1000;
+    if (/^juta/i.test(m[2] || '')) n *= 1000000;
+    return n;
+  });
+  const rpBad = rpHits.filter((n) => n !== 50000 && n !== 20000);
+  if (rpBad.length) errors.push(`Fabricated price (Rp${rpBad[0]} — harga hanya dari tabel)`);
+
+  // RankMath-100: keyword di subheading — 2 kata pertama keyword harus muncul
+  // di salah satu H2 naratif (longtail geo tetap lolos via kata benda).
+  const h2Lines = (body.match(/^##\s+.+$/gm) || [])
+    .filter((h) => !/^##\s*(?:FAQ|Baca juga)\s*$/i.test(h));
+  const kwHead = (keyword || '').toLowerCase().split(/\s+/).slice(0, 2).join(' ');
+  if (kwHead && !h2Lines.some((h) => h.toLowerCase().includes(kwHead)))
+    errors.push(`Keyword "${kwHead}" missing in H2`);
+
+  // RankMath density ~1%: keyword exact 3-25x dalam 850-1400 kata.
+  // Longtail 4-5 kata yang natural muncul 3-6x exact + banyak partial —
+  // partial (3 kata pertama) dihitung sebagai pendukung.
+  const escKw = (keyword || '').toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const kwHits = escKw ? (body.toLowerCase().match(new RegExp(escKw, 'g')) || []).length : 0;
+  const kw3 = (keyword || '').toLowerCase().split(/\s+/).slice(0, 3).join(' ');
+  const esc3 = kw3.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const partialHits = esc3 && esc3 !== escKw ? (body.toLowerCase().match(new RegExp(esc3, 'g')) || []).length : kwHits;
+  if (kwHits < 3 && !(kwHits >= 2 && partialHits >= 8)) errors.push(`Keyword density low (${kwHits} hits, min 3)`);
+  if (kwHits > 25) errors.push(`Keyword stuffing (${kwHits} hits, max 25)`);
+
+  // RankMath external link: TEPAT 1 link luar ke domain resmi (help center).
+  // Internal socio.id + app.socio.id tidak dihitung.
+  const allLinks = [...body.matchAll(/\[[^\]]+\]\((https?:[^)]+)\)/g)].map((m) => m[1]);
+  const extLinks = allLinks.filter(
+    (u) => !/^(https:\/\/)?(www\.)?socio\.id\//i.test(u) && !/app\.socio\.id/i.test(u),
+  );
+  if (extLinks.length < 1) errors.push('Missing 1 external authoritative link');
+  if (extLinks.length > 2) errors.push(`Too many external links (${extLinks.length}, max 2)`);
 
   return { ok: errors.length === 0, errors, title, desc, faqCount, h2Count, words, internalLinks };
 }
@@ -202,10 +333,16 @@ export function validateMdx(content, keyword) {
  * Derive meta (title + description) dari output LLM (heuristic + template).
  */
 export function deriveMeta({ keyword, llmBody, category }) {
-  const valueProps = ['Cara Aman & Harga 2026', 'Panduan Lengkap', 'Harga Termurah 2026', 'Cara Aman 2026'];
+  // RankMath title: keyword di AWAL + angka + power word, target ≤60 char
+  // (schema tahan 70). Angka 5-9 + power dari hash → deterministik per keyword.
+  const powers = ['Cara Aman', 'Panduan Praktis', 'Harga Update', 'Tips Terbukti', 'Fakta Lengkap'];
   const hash = (keyword || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const vp = valueProps[hash % valueProps.length];
-  let title = `${capitalize(keyword || 'smm panel')}: ${vp}`;
+  const num = 5 + (hash % 5);
+  // Hindari gema kata (mis. keyword "...aman" + power "Cara Aman").
+  const kwWords = new Set((keyword || '').toLowerCase().split(/\s+/));
+  const power =
+    powers.find((p) => !p.toLowerCase().split(/\s+/).some((w) => kwWords.has(w))) ?? powers[1];
+  let title = `${capitalize(keyword || 'smm panel')}: ${num} ${power} 2026`;
   if (title.length > 70) title = title.slice(0, 67) + '...';
 
   const firstSentence = (llmBody || '').split(/[.!?]/)[0] || '';
@@ -215,11 +352,30 @@ export function deriveMeta({ keyword, llmBody, category }) {
   }
   if (description.length > 160) description = description.slice(0, 157) + '...';
 
-  return { title, description, category };
+  return { title, description, category: mapCategory(category) };
+}
+
+const ACRONYMS = new Set(['SMM', 'SEO', 'API', 'QRIS', 'DM', 'FYP', 'CTA', 'UGC']);
+
+// Kategori koleksi Astro hanya kenal 4 enum — petakan kategori queue/geo.
+function mapCategory(category) {
+  const c = String(category || 'Lainnya');
+  if (['Followers', 'TikTok', 'Reseller', 'Lainnya'].includes(c)) return c;
+  if (/reseller/i.test(c)) return 'Reseller';
+  if (/tiktok/i.test(c)) return 'TikTok';
+  if (/follow/i.test(c)) return 'Followers';
+  return 'Lainnya';
 }
 
 function capitalize(s) {
-  return s.split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  return s
+    .split(/\s+/)
+    .map((w) => {
+      const up = w.toUpperCase();
+      if (ACRONYMS.has(up)) return up;
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(' ');
 }
 
 // === GENERATE.MJS EXTRACT MARKERS ===
