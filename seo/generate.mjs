@@ -676,8 +676,14 @@ async function main() {
   }
   if (opts.dry) return;
   if (opts.list) {
-    // Mode orkestrator paralel: cetak keyword saja (satu per baris).
-    for (const t of targets) console.log(`KW::${t.keyword}`);
+    // Mode orkestrator paralel: cetak N keyword sekaligus. Versi lama memakai
+    // `targets` yang sudah di-apply --count (default 1), jadi --list=20 hanya
+    // mencetak 1 keyword — akibatnya generate-parallel.sh menjalankan keyword
+    // yang sama di semua worker. Di sini langsung pickTargets dengan opts.list.
+    const listItems = opts.keyword
+      ? QUEUE.items.filter((i) => i.keyword === opts.keyword && i.status === 'pending')
+      : pickTargets(QUEUE.items, opts.list);
+    for (const t of listItems) console.log(`KW::${t.keyword}`);
     return;
   }
   if (opts.mergeQueue) {
@@ -807,16 +813,59 @@ async function main() {
         // di dalamnya membuat regex extractFaqFromBody terpotong di awal, sehingga
         // FAQ terbaca 0 walau Q+A-nya ada. Jadi bersihkan: buang semua heading dan
         // teks sebelum pertanyaan bernomor pertama.
+        // SABR: model gratis sering tidak memberi format bernomor sama sekali —
+        // itu penyebab kegagalan #1 ("FAQ hanya 0/5"). Coba beberapa bentuk berurutan:
+        //   1) "1. pertanyaan" + "Jawaban: ..."     (format yang diminta prompt)
+        //   2) "**pertanyaan**" + paragraf            (format yang FAQ lama pakai)
+        //   3) "Q: ... / A: ..."
+        //   4) bentuk bebas: baris berakhir "?" + baris berikutnya
         const cleanFaqPart = (s) => {
-          const lines = String(s || '').split('\n');
-          const startAt = lines.findIndex((l) => /^\s*1[.)]\s*\S/.test(l));
-          if (startAt < 0) return '';
-          return lines
-            .slice(startAt)
-            .filter((l) => !/^\s*#{1,6}\s/.test(l))
-            .join('\n')
-            .replace(/\n{3,}/g, '\n\n')
-            .trim();
+          const txt = String(s || '').replace(/^\s*#{1,6}\s.*$/gm, '');
+          const lines = txt.split('\n').map((l) => l.trim()).filter(Boolean);
+          const out = [];
+          // (1) bernomor
+          let i = 0;
+          while (i < lines.length && out.length < 5) {
+            const m = lines[i].match(/^(\d{1,2})[.)]\s*(\S.*\?)\s*$/);
+            if (m) {
+              let a = '';
+              if (i + 1 < lines.length && !/^\s*\d{1,2}[.)]\s/.test(lines[i + 1])) a = lines[++i];
+              out.push({ q: m[2].trim(), a: (a || '').replace(/^jawaban\s*:\s*/i, '').trim() });
+            }
+            i++;
+          }
+          if (out.length >= 5) return out;
+          // (2) bold question  (3) Q:/A:
+          const bold = [];
+          for (let k = 0; k < lines.length && bold.length < 5; k++) {
+            const b2 = lines[k].match(/^\*\*(.+?\?)\*\*$/);
+            const qa = lines[k].match(/^Q[:.]\s*(.+?\?)\s*$/i);
+            const q = b2 ? b2[1] : qa ? qa[1] : null;
+            if (q) {
+              let a = lines[k + 1] || '';
+              if (a && !a.endsWith('?') && !/^\d{1,2}[.)]\s/.test(a)) {
+                bold.push({ q: q.trim(), a: a.replace(/^A[:.]\s*/i, '').trim() });
+                k++;
+              }
+            }
+          }
+          for (const x of bold) {
+            if (out.length >= 5) break;
+            if (!out.some((y) => y.q.toLowerCase() === x.q.toLowerCase())) out.push(x);
+          }
+          if (out.length >= 5) return out;
+          // (4) bentuk bebas: baris berakhir "?" lalu baris berikutnya
+          for (let k = 0; k < lines.length - 1 && out.length < 5; k++) {
+            if (lines[k].endsWith('?') && lines[k].length < 140) {
+              const a2 = lines[k + 1];
+              if (a2 && !a2.endsWith('?') && a2.length > 20 && !/^#/.test(a2)) {
+                if (!out.some((y) => y.q.toLowerCase() === lines[k].toLowerCase()))
+                  out.push({ q: lines[k].trim(), a: a2.replace(/^jawaban\s*:\s*/i, '').trim() });
+                k++;
+              }
+            }
+          }
+          return out.slice(0, 5);
         };
         // Free model MELIHIBihi: diminta 2 H2 dia tulis 4-5, sehingga total H2 bisa 9
         // dan body 2518 kata (gate: 850-1400). Struktur JANGAN diserahkan ke model —
@@ -873,7 +922,10 @@ async function main() {
           }
           return out;
         };
-        const faqPart = cleanFaqPart(pfaqRaw);
+        const faqPairs = cleanFaqPart(pfaqRaw);
+        const faqPart = faqPairs.length
+          ? faqPairs.map((f, i) => `${i + 1}. ${f.q}\nJawaban: ${f.a}`).join('\n\n')
+          : '';
         const bodyClean = normalizeSplitBody(`${p1}\n${p2}`);
         // Free model SISIPKAN sampah non-Latin (terlihat di korpus: karakter CJK
         // akan menolak — itu benar, tapi untuk free model kejadian itu NORMAL, jadi
