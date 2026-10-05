@@ -79,3 +79,7 @@ app/vite.config.ts.timestamp-*.mjs
 
 # Screenshot WhatsApp pribadi (jangan masuk repo)
 issue/
+
+# File artikel/*.md dari luar pipeline SEO (provenance tidak jelas) — jangan masuk repo
+artikel_*.md
+article_part2.md
