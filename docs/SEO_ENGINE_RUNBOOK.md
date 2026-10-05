@@ -154,3 +154,54 @@ Pesan dan artinya:
 - **Publish tidak pernah jalan kalau indexer gagal** (fail-closed). Ini disengaja.
 - **Tidak ada auto-push ke GitHub.** Artikel terbit lewat Cloudflare Pages deploy
   langsung, bukan lewat commit. `app.socio.id` tidak tersentuh sama sekali.
+
+
+---
+
+## 9. STATUS 5 Okt 2026 — LIVE (indexer + publish keduanya jalan)
+
+### Yang aktif
+| Komponen | Status |
+|---|---|
+| Container `socio-seo-runner` | Up, restart policy `unless-stopped` |
+| Image | 927 mdx · publish.mjs OK · astro OK · wrangler OK · pnpm 9.15.9 |
+| `state.json` | persist di volume `/data/coolify/.../data` |
+| Scheduled Task | `seo-daily-index` (`23 * * * *`), `seo-weekly` (`2 2 * * 1`) |
+| Watchdog | `/usr/local/bin/seo-watchdog`, crontab tiap 10 menit |
+| Env | GSC + Bing + CLOUDFLARE terisi. `GROQ_API_KEY` **kosong** → generate LLM nonaktif (hemat kuota) |
+
+Pipeline `runner/daily.mjs`: lock → indexer (5 tahap) → generate (skip) → publish
+(`--count=daily_count`) → laporan. Fail-closed: indexer gagal → publish tidak jalan.
+
+**Bukti publish berhasil 5 Okt:** 3 artikel live sekaligus
+(`cara-kerja-smm-panel`, `smm-panel-gratis-ada-gak`, `smm-panel-gratis`) —
+`wrangler pages deploy` sukses, IndexNow `200 OK`, `exit 0`, `app.socio.id` HTTP 303
+tidak tersentuh.
+
+### Tiga jebakan yang ditemukan (dan perbaikannya)
+1. **Runner dibangun dari repo TERPISAH.** App Coolify #5 clone dari
+   `ReqTimeout/socio-seo-runner.git`, bukan repo `socio`. Push ke `socio` TIDAK
+   akan rebuild runner — harus push ke repo runner juga.
+2. **`cp -R src/seo ./seo` membuat nested `seo/seo/`.** Akibatnya image hanya berisi
+   11 file (indexer, gsc, bing, ramp, remedy, indexnow). `publish.mjs`,
+   `queue.json`, `generate.mjs`, `check-article.mjs`, `blog-expand.mjs`,
+   `fix-sitemap.mjs` semua hilang. Indexer tetap jalan (butuh 11 itu), publish mustahil.
+   Sekarang 26 file `.mjs`.
+3. **File AppleDouble (`._*`) merusak `mesh-build.mjs`.** File ini dibuat macOS saat
+   copy; `mesh-build` menghitung pagar `---` dan dapat 0 → fatal, publish terhenti
+   sebelum build. Di-exclude di `.dockerignore` + `.gitignore`, dan tar pakai
+   `--no-xattrs`.
+
+### Risiko tersisa (jujur)
+- **Coolify tidak tahu image baru.** `applications.status` = `exited` karena
+  container dikelola manual. Kalau Coolify melakukan recreate, ia akan memakai image
+  lamanya (tanpa `landing/`). **Watchdog menutup ini**: tiap 10 menit ia cek
+  container hidup + `publish.mjs` ada; kalau tidak, recreate dengan image baru.
+  Rollback: image lama tersimpan sebagai `ssoe-old:backup`.
+- **Coolify build tidak bisa dipicu lewat API** (queue worker `deployments` tidak ada;
+  `POST /api/v1/deploy` diam-diam gagal). Image dibangun langsung dengan `docker build`
+  lalu dikirim lewat `scp`. Kalau mau image baru di masa depan: ulangi pola ini.
+- **Kuota publish 3/hari.** 918 draft tersisa ≈ 306 hari. `ramp-gate` menaikkan
+  otomatis ke `daily_count_max=10` bila `index_rate` ≥ 85%, menurunkannya bila < 70%.
+  Saat ini `index_rate` 0% (5 URL, 4 `not_discovered` + 1 belum ketemu) dengan
+  `discovery_gap` 100% — itu yang menahan, bukan volume.
