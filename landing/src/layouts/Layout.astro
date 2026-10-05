@@ -143,6 +143,13 @@ const ogImage = ogImageOverride || new URL('/og-image.png', Astro.site ?? 'https
              Mode, Google tetap serve iklan cookieless saat ads_storage denied,
              jadi banner tidak mematikan pendapatan — hanya menahan cookie. */}
         <script is:inline define:vars={{ adsenseClient }}>
+          // Auto Ads: Google sendiri yang menaruh iklan di posisi terbaik
+          // (dempeter, in-article, sticky footer, anchor, vignette). Ini yang
+          // bikinnya "maksimal" tanpa harus bikin slot manual satu per satu.
+          // Tetap contingent pada sakelar Auto Ads di dashboard AdSense — kode
+          // ini cuma mengirim flag-nya, kliknya tetap di sisi dashboard.
+          window.adsbygoogle = window.adsbygoogle || [];
+          window.adsbygoogle.push({ google_ad_client: adsenseClient, enable_page_level_ads: true });
           window.__loadAdSense = function () {
             if (window.__adsLoaded) return;
             window.__adsLoaded = true;
