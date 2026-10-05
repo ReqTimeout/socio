@@ -20,10 +20,13 @@ export const BLOG_DIR = process.env.SEO_CONTENT_DIR
   ? resolve(process.env.SEO_CONTENT_DIR)
   : join(ROOT, 'landing/src/content/blog');
 
-export const QUEUE_PATH = join(ROOT, 'seo/queue.json');
+export const QUEUE_PATH = process.env.SEO_QUEUE_PATH
+  ? resolve(process.env.SEO_QUEUE_PATH)
+  : join(ROOT, 'seo/queue.json');
 // State/config bisa dipindah (runner Docker memakai volume persisten):
 //   SEO_STATE_PATH=/app/data/state.json
 //   SEO_CONFIG_PATH=/app/data/config.json
+//   SEO_QUEUE_PATH=/app/data/queue.json
 // Default tetap repo, supaya perilaku script lokal tidak berubah.
 export const STATE_PATH = process.env.SEO_STATE_PATH
   ? resolve(process.env.SEO_STATE_PATH)

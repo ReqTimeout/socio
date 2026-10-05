@@ -1,10 +1,16 @@
 # Runbook: menyalakan engine SEO otomatis
 
-> Ditulis 4 Okt 2026. Menjawab: "generate artikel semua keyword → set draft →
-> publish harian sesuai kuota GSC, otomatis."
+> Ditulis 4 Okt 2026, diperbarui 5 Okt 2026. Menjawab: "generate artikel semua keyword → set draft → publish harian sesuai kuota GSC, otomatis."
 >
-> **Status: belum live.** Kodenya siap dan sudah diuji sampai flip draft + build.
-> Yang belum: deploy produksi pertama + env Coolify. Lihat §5.
+> **Status: LIVE.** Indexer + publish keduanya jalan di produksi. Publish berjalan
+> 1 artikel/jam lewat task `seo-publish-hourly`. Tidak ada LLM di loop — artikel
+> dibuat dari template (`blog-expand.mjs`), nol kuota.
+>
+> Baca juga: §9 (jebakan container/AppleDouble), §10 (bug persistensi state),
+> §11 (slot AdSense yang masih kosong), §12 (cara deploy image — selalu manual).
+>
+> Catatan: §1–§8 ditulis saat sistem belum live; baris "belum" di sana sudah
+> usang. §9–§12 yang otoritatif.
 
 ## 1. Yang sudah berjalan vs yang belum
 
@@ -205,3 +211,139 @@ tidak tersentuh.
   otomatis ke `daily_count_max=10` bila `index_rate` ≥ 85%, menurunkannya bila < 70%.
   Saat ini `index_rate` 0% (5 URL, 4 `not_discovered` + 1 belum ketemu) dengan
   `discovery_gap` 100% — itu yang menahan, bukan volume.
+
+---
+
+## 10. STATUS 5 Okt 2026 (sore) — persistensi publish diperbaiki
+
+Jadwal produksi sekarang **1 artikel/jam** (24/hari), bukan 3/hari:
+
+| Task | Cron | Perintah | Status |
+|---|---|---|---|
+| `seo-publish-hourly` | `41 * * * *` | `node seo/publish.mjs --count=1` | enabled |
+| `seo-daily-index` | `23 * * * *` | `node runner/daily.mjs` | enabled |
+| `seo-weekly` | `2 2 * * 1` | — | enabled |
+
+`SEO_SKIP_PUBLISH=1` dan `SEO_SKIP_GENERATE=1` diset di container, jadi
+`runner/daily.mjs` tidak lagi ikut publish — itu tugasnya task per-jam. Tidak ada
+dobel-publish.
+
+### Dua jebakan data yang baru ditemukan (keduanya sudah diperbaiki)
+
+Sepanjang sesi sore ini ditemukan bahwa klaim "status publish persisten" **sebenarnya
+tidak benar** untuk artikel yang terbit setelah baseline. Polanya berulang, bukan
+kebetulan: `10 → 7 → 7 → 7`. Pattern-nya berulang, bukan kebetulan.
+
+**1. `indexnow.mjs` menulis ke path yang salah.**
+`seo/indexnow.mjs` pernah punya `const STATE_PATH = \`${ROOT}/seo/state.json\`` sendiri,
+yang **menggantukan** path kanonik dari `paths.mjs`. Di runner, `paths.mjs` menghormati
+`SEO_STATE_PATH=/app/data/state.json` (volume), tapi `indexnow` tetap menulis ke
+`/app/seo/state.json` — yang ada di **layer image**, hilang tiap container rebuild.
+Akibatnya dua file state berbeda pendapat: volume beku di 7, image di 5, sementara 8
+file MDX benar-benar `draft: false`. Diperbaiki: `indexnow` kini mengimpor `STATE_PATH`
+dari `paths.mjs`.
+
+**2. `restore-published.mjs` hanya percaya `state.published`.**
+Ini penyebab sebenarnya artikel hilang. `publish.mjs` mencatat status publish **hanya**
+di `queue.json` (`t.status = 'published'`) dan tidak pernah append ke `state.published[]`
+— array itu cuma baseline dari `bootstrap-state.mjs`. Maka setiap artikel yang terbit
+sesudah baseline tidak ada di daftar restore, dan di-flip balik jadi `draft:true` pada
+rebuild berikutnya. Terverifikasi nyata: `cara-kerja-smm-panel` terbit 18:38, tayang,
+lalu hilang lagi saat image dibangun ulang.
+
+Diperbaiki: `restore-published` memakai **union** `state.published` ∪
+`queue.items[status=published]`. `queue.json` sekarang persisten di volume
+(`SEO_QUEUE_PATH=/app/data/queue.json`).
+
+Uji: **8 → 8 → 8 → 8** pada empat kali `docker rm` + `run` berturut-turut.
+
+### Dua skrip baru
+
+| Skrip | Fungsi |
+|---|---|
+| `seo/heal-queue.mjs` | Selaraskan `queue.json` dengan frontmatter MDX. Sumber kebenaran = file MDX. Dipanggil `runner-start.sh` tiap start. `--check` untuk dry-run (exit 1 kalau perlu heal). |
+| `seo/migrate-state.mjs` | Satukan state yang terpecah jadi satu authoritative di volume, ambil juga slug dari frontmatter MDX. Idempoten, backup `.bak`. |
+
+`heal-queue` penting karena `publish.mjs` menandai queue `published` **sebelum** deploy.
+Kalau proses mati di tengah (timeout Pages, Ctrl-C, OOM), queue dan file berbeda
+pendapat, dan publish berikutnya berhenti dengan
+`FATAL: frontmatter tidak berubah — draft:true tidak ditemukan?` — melumpuhkan task
+per-jam **setiap jam** sampai ada intervensi manual. Ini terjadi dua kali selama sesi ini.
+
+### Env dipindah keluar dari /tmp
+
+Semua env runner (31 baris, termasuk `CLOUDFLARE_API_TOKEN`, GSC, Bing, IndexNow)
+tadinya di `/tmp/env-backup.txt`, dan `seo-watchdog` membacanya dari sana untuk recreate
+container. `/tmp` dibersihkan `systemd-tmpfiles` saat reboot — setelah reboot, watchdog
+tidak bisa recreate dan seluruh pipeline publikasi mati. Sekarang:
+
+```
+/etc/seo-runner/env      0600 root-only, 31 baris
+```
+
+Watchdog sudah diarahkan ke sana dan `/tmp/env-backup.txt` dihapus.
+
+### Status website
+
+| Item | Nilai |
+|---|---|
+| Artikel live | **8** (semua HTTP 200, ada di sitemap) |
+| Total URL sitemap | 57 |
+| `ads.txt` | HTTP 200, `google.com, pub-4438184351486735, DIRECT, f08c47fec0942fa0` |
+| Spacer consent | 0px (sebelumnya 156px) |
+| `app.socio.id` | HTTP 303, tidak tersentuh |
+
+### Yang masih perlu dari Anda
+
+Slot ID AdSense (`PUBLIC_ADSENSE_SLOT_TOP/MID/BOTTOM/SIDEBAR`) masih kosong, jadi
+belum ada unit iklan yang tampil. `ads.txt` itu otorisasi publisher; slot ID hanya ada di
+dashboard AdSense. Lihat §11.
+
+## 11. Slot AdSense belum terisi
+
+`landing/src/components/AdsenseSlot.astro` sengaja `return null` kalau client atau slot
+kosong — supaya halaman tetap build bersih dan tidak ada CLS. Efeknya: script AdSense
+dimuat, tapi tidak ada unit yang bisa dirender.
+
+Butuh 4 slot ID dari **AdSense → Ads → Overview** (unit Display):
+
+```
+PUBLIC_ADSENSE_SLOT_TOP=...
+PUBLIC_ADSENSE_SLOT_MID=...
+PUBLIC_ADSENSE_SLOT_BOTTOM=...
+PUBLIC_ADSENSE_SLOT_SIDEBAR=...
+```
+
+Setelah diisi, rebuild image agar `import.meta.env` ikut ter-bake. Jangan karang ID —
+ID palsu bikin iklan tidak muncul dan bisa kena pelanggaran kebijakan AdSense.
+
+## 12. Cara deploy image baru (semua image dibangun manual)
+
+Coolify tidak bisa build lewat API (queue worker `deployments` tidak ada), jadi polanya:
+
+```bash
+# 1. di lokal: salin perubahan ke /tmp/ssoe (clone repo runner), commit, push
+# 2. kirim source
+cd /tmp && rm -rf ssoe-build && cp -R ssoe ssoe-build && rm -rf ssoe-build/.git
+find ssoe-build -name '._*' -delete
+COPYFILE_DISABLE=1 tar --no-xattrs -czf /tmp/ssoe-build.tgz ssoe-build
+scp -i ~/.ssh/id_rsa /tmp/ssoe-build.tgz root@130.254.47.93:/tmp/
+
+# 3. di server: build + recreate dengan env persisten
+ssh -i ~/.ssh/id_rsa root@130.254.47.93
+cd /tmp && rm -rf ssoe-build && tar --no-xattrs -xzf ssoe-build.tgz
+cd /tmp/ssoe-build && find . -name '._*' -delete
+docker build -t ssoe-new:latest .
+docker rm -f c9iqug5vvi9kjywt1fn6xnsc-135758379657
+docker run -d --name c9iqug5vvi9kjywt1fn6xnsc-135758379657 \
+  --restart unless-stopped --env-file /etc/seo-runner/env \
+  -v /data/coolify/applications/c9iqug5vvi9kjywt1fn6xnsc/data:/app/data \
+  ssoe-new:latest
+```
+
+`--env-file /etc/seo-runner/env` (bukan `/tmp/env-backup.txt`). `--no-xattrs` wajib
+karena file `._*` AppleDouble merusak `mesh-build.mjs` (§9 jebakan 3). Cek hasil:
+`docker logs <nama> | grep -E 'restore-published|heal-queue'` harus `live` = jumlah
+artikel yang diharapkan.
+
+Rollback: image lama ada sebagai `ssoe-old:backup`.

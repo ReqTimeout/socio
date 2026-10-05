@@ -11,9 +11,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
-const STATE_PATH = `${ROOT}/seo/state.json`;
+import { ROOT, STATE_PATH } from './paths.mjs';
 // Key: env dulu, lalu file key di repo landing (monorepo), lalu file opsional yang
 // bisa diset ke lokasi lain (image runner tidak punya landing/).
 const KEY =

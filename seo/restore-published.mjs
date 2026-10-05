@@ -21,7 +21,7 @@
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { BLOG_DIR, STATE_PATH } from './paths.mjs';
+import { BLOG_DIR, STATE_PATH, QUEUE_PATH } from './paths.mjs';
 
 function main() {
   let state;
@@ -48,6 +48,33 @@ function main() {
     }
     const m = /\/blog\/([a-z0-9-]+)\/?$/.exec(String(p.url || ''));
     if (m) slugs.add(m[1]);
+  }
+
+  // QUEUE juga|authoritatif. `publish.mjs` mencatat status publish di
+  // `queue.json` (t.status = 'published'), BUKAN di `state.published[]` —
+  // array itu cuma baseline dari bootstrap dan tidak pernah di-append.
+  //
+  // Dulu restore hanya percaya `state.published`, sehingga setiap artikel yang
+  // terbit SESUDAH bootstrap (mis. `cara-kerja-smm-panel`) tidak ada di daftar
+  // dan di-flip balik jadi `draft:true` pada rebuild berikutnya — artikel
+  // yang tayang diam-diam hilang dari situs.
+  //
+  // `queue.json` sekarang persisten di volume (SEO_QUEUE_PATH), jadi union
+  // ini aman dan menutup celah itu.
+  let queueAdded = 0;
+  try {
+    const queue = JSON.parse(readFileSync(QUEUE_PATH, 'utf8'));
+    for (const it of queue.items || []) {
+      if (it && it.status === 'published' && it.slug && !slugs.has(it.slug)) {
+        slugs.add(it.slug);
+        queueAdded++;
+      }
+    }
+    if (queueAdded) {
+      console.log(`[restore-published] +${queueAdded} slug diambil dari queue (tidak ada di state.published)`);
+    }
+  } catch {
+    // queue tidak ada / rusak — andalkan state.published saja
   }
   if (!slugs.size) {
     console.log('[restore-published] tidak ada slug bisa dibaca — lewati');
