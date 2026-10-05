@@ -200,44 +200,68 @@
   },
   "rampGate": {
     "lastRun": {
-      "at": "2026-10-01T11:17:37.816Z",
+      "at": "2026-10-05T09:21:32.799Z",
       "previous_daily_count": 3,
       "daily_count": 3,
-      "reason": "hold — discovery gap 100% (5 not_discovered / 5)",
+      "reason": "hold — sample tipis (discovered 4 < min_sample 5)",
       "window_days": 14,
       "metrics": {
         "total": 5,
-        "discovered": 0,
+        "discovered": 4,
         "indexed": 0,
-        "not_indexed": 0,
-        "not_discovered": 5,
+        "not_indexed": 4,
+        "not_discovered": 1,
         "blocked": 0,
         "unknown": 0,
-        "index_rate": null,
-        "discovery_gap_ratio": 1
+        "index_rate": 0,
+        "discovery_gap_ratio": 0.2
       },
       "alerts": [
-        "discovery_gap"
+        "insufficient_sample"
       ]
     },
     "alert": {
       "level": "warn",
-      "code": "discovery_gap",
-      "msg": "Google belum menemukan 5/5 URL. Perbaiki discovery (sitemap GSC + internal link money→blog) BUKAN turunkan volume publish."
+      "code": "insufficient_sample",
+      "msg": "hold — sample tipis (discovered 4 < min_sample 5)"
     }
   },
   "indexer": {
     "lastRun": {
-      "at": "2026-10-01T11:17:38.543Z",
+      "at": "2026-10-05T09:21:32.819Z",
       "dryRun": false,
       "windowDays": 1,
-      "rampTriggered": false,
+      "rampTriggered": true,
       "stages": [
+        {
+          "name": "indexnow",
+          "status": "skipped",
+          "reason": "no new urls",
+          "ms": 0
+        },
+        {
+          "name": "bing",
+          "status": "ok",
+          "code": 0,
+          "ms": 1226
+        },
+        {
+          "name": "gsc",
+          "status": "ok",
+          "code": 0,
+          "ms": 134
+        },
         {
           "name": "remedy",
           "status": "ok",
           "code": 0,
-          "ms": 143
+          "ms": 150
+        },
+        {
+          "name": "ramp",
+          "status": "ok",
+          "code": 0,
+          "ms": 136
         }
       ],
       "criticalFailed": 0,
@@ -308,7 +332,7 @@
   },
   "remedyAlert": null,
   "remedyLastRun": {
-    "at": "2026-10-01T11:17:38.529Z",
+    "at": "2026-10-05T09:21:32.668Z",
     "buckets": {
       "healthy": 0,
       "actionable": 0,

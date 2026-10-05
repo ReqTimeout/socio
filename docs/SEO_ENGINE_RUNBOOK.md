@@ -55,6 +55,38 @@ Runner membaca env sendiri (tidak memuat `.env` repo). Isi di
 > `GSC_SERVICE_ACCOUNT_JSON` harus **satu baris**. Cara aman:
 > `jq -c . <sa.json>` lalu tempel. Jangan salin private key ke mana pun yang ter-commit.
 
+## 3b. MODAL MINIMAL: indexer saja (tanpa publish)
+
+Kalau tujuan pertama "indexer jalan", tidak perlu CLOUDFLARE_API_TOKEN sama sekali.
+`runner/daily.mjs` punya env untuk mematikan tahap individual:
+
+| Env | Efek |
+|---|---|
+| `SEO_SKIP_PUBLISH=1` | indexer jalan, publish tidak |
+| `SEO_SKIP_GENERATE=1` | indexer jalan, generate tidak (hemat kuota Groq) |
+
+**Env minimum untuk indexer saja — 2 variabel:**
+
+```
+GSC_SERVICE_ACCOUNT_JSON=<JSON SA satu baris>
+GSC_SITE_URL=sc-domain:socio.id
+BING_API_KEY=<dari Bing Webmaster Tools>
+```
+
+`GSC_SERVICE_ACCOUNT_JSON` WAJIB diisi di Coolify. Di lokal boleh pakai
+`GSC_SA_FILE=/path/ke/sa.json` (yang sekarang dipakai). Cara safely ambil JSON
+satu baris: `jq -c . <sa.json>`
+
+Dengan 3 env di atas + `SEO_SKIP_PUBLISH=1` + `SEO_SKIP_GENERATE=1`, pipeline
+menjadi 100% read-only terhadap website: hanya submit URL ke mesin pencari +
+mengukur di GSC + menulis `state.json`. Tidak menyentuh `app.socio.id`, tidak
+butuh Cloudflare, tidak boros token LLM.
+
+**Terbukti jalan 5 Okt** (run lokal, 0 error):
+`indexnow 0 ping (5 URL sudah pernah dikirim) · bing OK · gsc OK · remedy OK ·
+ramp OK — index_rate 0.0% (0 indexed / 4 discovered), daily_count 3 (hold,
+sample tipis: discovered 4 < min_sample 5)`
+
 ## 4. Menjadwalkan
 
 Container memakai `CMD node runner/idle.mjs` (bukan pipeline) supaya Coolify tidak
