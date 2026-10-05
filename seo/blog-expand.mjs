@@ -321,28 +321,14 @@ function buildArticle(t) {
 
   // Judul & deskripsi dari sumber intro
   const TS = (x) => swapCity(x, introSrc.city, city.city);
-  // Judul WAJIB unik per kota. Versi lama memakai judul sumber apa adanya, jadi
-  // "beli-followers-instagram-batam" dan "-denpasar" получили judul yang PERSIS
-  // sama -> 28 title duplikat (FAIL). Karena bank cuma 8 sumber, judul harus
-  // disusun ulang: pola keyword target + kota + subjek dari sumber.
-  const kwTitle = kw.charAt(0).toUpperCase() + kw.slice(1);
-  const SUBJEK = {
-    smm: 'Panel SMM', panel: 'Panel SMM', reseller: 'Reseller',
-    followers: 'Followers', likes: 'Likes', views: 'Views',
-    harga: 'Harga', subscribers: 'Subscriber', youtube: 'YouTube',
-    tiktok: 'TikTok', instagram: 'Instagram',
-  };
-  const subjek =
-    Object.entries(SUBJEK).find(([k]) => kw.toLowerCase().includes(k))?.[1] || 'Panel SMM';
-  // Bentuk judul: "<Subjek> <kota> — <ringkasan sumber>" (potong ≤70)
-  const ringkas = TS(introSrc.title)
-    .split(/[:|]/)[0]
-    .replace(new RegExp(city.city, 'gi'), '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-  let title = `${subjek} ${capCity(city.city)}: ${ringkas.length > 18 ? ringkas : subjek + ' Praktis'}`;
+  // Judul WAJIB unik per KEYWORD (bukan per kota). Versi lama memakai pola
+  // "<Subjek> <kota>: <ringkas>" sehingga semua topik di kota yang sama dapat
+  // judul IDENTIK ("Panel SMM Kudus: Panel SMM Praktis" untuk umkm, reseller, agen,
+  // terpercaya) -> 311 artikel duplikat. Keyword di antrean unik per slug, jadi
+  // judul dibangun dari keyword target langsung.
+  const kwCap = kw.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  let title = kwCap.length <= 66 ? `${kwCap} Panduan` : kwCap;
   if (title.length > 70) title = title.slice(0, 67).trim() + '...';
-  if (!new RegExp(city.city, 'i').test(title)) title = `${subjek} ${capCity(city.city)}`.slice(0, 70);
   let description = TS(introSrc.description).replace(/\s{2,}/g, ' ').trim();
   if (description.length > 158) description = description.slice(0, 155).trim() + '...';
   if (!description) {
