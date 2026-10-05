@@ -213,6 +213,13 @@ if (!enabled) return null;
     var existing = read();
     if (!forced && (existing === 'all' || existing === 'analytics' || existing === 'essential')) {
       // Sudah pernah memutuskan? Jangan ganggu lagi.
+      // WAJIB releaseSpace(): `--consent-h` sudah diset oleh reserveSpace()
+      // di bawah pada load, SEBELUM cabang ini dicek. Kalau tidak dilepas
+      // di sini, spacer setinggi banner (~156px) tertinggal permanen di bawah
+      // footer untuk semua pengunjung yang sudah pernah klik tombol — tampil
+      // sebagai ruang kosong di halaman artikel. Bug nyata 5 Okt 2026.
+      releaseSpace();
+      banner.hidden = true;
       banner.setAttribute('data-resolved', existing);
       return;
     }
