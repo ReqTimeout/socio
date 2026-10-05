@@ -137,18 +137,12 @@ const GENERIC_SLUGS = new Set([
 const SOURCES = [];
 const files = existsSync(BLOG_DIR) ? readdirSync(BLOG_DIR).filter((f) => f.endsWith('.mdx')) : [];
 for (const f of files) {
-  try {
-    const a = parseArticle(f);
-    // HANYA artikel non-geo (city === null) yang aman di-swap. Artikel geo punya
-    // fakta kota sendiri di dalam prosa (sungai, pasar, tourist spot) — mengganti
-    // namanya saja menghasilkan "Wisata Sungai" di artikel SMM tertuan Elsewhere.
-    // Sumber bank: artikel GENERIC. Dua jenis diterima:
-    //  (a) tanpa nama kota sama sekali (added_by generic, 13 sumber), dan
-    //  (b) tanpa nama kota di title/slug (mis. smm-panel, cara-kerja-smm-panel).
-    // Artikel GEO (punya "…" kota di title) TIDAK dipakai — prosa-nya menyisipkan
-    // fakta kota (sungai, pasar) yang tak bisa di-swap.
-    const generic = a && (a.city === null || GENERIC_SLUGS.has(slug));
-    if (generic && a.sections.length >= 2 && a.faq.length === 5 && a.intro.length >= 1) SOURCES.push(a);
+    try {
+      const a = parseArticle(f);
+      // SEMUA artikel valid masuk bank. Normalisasi kota (swapCity + CITY_RE,
+      // ganti SEMUA nama kota dengan kota target) menangani fakta kota secara
+      // deterministik. Filter per-tipe di buildArticle memastikan topikal koheren.
+      if (a && a.sections.length >= 2 && a.faq.length === 5 && a.intro.length >= 1) SOURCES.push(a);
   } catch {
     /* artikel rusak dilewati */
   }
@@ -238,7 +232,25 @@ function buildArticle(t) {
   const plat = platformFor(kw);
   const city =
     CITIES.find((c) => kw.toLowerCase().includes(c.city.toLowerCase())) || CITIES[H(kw) % CITIES.length];
-  const src = SOURCES[H(`${salt}#src`) % SOURCES.length];
+  // TEMPLATE PER TIPE KEYWORD (seperti foryoutour: 7 tipe route -> 7 template).
+  // Target "harga" hanya memakai sumber "harga", target "umkm" hanya sumber "umkm".
+  // Ini membuat artikel se-tipe konsisten secara topikal, dan antar-tipe berbeda.
+  const TIPE_RE = [
+    ['harga', /harga|termurah|murah/i],
+    ['umkm', /umkm|usaha|jualan|reseller|agen/i],
+    ['cara', /\bcara\b/i],
+    ['jasa', /jasa|promosi/i],
+    ['sosmed', /followers|likes|views|subscriber|tiktok|instagram|youtube/i],
+  ];
+  const tipeKw = (TIPE_RE.find(([t, re]) => re.test(kw)) || ["info"])[0];
+  const tipeSlug = (S) => {
+    const x = S.toLowerCase();
+    return (TIPE_RE.find(([t, re]) => re.test(x))?.[0]) || 'info';
+  };
+  // Sumber se-tipe. Kalau tipe itu < 3 sumber, fallback ke semua (jangan gagal).
+  const sameType = SOURCES.filter((S) => tipeSlug(S.slug) === tipeKw);
+  const BANK = sameType.length >= 3 ? sameType : SOURCES;
+  const src = BANK[H(`${salt}#src`) % BANK.length];
   const T = (x) => swapCity(x, src.city, city.city);
 
   // ANTI-DUPLIKASI: satu seksi dari satu sumber BERBEDA. Versi lama mengambil
@@ -266,7 +278,10 @@ function buildArticle(t) {
   // Top-up dari sumber belum terpakai sampai 900 kata (batas 6 agar tidak over)
   let topup = 0;
   while (WORDS(secs.join('\n')) < 900 && topup < 8 && secs.length < 6) {
-    const o = SOURCES[H(`${salt}#top${topup}`) % SOURCES.length];
+    // PENTING: modulus harus BANK.length, bukan SOURCES.length. BANK untuk tipe
+    // langka (mis. cara=3 sumber) JAUH lebih kecil dari SOURCES (62). Salah
+    // modulus = index out-of-bounds = crash undefined.slug.
+    const o = BANK[H(`${salt}#top${topup}`) % BANK.length];
     if (!usedSrc.has(o.slug) && o.sections.length) {
       usedSrc.add(o.slug);
       picked.push(o.sections[H(`${salt}#tops${o.slug}`) % o.sections.length]);
