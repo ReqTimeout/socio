@@ -9,7 +9,8 @@ import BlogSidebar from '../../../components/BlogSidebar.astro';
 // /blog/page/[n] — layout portal sama dengan index (grid + sidebar).
 // PER_PAGE sinkron dengan index.astro (3 dari `rest` non-featured).
 export async function getStaticPaths() {
-  const PER_PAGE = 3;
+  // Sinkron dengan index.astro — jangan diubah terpisah.
+  const PER_PAGE = 12;
   const all = (await getCollection('blog', ({ data }) => !data.draft)).sort(
     (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
   );

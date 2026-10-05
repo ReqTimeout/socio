@@ -40,7 +40,6 @@
     <div class="hidden items-center gap-1.5 md:flex">
       <a href="/layanan" class="rounded-full px-3.5 py-2 text-sm font-bold text-ink-2 transition-colors hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink">Layanan</a>
       <a href="/reseller" class="rounded-full px-3.5 py-2 text-sm font-bold text-ink-2 transition-colors hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink">Reseller</a>
-      <a href="/blog" class="rounded-full px-3.5 py-2 text-sm font-bold text-ink-2 transition-colors hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink">Blog</a>
       <a href="#harga" class="rounded-full px-3.5 py-2 text-sm font-bold text-ink-2 transition-colors hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink">Harga</a>
       <a href="#faq" class="rounded-full px-3.5 py-2 text-sm font-bold text-ink-2 transition-colors hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink">FAQ</a>
       <span class="mx-2 h-6 w-0.5 rounded-full bg-[var(--hairline-strong)]" aria-hidden="true"></span>

@@ -15,7 +15,11 @@ const all = (await getCollection('blog', ({ data }) => !data.draft)).sort(
   (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
 
-const PER_PAGE = 3;
+// 3 terlalu sedikit: halaman 1 hanya menampilkan 4 artikel (1 featured + 3),
+// jadi pengunjung harus lewat beberapa halaman untuk melihat 10 artikel yang
+// published. 12 muat semuanya dalam satu halaman untuk kondisi sekarang, dan
+// pagination tetap bekerja saat jumlah artikel bertambah.
+const PER_PAGE = 12;
 const featured = all.find((a) => a.data.category === 'Reseller') ?? all[0];
 const rest = all.filter((a) => a.id !== featured?.id);
 const totalPages = Math.max(1, Math.ceil(rest.length / PER_PAGE));
