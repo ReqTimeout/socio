@@ -10,9 +10,9 @@
   "threshold_up": 0.85,
   "threshold_down": 0.7,
   "discovery_gap_alert": 0.5,
-  "updated_at": "2026-10-01T11:17:37.816Z",
+  "updated_at": "2026-10-05T09:21:32.799Z",
   "updated_by": "ramp-gate.mjs (auto)",
-  "reason": "hold — discovery gap 100% (5 not_discovered / 5)",
+  "reason": "hold — sample tipis (discovered 4 < min_sample 5)",
   "history": [
     {
       "at": "2026-10-01T09:54:08.976Z",
@@ -75,6 +75,27 @@
       },
       "alerts": [
         "discovery_gap"
+      ]
+    },
+    {
+      "at": "2026-10-05T09:21:32.799Z",
+      "previous_daily_count": 3,
+      "daily_count": 3,
+      "reason": "hold — sample tipis (discovered 4 < min_sample 5)",
+      "window_days": 14,
+      "metrics": {
+        "total": 5,
+        "discovered": 4,
+        "indexed": 0,
+        "not_indexed": 4,
+        "not_discovered": 1,
+        "blocked": 0,
+        "unknown": 0,
+        "index_rate": 0,
+        "discovery_gap_ratio": 0.2
+      },
+      "alerts": [
+        "insufficient_sample"
       ]
     }
   ]
