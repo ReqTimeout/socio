@@ -312,7 +312,9 @@
     if (svc) pickService(svc);
   }
 
-  // Search global lintas platform (debounce 350ms, min 2 char).
+  // Search global lintas platform — debounce 350ms, min 2 char.
+  // ID murni digit (mis. "12345") DEBOUNCE 0 (langsung tembak) supaya user
+  // bisa lompat ke layanan tanpa jeda.
   function onSearchInput() {
     clearTimeout(searchTimer);
     const q = searchQuery.trim();
@@ -320,7 +322,8 @@
       searchResults = [];
       return;
     }
-    searchTimer = setTimeout(async () => {
+    const isId = /^\d{1,8}$/.test(q);
+    const run = async () => {
       searching = true;
       try {
         const res = await fetch(`/pesan/services?q=${encodeURIComponent(q)}`);
@@ -330,7 +333,8 @@
       } finally {
         searching = false;
       }
-    }, 350);
+    };
+    searchTimer = setTimeout(run, isId ? 0 : 350);
   }
 
   // Pilih dari hasil search → sinkronkan chip platform+jenis lalu muat bucket
@@ -552,20 +556,28 @@
                             <span>· {formatRupiah(svc.pricePer1k)}/1000</span>
                           </span>
                         </span>
-                        {#if selectedService?.id === svc.id}
+                        <span class="flex shrink-0 flex-col items-end gap-1">
                           <span
-                            class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success text-white"
-                            aria-hidden="true"
+                            class="rounded-md bg-ink-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ink-600 tabular-nums"
+                            aria-label={`ID layanan ${svc.id}`}
+                            title={`Layanan #${svc.id}`}
                           >
-                            <Icon name="check" size={12} stroke={3} />
+                            #{svc.id}
                           </span>
-                        {/if}
-                        {#if svc.isRefill}
-                          <span
-                            class="shrink-0 rounded-full bg-success/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600"
-                            >♻</span
-                          >
-                        {/if}
+                          {#if selectedService?.id === svc.id}
+                            <span
+                              class="grid h-5 w-5 place-items-center rounded-full bg-success text-white"
+                              aria-hidden="true"
+                            >
+                              <Icon name="check" size={12} stroke={3} />
+                            </span>
+                          {:else if svc.isRefill}
+                            <span
+                              class="rounded-full bg-success/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600"
+                              >♻</span
+                            >
+                          {/if}
+                        </span>
                       </button>
                     </li>
                   {/each}
@@ -719,19 +731,28 @@
                               {/if}
                             </span>
                           </span>
-                          {#if selectedService?.id === svc.id}
+                          <span class="flex shrink-0 flex-col items-end gap-1">
                             <span
-                              class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success text-white"
-                              aria-hidden="true"
+                              class="rounded-md bg-ink-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ink-600 tabular-nums"
+                              aria-label={`ID layanan ${svc.id}`}
+                              title={`Layanan #${svc.id} — ketik di search untuk lompat cepat`}
                             >
-                              <Icon name="check" size={12} stroke={3} />
+                              #{svc.id}
                             </span>
-                          {:else if svc.isRefill}
-                            <span
-                              class="shrink-0 rounded-full bg-success/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600"
-                              >♻ Refill</span
-                            >
-                          {/if}
+                            {#if selectedService?.id === svc.id}
+                              <span
+                                class="grid h-5 w-5 place-items-center rounded-full bg-success text-white"
+                                aria-hidden="true"
+                              >
+                                <Icon name="check" size={12} stroke={3} />
+                              </span>
+                            {:else if svc.isRefill}
+                              <span
+                                class="rounded-full bg-success/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600"
+                                >♻ Refill</span
+                              >
+                            {/if}
+                          </span>
                         </button>
                       </li>
                     {/each}
