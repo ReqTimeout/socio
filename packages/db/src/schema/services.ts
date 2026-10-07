@@ -73,6 +73,7 @@ export const services = mysqlTable(
   (t) => ({
     categoryIdx: index("category_id_idx").on(t.categoryId),
     providerIdx: index("provider_id_idx").on(t.providerId),
+    statusIdx: index("status_idx").on(t.status),
   }),
 );
 

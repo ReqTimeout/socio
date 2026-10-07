@@ -1,28 +1,67 @@
 import { db } from "@socio/db";
 import { services } from "@socio/db/schema";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, like } from "drizzle-orm";
 import { json, error } from "@sveltejs/kit";
 import { baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
+import {
+  detectPlatform,
+  detectKind,
+  KIND_ORDER,
+  type PlatformId,
+  type KindId,
+} from "@socio/core/catalog";
 import { getPricingRules } from "$lib/server/pricing";
 import type { RequestHandler } from "./$types";
 
 /**
- * Services for a given category — powers the self-contained order flow
- * (kategori → layanan) without leaving /pesan, mirroring the old
- * ajax/order-get-service.php + order-select-service.php endpoints.
+ * Katalog layanan untuk flow /pesan baru (PESAN_REVAMP 2026-10-07):
+ * Platform (chip icon) → Jenis (chip) → Layanan (card).
+ *
+ * Query params (boleh kombinasi):
+ * - `platform`: id platform (instagram, tiktok, …) — filter bucket.
+ * - `kind`: id jenis (followers, likes, …) — filter dalam bucket.
+ * - `q`: search global lintas platform (min 2 char, max 60 hasil).
+ * - `kinds=1` + `platform`: KEMBALIKAN agregasi jenis [{id, count}] saja
+ *   (tanpa baris layanan) — untuk render chip jenis + hitungan live.
+ * - `cat`: id kategori LEGACY — kompatibilitas deep-link lama, tetap didukung.
+ *
+ * ANTI-SAMPAH: hanya `status = 1` yang pernah keluar. Platform/jenis dihitung
+ * dari nama layanan saat request → yang dinonaktifkan hilang otomatis.
  *
  * KEAMANAN: harga base/modal (price, price_api, price_reseller) dan persentase
- * markup TIDAK pernah dikirim ke client. Server menghitung harga efektif
- * per-1000 untuk level user login lalu hanya mengembalikan angka final
- * (`pricePer1k`). Client tinggal total = round(qty/1000 * pricePer1k).
+ * markup TIDAK pernah dikirim ke client — hanya harga efektif per-1000
+ * (`pricePer1k`) untuk level user login.
  */
 export const GET: RequestHandler = async ({ url, locals }) => {
   if (!locals.user) throw error(401, "Unauthorized");
+  const platform = (url.searchParams.get("platform") ?? "") as PlatformId | "";
+  const kind = (url.searchParams.get("kind") ?? "") as KindId | "";
+  const q = (url.searchParams.get("q") ?? "").trim().slice(0, 60);
   const cat = Number(url.searchParams.get("cat") ?? 0);
-  if (!cat) return json([]);
 
   const level = (locals.user.level as UserLevel) ?? "Member";
   const rule = (await getPricingRules())[level];
+
+  // Mode agregasi jenis — query ramping (nama saja), tanpa hitung harga.
+  if (url.searchParams.get("kinds") === "1" && platform) {
+    const names = await db
+      .select({ serviceName: services.serviceName })
+      .from(services)
+      .where(eq(services.status, 1))
+      .limit(10000);
+    const counts = new Map<KindId, number>();
+    for (const r of names) {
+      if (detectPlatform(r.serviceName) !== platform) continue;
+      const k = detectKind(r.serviceName);
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    return json(
+      KIND_ORDER.filter((k) => (counts.get(k) ?? 0) > 0).map((k) => ({
+        id: k,
+        count: counts.get(k) ?? 0,
+      })),
+    );
+  }
 
   const rows = await db
     .select({
@@ -39,11 +78,18 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       waktu: services.waktu,
     })
     .from(services)
-    .where(and(eq(services.categoryId, cat), eq(services.status, 1)))
-    .orderBy(asc(services.price));
+    .where(
+      and(
+        eq(services.status, 1),
+        ...(cat ? [eq(services.categoryId, cat)] : []),
+        ...(q ? [like(services.serviceName, `%${q.replace(/[%_\\]/g, "\\$&")}%`)] : []),
+      ),
+    )
+    .orderBy(asc(services.price))
+    .limit(q ? 60 : 10000);
 
-  // Petakan ke bentuk aman: hanya harga efektif per-1000 untuk level user ini.
-  const safe = rows.map((r) => {
+  // Petakan ke bentuk aman + tempel platform/jenis hasil deteksi.
+  const mapped = rows.map((r) => {
     const modal = Number(r.priceApi ?? 0);
     const base = baseForLevel(
       {
@@ -53,7 +99,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       },
       level,
     );
-    const pricePer1k = effectivePer1k(base, level, rule, modal);
     return {
       id: r.id,
       serviceName: r.serviceName,
@@ -63,9 +108,19 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       isRefill: r.isRefill,
       note: r.note,
       waktu: r.waktu,
-      pricePer1k,
+      pricePer1k: effectivePer1k(base, level, rule, modal),
+      platform: detectPlatform(r.serviceName),
+      kind: detectKind(r.serviceName),
     };
   });
 
-  return json(safe);
+  // Urut termurah per tampilan (harga efektif, bukan harga mentah).
+  mapped.sort((a, b) => a.pricePer1k - b.pricePer1k);
+
+  const filtered = mapped.filter(
+    (s) => (!platform || s.platform === platform) && (!kind || s.kind === kind),
+  );
+
+  // Cap 500 baris — bucket terbesar (IG followers) < 500; search max 60 dari SQL.
+  return json(filtered.slice(0, 500));
 };

@@ -1,21 +1,14 @@
 import { db } from "@socio/db";
-import {
-  services,
-  categories,
-  savedLinks,
-  orders,
-  users,
-  balanceLogs,
-  provider,
-} from "@socio/db/schema";
-import { eq, desc, asc, sql } from "drizzle-orm";
+import { services, savedLinks, orders, users, balanceLogs, provider } from "@socio/db/schema";
+import { eq, desc, sql } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
 import { computePrice, baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
+import { PLATFORMS, detectPlatform, detectKind, type PlatformId } from "@socio/core/catalog";
 import { smmturkAddFor } from "@socio/core/smmturk";
 import { decryptSecret } from "$lib/server/crypto";
 import { getPricingRules } from "$lib/server/pricing";
 import { validateCoupon, consumeCoupon, releaseCoupon } from "$lib/server/coupons";
-import { whitelabel, asciiSafe } from "$lib/format";
+import { asciiSafe } from "$lib/format";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
@@ -23,13 +16,26 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const prefillLink = url.searchParams.get("link") ?? "";
   const prefillQty = Number(url.searchParams.get("qty") ?? 0);
   const level = ((locals.user!.level as UserLevel) ?? "Member") as UserLevel;
-  const catRows = await db
-    .select({ id: categories.id, name: categories.name })
-    .from(categories)
-    .orderBy(asc(categories.name));
+  // Platform + hitungan layanan AKTIF — dihitung live dari nama layanan
+  // (status=1) sehingga yang dinonaktifkan hilang otomatis dari chip.
+  // Nama kategori mentah TIDAK PERNAH dikirim ke client lagi (anti-sampah).
+  const activeNames = await db
+    .select({ serviceName: services.serviceName })
+    .from(services)
+    .where(eq(services.status, 1));
+  const counts = new Map<PlatformId, number>();
+  for (const r of activeNames) {
+    const p = detectPlatform(r.serviceName);
+    counts.set(p, (counts.get(p) ?? 0) + 1);
+  }
+  const platforms = PLATFORMS.filter((p) => (counts.get(p.id) ?? 0) > 0).map((p) => ({
+    ...p,
+    count: counts.get(p.id) ?? 0,
+  }));
 
   // Bentuk AMAN untuk client: TIDAK ada harga base/modal (price, price_api,
   // price_reseller) maupun providerId — hanya harga efektif per-1000 level user.
+  // Platform/jenis ikut dihitung server supaya deep-link langsung buka bucket benar.
   let service: null | {
     id: number;
     serviceName: string;
@@ -41,6 +47,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     waktu: string;
     categoryId: number;
     pricePer1k: number;
+    platform: PlatformId;
+    kind: string;
   } = null;
 
   if (serviceId) {
@@ -80,6 +88,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
         waktu: s.waktu,
         categoryId: s.categoryId,
         pricePer1k: effectivePer1k(base, level, rule, modal),
+        platform: detectPlatform(s.serviceName),
+        kind: detectKind(s.serviceName),
       };
     }
   }
@@ -98,9 +108,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
   return {
     service,
-    // Safety-net white-label: nama kategori disanitasi saat baca, supaya branding
-    // hulu tidak pernah tampil walau ada baris lama yang belum di-backfill.
-    categories: catRows.map((c) => ({ id: c.id, name: whitelabel(c.name) })),
+    // Daftar platform bersih + jumlah layanan aktif (live count, anti-sampah).
+    platforms,
     saved,
     balance: locals.user!.balance ?? 0,
     level,

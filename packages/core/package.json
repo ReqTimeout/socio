@@ -6,6 +6,7 @@
     "./pricing": "./src/pricing.ts",
     "./smmturk": "./src/smmturk.ts",
     "./copy": "./src/copy.ts",
+    "./catalog": "./src/catalog.ts",
     "./rbac": "./src/rbac.ts",
     "./totp": "./src/totp.ts",
     "./order-status": "./src/order-status.ts"
