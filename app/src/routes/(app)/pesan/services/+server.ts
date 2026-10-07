@@ -18,13 +18,13 @@ import type { RequestHandler } from "./$types";
  * Event layanan dari `service_changelog` yang layak jadi badge inline di
  * kartu /pesan (PRD §6.3). Window 14 hari cukup — perubahan lebih lama
  * jadi noise (perubahan harga mingguan = sinyal palsu).
+ *
+ * Hanya SATU event per layanan — yang PALING BARU (`detectedAt DESC`).
+ * Kalau service punya price_up dan price_down dalam 14 hari, label yang
+ * muncul = perubahan paling baru (mis. harga turun kemarin lalu naik
+ * hari ini → label "Naik"). Bukan double badge "Turun + Naik" yang
+ * membingungkan. Sort by detectedAt bukan by event type priority.
  */
-const SVC_EVENT_PRIORITY: Record<string, number> = {
-  created: 0,
-  price_down: 1,
-  price_up: 2,
-};
-
 async function attachEventBadges<
   T extends { id: number },
 >(rows: T[]): Promise<Array<T & { events: Array<{ event: string; detectedAt: string }> }>> {
@@ -45,20 +45,18 @@ async function attachEventBadges<
         gte(serviceChangelog.detectedAt, cutoff),
       ),
     );
-  const grouped = new Map<number, Array<{ event: string; detectedAt: string }>>();
+  const latest = new Map<number, { event: string; detectedAt: string }>();
   for (const e of events) {
-    const arr = grouped.get(e.serviceId) ?? [];
-    arr.push({ event: e.event, detectedAt: e.detectedAt.toISOString() });
-    grouped.set(e.serviceId, arr);
+    const iso = e.detectedAt.toISOString();
+    const cur = latest.get(e.serviceId);
+    if (!cur || cur.detectedAt < iso) {
+      latest.set(e.serviceId, { event: e.event, detectedAt: iso });
+    }
   }
-  for (const arr of grouped.values()) {
-    arr.sort((a, b) => {
-      const pa = SVC_EVENT_PRIORITY[a.event] ?? 99;
-      const pb = SVC_EVENT_PRIORITY[b.event] ?? 99;
-      return pa - pb;
-    });
-  }
-  return rows.map((r) => ({ ...r, events: grouped.get(r.id) ?? [] }));
+  return rows.map((r) => {
+    const e = latest.get(r.id);
+    return { ...r, events: e ? [e] : [] };
+  });
 }
 
 /**
