@@ -154,3 +154,32 @@ export function newsFinalPrice(s: string | null | undefined): string {
   if (!ms || ms.length === 0) return "";
   return ms[ms.length - 1] + (/\/1k\s*$/.test(text) ? " /1k" : "");
 }
+
+/**
+ * PRD Service Sync v2 §6.3 — badge inline untuk event `service_changelog`
+ * yang ditampilkan di kartu layanan /pesan (compact, tanpa border, gaya
+ * konsisten dengan pill "Termurah" di /pesan). Hanya 3 event yang layak
+ * ditampilkan (sumber: enum `service_changelog.event`):
+ * - `created`    → "Baru"   (emerald)
+ * - `price_down` → "Turun"  (teal)
+ * - `price_up`   → "Naik"   (amber)
+ * Sisanya (name/category/minmax/cancel/dripfeed/refill/enabled/disabled)
+ * terlalu teknis dan tidak relevan untuk pengguna — tidak di-render.
+ */
+export type SvcEventBadge = {
+  label: string;
+  bg: string;
+  ink: string;
+};
+export function svcEventBadge(event: string | null | undefined): SvcEventBadge | null {
+  switch (event) {
+    case "created":
+      return { label: "Baru", bg: "bg-emerald-500/15", ink: "text-emerald-700" };
+    case "price_down":
+      return { label: "Turun", bg: "bg-teal-500/15", ink: "text-teal-700" };
+    case "price_up":
+      return { label: "Naik", bg: "bg-amber-500/15", ink: "text-amber-700" };
+    default:
+      return null;
+  }
+}

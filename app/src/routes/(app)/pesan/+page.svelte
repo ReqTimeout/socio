@@ -24,6 +24,7 @@ import {
     type KindId,
   } from "@socio/core/catalog";
   import { formatRupiah, serviceDisplayName, whitelabel } from "$lib/format";
+  import { svcEventBadge } from "$lib/news-meta";
   import { applyAction, enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
@@ -47,6 +48,10 @@ import {
     pricePer1k: number;
     platform: PlatformId;
     kind: KindId;
+    // Event `service_changelog` 14 hari terakhir (sudah di-prioritas server:
+    // created > price_down > price_up). Dipakai badge "Baru/Turun/Naik"
+    // inline di kartu (gaya pill "Termurah", tanpa border neo-brutalist).
+    events?: Array<{ event: string; detectedAt: string }>;
   };
 
   // ── Step state: Kategori (dropdown primary) → Layanan (cards) ──
@@ -355,11 +360,19 @@ import {
     }
   }
 
-  // Layanan yang tampil = fetch by kategori, di-narrow oleh platform/kind.
+  // Layanan yang tampil = fetch by kategori, di-narrow oleh platform/kind,
+  // di-sort ASCENDING by harga efektif per-1000. Server sudah sort juga (lihat
+  // /pesan/services +server.ts `mapped.sort(pricePer1k)`), tapi sort ulang di
+  // client sebagai defensive: kalau server sort someday berubah, label
+  // "Termurah" (konditional `i === 0`) tetap nempel di layanan paling murah.
   const visibleServices = $derived(
-    serviceList.filter(
-      (s) => (!selectedPlatform || s.platform === selectedPlatform) && (!selectedKind || s.kind === selectedKind),
-    ),
+    serviceList
+      .filter(
+        (s) =>
+          (!selectedPlatform || s.platform === selectedPlatform) &&
+          (!selectedKind || s.kind === selectedKind),
+      )
+      .sort((a, b) => a.pricePer1k - b.pricePer1k),
   );
 
   async function pickService(svc: Svc) {
@@ -853,6 +866,16 @@ import {
                                   >Termurah</span
                                 >
                               {/if}
+                              {#each (svc.events ?? []).slice(0, 2) as ev (ev.event)}
+                                {@const b = svcEventBadge(ev.event)}
+                                {#if b}
+                                  <span
+                                    class="rounded-full px-1.5 py-px text-[10px] font-extrabold {b.bg} {b.ink}"
+                                  >
+                                    {b.label}
+                                  </span>
+                                {/if}
+                              {/each}
                             </span>
                           </span>
                           <span class="flex shrink-0 flex-col items-end gap-1">

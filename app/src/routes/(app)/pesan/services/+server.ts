@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
-import { services } from "@socio/db/schema";
-import { eq, and, asc, like, sql } from "drizzle-orm";
+import { services, serviceChangelog } from "@socio/db/schema";
+import { eq, and, asc, like, sql, inArray, gte } from "drizzle-orm";
 import { json, error } from "@sveltejs/kit";
 import { baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
 import {
@@ -13,6 +13,53 @@ import {
 } from "@socio/core/catalog";
 import { getPricingRules } from "$lib/server/pricing";
 import type { RequestHandler } from "./$types";
+
+/**
+ * Event layanan dari `service_changelog` yang layak jadi badge inline di
+ * kartu /pesan (PRD §6.3). Window 14 hari cukup — perubahan lebih lama
+ * jadi noise (perubahan harga mingguan = sinyal palsu).
+ */
+const SVC_EVENT_PRIORITY: Record<string, number> = {
+  created: 0,
+  price_down: 1,
+  price_up: 2,
+};
+
+async function attachEventBadges<
+  T extends { id: number },
+>(rows: T[]): Promise<Array<T & { events: Array<{ event: string; detectedAt: string }> }>> {
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
+  const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  const events = await db
+    .select({
+      serviceId: serviceChangelog.serviceId,
+      event: serviceChangelog.event,
+      detectedAt: serviceChangelog.detectedAt,
+    })
+    .from(serviceChangelog)
+    .where(
+      and(
+        inArray(serviceChangelog.serviceId, ids),
+        inArray(serviceChangelog.event, ["created", "price_down", "price_up"]),
+        gte(serviceChangelog.detectedAt, cutoff),
+      ),
+    );
+  const grouped = new Map<number, Array<{ event: string; detectedAt: string }>>();
+  for (const e of events) {
+    const arr = grouped.get(e.serviceId) ?? [];
+    arr.push({ event: e.event, detectedAt: e.detectedAt.toISOString() });
+    grouped.set(e.serviceId, arr);
+  }
+  for (const arr of grouped.values()) {
+    arr.sort((a, b) => {
+      const pa = SVC_EVENT_PRIORITY[a.event] ?? 99;
+      const pb = SVC_EVENT_PRIORITY[b.event] ?? 99;
+      return pa - pb;
+    });
+  }
+  return rows.map((r) => ({ ...r, events: grouped.get(r.id) ?? [] }));
+}
 
 /**
  * Katalog layanan untuk flow /pesan (PESAN_REVAMP 2026-10-07 rev 4):
@@ -72,22 +119,24 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       { price: Number(row.price), priceApi: modal, priceReseller: Number(row.priceReseller) },
       level,
     );
-    return json([
-      {
-        id: row.id,
-        serviceName: row.serviceName,
-        type: row.type,
-        min: row.min,
-        max: row.max,
-        isRefill: row.isRefill,
-        note: row.note,
-        waktu: row.waktu,
-        categoryId: row.categoryId,
-        pricePer1k: effectivePer1k(base, level, rule, modal),
-        platform: detectPlatform(row.serviceName),
-        kind: detectKind(row.serviceName),
-      },
-    ]);
+    return json(
+      await attachEventBadges([
+        {
+          id: row.id,
+          serviceName: row.serviceName,
+          type: row.type,
+          min: row.min,
+          max: row.max,
+          isRefill: row.isRefill,
+          note: row.note,
+          waktu: row.waktu,
+          categoryId: row.categoryId,
+          pricePer1k: effectivePer1k(base, level, rule, modal),
+          platform: detectPlatform(row.serviceName),
+          kind: detectKind(row.serviceName),
+        },
+      ]),
+    );
   }
 
   // Mode agregasi jenis (untuk chip icon di client).
@@ -178,5 +227,5 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   );
 
   if (q && tokens.length === 0) return json([]);
-  return json(filtered.slice(0, 1000));
+  return json(await attachEventBadges(filtered.slice(0, 1000)));
 };
