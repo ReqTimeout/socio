@@ -23,7 +23,7 @@ import {
     type PlatformId,
     type KindId,
   } from "@socio/core/catalog";
-  import { formatRupiah, serviceDisplayName } from "$lib/format";
+  import { formatRupiah, serviceDisplayName, whitelabel } from "$lib/format";
   import { applyAction, enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
@@ -54,17 +54,44 @@ import {
   let selectedCat = $state<number>(0);
   let selectedPlatform = $state<PlatformId | "">("");
   let selectedKind = $state<KindId | "">("");
+  let showAllPlatforms = $state(false);
   let serviceList = $state<Svc[]>([]);
   let loadingServices = $state(false);
   let selectedService = $state<Svc | null>(null);
 
   // Dropdown options dari server (kategori provider, sudah whitelabel).
+  // Filter chip-icon di-narrow di sini — kalau user klik icon platform/jenis,
+  // dropdown hanya menampilkan kategori yang punya layanan sesuai icon.
   const catsOptions = $derived(
-    data.cats.map((c) => ({
-      value: c.id,
-      label: c.name,
-      hint: c.count > 0 ? `${c.count}` : undefined,
-    })),
+    data.cats
+      .filter((c) => {
+        if (selectedPlatform && !(c.platforms ?? []).includes(selectedPlatform)) return false;
+        if (selectedKind && !(c.kinds ?? []).includes(selectedKind)) return false;
+        return true;
+      })
+      .map((c) => ({
+        value: c.id,
+        label: trimCatLabel(c.name),
+        hint: c.count > 0 ? `${c.count}` : undefined,
+      })),
+  );
+
+  // Label panjang MAX_CAT_CHARS karakter lalu "…" — opsi lihat di dropdown
+  // jadi mudah di-scan (owner vision 7 Okt). Whitelabel() sudah strip
+  // Provider/SMMTURK, tapi nama panjang seperti
+  // "(AI)Premium Spam Off Followers[Read...]..." tetap panjang.
+  const MAX_CAT_CHARS = 72;
+  function trimCatLabel(s: string): string {
+    return s.length > MAX_CAT_CHARS ? s.slice(0, MAX_CAT_CHARS).trim() + "…" : s;
+  }
+
+  // Platform cards: top-8 default + "Tampilkan semua" toggle (owner vision 7 Okt).
+  const TOP_PLATFORMS = 8;
+  const visiblePlatforms = $derived(
+    showAllPlatforms ? data.platforms : data.platforms.slice(0, TOP_PLATFORMS),
+  );
+  const totalServiceCount = $derived(
+    data.platforms.reduce((acc, p) => acc + p.count, 0),
   );
 
   // ── Search global lintas platform ────────────────────────
@@ -284,19 +311,48 @@ import {
     if (catId === selectedCat && serviceList.length > 0) return;
     selectedCat = catId;
     selectedService = null;
-    selectedPlatform = "";
-    selectedKind = "";
+    // selectedPlatform + selectedKind JANGAN di-clear: ini PRIMARY filter
+    // yang user pilih sebelum kategori. Kalau kategori baru tidak match,
+    // visibleServices akan kosong dan mereka bisa reset icon-nya.
     await loadServicesByCat(catId);
   }
 
   // Filter SEKUNDER dari chip icon — client-side narrowing, no re-fetch.
+  // Klik platform card: toggle on/off, sekaligus reset selectedCat kalau
+  // kategori yang sedang dipilih TIDAK punya layanan platform tsb.
   function setPlatformFilter(p: PlatformId | "") {
     haptic(8);
-    selectedPlatform = p === selectedPlatform ? "" : p;
+    const next: PlatformId | "" = p === selectedPlatform ? "" : p;
+    selectedPlatform = next;
+    if (selectedCat) {
+        const cat = data.cats.find((c) => c.id === selectedCat);
+        const stillValid =
+          !!cat &&
+          (!next || (cat.platforms ?? []).includes(next)) &&
+          (!selectedKind || (cat.kinds ?? []).includes(selectedKind));
+        if (!stillValid) {
+          selectedCat = 0;
+          serviceList = [];
+          selectedService = null;
+        }
+      }
   }
   function setKindFilter(k: KindId) {
     haptic(8);
-    selectedKind = k === selectedKind ? "" : k;
+    const next: KindId | "" = k === selectedKind ? "" : k;
+    selectedKind = next;
+    if (selectedCat) {
+      const cat = data.cats.find((c) => c.id === selectedCat);
+      const stillValid =
+        !!cat &&
+        (!selectedPlatform || (cat.platforms ?? []).includes(selectedPlatform)) &&
+        (!next || (cat.kinds ?? []).includes(next));
+      if (!stillValid) {
+        selectedCat = 0;
+        serviceList = [];
+        selectedService = null;
+      }
+    }
   }
 
   // Layanan yang tampil = fetch by kategori, di-narrow oleh platform/kind.
@@ -545,8 +601,8 @@ import {
                           : ''}"
                       >
                         <span class="min-w-0 flex-1 text-left">
-                          <span class="block truncate text-sm font-bold leading-snug">
-                            {serviceDisplayName(svc.serviceName)}
+                          <span class="block line-clamp-2 text-sm font-bold leading-snug">
+                            {whitelabel(svc.serviceName)}
                           </span>
                           <span
                             class="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-ink-500"
@@ -588,79 +644,144 @@ import {
               {/if}
             </div>
           {:else}
-            <!-- Kategori dropdown — PRIMARY (1132 dari provider, whitelabel) -->
+            <!-- Platform filter (PRIMARY) — owner vision rev 7 Okt:
+                 • Mobile: icon kecil brand-color (icon-only, horizontal scroll).
+                 • Desktop: full card dengan icon + label + count.
+                 Klik = setPlatformFilter, narrows dropdown kategori + layanan. -->
+            <div>
+              <span class="mb-1.5 block text-sm font-bold">Platform</span>
+
+              <!-- Mobile: small icon-only, brand color, horizontal scroll -->
+              <div
+                class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:hidden"
+                role="radiogroup"
+                aria-label="Filter platform"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedPlatform === ""}
+                  aria-label="Semua platform"
+                  onclick={() => setPlatformFilter("")}
+                  title="Semua"
+                  class="svc-icon shrink-0 {selectedPlatform === '' ? 'is-selected' : ''}"
+                >
+                  <Icon name="grid" size={15} />
+                </button>
+                {#each data.platforms as p (p.id)}
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selectedPlatform === p.id}
+                    aria-label={p.label}
+                    onclick={() => setPlatformFilter(p.id as PlatformId)}
+                    title="{p.label} — {p.count.toLocaleString('id-ID')} layanan"
+                    class="svc-icon shrink-0 {selectedPlatform === p.id ? 'is-selected' : ''}"
+                    style="--brand: {p.color}"
+                  >
+                    <Icon name={p.icon} size={15} />
+                  </button>
+                {/each}
+              </div>
+
+              <!-- Desktop: full card grid -->
+              <div
+                class="hidden lg:grid grid-cols-3 gap-2 xl:grid-cols-4"
+                role="radiogroup"
+                aria-label="Filter platform"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedPlatform === ""}
+                  onclick={() => setPlatformFilter("")}
+                  class="svc-tile justify-center text-center {selectedPlatform === '' ? 'is-selected' : ''}"
+                >
+                  <Icon name="grid" size={16} class="text-ink-500" />
+                  <span class="block truncate text-xs font-bold">Semua</span>
+                  <span class="block text-[10px] tabular-nums text-ink-500"
+                    >{totalServiceCount.toLocaleString("id-ID")}</span
+                  >
+                </button>
+                {#each visiblePlatforms as p (p.id)}
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selectedPlatform === p.id}
+                    onclick={() => setPlatformFilter(p.id as PlatformId)}
+                    title={p.label}
+                    class="svc-tile justify-center text-center {selectedPlatform === p.id ? 'is-selected' : ''}"
+                    style="--brand: {p.color}"
+                  >
+                    <Icon name={p.icon} size={16} class="brand-icon" />
+                    <span class="block truncate text-xs font-bold">{p.label}</span>
+                    <span class="block text-[10px] tabular-nums text-ink-500"
+                      >{p.count.toLocaleString("id-ID")}</span
+                    >
+                  </button>
+                {/each}
+              </div>
+              {#if data.platforms.length > TOP_PLATFORMS}
+                <button
+                  type="button"
+                  onclick={() => (showAllPlatforms = !showAllPlatforms)}
+                  class="mt-1.5 hidden w-full items-center justify-center gap-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/5 active:scale-[0.98] lg:inline-flex"
+                >
+                  {showAllPlatforms ? "Lebih sedikit" : `Tampilkan semua (${data.platforms.length})`}
+                  <Icon name={showAllPlatforms ? "chevron_up" : "chevron_down"} size={13} />
+                </button>
+              {/if}
+            </div>
+
+            <!-- Kategori dropdown — di-narrow oleh selectedPlatform (0824).
+                 Tetap PRIMARY (1132 whitelabel dari provider). multiline=true
+                 supaya nama panjang "[Cheap Price]━━ Instagram ..." tetap
+                 kebaca utuh saat dropdown dibuka. -->
             <div>
               <span class="mb-1.5 block text-sm font-bold">Kategori</span>
               <Select
                 value={selectedCat}
                 options={catsOptions}
-                placeholder="Pilih kategori…"
+                placeholder={selectedPlatform ? `Kategori ${platformById(selectedPlatform).label}…` : "Pilih kategori…"}
                 searchPlaceholder="Cari kategori…"
+                multiline
                 onChange={(v) => selectCategory(Number(v))}
               />
             </div>
 
-            <!-- Platform + Kind icon filter — SEKUNDER, small icon-only.
-                 Tampil setelah kategori dipilih untuk narrow cards yang muncul.
-                 Owner request: "tambah icon2 kecil sebagai filter" — di sini. -->
-            {#if selectedCat}
-              <div class="space-y-2">
-                <!-- Platform icon (kecil) — scrollable di mobile -->
-                <div
-                  class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
-                  role="radiogroup"
-                  aria-label="Filter platform"
+            <!-- Kind chip filter — kecil, scrollable, setelah kategori.
+                 Menyesempitkan card dalam kategori. -->
+            {#if selectedCat && serviceList.length > 0}
+              <div
+                class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+                role="radiogroup"
+                aria-label="Filter jenis"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedKind === ""}
+                  onclick={() => setKindFilter("" as KindId)}
+                  title="Semua jenis"
+                  class="icon-chip shrink-0 {selectedKind === '' ? 'is-selected' : ''}"
                 >
+                  <Icon name="grid" size={13} />
+                  Semua
+                </button>
+                {#each KIND_ORDER.filter((k) => serviceList.some((s) => s.kind === k)) as kid (kid)}
+                  {@const kd = kindById(kid)}
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={selectedPlatform === ""}
-                    onclick={() => setPlatformFilter("")}
-                    title="Semua platform"
-                    class="icon-chip shrink-0 {selectedPlatform === '' ? 'is-selected' : ''}"
+                    aria-checked={selectedKind === kid}
+                    onclick={() => setKindFilter(kid)}
+                    title={kd.label}
+                    class="icon-chip shrink-0 {selectedKind === kid ? 'is-selected' : ''}"
                   >
-                    <Icon name="grid" size={13} />
-                    Semua
+                    <Icon name={kd.icon} size={13} />
+                    <span class="hidden lg:inline">{kd.label}</span>
                   </button>
-                  {#each data.platforms as p (p.id)}
-                    {@const present = visibleServices.some((s) => s.platform === p.id)}
-                    {#if present}
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={selectedPlatform === p.id}
-                          onclick={() => setPlatformFilter(p.id as PlatformId)}
-                          title={p.label}
-                          class="icon-chip shrink-0 {selectedPlatform === p.id ? 'is-selected' : ''}"
-                        >
-                          <Icon name={p.icon} size={13} />
-                          <span class="hidden lg:inline">{p.label}</span>
-                        </button>
-                    {/if}
-                  {/each}
-                </div>
-
-                <!-- Kind icon (kecil) — scrollable di mobile -->
-                <div
-                  class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
-                  role="radiogroup"
-                  aria-label="Filter jenis"
-                >
-                  {#each KIND_ORDER.filter((k) => visibleServices.some((s) => s.kind === k)) as kid (kid)}
-                    {@const kd = kindById(kid)}
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={selectedKind === kid}
-                      onclick={() => setKindFilter(kid)}
-                      title={kd.label}
-                      class="icon-chip shrink-0 {selectedKind === kid ? 'is-selected' : ''}"
-                    >
-                      <Icon name={kd.icon} size={13} />
-                      <span class="hidden lg:inline">{kd.label}</span>
-                    </button>
-                  {/each}
-                </div>
+                {/each}
               </div>
             {/if}
 
@@ -714,9 +835,9 @@ import {
                             ? 'is-selected'
                             : ''}"
                         >
-                          <span class="min-w-0 flex-1 text-left">
-                            <span class="block truncate text-sm font-bold leading-snug">
-                              {serviceDisplayName(svc.serviceName)}
+<span class="min-w-0 flex-1 text-left">
+                            <span class="block line-clamp-2 text-sm font-bold leading-snug">
+                            {whitelabel(svc.serviceName)}
                             </span>
                             <span
                               class="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-ink-500"
@@ -1174,7 +1295,7 @@ import {
             <div class="flex justify-between gap-3 border-b border-dashed border-ink-100 pb-2">
               <dt class="shrink-0 text-ink-500">Layanan</dt>
               <dd class="truncate text-right font-semibold">
-                {selectedService ? serviceDisplayName(selectedService.serviceName) : "—"}
+                {selectedService ? whitelabel(selectedService.serviceName) : "—"}
               </dd>
             </div>
             <div class="flex justify-between border-b border-dashed border-ink-100 pb-2">
@@ -1285,6 +1406,63 @@ import {
     border-color: var(--color-ink-900);
     color: #fff;
   }
+  /* PESAN_REVAMP rev 5: platform card tile — PRIMARY filter (icon + label
+     + count), grid 2-3-4 col. Klik = setPlatformFilter. */
+  .svc-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.4rem 0.3rem;
+    border-radius: 0.65rem;
+    border: 1.5px solid var(--color-ink-100);
+    background: #fff;
+    min-height: 52px;
+    transition:
+      border-color 180ms var(--ease-out-soft),
+      background-color 180ms var(--ease-out-soft),
+      transform 180ms var(--ease-out-soft),
+      box-shadow 180ms var(--ease-out-soft);
+  }
+  .svc-tile:active {
+    transform: scale(0.97);
+  }
+  .svc-tile.is-selected {
+    border-color: var(--color-ink-900);
+    background: rgb(0 95 124 / 0.05);
+    box-shadow: 2px 2px 0 var(--color-ink-900);
+  }
+  /* PESAN_REVAMP rev 7: svc-icon — mobile-only icon kecil brand color,
+     horizontal scroll. Selected = invert jadi dark. */
+  .svc-icon {
+    --brand: var(--color-ink-500);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 0.6rem;
+    background: #fff;
+    border: 1.5px solid var(--color-ink-100);
+    color: var(--brand);
+    transition:
+      background-color 180ms var(--ease-out-soft),
+      border-color 180ms var(--ease-out-soft),
+      color 180ms var(--ease-out-soft),
+      transform 180ms var(--ease-out-soft);
+  }
+  .svc-icon:active {
+    transform: scale(0.93);
+  }
+  .svc-icon.is-selected {
+    background: var(--color-ink-900);
+    border-color: var(--color-ink-900);
+    color: #fff;
+  }
+  /* Brand icon tint untuk desktop card */
+  .brand-icon {
+    color: var(--brand, var(--color-primary));
+  }
   .svc-card {
     display: flex;
     align-items: center;
@@ -1308,7 +1486,9 @@ import {
   }
   @media (prefers-reduced-motion: reduce) {
     .icon-chip,
-    .svc-card {
+    .svc-card,
+    .svc-tile,
+    .svc-icon {
       transition: none;
     }
   }
@@ -1338,6 +1518,10 @@ import {
     .svc-card .font-mono {
       font-size: 9.5px;
       padding: 0.1rem 0.4rem;
+    }
+    .svc-tile {
+      min-height: 48px;
+      padding: 0.35rem 0.25rem;
     }
   }
   /* MOBILE-ONLY: bottom dock sudah ada Total+Saldo. Pastikan card Layanan

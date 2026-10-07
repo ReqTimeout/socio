@@ -63,8 +63,10 @@ export function fixMojibake(s: string): string {
  */
 export function serviceDisplayName(name: string): string {
   let fixed = fixMojibake(name);
-  // Replace provider branding with "Socio" (varian: SMMTURK / SMMTurk / SMMTÜRK)
-  fixed = fixed.replace(/SMMT[UÜ]RK/gi, "Socio");
+  // Replace provider branding with "Socio" (varian: SMMTURK / SMMTurk /
+  // SMMTÜRK / double-encode SMMTÃRK). Owner 7 Okt: nama masih bocor di UI
+  // karena spasi + char non-ASCII memisahkan token.
+  fixed = fixed.replace(/SMMT[\sÜÃœ\u0080-\u00BF]*[UÜ]?[\sÜÃœ\u0080-\u00BF]*RK/gi, "Socio");
   // Remove bracket tags containing "Provider" (e.g. "[ Provider ]", "[%100 Provider]", "[ %100 Provider ]")
   fixed = fixed.replace(/\[\s*%?\d*\s*Provider\s*\]/gi, "");
   // Collapse whitespace left by removals
@@ -84,17 +86,32 @@ export function serviceDisplayName(name: string): string {
  * 2. buang segmen ber-pipe yang menyebut brand,
  * 3. buang anak-kalimat trailing (setelah , : - –) yang masih menyebut brand,
  * 4. netralisasi sisa token brand → "Socio",
- * 5. rapikan kata noise ("Own"/"Exclusive"/"Special Update") + separator menggantung.
+ * 5. rapikan kata noise ("Own"/"Exclusive"/"Special Update") + separator
+ *    menggantung,
+ * 6. buang tag `[...Provider...]` (bracket-wrapped), suffix `| Provider`,
+ *    dan trailing ` | Provider(s) ` (idempotent, owner 7 Okt).
  */
 export function whitelabel(raw: string): string {
   let s = fixMojibake(String(raw ?? ""));
-  s = s.replace(/\((?:[^()]*\bSMMT[UÜ]RK\b[^()]*)\)/gi, " ");
+  // Pola SMMTURK + varian mojibake UTF-8 (Ü Latin1, Ã double-encode),
+  // dengan/tanpa spasi antara Ü dan RK. Owner 7 Okt: nama kategori masih
+  // bocor di dropdown karena space memisahkan Ü dari RK. Middle char boleh
+  // kosong/spasi/Ü/Ã/kontrol byte + U opsional, jadi SMMTURK & SMMTÜ RK
+  // & SMMTÃŒRK semua kena.
+  const SMMT_PAT = "SMMT[\\sÜÃœ\\u0080-\\u00BF]*[UÜ]?[\\sÜÃœ\\u0080-\\u00BF]*RK";
+  s = s.replace(new RegExp(`\\((?:[^()]*${SMMT_PAT}[^()]*)\\)`, "gi"), " ");
   const parts = s.split("|");
-  const kept = parts.filter((p) => !/SMMT[UÜ]RK/i.test(p));
+  const kept = parts.filter((p) => !new RegExp(SMMT_PAT, "i").test(p));
   s = (kept.length ? kept : parts).join("|");
-  s = s.replace(/[:,\-\u2013]\s*[^|]*\bSMMT[UÜ]RK\b[^|]*$/gi, "");
-  s = s.replace(/SMMT[UÜ]RK/gi, "Socio");
-  s = s.replace(/(^|\||,|\s)\s*(Special Update|Own|Exclusive)\b/gi, "$1");
+  s = s.replace(new RegExp(`[:,–-—\\u2013]\\s*[^|]*${SMMT_PAT}[^|]*$`, "gi"), "");
+  s = s.replace(new RegExp(SMMT_PAT, "gi"), "Socio");
+  // Provider patterns — bracket-wrapped OR trailing ` | Provider` suffix OR
+  // ` of Provider(s)` frasa. Pertahankan nama provider lain (Tokopedia/Shopee/dll)
+  // karena bukan brand panel — itu penanda marketplace.
+  s = s.replace(/\[\s*[^\]]*\bProvider(s)?\b[^\]]*\]/gi, "");
+  s = s.replace(/\|\s*Provider(s)?\s*$/gi, "");
+  s = s.replace(/\s+of\s+Providers?\b/gi, "");
+  s = s.replace(/(^|\||,|;|\s|[-–—:])(\s*)(Special Update|Own|Exclusive)\b/gi, "$1");
   s = s.replace(/\s{2,}/g, " ").trim();
   // buang pemisah menggantung di ujung hasil penghapusan (mis. "... -", "... |")
   s = s

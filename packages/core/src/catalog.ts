@@ -46,34 +46,36 @@ export interface PlatformDef {
   label: string;
   /** Nama icon di @socio/ui Icon — SETIAP platform WAJIB punya icon sendiri. */
   icon: string;
+  /** Brand color hex — dipakai untuk tint icon/swatch di UI. */
+  color: string;
 }
 
 export const PLATFORMS: PlatformDef[] = [
-  { id: "instagram", label: "Instagram", icon: "instagram" },
-  { id: "tiktok", label: "TikTok", icon: "tiktok" },
-  { id: "youtube", label: "YouTube", icon: "youtube" },
-  { id: "facebook", label: "Facebook", icon: "facebook" },
-  { id: "x", label: "X (Twitter)", icon: "twitter" },
-  { id: "telegram", label: "Telegram", icon: "telegram" },
-  { id: "whatsapp", label: "WhatsApp", icon: "whatsapp" },
-  { id: "spotify", label: "Spotify", icon: "spotify" },
-  { id: "musik", label: "Musik", icon: "music" },
-  { id: "kwai", label: "Kwai", icon: "play" },
-  { id: "snapchat", label: "Snapchat", icon: "ghost" },
-  { id: "quora", label: "Quora", icon: "help" },
-  { id: "kick", label: "Kick", icon: "zap" },
-  { id: "twitch", label: "Twitch", icon: "twitch" },
-  { id: "pinterest", label: "Pinterest", icon: "pin" },
-  { id: "reddit", label: "Reddit", icon: "reddit" },
-  { id: "threads", label: "Threads", icon: "at" },
-  { id: "linkedin", label: "LinkedIn", icon: "linkedin" },
-  { id: "discord", label: "Discord", icon: "message" },
-  { id: "bluesky", label: "Bluesky", icon: "cloud" },
-  { id: "xiaohongshu", label: "RedNote", icon: "book" },
-  { id: "trustpilot", label: "Trustpilot", icon: "shield" },
-  { id: "marketplace", label: "Marketplace", icon: "shopping" },
-  { id: "seo", label: "SEO & Web", icon: "globe" },
-  { id: "other", label: "Lainnya", icon: "grid" },
+  { id: "instagram", label: "Instagram", icon: "instagram", color: "#E1306C" },
+  { id: "tiktok", label: "TikTok", icon: "tiktok", color: "#010101" },
+  { id: "youtube", label: "YouTube", icon: "youtube", color: "#FF0000" },
+  { id: "facebook", label: "Facebook", icon: "facebook", color: "#1877F2" },
+  { id: "x", label: "X (Twitter)", icon: "twitter", color: "#000000" },
+  { id: "telegram", label: "Telegram", icon: "telegram", color: "#229ED9" },
+  { id: "whatsapp", label: "WhatsApp", icon: "whatsapp", color: "#25D366" },
+  { id: "spotify", label: "Spotify", icon: "spotify", color: "#1DB954" },
+  { id: "musik", label: "Musik", icon: "music", color: "#A855F7" },
+  { id: "kwai", label: "Kwai", icon: "play", color: "#FF6600" },
+  { id: "snapchat", label: "Snapchat", icon: "ghost", color: "#FFFC00" },
+  { id: "quora", label: "Quora", icon: "help", color: "#B92B27" },
+  { id: "kick", label: "Kick", icon: "zap", color: "#53FC18" },
+  { id: "twitch", label: "Twitch", icon: "twitch", color: "#9146FF" },
+  { id: "pinterest", label: "Pinterest", icon: "pin", color: "#E60023" },
+  { id: "reddit", label: "Reddit", icon: "reddit", color: "#FF4500" },
+  { id: "threads", label: "Threads", icon: "at", color: "#000000" },
+  { id: "linkedin", label: "LinkedIn", icon: "linkedin", color: "#0A66C2" },
+  { id: "discord", label: "Discord", icon: "message", color: "#5865F2" },
+  { id: "bluesky", label: "Bluesky", icon: "cloud", color: "#1185FE" },
+  { id: "xiaohongshu", label: "RedNote", icon: "book", color: "#FE2C55" },
+  { id: "trustpilot", label: "Trustpilot", icon: "shield", color: "#00B67A" },
+  { id: "marketplace", label: "Marketplace", icon: "shopping", color: "#F59E0B" },
+  { id: "seo", label: "SEO & Web", icon: "globe", color: "#0891B2" },
+  { id: "other", label: "Lainnya", icon: "grid", color: "#6B7280" },
 ];
 
 export const platformById = (id: string): PlatformDef =>

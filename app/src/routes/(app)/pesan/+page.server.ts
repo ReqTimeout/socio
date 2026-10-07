@@ -25,14 +25,20 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     .from(services)
     .where(eq(services.status, 1));
   const counts = new Map<PlatformId, number>();
+  const catPlatforms = new Map<number, Set<PlatformId>>();
+  const catKinds = new Map<number, Set<string>>();
   for (const r of activeNames) {
     const p = detectPlatform(r.serviceName);
+    const k = detectKind(r.serviceName);
     counts.set(p, (counts.get(p) ?? 0) + 1);
+    if (!catPlatforms.has(r.categoryId)) catPlatforms.set(r.categoryId, new Set());
+    catPlatforms.get(r.categoryId)!.add(p);
+    if (!catKinds.has(r.categoryId)) catKinds.set(r.categoryId, new Set());
+    catKinds.get(r.categoryId)!.add(k);
   }
-  const platforms = PLATFORMS.filter((p) => (counts.get(p.id) ?? 0) > 0).map((p) => ({
-    ...p,
-    count: counts.get(p.id) ?? 0,
-  }));
+  const platforms = PLATFORMS.filter((p) => (counts.get(p.id) ?? 0) > 0)
+    .map((p) => ({ ...p, count: counts.get(p.id) ?? 0 }))
+    .sort((a, b) => b.count - a.count);
 
   // Daftar kategori PROVIDER (1132 row) — tetap jadi PRIMARY source of truth.
   // Whitelabel diterapkan server-side (SMMTURK/Own/Exclusive dll) supaya client
@@ -54,6 +60,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     name: whitelabel(c.name),
     raw: c.name,
     count: Number(c.svcCount) || 0,
+    platforms: Array.from(catPlatforms.get(c.id) ?? []),
+    kinds: Array.from(catKinds.get(c.id) ?? []),
   }));
 
   // Bentuk AMAN untuk client: TIDAK ada harga base/modal (price, price_api,
