@@ -480,7 +480,7 @@
                 type="search"
                 bind:value={searchQuery}
                 oninput={onSearchInput}
-                placeholder="Cari… mis. followers ig, livestream, #12345"
+                placeholder="Cari… followers, livestream, #12345"
                 autocomplete="off"
                 inputmode="search"
                 aria-label="Cari layanan"
@@ -1366,6 +1366,61 @@
     .kind-chip,
     .svc-card {
       transition: none;
+    }
+  }
+  /* MOBILE-FIRST COMPACT (sm ke bawah) — semua order-aman, tidak geser layout
+     ke desktop, tidak menyentuh logika order. Tujuan: thumb-reach enak,
+     lebih banyak card per scroll. */
+  @media (max-width: 639px) {
+    .platform-rail {
+      /* 11 chip × 44px + gap 8px = 516px, tetap scroll-snap 1 baris, tidak
+         overflow. Sebelum: 52px chip 1 swipe 695px. */
+      margin: 0 -0.5rem;
+    }
+    .platform-chip {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0.35rem;
+    }
+    .platform-chip .platform-ic {
+      width: 1.85rem;
+      height: 1.85rem;
+    }
+    .kind-chip {
+      min-height: 34px;
+      padding: 0.32rem 0.6rem;
+      font-size: 11px;
+      gap: 0.25rem;
+    }
+    .svc-card {
+      padding: 0.5rem 0.6rem;
+      gap: 0.5rem;
+    }
+    /* Card layanan: 1 baris ringkas (nama + harga) + baris 2 (id + min).
+       Hapus "Min 1.000" dari baris 1 — sudah ada di baris 2 ringkas. */
+    .svc-card > span.flex-1 > span:first-child {
+      font-size: 12.5px;
+    }
+    .svc-card > span.flex-1 > span:last-child {
+      font-size: 10.5px;
+    }
+    .svc-card .flex.shrink-0 {
+      gap: 0.25rem;
+    }
+    .svc-card .font-mono {
+      font-size: 9.5px;
+      padding: 0.1rem 0.4rem;
+    }
+  }
+  /* MOBILE-ONLY: bottom dock sudah ada Total+Saldo. Jangan tampil ringkasan
+     besar (Ringkasan + Ketentuan) di mobile — sudah pindah ke bottom dock.
+     Simpan untuk desktop saja. */
+  @media (max-width: 1023px) {
+    /* Ringkasan & Ketentuan sudah di-handle via parent .hidden lg:block,
+       tapi kita pastikan card Layanan full-width dan tidak kepotong bottom
+       CTA pinned 88px dari viewport. */
+    #layanan-list {
+      max-height: 38vh;
     }
   }
   /* F2 playful: step indicator, stamp, tick — transform/opacity only (GPU) */
