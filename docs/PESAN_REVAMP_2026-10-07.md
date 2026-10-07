@@ -76,7 +76,21 @@ impressions (`chart`), reach (`trending_up`), watchtime (`clock`), traffic
 - Validasi silang link: `PLATFORM_LINK_NAME[platform]` vs hasil `validateLink()`.
   Platform non-link (WA/Spotify/Musik/Kwai/Lainnya) = string kosong = tidak dicek.
 
-## Follow-up 2026-10-07 malam (feedback owner: "kurang, ga lengkap, livestream ga ada")
+## Follow-up 2026-10-07 malam (2): "Lainnya" terlalu besar + search by id
+
+4. **14 platform baru dari pemetaan "other"** (setiap chip punya icon sendiri):
+   Snapchat (ghost), Quora (help), Kick (zap), Twitch (twitch), Pinterest (pin),
+   Reddit (reddit), Threads (at), LinkedIn (linkedin), Discord (message),
+   Bluesky (cloud), RedNote/Xiaohongshu (book), Trustpilot (shield),
+   Marketplace (shopping, gabungan shopee/tokopedia/lazada/coin price),
+   SEO & Web (globe, backlink/press release/website traffic). 510 layanan
+   keluar dari bucket Lainnya.
+5. **Search by id layanan** — input seluruhnya digit → `SELECT WHERE id = ?`
+   exact match (auto-suggest "#12345"). Bukan LIKE supaya id 12345 tidak
+   salah hit id 1234/123456.
+6. **Filter nama kosong** di endpoint (`LENGTH(TRIM(name)) >= 3`) — 145
+   baris marketer-only (nama "" atau spasi) tidak pernah tampil, walau
+   `status=1`. Tetap di-DB agar sinkron provider tidak curiga.
 
 1. **3 bucket kepotong cap 500** (IG followers 750, TikTok followers 577, IG likes
    523) → cap naik ke **1000** (`services/+server.ts`). Bucket terbesar muat penuh.

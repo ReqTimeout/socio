@@ -476,8 +476,9 @@
                 type="search"
                 bind:value={searchQuery}
                 oninput={onSearchInput}
-                placeholder="Cari layanan… mis. followers ig"
+                placeholder="Cari… mis. followers ig, livestream, #12345"
                 autocomplete="off"
+                inputmode="search"
                 aria-label="Cari layanan"
                 class="h-11 w-full rounded-xl border-2 border-ink-900 bg-white pl-9 pr-9 text-sm outline-none transition-shadow placeholder:text-ink-400 focus-visible:ring-2 focus-visible:ring-primary/40"
               />

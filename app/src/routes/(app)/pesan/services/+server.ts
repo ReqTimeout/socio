@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
 import { services } from "@socio/db/schema";
-import { eq, and, asc, like } from "drizzle-orm";
+import { eq, and, asc, like, sql } from "drizzle-orm";
 import { json, error } from "@sveltejs/kit";
 import { baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
 import {
@@ -48,6 +48,51 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   const level = (locals.user.level as UserLevel) ?? "Member";
   const rule = (await getPricingRules())[level];
 
+  // ── Search by id — bila input seluruhnya digit, exact match by id.
+  // Pakai flow yang SAMA dgn search teks (embalikan Svc[] lengkap) supaya
+  // UI tinggal render — tidak ada branching di client.
+  if (q && /^\d{1,8}$/.test(q)) {
+    const id = Number(q);
+    const [row] = await db
+      .select({
+        id: services.id,
+        serviceName: services.serviceName,
+        type: services.type,
+        price: services.price,
+        priceApi: services.priceApi,
+        priceReseller: services.priceReseller,
+        min: services.min,
+        max: services.max,
+        isRefill: services.isRefill,
+        note: services.note,
+        waktu: services.waktu,
+      })
+      .from(services)
+      .where(and(eq(services.id, id), eq(services.status, 1)))
+      .limit(1);
+    if (!row) return json([]);
+    const modal = Number(row.priceApi ?? 0);
+    const base = baseForLevel(
+      { price: Number(row.price), priceApi: modal, priceReseller: Number(row.priceReseller) },
+      level,
+    );
+    return json([
+      {
+        id: row.id,
+        serviceName: row.serviceName,
+        type: row.type,
+        min: row.min,
+        max: row.max,
+        isRefill: row.isRefill,
+        note: row.note,
+        waktu: row.waktu,
+        pricePer1k: effectivePer1k(base, level, rule, modal),
+        platform: detectPlatform(row.serviceName),
+        kind: detectKind(row.serviceName),
+      },
+    ]);
+  }
+
   // Mode agregasi jenis — query ramping (nama saja), tanpa hitung harga.
   if (url.searchParams.get("kinds") === "1" && platform) {
     const names = await db
@@ -86,6 +131,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     .from(services)
     .where(
       and(
+        // Wajib: skip layanan dengan nama kosong/terlalu pendek (rows marketer-only
+        // yang tidak punya platform clue; tetap di-DB untuk sinkron tapi tidak
+        // pernah tampil di /pesan).
+        sql`LENGTH(TRIM(${services.serviceName})) >= 3`,
         eq(services.status, 1),
         ...(cat ? [eq(services.categoryId, cat)] : []),
         // Tiap token = LIKE %token% (escape wildcard user). AND antar token.

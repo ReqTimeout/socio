@@ -24,6 +24,20 @@ export type PlatformId =
   | "spotify"
   | "musik"
   | "kwai"
+  | "snapchat"
+  | "quora"
+  | "kick"
+  | "twitch"
+  | "pinterest"
+  | "reddit"
+  | "threads"
+  | "linkedin"
+  | "discord"
+  | "bluesky"
+  | "xiaohongshu"
+  | "trustpilot"
+  | "marketplace"
+  | "seo"
   | "other";
 
 export interface PlatformDef {
@@ -45,7 +59,21 @@ export const PLATFORMS: PlatformDef[] = [
   { id: "spotify", label: "Spotify", icon: "spotify" },
   { id: "musik", label: "Musik", icon: "music" },
   { id: "kwai", label: "Kwai", icon: "play" },
-  { id: "other", label: "Lainnya", icon: "globe" },
+  { id: "snapchat", label: "Snapchat", icon: "ghost" },
+  { id: "quora", label: "Quora", icon: "help" },
+  { id: "kick", label: "Kick", icon: "zap" },
+  { id: "twitch", label: "Twitch", icon: "twitch" },
+  { id: "pinterest", label: "Pinterest", icon: "pin" },
+  { id: "reddit", label: "Reddit", icon: "reddit" },
+  { id: "threads", label: "Threads", icon: "at" },
+  { id: "linkedin", label: "LinkedIn", icon: "linkedin" },
+  { id: "discord", label: "Discord", icon: "message" },
+  { id: "bluesky", label: "Bluesky", icon: "cloud" },
+  { id: "xiaohongshu", label: "RedNote", icon: "book" },
+  { id: "trustpilot", label: "Trustpilot", icon: "shield" },
+  { id: "marketplace", label: "Marketplace", icon: "shopping" },
+  { id: "seo", label: "SEO & Web", icon: "globe" },
+  { id: "other", label: "Lainnya", icon: "grid" },
 ];
 
 export const platformById = (id: string): PlatformDef =>
@@ -61,12 +89,29 @@ export function detectPlatform(
   categoryName = "",
 ): PlatformId {
   const n = `${serviceName} ${categoryName}`.toLowerCase();
+  // Platform spesifik dulu — urutan penting agar tidak salah tangkap
+  // (mis. 'xiaohongshu' sebelum 'seo', 'shopee' sebelum 'instagram' kalau
+  // suatu saat nama mengandung keduanya).
+  if (/xiaohongshu|red ?note|小红书/.test(n)) return "xiaohongshu";
+  if (/\bsnap ?chat\b/.test(n)) return "snapchat";
+  if (/\bquora\b/.test(n)) return "quora";
+  if (/\bbluesky\b|\bbsky\b/.test(n)) return "bluesky";
+  if (/\bthreads\b/.test(n)) return "threads";
+  if (/\breddit\b/.test(n)) return "reddit";
+  if (/\btwitch\b/.test(n)) return "twitch";
+  if (/\bkick\b/.test(n)) return "kick";
+  if (/\bpinterest\b/.test(n)) return "pinterest";
+  if (/\blinkedin\b/.test(n)) return "linkedin";
+  if (/\bdiscord\b/.test(n)) return "discord";
+  if (/trustpilot/.test(n)) return "trustpilot";
   if (
-    /xiaohongshu|rednote|bluesky|bsky|shopee|tokopedia|bukalapak|lazada|backlink|\bseo\b|press release|coingecko|coinmarketcap|trustpilot|website|traffic exchange/.test(
+    /\b(shopee|tokopedia|bukalapak|lazada|tiktok ?shop|marketplace|coinmarketcap|coingecko|coinhunt|cryptorank|cryptorival|coin ?price)\b/.test(
       n,
     )
   )
-    return "other";
+    return "marketplace";
+  if (/\b(backlink|\bseo\b|press ?release|website ?traffic|web ?traffic|safe ?link|traffic ?exchange)\b/.test(n))
+    return "seo";
   if (/instagram|\binsta\b|\big\b/.test(n)) return "instagram";
   if (/tiktok|tik-?tok|\btt\b/.test(n)) return "tiktok";
   if (/youtube|youtu|\byt\b/.test(n)) return "youtube";
@@ -229,10 +274,9 @@ export function normalizeSearchQuery(q: string): string[] {
     .slice(0, 4);
 }
 
-/**
- * Platform kanonik untuk validasi link — SAMA persis dgn string yang
+/** Platform kanonik untuk validasi link — SAMA persis dgn string yang
  * dipakai validateLink() di /pesan, supaya perbandingan langsung cocok.
- */
+ * Platform tanpa link (WA/Spotify/Musik/...) = string kosong = tidak dicek. */
 export const PLATFORM_LINK_NAME: Record<PlatformId, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
@@ -244,5 +288,19 @@ export const PLATFORM_LINK_NAME: Record<PlatformId, string> = {
   spotify: "",
   musik: "",
   kwai: "",
+  snapchat: "",
+  quora: "",
+  kick: "",
+  twitch: "",
+  pinterest: "",
+  reddit: "",
+  threads: "",
+  linkedin: "",
+  discord: "",
+  bluesky: "",
+  xiaohongshu: "",
+  trustpilot: "",
+  marketplace: "",
+  seo: "",
   other: "",
 };
