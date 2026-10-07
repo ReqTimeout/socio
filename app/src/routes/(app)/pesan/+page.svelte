@@ -1294,7 +1294,7 @@ import {
             </div>
             <div class="flex justify-between gap-3 border-b border-dashed border-ink-100 pb-2">
               <dt class="shrink-0 text-ink-500">Layanan</dt>
-              <dd class="truncate text-right font-semibold">
+              <dd class="line-clamp-2 text-right font-semibold">
                 {selectedService ? whitelabel(selectedService.serviceName) : "—"}
               </dd>
             </div>
