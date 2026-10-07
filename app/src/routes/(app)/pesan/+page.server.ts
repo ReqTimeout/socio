@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
-import { services, savedLinks, orders, users, balanceLogs, provider } from "@socio/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { services, categories, savedLinks, orders, users, balanceLogs, provider } from "@socio/db/schema";
+import { eq, desc, asc, sql } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
 import { computePrice, baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
 import { PLATFORMS, detectPlatform, detectKind, type PlatformId } from "@socio/core/catalog";
@@ -8,7 +8,7 @@ import { smmturkAddFor } from "@socio/core/smmturk";
 import { decryptSecret } from "$lib/server/crypto";
 import { getPricingRules } from "$lib/server/pricing";
 import { validateCoupon, consumeCoupon, releaseCoupon } from "$lib/server/coupons";
-import { asciiSafe } from "$lib/format";
+import { asciiSafe, whitelabel } from "$lib/format";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
@@ -16,11 +16,12 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const prefillLink = url.searchParams.get("link") ?? "";
   const prefillQty = Number(url.searchParams.get("qty") ?? 0);
   const level = ((locals.user!.level as UserLevel) ?? "Member") as UserLevel;
+
   // Platform + hitungan layanan AKTIF — dihitung live dari nama layanan
   // (status=1) sehingga yang dinonaktifkan hilang otomatis dari chip.
   // Nama kategori mentah TIDAK PERNAH dikirim ke client lagi (anti-sampah).
   const activeNames = await db
-    .select({ serviceName: services.serviceName })
+    .select({ serviceName: services.serviceName, categoryId: services.categoryId })
     .from(services)
     .where(eq(services.status, 1));
   const counts = new Map<PlatformId, number>();
@@ -31,6 +32,28 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const platforms = PLATFORMS.filter((p) => (counts.get(p.id) ?? 0) > 0).map((p) => ({
     ...p,
     count: counts.get(p.id) ?? 0,
+  }));
+
+  // Daftar kategori PROVIDER (1132 row) — tetap jadi PRIMARY source of truth.
+  // Whitelabel diterapkan server-side (SMMTURK/Own/Exclusive dll) supaya client
+  // tidak pernah melihat brand hulu. Sort alfabetis, hanya kategori yang punya
+  // layanan aktif (JOIN exclude mati).
+  const catRows = await db
+    .select({
+      id: categories.id,
+      name: categories.name,
+      svcCount: sql<number>`COUNT(${services.id})`,
+    })
+    .from(categories)
+    .leftJoin(services, sql`${services.categoryId} = ${categories.id} AND ${services.status} = 1`)
+    .groupBy(categories.id, categories.name)
+    .having(sql`COUNT(${services.id}) > 0`)
+    .orderBy(asc(categories.name));
+  const cats = catRows.map((c) => ({
+    id: c.id,
+    name: whitelabel(c.name),
+    raw: c.name,
+    count: Number(c.svcCount) || 0,
   }));
 
   // Bentuk AMAN untuk client: TIDAK ada harga base/modal (price, price_api,
@@ -110,6 +133,9 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     service,
     // Daftar platform bersih + jumlah layanan aktif (live count, anti-sampah).
     platforms,
+    // Daftar kategori dari PROVIDER (1132 aktif, sudah whitelabel). PRIMARY —
+    // dropdown /pesan. Filter tambahan (platform/kind icon) ada di client.
+    cats,
     saved,
     balance: locals.user!.balance ?? 0,
     level,

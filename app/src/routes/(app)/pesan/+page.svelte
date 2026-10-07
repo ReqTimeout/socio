@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {
+import {
     Input,
     QtyStepper,
     Button,
@@ -9,6 +9,7 @@
     revealDelay,
     NumberFlow,
     Sparko,
+    Select,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -18,6 +19,7 @@
     isCustomCommentsService,
     PLATFORM_LINK_NAME,
     platformById,
+    KIND_ORDER,
     type PlatformId,
     type KindId,
   } from "@socio/core/catalog";
@@ -39,6 +41,7 @@
     isRefill: number;
     note: string;
     waktu: string;
+    categoryId?: number;
     // Harga efektif per-1000 utk level user ini — SUDAH markup, dihitung server.
     // Client TIDAK pernah menerima harga base/modal/markup (anti-kebocoran).
     pricePer1k: number;
@@ -46,23 +49,32 @@
     kind: KindId;
   };
 
-  // ── Step state: Platform (chip icon) → Jenis (chip) → Layanan (card) ──
+  // ── Step state: Kategori (dropdown primary) → Layanan (cards) ──
+  // Platform + kind = SEKUNDER icon filter (narrow what cards show).
+  let selectedCat = $state<number>(0);
   let selectedPlatform = $state<PlatformId | "">("");
   let selectedKind = $state<KindId | "">("");
-  let kindList = $state<{ id: KindId; count: number }[]>([]);
-  let loadingKinds = $state(false);
   let serviceList = $state<Svc[]>([]);
   let loadingServices = $state(false);
   let selectedService = $state<Svc | null>(null);
 
-  // ── Search global lintas platform ──
+  // Dropdown options dari server (kategori provider, sudah whitelabel).
+  const catsOptions = $derived(
+    data.cats.map((c) => ({
+      value: c.id,
+      label: c.name,
+      hint: c.count > 0 ? `${c.count}` : undefined,
+    })),
+  );
+
+  // ── Search global lintas platform ────────────────────────
   let searchQuery = $state("");
   let searchResults = $state<Svc[]>([]);
   let searching = $state(false);
   const searchActive = $derived(searchQuery.trim().length >= 2);
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
-  // ── Order form state ────────────────────────────────────────
+  // ── Order form state ─────────────────────────────────────
   let link = $state("");
   let quantity = $state(0);
   let komen = $state("");
@@ -72,6 +84,7 @@
   $effect(() => {
     const svc = data.service;
     if (svc) {
+      selectedCat = svc.categoryId ?? 0;
       selectedPlatform = svc.platform;
       selectedKind = (svc.kind as KindId) ?? "";
       selectedService = { ...(svc as Svc), note: svc.note ?? "", waktu: svc.waktu ?? "" };
@@ -129,7 +142,7 @@
 
   // Step indicator hidup (F2, presentasi saja): mengikuti state form yang ada.
   const steps = $derived([
-    { label: "Platform", done: selectedPlatform !== "" },
+    { label: "Kategori", done: selectedCat > 0 },
     { label: "Layanan", done: !!selectedService },
     {
       label: "Order",
@@ -247,28 +260,16 @@
             : "idle",
   );
 
-  // ── Data loading: Platform → Jenis → Layanan ───────────────────
-  async function loadKinds(platform: PlatformId) {
-    loadingKinds = true;
-    try {
-      const res = await fetch(`/pesan/services?platform=${platform}&kinds=1`);
-      kindList = res.ok ? await res.json() : [];
-    } catch {
-      kindList = [];
-      toast("Gagal memuat jenis layanan", "error");
-    } finally {
-      loadingKinds = false;
-    }
-  }
-
-  async function loadServices(platform: PlatformId, kind: KindId) {
-    if (!platform || !kind) {
+  // ── Data loading: Kategori (dropdown) → Layanan (cards) ───────────────
+  // Platform + kind = filter SEKUNDER client-side (narrow visible cards).
+  async function loadServicesByCat(catId: number) {
+    if (!catId) {
       serviceList = [];
       return;
     }
     loadingServices = true;
     try {
-      const res = await fetch(`/pesan/services?platform=${platform}&kind=${kind}`);
+      const res = await fetch(`/pesan/services?categoryId=${catId}`);
       serviceList = res.ok ? await res.json() : [];
     } catch {
       serviceList = [];
@@ -278,25 +279,32 @@
     }
   }
 
-  async function selectPlatform(p: PlatformId) {
+  async function selectCategory(catId: number) {
     haptic(8);
-    if (p === selectedPlatform && kindList.length > 0) return;
-    selectedPlatform = p;
-    selectedKind = "";
+    if (catId === selectedCat && serviceList.length > 0) return;
+    selectedCat = catId;
     selectedService = null;
-    serviceList = [];
-    await loadKinds(p);
-    // Auto-pilih jenis pertama (KIND_ORDER = paling laku) — hemat 1 tap.
-    if (kindList.length > 0) await selectKind(kindList[0]!.id);
+    selectedPlatform = "";
+    selectedKind = "";
+    await loadServicesByCat(catId);
   }
 
-  async function selectKind(k: KindId) {
+  // Filter SEKUNDER dari chip icon — client-side narrowing, no re-fetch.
+  function setPlatformFilter(p: PlatformId | "") {
     haptic(8);
-    if (k === selectedKind && serviceList.length > 0) return;
-    selectedKind = k;
-    selectedService = null;
-    if (selectedPlatform) await loadServices(selectedPlatform, k);
+    selectedPlatform = p === selectedPlatform ? "" : p;
   }
+  function setKindFilter(k: KindId) {
+    haptic(8);
+    selectedKind = k === selectedKind ? "" : k;
+  }
+
+  // Layanan yang tampil = fetch by kategori, di-narrow oleh platform/kind.
+  const visibleServices = $derived(
+    serviceList.filter(
+      (s) => (!selectedPlatform || s.platform === selectedPlatform) && (!selectedKind || s.kind === selectedKind),
+    ),
+  );
 
   async function pickService(svc: Svc) {
     haptic(10);
@@ -337,28 +345,23 @@
     searchTimer = setTimeout(run, isId ? 0 : 350);
   }
 
-  // Pilih dari hasil search → sinkronkan chip platform+jenis lalu muat bucket
-  // agar state konsisten (langkah tetap Platform → Layanan → Order).
+  // Pilih dari hasil search → sync dropdown kategori, lalu pilih layanan.
   async function pickFromSearch(svc: Svc) {
     haptic(10);
     searchQuery = "";
     searchResults = [];
+    selectedCat = svc.categoryId ?? 0;
+    if (selectedCat) await loadServicesByCat(selectedCat);
     selectedPlatform = svc.platform;
-    await loadKinds(svc.platform);
     selectedKind = svc.kind;
-    await loadServices(svc.platform, svc.kind);
     pickServiceById(svc.id);
     document.getElementById("layanan-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  // Deep-link (?service=X): server sudah hitung platform+kind → muat rantai bucket
-  // supaya chip ter-highlight & daftar menampilkan pilihan.
-  onMount(async () => {
-    const svc = data.service;
-    if (svc?.platform) {
-      await loadKinds(svc.platform as PlatformId);
-      if (svc.kind) await loadServices(svc.platform as PlatformId, svc.kind as KindId);
-    }
+  // Deep-link (?service=X): server sudah hitung categoryId → muat chain bucket
+  // supaya dropdown ter-set & daftar menampilkan.
+  onMount(() => {
+    if (selectedCat) loadServicesByCat(selectedCat);
   });
 </script>
 
@@ -585,92 +588,84 @@
               {/if}
             </div>
           {:else}
-            <!-- Platform — chip icon, 1 baris scroll-snap di mobile -->
+            <!-- Kategori dropdown — PRIMARY (1132 dari provider, whitelabel) -->
             <div>
-              <span class="mb-1.5 block text-sm font-bold" id="platform-label">Platform</span>
-              <div
-                class="platform-rail -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:grid lg:grid-cols-4 lg:overflow-visible"
-                role="radiogroup"
-                aria-labelledby="platform-label"
-              >
-                {#each data.platforms as p (p.id)}
+              <span class="mb-1.5 block text-sm font-bold">Kategori</span>
+              <Select
+                value={selectedCat}
+                options={catsOptions}
+                placeholder="Pilih kategori…"
+                searchPlaceholder="Cari kategori…"
+                onChange={(v) => selectCategory(Number(v))}
+              />
+            </div>
+
+            <!-- Platform + Kind icon filter — SEKUNDER, small icon-only.
+                 Tampil setelah kategori dipilih untuk narrow cards yang muncul.
+                 Owner request: "tambah icon2 kecil sebagai filter" — di sini. -->
+            {#if selectedCat}
+              <div class="space-y-2">
+                <!-- Platform icon (kecil) — scrollable di mobile -->
+                <div
+                  class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+                  role="radiogroup"
+                  aria-label="Filter platform"
+                >
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={selectedPlatform === p.id}
-                    aria-label={`${p.label} — ${p.count} layanan`}
-                    onclick={() => selectPlatform(p.id as PlatformId)}
-                    title={`${p.label} — ${p.count} layanan`}
-                    class="platform-chip shrink-0 {selectedPlatform === p.id ? 'is-selected' : ''}"
+                    aria-checked={selectedPlatform === ""}
+                    onclick={() => setPlatformFilter("")}
+                    title="Semua platform"
+                    class="icon-chip shrink-0 {selectedPlatform === '' ? 'is-selected' : ''}"
                   >
-                    <span class="platform-ic" aria-hidden="true">
-                      <Icon name={p.icon} size={22} />
-                    </span>
-                    <span class="platform-tx">
-                      <span class="block text-xs font-extrabold leading-tight">{p.label}</span>
-                      <span
-                        class="block text-[10px] font-semibold leading-tight opacity-70 tabular-nums"
-                      >
-                        {p.count > 999 ? `${(p.count / 1000).toFixed(1)}rb` : p.count} layanan
-                      </span>
-                    </span>
-                    {#if selectedPlatform === p.id}
-                      <span
-                        class="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-white/25"
-                        aria-hidden="true"
-                      >
-                        <Icon name="check" size={10} stroke={3.5} />
-                      </span>
-                    {/if}
+                    <Icon name="grid" size={13} />
+                    Semua
                   </button>
-                {/each}
-              </div>
-            </div>
-
-            <!-- Jenis — chip, muncul setelah platform dipilih -->
-            {#if selectedPlatform}
-              <div>
-                <div class="mb-1.5 flex items-center justify-between">
-                  <span class="text-sm font-bold" id="kind-label">Jenis</span>
-                  {#if loadingKinds}
-                    <span class="flex items-center gap-1 text-xs text-ink-500">
-                      <Icon name="refresh" size={12} class="animate-spin" /> Memuat…
-                    </span>
-                  {/if}
+                  {#each data.platforms as p (p.id)}
+                    {@const present = visibleServices.some((s) => s.platform === p.id)}
+                    {#if present}
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={selectedPlatform === p.id}
+                          onclick={() => setPlatformFilter(p.id as PlatformId)}
+                          title={p.label}
+                          class="icon-chip shrink-0 {selectedPlatform === p.id ? 'is-selected' : ''}"
+                        >
+                          <Icon name={p.icon} size={13} />
+                          <span class="hidden lg:inline">{p.label}</span>
+                        </button>
+                    {/if}
+                  {/each}
                 </div>
-                {#if loadingKinds && kindList.length === 0}
-                  <div class="flex gap-2" aria-hidden="true">
-                    <Skeleton width="4.5rem" height="2rem" />
-                    <Skeleton width="4rem" height="2rem" />
-                    <Skeleton width="5rem" height="2rem" />
-                  </div>
-                {:else}
-                  <div
-                    class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:flex-wrap lg:overflow-visible"
-                    role="radiogroup"
-                    aria-labelledby="kind-label"
-                  >
-                    {#each kindList as k (k.id)}
-                      {@const kd = kindById(k.id)}
-                      <button
-                        type="button"
-                        role="radio"
-                        aria-checked={selectedKind === k.id}
-                        onclick={() => selectKind(k.id)}
-                        class="kind-chip shrink-0 {selectedKind === k.id ? 'is-selected' : ''}"
-                      >
-                        <Icon name={kd.icon} size={14} />
-                        {kd.label}
-                        <span class="tabular-nums opacity-70">{k.count}</span>
-                      </button>
-                    {/each}
-                  </div>
-                {/if}
+
+                <!-- Kind icon (kecil) — scrollable di mobile -->
+                <div
+                  class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+                  role="radiogroup"
+                  aria-label="Filter jenis"
+                >
+                  {#each KIND_ORDER.filter((k) => visibleServices.some((s) => s.kind === k)) as kid (kid)}
+                    {@const kd = kindById(kid)}
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={selectedKind === kid}
+                      onclick={() => setKindFilter(kid)}
+                      title={kd.label}
+                      class="icon-chip shrink-0 {selectedKind === kid ? 'is-selected' : ''}"
+                    >
+                      <Icon name={kd.icon} size={13} />
+                      <span class="hidden lg:inline">{kd.label}</span>
+                    </button>
+                  {/each}
+                </div>
               </div>
             {/if}
 
-            <!-- Layanan — daftar card radio, bukan dropdown -->
-            {#if selectedKind}
+            <!-- Layanan — daftar card radio. Muncul setelah kategori dipilih. -->
+            {#if selectedCat}
               <div id="layanan-list">
                 <div class="mb-1.5 flex items-center justify-between">
                   <span class="text-sm font-bold">Layanan</span>
@@ -678,9 +673,13 @@
                     <span class="flex items-center gap-1 text-xs text-ink-500">
                       <Icon name="refresh" size={12} class="animate-spin" /> Memuat…
                     </span>
-                  {:else if serviceList.length > 0}
+                  {:else if visibleServices.length > 0}
                     <span class="text-xs text-ink-500"
-                      >{serviceList.length} layanan · termurah di atas</span
+                      >{visibleServices.length}
+                      {#if visibleServices.length !== serviceList.length}
+                        / {serviceList.length}
+                      {/if}
+                      layanan · termurah di atas</span
                     >
                   {/if}
                 </div>
@@ -692,7 +691,11 @@
                   </div>
                 {:else if serviceList.length === 0}
                   <p class="rounded-xl bg-ink-50 px-3 py-4 text-center text-xs text-ink-500">
-                    Layanan tidak tersedia saat ini.
+                    Layanan tidak tersedia untuk kategori ini.
+                  </p>
+                {:else if visibleServices.length === 0}
+                  <p class="rounded-xl bg-ink-50 px-3 py-4 text-center text-xs text-ink-500">
+                    Tidak ada layanan sesuai filter — coba reset icon di atas.
                   </p>
                 {:else}
                   <ul
@@ -700,7 +703,7 @@
                     role="listbox"
                     aria-label="Daftar layanan"
                   >
-                    {#each serviceList as svc, i (svc.id)}
+                    {#each visibleServices as svc, i (svc.id)}
                       <li>
                         <button
                           type="button"
@@ -723,7 +726,7 @@
                               >
                               <span>/1000</span>
                               <span>· Min {svc.min.toLocaleString("id-ID")}</span>
-                              {#if i === 0 && serviceList.length > 1}
+                              {#if i === 0 && visibleServices.length > 1}
                                 <span
                                   class="rounded-full bg-mango-500/15 px-1.5 py-px text-[10px] font-extrabold text-mango-700"
                                   >Termurah</span
@@ -1252,90 +1255,32 @@
 </section>
 
 <style>
-  /* PESAN_REVAMP: platform chip / kind chip / service card — transform/opacity only */
-  .platform-rail {
-    scroll-snap-type: x proximity;
-  }
-  .platform-chip {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-height: 52px;
-    padding: 0.45rem 0.7rem;
-    border-radius: 0.9rem;
-    border: 2px solid var(--color-ink-900);
-    background: #fff;
-    color: var(--color-ink-900);
-    scroll-snap-align: start;
-    transition:
-      background-color 180ms var(--ease-out-soft),
-      color 180ms var(--ease-out-soft),
-      transform 180ms var(--ease-out-soft);
-  }
-  .platform-chip:active {
-    transform: scale(0.96);
-  }
-  .platform-chip.is-selected {
-    background: var(--color-ink-900);
-    color: #fff;
-    box-shadow: 3px 3px 0 rgb(0 95 124 / 0.35);
-  }
-  .platform-ic {
-    display: grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    flex-shrink: 0;
-    border-radius: 0.65rem;
-    background: rgb(0 95 124 / 0.08);
-  }
-  .platform-chip.is-selected .platform-ic {
-    background: rgb(255 255 255 / 0.15);
-  }
-  .platform-tx {
-    min-width: 0;
-    text-align: left;
-  }
-  /* Mobile: chip platform = ICON SAJA (hemat tempat, 11 platform 1 swipe).
-     Label/count hanya di desktop (lg+). Nama tetap di aria-label + title. */
-  @media (max-width: 1023px) {
-    .platform-chip {
-      min-width: 52px;
-      min-height: 52px;
-      padding: 0.45rem;
-      justify-content: center;
-    }
-    .platform-chip .platform-ic {
-      width: 2.3rem;
-      height: 2.3rem;
-      border-radius: 0.75rem;
-    }
-    .platform-tx {
-      display: none;
-    }
-  }
-  .kind-chip {
+  /* PESAN_REVAMP rev 4: small icon-chip untuk filter SEKUNDER (platform + kind).
+     Kategori = dropdown PRIMARY (1132, whitelabel). */
+  .icon-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    min-height: 40px;
-    padding: 0.4rem 0.75rem;
+    gap: 0.3rem;
+    min-height: 30px;
+    padding: 0.3rem 0.55rem;
     border-radius: 9999px;
     border: 1.5px solid var(--color-ink-200);
     background: #fff;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--color-ink-700);
+    scroll-snap-align: start;
+    white-space: nowrap;
     transition:
       background-color 180ms var(--ease-out-soft),
       border-color 180ms var(--ease-out-soft),
       color 180ms var(--ease-out-soft),
       transform 180ms var(--ease-out-soft);
   }
-  .kind-chip:active {
+  .icon-chip:active {
     transform: scale(0.95);
   }
-  .kind-chip.is-selected {
+  .icon-chip.is-selected {
     background: var(--color-ink-900);
     border-color: var(--color-ink-900);
     color: #fff;
@@ -1362,42 +1307,25 @@
     box-shadow: 2px 2px 0 var(--color-ink-900);
   }
   @media (prefers-reduced-motion: reduce) {
-    .platform-chip,
-    .kind-chip,
+    .icon-chip,
     .svc-card {
       transition: none;
     }
   }
-  /* MOBILE-FIRST COMPACT (sm ke bawah) — semua order-aman, tidak geser layout
-     ke desktop, tidak menyentuh logika order. Tujuan: thumb-reach enak,
-     lebih banyak card per scroll. */
+  /* MOBILE-FIRST COMPACT (sm ke bawah) — order-aman, tidak geser layout
+     ke desktop, tidak menyentuh logika order. */
   @media (max-width: 639px) {
-    .platform-rail {
-      /* 11 chip × 44px + gap 8px = 516px, tetap scroll-snap 1 baris, tidak
-         overflow. Sebelum: 52px chip 1 swipe 695px. */
-      margin: 0 -0.5rem;
-    }
-    .platform-chip {
-      min-width: 44px;
-      min-height: 44px;
-      padding: 0.35rem;
-    }
-    .platform-chip .platform-ic {
-      width: 1.85rem;
-      height: 1.85rem;
-    }
-    .kind-chip {
-      min-height: 34px;
-      padding: 0.32rem 0.6rem;
-      font-size: 11px;
+    .icon-chip {
+      min-height: 28px;
+      padding: 0.28rem 0.5rem;
+      font-size: 10.5px;
       gap: 0.25rem;
     }
     .svc-card {
       padding: 0.5rem 0.6rem;
       gap: 0.5rem;
     }
-    /* Card layanan: 1 baris ringkas (nama + harga) + baris 2 (id + min).
-       Hapus "Min 1.000" dari baris 1 — sudah ada di baris 2 ringkas. */
+    /* Card layanan: 1 baris ringkas (nama + harga) + baris 2 (id + min). */
     .svc-card > span.flex-1 > span:first-child {
       font-size: 12.5px;
     }
@@ -1412,13 +1340,9 @@
       padding: 0.1rem 0.4rem;
     }
   }
-  /* MOBILE-ONLY: bottom dock sudah ada Total+Saldo. Jangan tampil ringkasan
-     besar (Ringkasan + Ketentuan) di mobile — sudah pindah ke bottom dock.
-     Simpan untuk desktop saja. */
+  /* MOBILE-ONLY: bottom dock sudah ada Total+Saldo. Pastikan card Layanan
+     full-width dan tidak kepotong bottom CTA pinned 88px dari viewport. */
   @media (max-width: 1023px) {
-    /* Ringkasan & Ketentuan sudah di-handle via parent .hidden lg:block,
-       tapi kita pastikan card Layanan full-width dan tidak kepotong bottom
-       CTA pinned 88px dari viewport. */
     #layanan-list {
       max-height: 38vh;
     }

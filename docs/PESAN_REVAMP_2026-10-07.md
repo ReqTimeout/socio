@@ -106,6 +106,22 @@ impressions (`chart`), reach (`trending_up`), watchtime (`clock`), traffic
    nama tetap di `aria-label`+`title`). Touch target 52px, icon 22px dalam
    bingkai 2.3rem.
 
+## Follow-up 2026-10-07 (3): mobile compact + copy
+
+Owner minta: "mobile dikecilin tapi jangan di geser, ada improve UX biar enak
+dan ketagihan?" Fokus: visual mobile, **tidak menyentuh alur/order**.
+
+- Card layanan mobile: padding 0.5/0.6 (dari 0.6/0.7), teks 12.5/10.5px,
+  id badge 9.5px. Tinggi card **70px → 56px** (-20%). Lebih banyak card
+  per scroll (~5 card per viewport iPhone SE 360×740).
+- Chip platform mobile: 52px → 44px. Tetap 1 swipe untuk 11 chip
+  (11 × 44 + 8gap = 484px, viewport 360 minus padding = 360).
+- Chip jenis mobile: 40px → 34px.
+- #layanan-list `max-height: 38vh` di mobile (sebelumnya fixed 320px tidak
+  adaptif ke viewport pendek; iPhone SE 740 × 38% = 281px pas).
+- Placeholder search: "Cari… followers, livestream, #12345" (3 contoh nyata).
+- Catatan: order flow/logika/harga TIDAK diubah.
+
 ## Verifikasi (2026-10-07, sesi ini)
 
 - [x] Mapping diuji ke 8.413 nama asli: distribusi wajar, bucket other = long-tail
@@ -127,3 +143,33 @@ impressions (`chart`), reach (`trending_up`), watchtime (`clock`), traffic
    (fungsi tampil saja, `pricePer1k` tetap angka).
 3. QR TnG tidak mengubah flow ini (bayar di `/saldo`, bukan `/pesan`).
 4. Jalankan `0003` via migrate di DB `socio_my` (DB kosong → otomatis).
+
+## Follow-up 2026-10-07 (4): dropdown kategori sebagai PRIMARY + small icon filter
+
+Owner complain: "kategorinya ga gini dan layanannya ga gini jadi bingung".
+Vision yang owner bayangin:
+- **KATEGORI = dropdown dari 1132 PROVIDER** (bukan 18 hardcoded kinds)
+- **LAYANAN = tetap card compact + truncate** (current sudah disetujui)
+- **Tambah icon kecil** sebagai filter sekunder (platform + kind)
+
+### Perubahan
+
+1. `+page.server.ts`: tambah `cats` — list 1132 kategori dari `categories`
+   table (LEFT JOIN services WHERE status=1, HAVING count > 0). Nama di-
+   `whitelabel()` server-side (SMMTURK→Socio, brand filter).
+2. `services/+server.ts`: tambah `?categoryId=N` filter (PRIMARY dropdown).
+   Platform + kind jadi client-side narrow (no re-fetch).
+3. `+page.svelte`:
+   - Tambah `<Select>` komponen (1132 opsi, searchable built-in untuk >8).
+   - Hapus rail platform "Gelaran 25 chip" yang sebelumnya prominent.
+   - Chip rail jadi `.icon-chip` 30px (28px mobile), ICON-ONLY on mobile
+     (label muncul di `lg+` saja). Toggle on/off (klik lagi = unselect).
+   - `visibleServices = serviceList.filter(by platform + kind)`.
+   - Service card unchanged: compact + truncate nama + #id + ♻ Refill.
+4. Search global, deep-link `?service=X`, validasi link silang — TETAP.
+
+### Aturan replikasi .my
+- Pakai `whitelabel()` (bukan `serviceDisplayName`) — `whitelabel` tidak potong
+  bracket prefix (mis. "[ Cheap Price ] Instagram ..." → tetap "[ Cheap Price ]
+  Instagram ..."). Brand filter + trim SAMA.
+- `data.cats` di-load dari `categories` DB langsung. Tidak ada hardcode kategori.

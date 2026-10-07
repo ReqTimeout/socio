@@ -15,42 +15,37 @@ import { getPricingRules } from "$lib/server/pricing";
 import type { RequestHandler } from "./$types";
 
 /**
- * Katalog layanan untuk flow /pesan baru (PESAN_REVAMP 2026-10-07):
- * Platform (chip icon) → Jenis (chip) → Layanan (card).
+ * Katalog layanan untuk flow /pesan (PESAN_REVAMP 2026-10-07 rev 4):
+ * Kategori dropdown (PRIMARY, dari `categories` table) → Layanan cards.
+ * Filter sekunder: platform icon + kind icon (narrow visible cards).
  *
  * Query params (boleh kombinasi):
- * - `platform`: id platform (instagram, tiktok, …) — filter bucket.
- * - `kind`: id jenis (followers, likes, …) — filter dalam bucket.
- * - `q`: search global lintas platform — ditokenisasi + alias
- *   (`normalizeSearchQuery`: "livestream view" → live AND view, "followers ig"
- *   → followers AND instagram). Min 1 token valid, max 60 hasil.
- * - `kinds=1` + `platform`: KEMBALIKAN agregasi jenis [{id, count}] saja
- *   (tanpa baris layanan) — untuk render chip jenis + hitungan live.
- * - `cat`: id kategori LEGACY — kompatibilitas deep-link lama, tetap didukung.
+ * - `categoryId`: id kategori PROVIDER (PRIMARY dropdown). Filter by kategori.
+ * - `platform`: id platform (instagram, tiktok, …) — filter bucket sekunder.
+ * - `kind`: id jenis (followers, likes, …) — filter bucket sekunder.
+ * - `q`: search global lintas platform — ditokenisasi + alias. Min 1 token valid.
+ * - `kinds=1` + `platform`: agregasi jenis [{id, count}] — untuk chip icon.
+ * - `cat`: id kategori LEGACY — kompatibilitas deep-link lama.
  *
  * ANTI-SAMPAH: hanya `status = 1` yang pernah keluar. Platform/jenis dihitung
  * dari nama layanan saat request → yang dinonaktifkan hilang otomatis.
  *
  * KEAMANAN: harga base/modal (price, price_api, price_reseller) dan persentase
- * markup TIDAK pernah dikirim ke client — hanya harga efektif per-1000
- * (`pricePer1k`) untuk level user login.
+ * markup TIDAK pernah dikirim ke client — hanya harga efektif per-1000.
  */
 export const GET: RequestHandler = async ({ url, locals }) => {
   if (!locals.user) throw error(401, "Unauthorized");
+  const categoryId = Number(url.searchParams.get("categoryId") ?? 0);
   const platform = (url.searchParams.get("platform") ?? "") as PlatformId | "";
   const kind = (url.searchParams.get("kind") ?? "") as KindId | "";
   const q = (url.searchParams.get("q") ?? "").trim().slice(0, 60);
-  // Search: semua token harus cocok (AND) — "livestream view" ketemu
-  // "TikTok Live Stream Views" walau user tidak ketik persis.
   const tokens = q ? normalizeSearchQuery(q) : [];
   const cat = Number(url.searchParams.get("cat") ?? 0);
 
   const level = (locals.user.level as UserLevel) ?? "Member";
   const rule = (await getPricingRules())[level];
 
-  // ── Search by id — bila input seluruhnya digit, exact match by id.
-  // Pakai flow yang SAMA dgn search teks (embalikan Svc[] lengkap) supaya
-  // UI tinggal render — tidak ada branching di client.
+  // ── Search by id — exact match by id (debounce 0 di client untuk digit murni).
   if (q && /^\d{1,8}$/.test(q)) {
     const id = Number(q);
     const [row] = await db
@@ -66,6 +61,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
         isRefill: services.isRefill,
         note: services.note,
         waktu: services.waktu,
+        categoryId: services.categoryId,
       })
       .from(services)
       .where(and(eq(services.id, id), eq(services.status, 1)))
@@ -86,6 +82,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
         isRefill: row.isRefill,
         note: row.note,
         waktu: row.waktu,
+        categoryId: row.categoryId,
         pricePer1k: effectivePer1k(base, level, rule, modal),
         platform: detectPlatform(row.serviceName),
         kind: detectKind(row.serviceName),
@@ -93,7 +90,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     ]);
   }
 
-  // Mode agregasi jenis — query ramping (nama saja), tanpa hitung harga.
+  // Mode agregasi jenis (untuk chip icon di client).
   if (url.searchParams.get("kinds") === "1" && platform) {
     const names = await db
       .select({ serviceName: services.serviceName })
@@ -127,17 +124,20 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       isRefill: services.isRefill,
       note: services.note,
       waktu: services.waktu,
+      categoryId: services.categoryId,
     })
     .from(services)
     .where(
       and(
-        // Wajib: skip layanan dengan nama kosong/terlalu pendek (rows marketer-only
-        // yang tidak punya platform clue; tetap di-DB untuk sinkron tapi tidak
-        // pernah tampil di /pesan).
         sql`LENGTH(TRIM(${services.serviceName})) >= 3`,
         eq(services.status, 1),
-        ...(cat ? [eq(services.categoryId, cat)] : []),
-        // Tiap token = LIKE %token% (escape wildcard user). AND antar token.
+        // Filter PRIMARY (dropdown kategori) — kalau ada, pakai. Kalau tidak,
+        // fallback ke `cat` legacy.
+        ...(categoryId
+          ? [eq(services.categoryId, categoryId)]
+          : cat
+            ? [eq(services.categoryId, cat)]
+            : []),
         ...tokens.map((t) => like(services.serviceName, `%${t.replace(/[%_\\]/g, "\\$&")}%`)),
       ),
     )
@@ -164,22 +164,19 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       isRefill: r.isRefill,
       note: r.note,
       waktu: r.waktu,
+      categoryId: r.categoryId,
       pricePer1k: effectivePer1k(base, level, rule, modal),
       platform: detectPlatform(r.serviceName),
       kind: detectKind(r.serviceName),
     };
   });
 
-  // Urut termurah per tampilan (harga efektif, bukan harga mentah).
   mapped.sort((a, b) => a.pricePer1k - b.pricePer1k);
 
   const filtered = mapped.filter(
     (s) => (!platform || s.platform === platform) && (!kind || s.kind === kind),
   );
 
-  // Query tanpa token valid (mis. "a") → kosong, bukan full scan sia-sia.
   if (q && tokens.length === 0) return json([]);
-
-  // Cap 1000 baris — bucket terbesar (IG followers ~750) muat penuh, tanpa truncate.
   return json(filtered.slice(0, 1000));
 };
