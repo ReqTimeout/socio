@@ -165,7 +165,7 @@ const platformFor = (k) => PLATFORM.find((p) => p.re.test(k)) || PLATFORM[0];
 
 // Pool FAQ GLOBAL: semua pasangan Q+A dari semua sumber (15 sumber x 5 = 75 item).
 // Versi lama memakai satu set FAQ UTUH per sumber, jadi dua artikel dari sumber
-// yang samaǐ分享 250 kata identik — itu ~25% body. Mencampur per-item menurunkan
+// yang sama: 250 kata identik — itu ~25% body. Mencampur per-item menurunkan
 // overlap ke ~2%.
 const FAQ_POOL = [];
 for (const s of SOURCES) {
@@ -291,7 +291,7 @@ function buildArticle(t) {
   }
 
   // FAQ: 5 item dari POOL GLOBAL (bukan satu set utuh), dijamin tidak duplikat
-  // dalam satu artikel dan，尽量 berbeda antar artikel lewat hash salt.
+  // dalam satu artikel dan, sebaliknya, harus berbeda antar artikel lewat hash salt.
   const faq = [];
   const seenQ = new Set();
   for (let k = 0; k < 240 && faq.length < 5; k++) {
@@ -355,7 +355,7 @@ function buildArticle(t) {
   //
   // VariasI: versi lama memakai satu blok dengan kalimat persis sama di semua
   // artikel (hanya anchor/buyer yang beda). Itu menyumbang ~80 kata dengan
-  // struktur identik ke SETIAP artikel, dan.cos相似 tetap 0,75-0,80 walau isi
+  // struktur identik ke SETIAP artikel, dan cosine tetap 0,75-0,80 walau isi
   // seksi sudah beda. Lima variasi di bawah memutus pola itu.
   const C = capCity(city.city);
   const LOCAL_VARIANTS = [

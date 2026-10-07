@@ -7,7 +7,7 @@
  * (`pnpm seo:check-article <slug>`) dan TIDAK PERNAH dipanggil dari pipeline.
  * `generate.mjs` hanya memanggil `validateMdx` yang mengecek frontmatter saja
  * (title ≤70, description ≤160, faq = 5) — nol pemeriksaan teks korup. Akibatnya
- * artikel写着 e.g. `yang_filters`, `sebelumellos. hasten.` masuk korpus tanpa
+ * artikel noise e.g. `yang_filters`, `sebelum ellos. hasten.` masuk korpus tanpa
  * pernah ditahan.
  *
  * Solusi: logika dipindah ke sini, lalu `check-article.mjs` jadi CLI tipis dan
@@ -18,7 +18,7 @@
  *   2. karakter non-Latin (CJK / Hangul / Cyrillic / fullwidth / emoji astral)
  *   3. kata menempel glued camelCase (`hanyaIncrement`)
  *   4. junk markup Liquid/Jekyll (`yang_filters`, `&[i]`, `][i]`)
- *   5. sisa teks Inggris (`sebelumellos. hasten.`, `Pertanyaan about harga`)
+ *   5. sisa teks Inggris (`sebelum ellos. hasten.`, `Pertanyaan about harga`)
  *   6. frontmatter: YAML parse bener, title ≤70, description ≤160, faq tepat 5
  */
 import { createRequire } from 'node:module';
@@ -64,7 +64,7 @@ const BOLEH = new Set([
  * Kenapa perlu: kelas ini yang paling lolos. `qc-uniqueness` hanya mengukur
  * kemiripan antar artikel, `check-article` (sebelum kelas ini ada) hanya
  * menangkap junk markup. Akibatnya kalimat seperti
- *   "sebelumellos. hasten."  ·  "Pertanyaan about harga borongan"
+ *   "sebelum ellos. hasten."  ·  "Pertanyaan about harga borongan"
  *   "tidak cheapest di daftar"
  * lolos semua gate.
  *
@@ -72,7 +72,7 @@ const BOLEH = new Set([
  * DIHAPUS — bising besar, menandai `angka`, `paling`, `batik`, `villa`, `sayur`.
  * Kamus bahasa Inggris tidak tahu mana yang pinjamAN sah di bahasa Indonesia.
  *
- * Pendekatan yang dipakai: daftar TERTUTUP kata风险 tinggi, dikurangi frasa
+ * Pendekatan yang dipakai: daftar TERTUTUP kata berisiko tinggi, dikurangi frasa
  * pinjam yang sudah diverifikasi sah di korpus ini. Konservatif = lebih banyak
  * false negative (glitch lolos) daripada false positive (menolak tulisan baik).
  * Kalau ada kata yang terlewat, tambahkan ke `SISA_INGGRIS` — jangan longgarkan
@@ -97,7 +97,7 @@ const SISA_INGGRIS = new Set([
   'before', 'after', 'between', 'during', 'through', 'without', 'being',
 
   // Morfologi Inggris yang tidak ada padanannya di Indonesia. Ini yang benar-benar
-  // bocor 4 Okt: `sebelumellos. hasten.` dan `tidak cheapest di daftar`.
+  // bocor 4 Okt: `sebelum ellos. hasten.` dan `tidak cheapest di daftar`.
   'hasten', 'cheapest', 'cheaper', 'dearest', 'fastest', 'slowest', 'best',
   'worst', 'largest', 'smallest', 'highest', 'lowest', 'nearest', 'greatest',
 ]);
@@ -257,7 +257,7 @@ if (process.argv.includes('--self-test')) {
     ['liquid sisa', 'Satu pelanggan yang_filters lewat rekomendasi bernilai.', 'junk markup'],
     ['liquidAW', 'daripada_posts broadcast lebih murah.', 'junk markup'],
     ['liquidBF', 'karena_pattern yang tidak berubah.', 'junk markup'],
-    ['inggris/1', 'apakah Anda benar-benar ada sebelumellos. hasten.', 'sisa teks Inggris'],
+    ['inggris/1', 'apakah Anda benar-benar ada sebelum ellos. hasten.', 'sisa teks Inggris'],
     ['inggris/2', 'Pertanyaan about harga borongan, minimal order.', 'sisa teks Inggris'],
     ['inggris/3', 'FacebookReplay sengaja tidak cheapest di daftar.', 'sisa teks Inggris'],
     ['glued', 'butuhPaparan dan hanyaIncrement adalah dua hal.', 'kata campuran huruf'],

@@ -3,6 +3,8 @@ import { users, accounts, verifications, deposits, balanceLogs } from "@socio/db
 import { eq, or, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
+import { emailShell, emailAmountBox, emailFooterTransactional } from "./email/render.js";
+import { EMAIL_COLORS } from "./email/tokens.js";
 import { sendEmail } from "./email";
 
 export interface SignupInput {
@@ -204,26 +206,20 @@ async function sendResellerInstructionsEmail(
     .limit(1);
   if (!u) return;
   const amt = Math.round(amount).toLocaleString("id-ID");
-  const html = `<!doctype html><html lang="id"><body style="margin:0;background:#f8fafc;padding:24px 12px;font-family:ui-sans-serif,system-ui,sans-serif">
-  <table role="presentation" width="100%"><tr><td align="center">
-    <table role="presentation" style="max-width:480px;width:100%;background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden">
-      <tr><td style="background:linear-gradient(135deg,#4f46e5,#06b6d4);padding:20px 24px;color:#fff">
-        <div style="font-size:18px;font-weight:800">Socio.id</div>
-        <div style="font-size:11px;opacity:.85;letter-spacing:.08em;text-transform:uppercase">Aktivasi Akun Reseller</div>
-      </td></tr>
-      <tr><td style="padding:24px;color:#334155;font-size:14px;line-height:1.7">
-        <p style="margin:0 0 12px">Halo <b>${u.fullName}</b>,</p>
-        <p style="margin:0 0 12px">Terima kasih sudah mendaftar sebagai <b>Reseller Socio.id</b>. Tinggal selangkah lagi! Silakan transfer biaya aktivasi sebesar:</p>
-        <div style="background:#f1f5f9;border-radius:12px;padding:16px;margin:16px 0;text-align:center">
-          <div style="font-size:24px;font-weight:800;color:#0f172a">Rp${amt}</div>
-          <div style="margin-top:6px;font-size:13px;color:#475569">${target}</div>
-        </div>
-        <p style="margin:0 0 12px"><b>Penting:</b> transfer <u>sesuai nominal</u> (termasuk 3 digit terakhir) supaya bisa dicocokkan, maksimal <b>12 jam</b> dari email ini.</p>
-        <p style="margin:0 0 12px">Akun reseller kamu otomatis aktif dan saldo <b>Rp20.000 sudah termasuk</b> dalam pembayaranmu — langsung bisa dipakai pesan. Nikmati harga khusus untuk jualan ulang!</p>
-        <p style="margin:0;color:#64748b;font-size:13px">Selamat bergabung!<br>Tim Socio.id</p>
-      </td></tr>
-    </table>
-  </td></tr></table></body></html>`;
+  // Sumber HTML: email/render.ts. Copy teks IDENTIK dengan versi lama.
+  const html = emailShell({
+    headerSub: "Aktivasi Akun Reseller",
+    maxWidth: 480,
+    content:
+      `<p style="margin:0 0 12px">Halo <b>${u.fullName}</b>,</p>` +
+      `<p style="margin:0 0 12px">Terima kasih sudah mendaftar sebagai <b>Reseller Socio.id</b>. Tinggal selangkah lagi! Silakan transfer biaya aktivasi sebesar:</p>` +
+      emailAmountBox({ amount: `Rp${amt}`, caption: target }) +
+      `<p style="margin:0 0 12px"><b>Penting:</b> transfer <u>sesuai nominal</u> (termasuk 3 digit terakhir) supaya bisa dicocokkan, maksimal <b>12 jam</b> dari email ini.</p>` +
+      `<p style="margin:0 0 12px">Akun reseller kamu otomatis aktif dan saldo <b>Rp20.000 sudah termasuk</b> dalam pembayaranmu — langsung bisa dipakai pesan. Nikmati harga khusus untuk jualan ulang!</p>` +
+      `<p style="margin:0;color:${EMAIL_COLORS.inkSecondary};font-size:13px">Selamat bergabung!<br>Tim Socio.id</p>`,
+    footer: emailFooterTransactional("bare"),
+    mascot: "wave",
+  });
   await sendEmail({
     to: u.email,
     subject: "Aktivasi Akun Reseller — Socio.id",
@@ -256,21 +252,20 @@ export async function activateReseller(userId: number): Promise<void> {
     .where(eq(users.id, userId))
     .limit(1);
   if (u) {
-    const html = `<!doctype html><html lang="id"><body style="margin:0;background:#f8fafc;padding:24px 12px;font-family:ui-sans-serif,system-ui,sans-serif">
-    <table role="presentation" width="100%"><tr><td align="center">
-      <table role="presentation" style="max-width:480px;width:100%;background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden">
-        <tr><td style="background:linear-gradient(135deg,#16a34a,#06b6d4);padding:20px 24px;color:#fff">
-          <div style="font-size:18px;font-weight:800">Socio.id</div>
-          <div style="font-size:11px;opacity:.85;letter-spacing:.08em;text-transform:uppercase">Selamat Datang Reseller</div>
-        </td></tr>
-        <tr><td style="padding:24px;color:#334155;font-size:14px;line-height:1.7">
-          <p style="margin:0 0 12px">Halo <b>${u.fullName}</b>,</p>
-          <p style="margin:0 0 12px">Pembayaran aktivasi reseller kamu sudah kami terima. 🎉</p>
-          <p style="margin:0 0 12px">Akun kamu sudah aktif — saldo <b>Rp${bonus.toLocaleString("id-ID")} sudah masuk</b> dan siap dipakai. Nikmati harga spesial reseller!</p>
-          <p style="margin:0;color:#64748b;font-size:13px">Sukses selalu!<br>Tim Socio.id</p>
-        </td></tr>
-      </table>
-    </td></tr></table></body></html>`;
+    // Sumber HTML: email/render.ts. Copy teks + emoji IDENTIK.
+    // Keputusan user 6 Okt 2026: header disamakan indigo (varian hijau dihapus),
+    // emoji dipertahankan, footer © ditambahkan.
+    const html = emailShell({
+      headerSub: "Selamat Datang Reseller",
+      maxWidth: 480,
+      content:
+        `<p style="margin:0 0 12px">Halo <b>${u.fullName}</b>,</p>` +
+        `<p style="margin:0 0 12px">Pembayaran aktivasi reseller kamu sudah kami terima. 🎉</p>` +
+        `<p style="margin:0 0 12px">Akun kamu sudah aktif — saldo <b>Rp${bonus.toLocaleString("id-ID")} sudah masuk</b> dan siap dipakai. Nikmati harga spesial reseller!</p>` +
+        `<p style="margin:0;color:${EMAIL_COLORS.inkSecondary};font-size:13px">Sukses selalu!<br>Tim Socio.id</p>`,
+      footer: emailFooterTransactional("bare"),
+      mascot: "celebrate",
+    });
     await sendEmail({ to: u.email, subject: "Selamat Datang Reseller — Socio.id", html });
   }
 }

@@ -21,6 +21,7 @@
     - `watch_paths` sudah diisi 2-Okt-2026 (`app/**`, `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`) sebagai jaring pengaman kalau webhook someday diaktifkan. Belum teruji pada jalur webhook sungguhan.
     - **Push >20 commit sekaligus bisa TERLEWAT deploy** (GitHub memotong payload push di 20 commit pertama). Setelah push besar → cek status deploy; kalau tertinggal, deploy manual.
     - Cara ubah/rollback + semantik glob: `docs/AGENT_MEMORY.md §1b`. **Baca sebelum deploy.**
+    - **⚠️ MCP Hostinger yang ada di environment itu BUANGAN untuk project ini.** Socio.id cuma pakai **TNA Hosting + Coolify + Cloudflare**. Jangan pernah memanggil tool `hostinger_*` untuk urusan VPS / PTR / reverse DNS — API itu shared hosting (`hosting_*`) dan tidak punya operasi VPS. PTR hanya lewat **TNA Hosting**.
     - `landing/` (`socio.id`) **tidak** dideploy Coolify (manual `npx wrangler pages deploy`), jadi push konten tidak menyentuh landing juga.
 
 ## 1. Source of truth (urutan prioritas)
@@ -39,7 +40,7 @@
 ## 2. Tech stack final (JANGAN diubah)
 
 - **Landing**: Astro 5 + Svelte 5 islands + Tailwind v4 + MDX → Cloudflare Pages
-- **App**: SvelteKit + adapter-node + Tailwind v4 → VPS TNA Hosting (hybrid, infra Hostinger SG) + Coolify
+- **App**: SvelteKit + adapter-node + Tailwind v4 → VPS **TNA Hosting** (130.254.47.93) + Coolify. **Bukan Hostinger** — jangan cari solusi lewat Hostinger API/MCP (itu shared hosting, tidak punya operasi VPS/PTR). Reverse DNS/PTR hanya bisa diubah lewat TNA Hosting.
 - **DB**: MySQL via Drizzle ORM → TiDB Serverless Singapore (managed, terpisah dari VPS)
 - **Auth**: better-auth + bcryptjs (kompatibel PHP `password_hash`)
 - **Queue**: DB-backed (`job_queue` + `SELECT FOR UPDATE SKIP LOCKED`) — NO Redis

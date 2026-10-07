@@ -131,6 +131,16 @@ async function sendViaResend(args: SendArgs): Promise<boolean> {
   return true;
 }
 
+import {
+  emailShell,
+  emailTitleBlock,
+  emailCta,
+  emailCopyLink,
+  emailFooterTransactional,
+  emailSupportAfterCard,
+} from "./email/render.js";
+import type { SparkoPose } from "./email/render.js";
+
 function wrapEmail(opts: {
   preheader: string;
   title: string;
@@ -138,38 +148,24 @@ function wrapEmail(opts: {
   ctaLabel: string;
   ctaHref: string;
   note?: string;
+  mascot?: SparkoPose;
 }): string {
-  const { preheader, title, intro, ctaLabel, ctaHref, note } = opts;
-  return `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body style="margin:0;padding:0;background:#f8fafc">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0">${preheader}</div>
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f8fafc;padding:24px 12px">
-    <tr><td align="center">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
-        <tr><td style="background:linear-gradient(135deg,#4f46e5 0%,#06b6d4 100%);padding:20px 24px;text-align:center">
-          <div style="font-family:ui-sans-serif,system-ui,sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.02em;color:#ffffff">Socio<span style="opacity:0.9">.id</span></div>
-          <div style="font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.85);margin-top:2px">Panel SMM Indonesia</div>
-        </td></tr>
-        <tr><td style="padding:28px 24px 8px 24px">
-          <h1 style="margin:0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:20px;line-height:1.3;font-weight:800;color:#0f172a">${title}</h1>
-          <p style="margin:12px 0 0 0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:1.6;color:#334155">${intro}</p>
-        </td></tr>
-        <tr><td style="padding:20px 24px 8px 24px" align="center">
-          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${ctaHref}" style="height:44px;v-text-anchor:middle;width:220px" arcsize="50%" strokecolor="#4f46e5" fillcolor="#4f46e5"><center style="color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:700">${ctaLabel}</center></v:roundrect><![endif]-->
-          <!--[if !mso]><!--><a href="${ctaHref}" style="display:inline-block;background:#4f46e5;color:#ffffff;font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;font-weight:700;line-height:44px;text-align:center;text-decoration:none;border-radius:9999px;padding:0 28px;min-width:180px">${ctaLabel}</a><!--<![endif]-->
-        </td></tr>
-        <tr><td style="padding:8px 24px 4px 24px">
-          <p style="margin:0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;line-height:1.5;color:#64748b;word-break:break-all">Atau salin link ini: <a href="${ctaHref}" style="color:#4f46e5;text-decoration:underline">${ctaHref}</a></p>
-          ${note ? `<p style="margin:12px 0 0 0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;line-height:1.5;color:#94a3b8">${note}</p>` : ""}
-        </td></tr>
-        <tr><td style="padding:24px;border-top:1px solid #f1f5f9">
-          <p style="margin:0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;line-height:1.5;color:#94a3b8;text-align:center">© ${new Date().getFullYear()} Socio.id — Panel SMM Indonesia<br>Jika bukan Anda yang meminta, abaikan email ini. Akun Anda tetap aman.</p>
-        </td></tr>
-      </table>
-      <div style="max-width:480px;margin:12px auto 0 auto;text-align:center"><p style="margin:0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;color:#94a3b8">Butuh bantuan? Balas email ini atau buka <a href="https://socio.id/tiket" style="color:#4f46e5">pusat bantuan</a>.</p></div>
-    </td></tr>
-  </table>
-</body></html>`;
+  const { preheader, title, intro, ctaLabel, ctaHref, note, mascot } = opts;
+  // Sumber HTML: app/src/lib/server/email/render.ts (token DNA).
+  // Copy teks IDENTIK dengan versi lama; yang berubah hanya warna sub-AA
+  // (#94a3b8 → #64748b di permukaan terang) + dark-mode + preheader aman.
+  return emailShell({
+    preheader,
+    headerSub: "Panel SMM Indonesia",
+    maxWidth: 480,
+    content:
+      emailTitleBlock(title, intro) +
+      emailCta({ label: ctaLabel, href: ctaHref }) +
+      emailCopyLink(ctaHref, note),
+    footer: emailFooterTransactional("security"),
+    afterCard: emailSupportAfterCard(),
+    mascot,
+  });
 }
 
 export function resetPasswordEmail(resetLink: string): {
@@ -184,6 +180,7 @@ export function resetPasswordEmail(resetLink: string): {
         "Kami menerima permintaan untuk mengatur ulang password akun Socio.id Anda. Klik tombol di bawah — link berlaku 1 jam dan hanya bisa dipakai sekali.",
       ctaLabel: "Reset password",
       ctaHref: resetLink,
+      mascot: "idle",
       note: "Demi keamanan, jangan bagikan link ini kepada siapa pun. Jika Anda tidak meminta reset, abaikan email ini.",
     }),
     text: `Reset password Socio.id\n\nKlik link berikut (berlaku 1 jam): ${resetLink}\n\nJika bukan Anda, abaikan email ini.`,
@@ -202,6 +199,7 @@ export function verificationEmail(verifyLink: string): {
         "Selamat datang di Socio.id! Klik tombol di bawah untuk memverifikasi email dan mengaktifkan akun Anda. Proses hanya butuh beberapa detik.",
       ctaLabel: "Verifikasi email",
       ctaHref: verifyLink,
+      mascot: "wave",
       note: "Link verifikasi akan kedaluwarsa dalam 24 jam. Jika tombol tidak berfungsi, salin link di atas ke browser.",
     }),
     text: `Verifikasi email Socio.id\n\nKlik link berikut untuk mengaktifkan akun: ${verifyLink}`,

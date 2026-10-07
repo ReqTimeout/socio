@@ -60,16 +60,27 @@ function parseArgs() {
   return opts;
 }
 
+// Kandidat dipool lebih besar dari `count` karena gate bisa menolak sebagian.
+// Kalau poolnya cuma `count`, satu slug yang diblokir akan menggagalkan SELURUH
+// siklus — dan karena slug itu tetap `status: draft` dan tetap prioritas teratas,
+// siklus berikutnya mengulang slug yang sama. Itu deadlock: publish mati
+// permanen (terjadi 6 Okt 2026, 44 siklus gagal berturut).
+const POOL_FACTOR = 12;
+const POOL_MIN = 24;
+
 function pickDrafts(queue, count, slug) {
+  const now = Date.now();
   const drafts = queue.items.filter((i) => {
     if (i.status !== 'draft') return false;
+    // Lewati yang sedang dikarantina gate duplikat.
+    if (i.qcBlockedUntil && Number(i.qcBlockedUntil) > now) return false;
     if (slug) return i.slug === slug;
     return existsSync(`${BLOG_DIR}/${i.slug}.mdx`);
   });
   if (slug) return drafts;
   return drafts
     .sort((a, b) => (b.priority || 0) - (a.priority || 0) || (a.notes || '').localeCompare(b.notes || ''))
-    .slice(0, count);
+    .slice(0, Math.max(count * POOL_FACTOR, POOL_MIN));
 }
 
 /**
@@ -130,31 +141,53 @@ async function main() {
 
   // Gate anti-duplicate: sisipkan draft yang mirip artikel existing, lalu publish
   // lagi pakai slot kuota harian dan menjatuhkan index_rate → ramp-gate turun.
+  //
+  // PENTING: slug yang diblokir TIDAK boleh menggagalkan siklus. Ia dikarantina
+  // agar dicoba lagi setelah 7 hari, sementara siklus ini lanjut ke kandidat
+  // berikutnya. Gate tetap berkuasa (tanpa --skip-uniqueness) — yang digeser
+  // hanya antreanannya, bukan aturannya. Tanpa ini publish mati permanen:
+  // 6 Okt 2026 satu slug mirip "beli-followers-tiktok-pontianak" memblokir
+  // 44 siklus berturut-turut karena selalu jadi kandidat prioritas teratas.
+  const QUARANTINE_MS = 7 * 24 * 3600 * 1000;
   const cleared = [];
   const blockedByGate = [];
   if (!opts.skipUniqueness) {
-    console.log('Gate qc-uniqueness (anti scaled-content-abuse):');
+    console.log(`Gate qc-uniqueness (anti scaled-content-abuse) — ${targets.length} kandidat:`);
     for (const t of targets) {
+      if (cleared.length >= opts.count) break; // cukup, sisanya untuk siklus depan
       const g = uniquenessGate(t.slug);
       if (g.warn) console.log(`  ⚠ ${t.slug}: gate error (tidak memblokir) — ${g.warn}`);
       if (g.ok) {
         cleared.push(t);
       } else {
-        blockedByGate.push(t);
+        blockedByGate.push({ t, detail: g.detail || [] });
         console.log(`  ✗ ${t.slug} DITOLAK — mirip: ${(g.detail || []).join(', ')}`);
-        console.log('    → rombak artikelnya (tambah data unik /_angle berbeda), atau publish manual dengan --skip-uniqueness');
       }
     }
     if (blockedByGate.length) {
-      console.log(`\n${blockedByGate.length} slug diblokir gate, ${cleared.length} lolos.`);
+      const until = new Date(Date.now() + QUARANTINE_MS).toISOString().slice(0, 10);
+      for (const { t, detail } of blockedByGate) {
+        t.qcBlockedUntil = Date.now() + QUARANTINE_MS;
+        t.qcBlockedDate = until;
+        t.qcBlockCount = (t.qcBlockCount || 0) + 1;
+        t.qcBlockedReason = detail.join('; ');
+      }
+      console.log(
+        `\n${blockedByGate.length} slug dikarantina sampai ${until} (percobaan ke-${blockedByGate[0].t.qcBlockCount}). Gate tetap berlaku — tidak ada yang di-skip.`,
+      );
+      console.log('  → artikel ini harus dirombak (data unik / angle berbeda), bukan di-bypass.');
     }
   } else {
-    cleared.push(...targets);
+    cleared.push(...targets.slice(0, opts.count));
     console.log('Gate qc-uniqueness: DILEWATI (--skip-uniqueness)');
   }
 
   if (!cleared.length) {
-    console.log('\nTidak ada draft yang lolos gate — tidak ada yang dipublish.');
+    // WAJIB tulis queue dulu: kalau tidak, penanda karantina hilang dan siklus
+    // berikutnya menguji slug yang sama lagi → deadlock yang baru saja diperbaiki.
+    writeFileSync(QUEUE_PATH, JSON.stringify(queue, null, 2) + '\n');
+    console.log('\nSemua kandidat dikarantina gate — tidak ada yang dipublish siklus ini.');
+    console.log('Siklus berikutnya akan mencoba kandidat lain. Artikel terkarantina perlu dirombak.');
     process.exitCode = 1;
     return;
   }

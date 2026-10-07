@@ -42,8 +42,19 @@ if (!enabled) return null;
   data-ga4={ga4Id ? '1' : '0'}
   class="consent-banner fixed inset-x-0 bottom-0 z-50 p-3 print:hidden sm:p-4"
 >
+  <!--
+    Banner di desktop sebelumnya `max-w-4xl` + dua kolom (teks kiri, tombol kanan).
+    Akibatnya card hanya ~896px di tengah layar 1280px: ada ruang kosong besar
+    di kiri dan kanan, teks jadi 3 baris, dan banner tumbuh jadi 156px — yang
+    langsung terbaca sebagai ada ruang kosong di bawah footer, padahal itu
+    banner-nya sendiri.
+
+    Sekarang: bar PENUH (tanpa max-width) dengan teks dan tombol dalam satu
+    baris. Teks ~2 baris, tinggi turun ke ~72px, dan tidak ada area kosong samping. `--consent-h` dihitung ulang oleh JS dari tinggi asli, jadi
+    spacer ikut mengikuti.
+  -->
   <div
-    class="consent-card mx-auto max-w-4xl rounded-2xl border border-[var(--hairline-strong)] bg-[var(--paper)]/95 p-4 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur sm:flex sm:items-center sm:gap-5 sm:p-5"
+    class="consent-card flex flex-col gap-3 rounded-2xl border border-[var(--hairline-strong)] bg-[var(--paper)]/95 p-4 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur sm:flex-row sm:items-center sm:gap-6 sm:p-4"
   >
     <div class="min-w-0 flex-1">
       <p id="consent-title" class="text-[13px] font-bold text-[var(--ink)]">Cookie: analitik &amp; iklan</p>
