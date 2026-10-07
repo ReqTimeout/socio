@@ -866,7 +866,7 @@ import {
                                   >Termurah</span
                                 >
                               {/if}
-                              {#each (svc.events ?? []).slice(0, 2) as ev (ev.event)}
+                              {#each (svc.events ?? []).slice(0, 2) as ev (ev.detectedAt)}
                                 {@const b = svcEventBadge(ev.event)}
                                 {#if b}
                                   <span
