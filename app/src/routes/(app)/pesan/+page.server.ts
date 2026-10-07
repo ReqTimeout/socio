@@ -58,7 +58,6 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const cats = catRows.map((c) => ({
     id: c.id,
     name: whitelabel(c.name),
-    raw: c.name,
     count: Number(c.svcCount) || 0,
     platforms: Array.from(catPlatforms.get(c.id) ?? []),
     kinds: Array.from(catKinds.get(c.id) ?? []),
