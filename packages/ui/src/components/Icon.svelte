@@ -135,6 +135,8 @@
     share:
       "M21 5a3 3 0 1 1-6 0 3 3 0 1 1 6 0zM9 12a3 3 0 1 1-6 0 3 3 0 1 1 6 0zM21 19a3 3 0 1 1-6 0 3 3 0 1 1 6 0zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4",
     bookmark: "M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z",
+    radio:
+      "M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM4.93 19.07a10 10 0 0 1 0-14.14M7.76 16.24a6 6 0 0 1 0-8.49M16.24 7.76a6 6 0 0 1 0 8.49M19.07 4.93a10 10 0 0 1 0 14.14",
   };
   // Icon brand fill (logo solid) — render dgn fill=currentColor, stroke none.
   // Selainnya stroke-based seperti biasa.

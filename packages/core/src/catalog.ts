@@ -116,7 +116,7 @@ export const KINDS: KindDef[] = [
   { id: "followers", label: "Followers", icon: "user_plus" },
   { id: "likes", label: "Likes", icon: "heart" },
   { id: "views", label: "Views", icon: "eye" },
-  { id: "live", label: "Live", icon: "activity" },
+  { id: "live", label: "Live", icon: "radio" },
   { id: "comments", label: "Comments", icon: "message" },
   { id: "subscribers", label: "Subscribers", icon: "users" },
   { id: "members", label: "Members", icon: "users" },

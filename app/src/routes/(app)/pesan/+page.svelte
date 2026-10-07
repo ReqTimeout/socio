@@ -633,7 +633,7 @@
                   </div>
                 {:else}
                   <div
-                    class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+                    class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:flex-wrap lg:overflow-visible"
                     role="radiogroup"
                     aria-labelledby="kind-label"
                   >
