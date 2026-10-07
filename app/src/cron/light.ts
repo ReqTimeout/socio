@@ -63,7 +63,9 @@ export async function runLightCron(): Promise<void> {
     console.error("[cron] deposit-expire failed:", e);
   }
 
-  // Reminder T-2h: Pending + expire < now+2h + belum diingatkan
+  // Reminder T-2h: Pending + expire < now+2h + belum diingatkan.
+  // reminderSent (0/1) dipakai SEMUA jenis deposit. Reminder H-2/H-1 khusus
+  // aktivasi reseller ada di blok terpisah di bawah (pakai reminder_stage).
   try {
     const due = await db
       .select({
@@ -95,9 +97,11 @@ export async function runLightCron(): Promise<void> {
           Math.round((new Date(dep.expire as any).getTime() - Date.now()) / 60000),
         );
         const leftText =
-          minsLeft >= 60
-            ? `${Math.floor(minsLeft / 60)} jam ${minsLeft % 60} mnt`
-            : `${minsLeft} menit`;
+          minsLeft >= 1440
+            ? `${Math.floor(minsLeft / 1440)} hari`
+            : minsLeft >= 60
+              ? `${Math.floor(minsLeft / 60)} jam ${minsLeft % 60} mnt`
+              : `${minsLeft} menit`;
         if (u?.email) {
           const m = depositReminderMail({
             name: u.fullName || "Pengguna Socio.id",
@@ -128,7 +132,83 @@ export async function runLightCron(): Promise<void> {
     console.error("[cron] deposit-reminder failed:", e);
   }
 
-  // Seed next_poll_at for orders in flight without a schedule
+  // Reminder H-2 / H-1 KHUSUS aktivasi reseller (expire 72 jam).
+  // Stage disimpan di deposits.reminder_stage (0=belum, 1=H-2 terkirim, 2=H-1 terkirim).
+  // Jendela tidak tumpang-tindih: H-2 = sisa (24h, 48h], H-1 = sisa (2h, 24h].
+  // Deposit top-up biasa (untukApa=smm, expire 24h) TIDAK tersentuh blok ini.
+  for (const stage of [
+    { stage: 1, maxHours: 48, minHours: 24 },
+    { stage: 2, maxHours: 24, minHours: 2 },
+  ]) {
+    try {
+      const rows = await db
+        .select({
+          id: deposits.id,
+          userId: deposits.userId,
+          amount: deposits.amount,
+          expire: deposits.expire,
+          stage: deposits.reminderStage,
+        })
+        .from(deposits)
+        .where(
+          and(
+            eq(deposits.status, "Pending"),
+            eq(deposits.untukApa, "reseller"),
+            sql`${deposits.reminderStage} < ${stage.stage}`,
+            sql`${deposits.expire} > DATE_ADD(NOW(), INTERVAL ${sql.raw(String(stage.minHours))} HOUR)`,
+            sql`${deposits.expire} <= DATE_ADD(NOW(), INTERVAL ${sql.raw(String(stage.maxHours))} HOUR)`,
+          ),
+        )
+        .limit(100);
+      for (const dep of rows) {
+        try {
+          const [u] = await db
+            .select({ email: users.email, fullName: users.fullName })
+            .from(users)
+            .where(eq(users.id, dep.userId))
+            .limit(1);
+          const minsLeft = Math.max(
+            1,
+            Math.round((new Date(dep.expire as any).getTime() - Date.now()) / 60000),
+          );
+          const leftText =
+            minsLeft >= 1440
+              ? `${Math.floor(minsLeft / 1440)} hari`
+              : `${Math.floor(minsLeft / 60)} jam ${minsLeft % 60} mnt`;
+          if (u?.email) {
+            const m = depositReminderMail({
+              name: u.fullName || "Pengguna Socio.id",
+              amount: Number(dep.amount),
+              invoiceId: `#${dep.id}`,
+              expireAt: dep.expire as any,
+              leftText,
+            });
+            await enqueueEmail({
+              to: u.email,
+              userId: dep.userId,
+              templateName: "deposit-reminder",
+              subject: m.subject,
+              body: m.text,
+              ctaText: "Bayar sekarang",
+              ctaUrl: "https://app.socio.id/saldo",
+              html: m.html,
+              priority: "high",
+            });
+          }
+          await db
+            .update(deposits)
+            .set({ reminderStage: stage.stage })
+            .where(eq(deposits.id, dep.id));
+        } catch (e) {
+          console.error(`[cron] reseller-reminder H${3 - stage.stage} ${dep.id} failed:`, e);
+        }
+      }
+      if (rows.length > 0)
+        console.log(`[cron] reseller-reminder stage${stage.stage}: ${rows.length} diingatkan`);
+    } catch (e) {
+      console.error("[cron] reseller-reminder failed:", e);
+    }
+  }
   try {
     await db.execute(sql`
       UPDATE orders

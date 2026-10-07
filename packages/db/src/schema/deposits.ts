@@ -35,6 +35,9 @@ export const deposits = mysqlTable(
     verifiedAt: datetime("verified_at"),
     verificationNotes: text("verification_notes"),
     reminderSent: tinyint("reminder_sent").notNull().default(0),
+    // Tahap reminder aktivasi reseller (H-2 = 1, H-1 = 2). Reminder T-2 jam
+    // terakhir tetap memakai reminderSent (0/1) untuk semua jenis deposit.
+    reminderStage: tinyint("reminder_stage").notNull().default(0),
   },
   (t) => ({
     userIdx: index("user_id_idx").on(t.userId),

@@ -142,7 +142,17 @@ export async function sendMemberVerificationEmail(userId: number): Promise<boole
   return sent;
 }
 
-/** Biaya aktivasi reseller: Rp50.000 incl. saldo Rp20.000 → tagihan = 50.000 + 111..999, kredit saldo 20.000 saat aktif. */
+/** Batas bayar aktivasi reseller (jam). Default 72 (3 hari). Berlaku ID + MY. */
+export function resellerActivationHours(): number {
+  const h = Number(process.env.SOCIO_RESELLER_ACTIVATION_HOURS ?? 72);
+  return Number.isFinite(h) && h >= 1 && h <= 168 ? Math.round(h) : 72;
+}
+
+/** Label batas bayar untuk email/UI: "12 jam" atau "72 jam (3 hari)". */
+export function resellerActivationDeadlineLabel(): string {
+  const h = resellerActivationHours();
+  return h >= 24 && h % 24 === 0 ? `${h} jam (${h / 24} hari)` : `${h} jam`;
+}
 export function resellerActivationAmount(): {
   amount: number;
   suffix: number;
@@ -163,9 +173,25 @@ export async function createResellerSignup(input: SignupInput): Promise<{
   depositId: number;
 }> {
   const userId = await createUserRow({ ...input, level: "Reseller" });
+  const inv = await issueResellerActivationInvoice(userId);
+  return { userId, amount: inv.amount, depositId: inv.depositId };
+}
+
+/**
+ * Terbitkan invoice aktivasi reseller baru (deposit Pending + email instruksi).
+ * Dipakai saat daftar DAN saat "kirim ulang invoice" (deposit lama expired).
+ * Maksimal 1 deposit aktivasi Pending per user — panggil hanya setelah cek itu.
+ */
+export async function issueResellerActivationInvoice(userId: number): Promise<{
+  amount: number;
+  depositId: number;
+  expireAt: Date;
+}> {
   const { amount } = resellerActivationAmount();
+  const hours = resellerActivationHours();
   const bcaNumber = process.env.SOCIO_BCA_NUMBER ?? "1392680815";
   const bcaName = process.env.SOCIO_BCA_NAME ?? "Awangga Ramadhi";
+  const expireAt = new Date(Date.now() + hours * 3600 * 1000);
 
   const [dep] = await db
     .insert(deposits)
@@ -182,7 +208,7 @@ export async function createResellerSignup(input: SignupInput): Promise<{
       phone: null,
       status: "Pending",
       createdAt: new Date(),
-      expire: new Date(Date.now() + 12 * 3600 * 1000),
+      expire: expireAt,
       idPm: `RESELLER-${Date.now()}-${userId}`,
       invoiceVirtual: "",
       untukApa: "reseller",
@@ -190,14 +216,20 @@ export async function createResellerSignup(input: SignupInput): Promise<{
     })
     .$returningId();
 
-  await sendResellerInstructionsEmail(userId, amount, `${bcaNumber} a.n ${bcaName} (BCA)`);
-  return { userId, amount, depositId: dep.id };
+  await sendResellerInstructionsEmail(
+    userId,
+    amount,
+    `${bcaNumber} a.n ${bcaName} (BCA)`,
+    expireAt,
+  );
+  return { amount, depositId: dep.id, expireAt };
 }
 
 async function sendResellerInstructionsEmail(
   userId: number,
   amount: number,
   target: string,
+  expireAt: Date,
 ): Promise<void> {
   const [u] = await db
     .select({ email: users.email, fullName: users.fullName })
@@ -206,6 +238,12 @@ async function sendResellerInstructionsEmail(
     .limit(1);
   if (!u) return;
   const amt = Math.round(amount).toLocaleString("id-ID");
+  const deadline = new Date(expireAt).toLocaleString("id-ID", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   // Sumber HTML: email/render.ts. Copy teks IDENTIK dengan versi lama.
   const html = emailShell({
     headerSub: "Aktivasi Akun Reseller",
@@ -214,7 +252,7 @@ async function sendResellerInstructionsEmail(
       `<p style="margin:0 0 12px">Halo <b>${u.fullName}</b>,</p>` +
       `<p style="margin:0 0 12px">Terima kasih sudah mendaftar sebagai <b>Reseller Socio.id</b>. Tinggal selangkah lagi! Silakan transfer biaya aktivasi sebesar:</p>` +
       emailAmountBox({ amount: `Rp${amt}`, caption: target }) +
-      `<p style="margin:0 0 12px"><b>Penting:</b> transfer <u>sesuai nominal</u> (termasuk 3 digit terakhir) supaya bisa dicocokkan, maksimal <b>12 jam</b> dari email ini.</p>` +
+      `<p style="margin:0 0 12px"><b>Penting:</b> transfer <u>sesuai nominal</u> (termasuk 3 digit terakhir) supaya bisa dicocokkan, maksimal <b>${resellerActivationDeadlineLabel()}</b> dari email ini (sebelum ${deadline} WIB).</p>` +
       `<p style="margin:0 0 12px">Akun reseller kamu otomatis aktif dan saldo <b>Rp20.000 sudah termasuk</b> dalam pembayaranmu — langsung bisa dipakai pesan. Nikmati harga khusus untuk jualan ulang!</p>` +
       `<p style="margin:0;color:${EMAIL_COLORS.inkSecondary};font-size:13px">Selamat bergabung!<br>Tim Socio.id</p>`,
     footer: emailFooterTransactional("bare"),
@@ -224,7 +262,7 @@ async function sendResellerInstructionsEmail(
     to: u.email,
     subject: "Aktivasi Akun Reseller — Socio.id",
     html,
-    text: `Aktivasi reseller: transfer Rp${amt} ke ${target} (sudah termasuk saldo Rp20.000). Akun aktif otomatis setelah pembayaran diterima.`,
+    text: `Aktivasi reseller: transfer Rp${amt} ke ${target} (sudah termasuk saldo Rp20.000). Bayar sebelum ${deadline} WIB. Akun aktif otomatis setelah pembayaran diterima.`,
   });
 }
 

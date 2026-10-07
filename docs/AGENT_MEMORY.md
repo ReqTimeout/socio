@@ -145,7 +145,7 @@ exclusion; `*` = satu level; `**` = semua level; **pola yang match terakhir mena
 
 ## 6. Model bisnis (jangan diubah tanpa user)
 - **Pricing**: `services.price`=Member, `priceApi`=Agen base, `priceReseller`=Reseller; harga jual = `ceil(modal × (1+markup/100))` + floor `modal+minProfit`. Sync tulis ulang harga tiap jam — **edit manual akan ke-overwrite** (tawarkan flag kunci bila user minta).
-- **Deposit**: manual BCA (Midtrans disabled, Tripay tidak ada). Expire 24 jam (top-up) / 12 jam (reseller). Confirm = transaksi atomik + idempotent CAS + audit + email sukses + komisi affiliate. Reseller = aktivasi (verify=Yes + bonus 20rb), BUKAN kredit 50rb.
+- **Deposit**: manual BCA (Midtrans disabled, Tripay tidak ada). Expire 24 jam (top-up) / 72 jam (aktivasi reseller, env `SOCIO_RESELLER_ACTIVATION_HOURS`). Reminder aktivasi reseller 3 tahap: H-2 + H-1 (`reminder_stage`) + T-2 jam (`reminder_sent`). Reseller `verify=No` wajib selesaikan aktivasi dulu (banner dashboard + order diblokir). Confirm = transaksi atomik + idempotent CAS + audit + email sukses + komisi affiliate. Reseller = aktivasi (verify=Yes + bonus 20rb), BUKAN kredit 50rb.
 - **Refund**: <Rp50rb auto, ≥Rp50rb approval admin kedua (self-approve diblokir).
 - **Member**: wajib klik link verifikasi email (gate login). **Reseller**: exempt — aktivasinya = confirm pembayaran admin.
 - **Email**: semua transaksional via `email_queue` (async ≤5 mnt, retry 3). Template di `lib/server/deposit-emails.ts` + `lib/server/email.ts` (`wrapEmail`). SMTP primary. Visibilitas: section Transaksional di `/admin/email`.

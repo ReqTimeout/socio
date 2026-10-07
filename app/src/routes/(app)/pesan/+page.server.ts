@@ -204,6 +204,21 @@ export const actions: Actions = {
     const userId = Number(locals.user!.id);
     const level = (locals.user!.level as UserLevel) ?? "Member";
 
+    // Gate aktivasi reseller: order diblokir sampai verify=Yes (biaya
+    // pendaftaran lunas + admin confirm). Login/dashboard tetap boleh.
+    if (level === "Reseller") {
+      const [ru] = await db
+        .select({ verify: users.verify })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (!ru || ru.verify !== "Yes") {
+        return fail(403, {
+          error: "Akun reseller belum aktif. Selesaikan pembayaran aktivasi dulu — cek dashboard.",
+        });
+      }
+    }
+
     // Harga dari rules DB + base per level (port lib/pricing.php)
     const rules = await getPricingRules();
     const rule = rules[level];

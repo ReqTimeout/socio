@@ -1,8 +1,17 @@
 import { db } from "@socio/db";
-import { orders, deposits, categories, promotionBanners, services, news } from "@socio/db/schema";
+import {
+  orders,
+  deposits,
+  categories,
+  promotionBanners,
+  services,
+  news,
+  users,
+} from "@socio/db/schema";
 import { eq, desc, and, gte, sql, lte, or, isNull, asc, inArray } from "drizzle-orm";
+import { fail } from "@sveltejs/kit";
 import { getSetting } from "$lib/server/admin";
-import type { PageServerLoad } from "./$types";
+import type { PageServerLoad, Actions } from "./$types";
 
 // Banner promo dashboard. Admin bisa set JSON via adminSettings key `dashboard_banners`
 // (array of { title, subtitle, cta, href, img, gradient, badge }). Kalau kosong → dummy.
@@ -45,6 +54,72 @@ const DUMMY_BANNERS: Banner[] = [
 
 export const load: PageServerLoad = async ({ locals }) => {
   const userId = Number(locals.user!.id);
+
+  // Gate aktivasi reseller: level Reseller yang belum verify=Yes WAJIB
+  // menyelesaikan pembayaran aktivasi dulu (banner dashboard + blokir order).
+  // Login tetap boleh (baca instruksi, buat tiket) — yang diblokir ordernya.
+  let activation: {
+    required: boolean;
+    hasPending: boolean;
+    amount: number;
+    bonus: number;
+    expireAt: string | null;
+    leftText: string | null;
+  } | null = null;
+  if ((locals.user as any)?.level === "Reseller") {
+    const bonusEnv = Number(process.env.SOCIO_RESELLER_BONUS ?? 20000);
+    const bonus = Number.isFinite(bonusEnv) && bonusEnv >= 0 ? Math.round(bonusEnv) : 20000;
+    try {
+      const [ru] = await db
+        .select({ verify: users.verify })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (!ru || ru.verify !== "Yes") {
+        const [pend] = await db
+          .select({ id: deposits.id, amount: deposits.amount, expire: deposits.expire })
+          .from(deposits)
+          .where(
+            and(
+              eq(deposits.userId, userId),
+              eq(deposits.untukApa, "reseller"),
+              eq(deposits.status, "Pending"),
+            ),
+          )
+          .orderBy(desc(deposits.id))
+          .limit(1);
+        let hasPending = false;
+        let amount = 0;
+        let expireAt: string | null = null;
+        let leftText: string | null = null;
+        if (pend && new Date(pend.expire).getTime() > Date.now()) {
+          hasPending = true;
+          amount = Number(pend.amount);
+          expireAt = new Date(pend.expire).toISOString();
+          const mins = Math.max(
+            1,
+            Math.round((new Date(pend.expire).getTime() - Date.now()) / 60000),
+          );
+          leftText =
+            mins >= 1440
+              ? `${Math.floor(mins / 1440)} hari`
+              : mins >= 60
+                ? `${Math.floor(mins / 60)} jam ${mins % 60} mnt`
+                : `${mins} menit`;
+        }
+        activation = { required: true, hasPending, amount, bonus, expireAt, leftText };
+      }
+    } catch {
+      activation = {
+        required: true,
+        hasPending: false,
+        amount: 0,
+        bonus,
+        expireAt: null,
+        leftText: null,
+      };
+    }
+  }
 
   // Jendela 14 hari: 7 hari untuk chart + 7 hari sebelumnya untuk delta WoW.
   const start = new Date();
@@ -330,6 +405,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   return {
     recent,
     banners,
+    activation,
     categories: catRows,
     activeOrders: Number(statActive[0]?.count ?? 0),
     quickOrders,
@@ -350,4 +426,46 @@ export const load: PageServerLoad = async ({ locals }) => {
       spend: curSpend,
     },
   };
+};
+
+export const actions: Actions = {
+  // Terbitkan ulang invoice aktivasi reseller (deposit lama expired/dibatalkan).
+  // Maksimal 1 deposit aktivasi Pending per user.
+  resendActivation: async ({ locals }) => {
+    const userId = Number(locals.user!.id);
+    if ((locals.user as any)?.level !== "Reseller") {
+      return fail(403, { error: "Khusus akun reseller." });
+    }
+    const [ru] = await db
+      .select({ verify: users.verify })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (ru?.verify === "Yes") {
+      return fail(400, { error: "Akun reseller sudah aktif." });
+    }
+    const [pend] = await db
+      .select({ id: deposits.id, expire: deposits.expire })
+      .from(deposits)
+      .where(
+        and(
+          eq(deposits.userId, userId),
+          eq(deposits.untukApa, "reseller"),
+          eq(deposits.status, "Pending"),
+        ),
+      )
+      .orderBy(desc(deposits.id))
+      .limit(1);
+    if (pend && new Date(pend.expire).getTime() > Date.now()) {
+      return fail(400, { error: "Invoice aktivasi masih aktif — cek email atau halaman saldo." });
+    }
+    try {
+      const { issueResellerActivationInvoice } = await import("$lib/server/signup");
+      const inv = await issueResellerActivationInvoice(userId);
+      return { success: true, resent: true, amount: inv.amount };
+    } catch (e) {
+      console.error("[dashboard] resendActivation failed:", (e as Error)?.message);
+      return fail(500, { error: "Gagal menerbitkan invoice. Coba lagi." });
+    }
+  },
 };

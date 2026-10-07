@@ -17,12 +17,13 @@
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { navigating } from "$app/state";
+  import { enhance } from "$app/forms";
   import { copy } from "@socio/core/copy";
   import { onMount } from "svelte";
   import { formatRupiah, serviceDisplayName } from "$lib/format";
   import { newsMeta, isOrderableEvent, newsPriceSegments, newsSplit } from "$lib/news-meta";
 
-  let { data } = $props();
+  let { data, form } = $props();
 
   const firstName = $derived((data.user?.name ?? "Sobat").split(" ")[0]);
 
@@ -210,6 +211,59 @@
 </svelte:head>
 
 <section class="space-y-5 lg:space-y-6 relative">
+  <!-- Gate aktivasi reseller: belum bayar biaya pendaftaran = wajib selesaikan dulu.
+       Login tetap boleh; yang diblokir order (lihat pesan/+page.server.ts). -->
+  {#if data.activation?.required}
+    <div
+      class="relative overflow-hidden rounded-2xl border-2 border-ink-900 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-400 px-4 py-3.5 text-ink-900 shadow-[2px_2px_0_var(--color-ink-900)]"
+      role="alert"
+    >
+      <div class="flex items-start gap-2.5">
+        <Icon name="crown" size={18} stroke={2.5} class="mt-0.5 shrink-0" />
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-extrabold">Akun reseller belum aktif</p>
+          {#if data.activation.hasPending}
+            <p class="mt-0.5 text-xs font-medium leading-relaxed">
+              Selesaikan pembayaran aktivasi
+              <b>{formatRupiah(data.activation.amount)}</b>
+              {#if data.activation.leftText}
+                (sisa {data.activation.leftText})
+              {/if}
+              — akun aktif otomatis + saldo {formatRupiah(data.activation.bonus)} masuk begitu pembayaran
+              kami terima.
+            </p>
+            <a
+              href="/saldo"
+              class="mt-2 inline-flex items-center gap-1 rounded-full bg-ink-900 px-4 py-2 text-xs font-bold text-white transition active:scale-95 hover:bg-ink-800"
+            >
+              Lihat status pembayaran →
+            </a>
+          {:else}
+            <p class="mt-0.5 text-xs font-medium leading-relaxed">
+              Invoice aktivasi sebelumnya kedaluwarsa atau dibatalkan. Terbitkan invoice baru (batas
+              3 hari) — instruksi pembayaran dikirim ke emailmu.
+            </p>
+            <form method="POST" action="?/resendActivation" use:enhance class="mt-2">
+              <button
+                type="submit"
+                class="inline-flex items-center gap-1 rounded-full bg-ink-900 px-4 py-2 text-xs font-bold text-white transition active:scale-95 hover:bg-ink-800"
+              >
+                Kirim ulang invoice aktivasi
+              </button>
+            </form>
+            {#if form?.resent}
+              <p class="mt-1.5 text-xs font-bold">
+                Invoice baru terkirim — cek email
+                {#if form.amount}({formatRupiah(form.amount)}){/if}.
+              </p>
+            {:else if form?.error}
+              <p class="mt-1.5 text-xs font-bold text-red-800">{form.error}</p>
+            {/if}
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
   <!-- Hero greeting — dot-grid + sky wash (brand §8.3/§13: no gradient blob).
      Rasa waktu tetap ada via eyebrow fase (Pagi/Siang/Sore/Malam). -->
   <header

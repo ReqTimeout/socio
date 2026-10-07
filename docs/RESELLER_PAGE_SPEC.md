@@ -14,7 +14,9 @@
 | 3 | Konfirmasi | **admin approve manual** setelah transfer diterima | user instruction |
 | 4 | Saldo awal khusus reseller | **Rp20.000** (sudah termasuk di Rp50.000) | user instruction |
 | 5 | Metode | Transfer BCA manual (nominal unik 3 digit) | `signup.ts` |
-| 6 | Kadaluarsa | 12 jam sejak email dikirim | `signup.ts:172` |
+| 6 | Kadaluarsa | 72 jam (3 hari) sejak email dikirim, via `SOCIO_RESELLER_ACTIVATION_HOURS` | `signup.ts` |
+| 6b | Reminder | H-2 (sisa 2 hari) + H-1 (sisa 1 hari) + T-2 jam, khusus aktivasi reseller | `cron/light.ts` (`reminder_stage`) |
+| 6c | Gate dashboard | Reseller `verify=No` wajib selesaikan aktivasi dulu (banner + tombol kirim-ulang invoice); order diblokir sampai `verify=Yes` | `(app)/+page.server.ts`, `pesan/+page.server.ts` |
 | 7 | Verify | `No` → `Yes` saat admin confirm | `activateReseller` |
 
 **Alur**: daftar (mode=reseller) → insert `users`(level=Reseller, verify=No) +
