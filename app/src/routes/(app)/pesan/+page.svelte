@@ -1399,7 +1399,7 @@ import {
       transform 180ms var(--ease-out-soft);
   }
   .icon-chip:active {
-    transform: scale(0.95);
+    opacity: 0.85;
   }
   .icon-chip.is-selected {
     background: var(--color-ink-900);
@@ -1425,7 +1425,7 @@ import {
       box-shadow 180ms var(--ease-out-soft);
   }
   .svc-tile:active {
-    transform: scale(0.97);
+    opacity: 0.85;
   }
   .svc-tile.is-selected {
     border-color: var(--color-ink-900);
@@ -1452,7 +1452,7 @@ import {
       transform 180ms var(--ease-out-soft);
   }
   .svc-icon:active {
-    transform: scale(0.93);
+    opacity: 0.85;
   }
   .svc-icon.is-selected {
     background: var(--color-ink-900);
@@ -1477,7 +1477,7 @@ import {
       transform 180ms var(--ease-out-soft);
   }
   .svc-card:active {
-    transform: scale(0.985);
+    opacity: 0.85;
   }
   .svc-card.is-selected {
     border-color: var(--color-ink-900);
