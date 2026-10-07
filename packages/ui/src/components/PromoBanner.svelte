@@ -74,9 +74,6 @@
       >
         {#if b.img}
           <img src={b.img} alt={b.title} class="h-full w-full object-cover" />
-          <div
-            class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent"
-          ></div>
         {:else}
           <div
             class="h-full w-full bg-gradient-to-br {b.gradient ??
