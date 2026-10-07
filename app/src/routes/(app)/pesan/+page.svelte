@@ -323,41 +323,22 @@ import {
   }
 
   // Filter SEKUNDER dari chip icon — client-side narrowing, no re-fetch.
-  // Klik platform card: toggle on/off, sekaligus reset selectedCat kalau
-  // kategori yang sedang dipilih TIDAK punya layanan platform tsb.
+  // Klik platform/kind: toggle on/off. JANGAN reset kategori saat filter
+  // tidak match — biar empty state di section Layanan yang informatif
+  // muncul (lihat line 832), plus tombol reset supaya user bisa keluar
+  // dari kondisi kosong. Reset kategori diam-diam (logic lama) bikin
+  // UI silent fail: section Layanan hilang dan user bingung kenapa.
   function setPlatformFilter(p: PlatformId | "") {
     haptic(8);
-    const next: PlatformId | "" = p === selectedPlatform ? "" : p;
-    selectedPlatform = next;
-    if (selectedCat) {
-        const cat = data.cats.find((c) => c.id === selectedCat);
-        const stillValid =
-          !!cat &&
-          (!next || (cat.platforms ?? []).includes(next)) &&
-          (!selectedKind || (cat.kinds ?? []).includes(selectedKind));
-        if (!stillValid) {
-          selectedCat = 0;
-          serviceList = [];
-          selectedService = null;
-        }
-      }
+    selectedPlatform = p === selectedPlatform ? "" : p;
+    // selectedService di-clear supaya Ringkasan ikut reset ke kategori
+    // (layanan sebelumnya bisa di luar intersection platform/kind baru).
+    selectedService = null;
   }
   function setKindFilter(k: KindId) {
     haptic(8);
-    const next: KindId | "" = k === selectedKind ? "" : k;
-    selectedKind = next;
-    if (selectedCat) {
-      const cat = data.cats.find((c) => c.id === selectedCat);
-      const stillValid =
-        !!cat &&
-        (!selectedPlatform || (cat.platforms ?? []).includes(selectedPlatform)) &&
-        (!next || (cat.kinds ?? []).includes(next));
-      if (!stillValid) {
-        selectedCat = 0;
-        serviceList = [];
-        selectedService = null;
-      }
-    }
+    selectedKind = k === selectedKind ? "" : k;
+    selectedService = null;
   }
 
   // Layanan yang tampil = fetch by kategori, di-narrow oleh platform/kind,
@@ -828,9 +809,22 @@ import {
                     Layanan tidak tersedia untuk kategori ini.
                   </p>
                 {:else if visibleServices.length === 0}
-                  <p class="rounded-xl bg-ink-50 px-3 py-4 text-center text-xs text-ink-500">
-                    Tidak ada layanan sesuai filter — coba reset icon di atas.
-                  </p>
+                  <div class="rounded-xl bg-ink-50 px-3 py-4 text-center text-xs text-ink-500">
+                    <p>Tidak ada layanan sesuai filter — coba reset icon di atas.</p>
+                    <button
+                      type="button"
+                      onclick={() => {
+                        selectedPlatform = "";
+                        selectedKind = "";
+                        selectedService = null;
+                        haptic(6);
+                      }}
+                      class="mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-white transition active:scale-95"
+                    >
+                      <Icon name="refresh" size={11} />
+                      Reset filter
+                    </button>
+                  </div>
                 {:else}
                   <ul
                     class="max-h-[320px] space-y-2 overflow-y-auto pr-0.5"
