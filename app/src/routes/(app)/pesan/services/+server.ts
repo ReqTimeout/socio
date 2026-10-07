@@ -7,6 +7,7 @@ import {
   detectPlatform,
   detectKind,
   KIND_ORDER,
+  normalizeSearchQuery,
   type PlatformId,
   type KindId,
 } from "@socio/core/catalog";
@@ -20,7 +21,9 @@ import type { RequestHandler } from "./$types";
  * Query params (boleh kombinasi):
  * - `platform`: id platform (instagram, tiktok, …) — filter bucket.
  * - `kind`: id jenis (followers, likes, …) — filter dalam bucket.
- * - `q`: search global lintas platform (min 2 char, max 60 hasil).
+ * - `q`: search global lintas platform — ditokenisasi + alias
+ *   (`normalizeSearchQuery`: "livestream view" → live AND view, "followers ig"
+ *   → followers AND instagram). Min 1 token valid, max 60 hasil.
  * - `kinds=1` + `platform`: KEMBALIKAN agregasi jenis [{id, count}] saja
  *   (tanpa baris layanan) — untuk render chip jenis + hitungan live.
  * - `cat`: id kategori LEGACY — kompatibilitas deep-link lama, tetap didukung.
@@ -37,6 +40,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   const platform = (url.searchParams.get("platform") ?? "") as PlatformId | "";
   const kind = (url.searchParams.get("kind") ?? "") as KindId | "";
   const q = (url.searchParams.get("q") ?? "").trim().slice(0, 60);
+  // Search: semua token harus cocok (AND) — "livestream view" ketemu
+  // "TikTok Live Stream Views" walau user tidak ketik persis.
+  const tokens = q ? normalizeSearchQuery(q) : [];
   const cat = Number(url.searchParams.get("cat") ?? 0);
 
   const level = (locals.user.level as UserLevel) ?? "Member";
@@ -82,11 +88,12 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       and(
         eq(services.status, 1),
         ...(cat ? [eq(services.categoryId, cat)] : []),
-        ...(q ? [like(services.serviceName, `%${q.replace(/[%_\\]/g, "\\$&")}%`)] : []),
+        // Tiap token = LIKE %token% (escape wildcard user). AND antar token.
+        ...tokens.map((t) => like(services.serviceName, `%${t.replace(/[%_\\]/g, "\\$&")}%`)),
       ),
     )
     .orderBy(asc(services.price))
-    .limit(q ? 60 : 10000);
+    .limit(tokens.length > 0 ? 60 : 10000);
 
   // Petakan ke bentuk aman + tempel platform/jenis hasil deteksi.
   const mapped = rows.map((r) => {
@@ -121,6 +128,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     (s) => (!platform || s.platform === platform) && (!kind || s.kind === kind),
   );
 
-  // Cap 500 baris — bucket terbesar (IG followers) < 500; search max 60 dari SQL.
-  return json(filtered.slice(0, 500));
+  // Query tanpa token valid (mis. "a") → kosong, bukan full scan sia-sia.
+  if (q && tokens.length === 0) return json([]);
+
+  // Cap 1000 baris — bucket terbesar (IG followers ~750) muat penuh, tanpa truncate.
+  return json(filtered.slice(0, 1000));
 };

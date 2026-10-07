@@ -89,6 +89,7 @@ export type KindId =
   | "followers"
   | "likes"
   | "views"
+  | "live"
   | "comments"
   | "subscribers"
   | "members"
@@ -115,6 +116,7 @@ export const KINDS: KindDef[] = [
   { id: "followers", label: "Followers", icon: "user_plus" },
   { id: "likes", label: "Likes", icon: "heart" },
   { id: "views", label: "Views", icon: "eye" },
+  { id: "live", label: "Live", icon: "activity" },
   { id: "comments", label: "Comments", icon: "message" },
   { id: "subscribers", label: "Subscribers", icon: "users" },
   { id: "members", label: "Members", icon: "users" },
@@ -136,6 +138,7 @@ export const KIND_ORDER: KindId[] = [
   "followers",
   "likes",
   "views",
+  "live",
   "comments",
   "subscribers",
   "members",
@@ -162,6 +165,8 @@ export const kindById = (id: string): KindDef =>
  */
 export function detectKind(serviceName: string): KindId {
   const n = serviceName.toLowerCase();
+  // Live SEBELUM views — "Live Stream Views"/"Live Viewers" itu produk sendiri (700+).
+  if (/\blive\b|livestream|live-?stream|stay ?time|concurrent/.test(n)) return "live";
   if (/watch ?time|watch ?hours/.test(n)) return "watchtime";
   if (/follower|following|fans|subscrib/.test(n))
     return /subscrib/.test(n) ? "subscribers" : "followers";
@@ -184,6 +189,44 @@ export function detectKind(serviceName: string): KindId {
 /** Layanan "komentar custom" (1 baris = 1 qty) — deteksi dari nama, bukan kolom type. */
 export function isCustomCommentsService(serviceName: string): boolean {
   return /custom comments?/.test(serviceName.toLowerCase());
+}
+
+/**
+ * Alias pencarian — kata user → kata katalog. Dipakai search /pesan supaya
+ * "livestream", "ig", "pengikut" tetap ketemu ("Live Viewers", "Instagram",
+ * "Followers"). Token < 2 char dibuang, maks 4 token (AND semua harus cocok).
+ */
+export const SEARCH_ALIASES: Record<string, string> = {
+  livestream: "live",
+  ig: "instagram",
+  tt: "tiktok",
+  yt: "youtube",
+  fb: "facebook",
+  tg: "telegram",
+  wa: "whatsapp",
+  subs: "subscribers",
+  sub: "subscribers",
+  pengikut: "followers",
+  follower: "followers",
+  suka: "likes",
+  tonton: "views",
+  lihat: "views",
+  komentar: "comments",
+  komen: "comments",
+  pelanggan: "subscribers",
+  anggota: "members",
+  bagikan: "shares",
+  ulasan: "reviews",
+  simpan: "saves",
+};
+
+export function normalizeSearchQuery(q: string): string[] {
+  return q
+    .toLowerCase()
+    .split(/\s+/)
+    .map((t) => SEARCH_ALIASES[t] ?? t)
+    .filter((t) => t.length >= 2)
+    .slice(0, 4);
 }
 
 /**

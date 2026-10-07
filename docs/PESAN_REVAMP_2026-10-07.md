@@ -43,9 +43,10 @@
 
 \* per 2026-10-07. Chip yang hitungannya 0 TIDAK dirender (otomatis).
 
-## Daftar final: 17 jenis (urutan tampil = `KIND_ORDER`)
+## Daftar final: 18 jenis (urutan tampil = `KIND_ORDER`)
 
-followers (`user_plus`), likes (`heart`), views (`eye`), comments (`message`),
+followers (`user_plus`), likes (`heart`), views (`eye`), **live (`activity`)**,
+comments (`message`),
 subscribers (`users`), members (`users`), shares (`share` BARU), reactions
 (`zap`), plays (`play`), reviews (`star`), saves (`bookmark` BARU),
 impressions (`chart`), reach (`trending_up`), watchtime (`clock`), traffic
@@ -74,6 +75,22 @@ impressions (`chart`), reach (`trending_up`), watchtime (`clock`), traffic
   dipisah dari followers; tak dikenali → `other`.
 - Validasi silang link: `PLATFORM_LINK_NAME[platform]` vs hasil `validateLink()`.
   Platform non-link (WA/Spotify/Musik/Kwai/Lainnya) = string kosong = tidak dicek.
+
+## Follow-up 2026-10-07 malam (feedback owner: "kurang, ga lengkap, livestream ga ada")
+
+1. **3 bucket kepotong cap 500** (IG followers 750, TikTok followers 577, IG likes
+   523) → cap naik ke **1000** (`services/+server.ts`). Bucket terbesar muat penuh.
+2. **Jenis baru `live`** (icon `activity`, urutan ke-4 setelah views):
+   `detectKind` cek `/live|livestream|live-stream|stay time|concurrent/` SEBELUM
+   views → 706 layanan live keluar dari kubangan views jadi chip sendiri.
+3. **Search ditokenisasi + alias** (`normalizeSearchQuery` di catalog.ts):
+   semua token harus cocok (AND). "livestream view" → live AND view;
+   "followers ig" → followers AND instagram. Alias: ig/tt/yt/fb/tg/wa,
+   subs/sub, pengikut, suka, tonton/lihat, komentar/komen, pelanggan, anggota,
+   bagikan, ulasan, simpan. Query tanpa token valid → kosong (bukan full scan).
+4. **Mobile: chip platform = ICON SAJA** (label/count hanya desktop lg+ via CSS;
+   nama tetap di `aria-label`+`title`). Touch target 52px, icon 22px dalam
+   bingkai 2.3rem.
 
 ## Verifikasi (2026-10-07, sesi ini)
 

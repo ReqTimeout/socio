@@ -585,12 +585,13 @@
                     type="button"
                     role="radio"
                     aria-checked={selectedPlatform === p.id}
+                    aria-label={`${p.label} — ${p.count} layanan`}
                     onclick={() => selectPlatform(p.id as PlatformId)}
                     title={`${p.label} — ${p.count} layanan`}
                     class="platform-chip shrink-0 {selectedPlatform === p.id ? 'is-selected' : ''}"
                   >
                     <span class="platform-ic" aria-hidden="true">
-                      <Icon name={p.icon} size={20} />
+                      <Icon name={p.icon} size={22} />
                     </span>
                     <span class="platform-tx">
                       <span class="block text-xs font-extrabold leading-tight">{p.label}</span>
@@ -1272,6 +1273,24 @@
   .platform-tx {
     min-width: 0;
     text-align: left;
+  }
+  /* Mobile: chip platform = ICON SAJA (hemat tempat, 11 platform 1 swipe).
+     Label/count hanya di desktop (lg+). Nama tetap di aria-label + title. */
+  @media (max-width: 1023px) {
+    .platform-chip {
+      min-width: 52px;
+      min-height: 52px;
+      padding: 0.45rem;
+      justify-content: center;
+    }
+    .platform-chip .platform-ic {
+      width: 2.3rem;
+      height: 2.3rem;
+      border-radius: 0.75rem;
+    }
+    .platform-tx {
+      display: none;
+    }
   }
   .kind-chip {
     display: inline-flex;
