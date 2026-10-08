@@ -61,17 +61,53 @@ export function fixMojibake(s: string): string {
  * - Fixes mojibake emoji.
  * - Extracts meaningful head before bracket metadata tags.
  */
+/**
+ * Pola SMMTURK + varian mojibake UTF-8 (Ü Latin1, Ã double-encode,
+ * � U+FFFD replacement char — owner 8 Okt: raw "Own SMMT�RK" lolos),
+ * dengan/tanpa spasi antara Ü dan RK. Dipakai whitelabel() +
+ * serviceDisplayName() + deteksi brand untuk fallback (di bawah).
+ */
+const SMMT_PAT = "SMMT[\\sÜÃœ�\\u0080-\\u00BF\\uFFFD]*[UÜ]?[\\sÜÃœ�\\u0080-\\u00BF\\uFFFD]*RK";
+
+/** Ada token brand hulu (varian SMMT, Provider, PROV?DER) di teks? */
+function hasBrandToken(s: string): boolean {
+  return (
+    new RegExp(SMMT_PAT, "i").test(s) || /P\s*R\s*O\s*V\s*\?\s*D\s*E\s*R\s*S?/i.test(s) || /\bProviders?\b/i.test(s)
+  );
+}
+
+/**
+ * Fallback anti-label-kosong: kalau whitelabel menghabiskan seluruh nama
+ * (mis. kategori provider bernama harfiah "Exclusive" — noise word yang
+ * ikut ke-strip), jangan kembalikan string hampa (opsi dropdown kosong).
+ * Kembalikan mentah (sudah fixMojibake+trim) SELAMA tidak mengandung brand;
+ * kalau mengandung brand, jatuhkan ke "Uncategorized" daripada membocorkan.
+ */
+function nonEmptyDisplay(stripped: string, raw: string): string {
+  if (stripped) return stripped;
+  const clean = fixMojibake(String(raw ?? ""))
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (!clean || hasBrandToken(clean)) return "Uncategorized";
+  return clean;
+}
+
 export function serviceDisplayName(name: string): string {
   let fixed = fixMojibake(name);
   // Replace provider branding with "Socio" (varian: SMMTURK / SMMTurk /
   // SMMTÜRK / double-encode SMMTÃRK). Owner 7 Okt: nama masih bocor di UI
   // karena spasi + char non-ASCII memisahkan token.
-  fixed = fixed.replace(/SMMT[\sÜÃœ�\u0080-\u00BF\uFFFD]*[UÜ]?[\sÜÃœ�\u0080-\u00BF\uFFFD]*RK/gi, "Socio");
+  fixed = fixed.replace(new RegExp(SMMT_PAT, "gi"), "Socio");
   // Remove bracket tags containing "Provider" (e.g. "[ Provider ]", "[%100 Provider]", "[ %100 Provider ]")
   fixed = fixed.replace(/\[\s*%?\d*\s*Provider\s*\]/gi, "");
   // ... maupun versi kurung biasa "(Provider)" / "(Main Provider)" (owner 8
   // Okt: 2 label dropdown lolos karena pola bracket-only tidak kena paren).
   fixed = fixed.replace(/\(\s*[^)]*\bProviders?\b[^)]*\)/gi, "");
+  // ... maupun SAMARAN "PROV?DER" (? ganti I) + kata "Provider" standalone
+  // ("Provider Service ?", "Youtube Provider", "? Provider" — owner 8 Okt:
+  // 11 kategori aktif bocor pola ini, 0 layanan kena).
+  fixed = fixed.replace(/P\s*R\s*O\s*V\s*\?\s*D\s*E\s*R\s*S?/gi, "");
+  fixed = fixed.replace(/\bProviders?\b/gi, "");
   // Collapse whitespace left by removals + buang pemisah menggantung
   // di ujung ("... -" setelah "(Main Provider)" dihapus)
   fixed = fixed
@@ -81,7 +117,8 @@ export function serviceDisplayName(name: string): string {
     .trim();
   // Extract head before first [ metadata tag
   const head = (fixed.split("[")[0] ?? fixed).trim();
-  return head.replace(/\s{2,}/g, " ").trim() || fixed;
+  const out = head.replace(/\s{2,}/g, " ").trim() || fixed.trim();
+  return nonEmptyDisplay(out, name);
 }
 
 /**
@@ -101,13 +138,9 @@ export function serviceDisplayName(name: string): string {
  */
 export function whitelabel(raw: string): string {
   let s = fixMojibake(String(raw ?? ""));
-  // Pola SMMTURK + varian mojibake UTF-8 (Ü Latin1, Ã double-encode,
-  // � U+FFFD replacement char — owner 8 Okt: raw "Own SMMT�RK" lolos),
-  // dengan/tanpa spasi antara Ü dan RK. Owner 7 Okt: nama kategori masih
-  // bocor di dropdown karena space memisahkan Ü dari RK. Middle char boleh
-  // kosong/spasi/Ü/Ã/kontrol byte/� + U opsional, jadi SMMTURK & SMMTÜ RK
-  // & SMMTÃŒRK & SMMT�RK semua kena.
-  const SMMT_PAT = "SMMT[\\sÜÃœ�\\u0080-\\u00BF\\uFFFD]*[UÜ]?[\\sÜÃœ�\\u0080-\\u00BF\\uFFFD]*RK";
+  // (SMMT_PAT kini konstanta module-level — dipakai bersama
+  // serviceDisplayName() + hasBrandToken().) Owner 7 Okt: nama kategori
+  // masih bocor di dropdown karena space memisahkan Ü dari RK.
   s = s.replace(new RegExp(`\\((?:[^()]*${SMMT_PAT}[^()]*)\\)`, "gi"), " ");
   const parts = s.split("|");
   const kept = parts.filter((p) => !new RegExp(SMMT_PAT, "i").test(p));
@@ -121,6 +154,10 @@ export function whitelabel(raw: string): string {
   // karena bukan brand panel — itu penanda marketplace.
   s = s.replace(/\[\s*[^\]]*\bProvider(s)?\b[^\]]*\]/gi, "");
   s = s.replace(/\(\s*[^)]*\bProvider(s)?\b[^)]*\)/gi, "");
+  // Samaran "PROV?DER" + "Provider" standalone (lihat serviceDisplayName —
+  // pola yang sama, 11 kategori aktif; layanan 0 kena tapi future-proof).
+  s = s.replace(/P\s*R\s*O\s*V\s*\?\s*D\s*E\s*R\s*S?/gi, "");
+  s = s.replace(/\bProviders?\b/gi, "");
   s = s.replace(/\|\s*Provider(s)?\s*$/gi, "");
   s = s.replace(/\s+of\s+Providers?\b/gi, "");
   s = s.replace(/(^|\||,|;|\s|[-–—:])(\s*)(Special Update|Own|Exclusive)\b/gi, "$1");
@@ -130,5 +167,7 @@ export function whitelabel(raw: string): string {
     .replace(/^(?:[-|,:;]\s*)+/, "")
     .replace(/(?:\s*[-|,:;])+$/, "")
     .trim();
-  return s;
+  // Anti-label-kosong: raw semacam "Exclusive" (murni noise word) ikut
+  // habis ke-strip → kembalikan mentah; yang ber-brand → "Uncategorized".
+  return nonEmptyDisplay(s, raw);
 }
