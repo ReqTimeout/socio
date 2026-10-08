@@ -66,7 +66,7 @@ export function serviceDisplayName(name: string): string {
   // Replace provider branding with "Socio" (varian: SMMTURK / SMMTurk /
   // SMMTÜRK / double-encode SMMTÃRK). Owner 7 Okt: nama masih bocor di UI
   // karena spasi + char non-ASCII memisahkan token.
-  fixed = fixed.replace(/SMMT[\sÜÃœ\u0080-\u00BF]*[UÜ]?[\sÜÃœ\u0080-\u00BF]*RK/gi, "Socio");
+  fixed = fixed.replace(/SMMT[\sÜÃœ�\u0080-\u00BF\uFFFD]*[UÜ]?[\sÜÃœ�\u0080-\u00BF\uFFFD]*RK/gi, "Socio");
   // Remove bracket tags containing "Provider" (e.g. "[ Provider ]", "[%100 Provider]", "[ %100 Provider ]")
   fixed = fixed.replace(/\[\s*%?\d*\s*Provider\s*\]/gi, "");
   // ... maupun versi kurung biasa "(Provider)" / "(Main Provider)" (owner 8
@@ -101,12 +101,13 @@ export function serviceDisplayName(name: string): string {
  */
 export function whitelabel(raw: string): string {
   let s = fixMojibake(String(raw ?? ""));
-  // Pola SMMTURK + varian mojibake UTF-8 (Ü Latin1, Ã double-encode),
+  // Pola SMMTURK + varian mojibake UTF-8 (Ü Latin1, Ã double-encode,
+  // � U+FFFD replacement char — owner 8 Okt: raw "Own SMMT�RK" lolos),
   // dengan/tanpa spasi antara Ü dan RK. Owner 7 Okt: nama kategori masih
   // bocor di dropdown karena space memisahkan Ü dari RK. Middle char boleh
-  // kosong/spasi/Ü/Ã/kontrol byte + U opsional, jadi SMMTURK & SMMTÜ RK
-  // & SMMTÃŒRK semua kena.
-  const SMMT_PAT = "SMMT[\\sÜÃœ\\u0080-\\u00BF]*[UÜ]?[\\sÜÃœ\\u0080-\\u00BF]*RK";
+  // kosong/spasi/Ü/Ã/kontrol byte/� + U opsional, jadi SMMTURK & SMMTÜ RK
+  // & SMMTÃŒRK & SMMT�RK semua kena.
+  const SMMT_PAT = "SMMT[\\sÜÃœ�\\u0080-\\u00BF\\uFFFD]*[UÜ]?[\\sÜÃœ�\\u0080-\\u00BF\\uFFFD]*RK";
   s = s.replace(new RegExp(`\\((?:[^()]*${SMMT_PAT}[^()]*)\\)`, "gi"), " ");
   const parts = s.split("|");
   const kept = parts.filter((p) => !new RegExp(SMMT_PAT, "i").test(p));
