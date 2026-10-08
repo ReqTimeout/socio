@@ -69,8 +69,16 @@ export function serviceDisplayName(name: string): string {
   fixed = fixed.replace(/SMMT[\sÜÃœ\u0080-\u00BF]*[UÜ]?[\sÜÃœ\u0080-\u00BF]*RK/gi, "Socio");
   // Remove bracket tags containing "Provider" (e.g. "[ Provider ]", "[%100 Provider]", "[ %100 Provider ]")
   fixed = fixed.replace(/\[\s*%?\d*\s*Provider\s*\]/gi, "");
-  // Collapse whitespace left by removals
-  fixed = fixed.replace(/\s{2,}/g, " ").trim();
+  // ... maupun versi kurung biasa "(Provider)" / "(Main Provider)" (owner 8
+  // Okt: 2 label dropdown lolos karena pola bracket-only tidak kena paren).
+  fixed = fixed.replace(/\(\s*[^)]*\bProviders?\b[^)]*\)/gi, "");
+  // Collapse whitespace left by removals + buang pemisah menggantung
+  // di ujung ("... -" setelah "(Main Provider)" dihapus)
+  fixed = fixed
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .replace(/(?:\s*[-|,:;])+$/, "")
+    .trim();
   // Extract head before first [ metadata tag
   const head = (fixed.split("[")[0] ?? fixed).trim();
   return head.replace(/\s{2,}/g, " ").trim() || fixed;
@@ -105,10 +113,13 @@ export function whitelabel(raw: string): string {
   s = (kept.length ? kept : parts).join("|");
   s = s.replace(new RegExp(`[:,–-—\\u2013]\\s*[^|]*${SMMT_PAT}[^|]*$`, "gi"), "");
   s = s.replace(new RegExp(SMMT_PAT, "gi"), "Socio");
-  // Provider patterns — bracket-wrapped OR trailing ` | Provider` suffix OR
+  // Provider patterns — bracket-wrapped `[Provider]` MAUPUN paren-wrapped
+  // `(Provider)`/`(Main Provider)` (owner 8 Okt: 2 label dropdown Telegram
+  // lolos karena pola lama bracket-only) OR trailing ` | Provider` suffix OR
   // ` of Provider(s)` frasa. Pertahankan nama provider lain (Tokopedia/Shopee/dll)
   // karena bukan brand panel — itu penanda marketplace.
   s = s.replace(/\[\s*[^\]]*\bProvider(s)?\b[^\]]*\]/gi, "");
+  s = s.replace(/\(\s*[^)]*\bProvider(s)?\b[^)]*\)/gi, "");
   s = s.replace(/\|\s*Provider(s)?\s*$/gi, "");
   s = s.replace(/\s+of\s+Providers?\b/gi, "");
   s = s.replace(/(^|\||,|;|\s|[-–—:])(\s*)(Special Update|Own|Exclusive)\b/gi, "$1");
