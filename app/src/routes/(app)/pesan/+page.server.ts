@@ -40,25 +40,31 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     .map((p) => ({ ...p, count: counts.get(p.id) ?? 0 }))
     .sort((a, b) => b.count - a.count);
 
-  // Daftar kategori PROVIDER (1132 row) — tetap jadi PRIMARY source of truth.
-  // Whitelabel diterapkan server-side (SMMTURK/Own/Exclusive dll) supaya client
-  // tidak pernah melihat brand hulu. Sort alfabetis, hanya kategori yang punya
+  // Daftar kategori PROVIDER — tetap jadi PRIMARY source of truth.
+  // Whitelabel diterapkan server-side (SMMTURK/[Provider]/Own/Exclusive dll)
+  // supaya client tidak pernah melihat brand hulu. Hanya kategori yang punya
   // layanan aktif (JOIN exclude mati).
+  // Sort = layanan TERBARU dulu (MAX services.created_at DESC, owner 8 Okt:
+  // kategori berisi layanan baru SMMturk gampang ditemukan di atas),
+  // tiebreak alfabetis. COALESCE ke epoch supaya baris legacy tanpa
+  // created_at jatuh ke bawah, bukan ke atas (NULLS handling eksplisit).
   const catRows = await db
     .select({
       id: categories.id,
       name: categories.name,
       svcCount: sql<number>`COUNT(${services.id})`,
+      latestAt: sql<string | null>`MAX(${services.createdAt})`,
     })
     .from(categories)
     .leftJoin(services, sql`${services.categoryId} = ${categories.id} AND ${services.status} = 1`)
     .groupBy(categories.id, categories.name)
     .having(sql`COUNT(${services.id}) > 0`)
-    .orderBy(asc(categories.name));
+    .orderBy(sql`COALESCE(MAX(${services.createdAt}), '1970-01-01') DESC`, asc(categories.name));
   const cats = catRows.map((c) => ({
     id: c.id,
     name: whitelabel(c.name),
     count: Number(c.svcCount) || 0,
+    latestAt: c.latestAt ? new Date(c.latestAt).toISOString() : null,
     platforms: Array.from(catPlatforms.get(c.id) ?? []),
     kinds: Array.from(catKinds.get(c.id) ?? []),
   }));

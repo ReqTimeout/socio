@@ -137,21 +137,29 @@ export async function runServiceSync(providerId: number): Promise<void> {
     }
     const catIdByName = new Map<string, number>();
     for (const [disp, raw] of catDisplayToRaw) {
+      // Cari baris lama via raw (kunci stabil sisi provider) ATAU display baru.
+      // Display bisa berubah saat pola whitelabel bertambah (mis. "[Provider]"
+      // baru di-strip) — lookup by name saja bikin duplikat + nama basi
+      // ("... [PROVIDER]") tidak pernah sembuh. Raw tidak berubah untuk
+      // kategori yang sama di sisi provider.
       const [existing] = await db
-        .select({ id: categories.id, nameRaw: categories.nameRaw })
+        .select({ id: categories.id, name: categories.name, nameRaw: categories.nameRaw })
         .from(categories)
-        .where(sql`${categories.name} = ${disp}`)
+        .where(sql`${categories.nameRaw} = ${raw} OR ${categories.name} = ${disp}`)
         .limit(1);
       if (existing) {
         catIdByName.set(disp, existing.id);
-        // Update raw kalau beda (baseline-safe, tanpa event emit — kolom raw bukan
-        // untuk user display, cukup jejak admin). One row gagal (mis. charset/
-        // panjang) tidak boleh abort seluruh sync → best-effort.
-        if (existing.nameRaw !== raw) {
+        // Self-healing: segarkan name + nameRaw kalau beda (pola whitelabel
+        // baru atau rename provider). Best-effort per row — satu gagal
+        // (mis. charset/panjang) tidak boleh abort seluruh sync.
+        if (existing.name !== disp || existing.nameRaw !== raw) {
           try {
-            await db.update(categories).set({ nameRaw: raw }).where(eq(categories.id, existing.id));
+            await db
+              .update(categories)
+              .set({ name: disp, nameRaw: raw })
+              .where(eq(categories.id, existing.id));
           } catch (e) {
-            console.error(`[cron] service-sync category raw update gagal (${disp}):`, e);
+            console.error(`[cron] service-sync category heal gagal (${disp}):`, e);
           }
         }
       } else {
