@@ -20,6 +20,8 @@ import {
     PLATFORM_LINK_NAME,
     platformById,
     KIND_ORDER,
+    PLATFORMS,
+    KINDS,
     type PlatformId,
     type KindId,
   } from "@socio/core/catalog";
@@ -95,6 +97,27 @@ import {
   const visiblePlatforms = $derived(
     showAllPlatforms ? data.platforms : data.platforms.slice(0, TOP_PLATFORMS),
   );
+
+  // Sticky bar mobile (Total + Submit) auto-hide kalau section Ringkasan
+  // / Link / Username sudah masuk viewport — owner vision 8 Okt: sticky
+  // bar menutupi "Link / Username" input sehingga user tidak bisa lihat
+  // field terakhir saat scroll. IntersectionObserver dengan rootMargin
+  // mengimbangi dock bawah (64px) + sticky offset (88px) supaya trigger
+  // saat section ringkasan muncul di atas area sticky.
+  let summarySection: HTMLElement | undefined = $state();
+  let stickyBarVisible = $state(true);
+  $effect(() => {
+    const el = summarySection;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        stickyBarVisible = !entry.isIntersecting;
+      },
+      { rootMargin: "0px 0px -160px 0px", threshold: 0 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  });
   const totalServiceCount = $derived(
     data.platforms.reduce((acc, p) => acc + p.count, 0),
   );
@@ -811,6 +834,43 @@ import {
                 {:else if visibleServices.length === 0}
                   <div class="rounded-xl bg-ink-50 px-3 py-4 text-center text-xs text-ink-500">
                     <p>Tidak ada layanan sesuai filter — coba reset icon di atas.</p>
+                    {#if selectedPlatform || selectedKind}
+                      <div class="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+                        {#if selectedPlatform}
+                          {@const pc = PLATFORMS.find((p) => p.id === selectedPlatform)}
+                          <button
+                            type="button"
+                            onclick={() => {
+                              selectedPlatform = "";
+                              selectedService = null;
+                              haptic(6);
+                            }}
+                            aria-label="Hapus filter {pc?.label ?? selectedPlatform}"
+                            class="inline-flex items-center gap-1 rounded-full border border-white/60 px-2 py-0.5 text-[11px] font-bold text-white"
+                            style={`background:${pc?.color ?? "#0f172a"}`}
+                          >
+                            {pc?.label ?? selectedPlatform}
+                            <Icon name="close" size={10} />
+                          </button>
+                        {/if}
+                        {#if selectedKind}
+                          {@const kc = KINDS.find((k) => k.id === selectedKind)}
+                          <button
+                            type="button"
+                            onclick={() => {
+                              selectedKind = "";
+                              selectedService = null;
+                              haptic(6);
+                            }}
+                            aria-label="Hapus filter {kc?.label ?? selectedKind}"
+                            class="inline-flex items-center gap-1 rounded-full border border-ink-300 bg-surface px-2 py-0.5 text-[11px] font-bold text-ink-700"
+                          >
+                            {kc?.label ?? selectedKind}
+                            <Icon name="close" size={10} />
+                          </button>
+                        {/if}
+                      </div>
+                    {/if}
                     <button
                       type="button"
                       onclick={() => {
@@ -822,7 +882,7 @@ import {
                       class="mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-white transition active:scale-95"
                     >
                       <Icon name="refresh" size={11} />
-                      Reset filter
+                      Reset semua
                     </button>
                   </div>
                 {:else}
@@ -906,6 +966,7 @@ import {
           <form
             id="pesan-form"
             method="POST"
+            bind:this={summarySection}
             class="space-y-5 border-t border-ink-100 pt-5"
             use:enhance={() => {
               saving = true;
@@ -1206,10 +1267,16 @@ import {
           {/if}
         </div>
 
-        <!-- UX3.1 — Mobile bottom-CTA pinned (di atas dock) — compact premium 1-baris -->
+        <!-- UX3.1 — Mobile bottom-CTA pinned (di atas dock) — compact premium 1-baris.
+        Auto-hide via stickyBarVisible saat Ringkasan/Link section masuk
+        viewport (lihat $effect observer di atas), supaya field input
+        terakhir tidak tertutup bar saat scroll. Transition opacity 180ms
+        + pointer-events none saat hidden = tidak ganggu klik target di
+        belakang, dan tetap accessible (focusable di luar scroll). -->
         <div
-          class="lg:hidden fixed inset-x-3 bottom-[88px] z-40 max-w-xl mx-auto"
+          class="lg:hidden fixed inset-x-3 bottom-[88px] z-40 max-w-xl mx-auto transition-[opacity,transform] duration-200 ease-out {stickyBarVisible ? 'opacity-100 translate-y-0' : 'pointer-events-none translate-y-2 opacity-0'}"
           aria-label="Total dan submit"
+          aria-hidden={!stickyBarVisible}
         >
           <div
             class="reveal rounded-xl border-2 border-white/25 bg-ink-900 px-2 py-1.5 text-white shadow-[3px_3px_0_rgba(255,255,255,0.22),0_10px_24px_-10px_rgba(15,23,42,0.5)]"
