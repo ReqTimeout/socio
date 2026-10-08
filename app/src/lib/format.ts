@@ -69,10 +69,56 @@ export function fixMojibake(s: string): string {
  */
 const SMMT_PAT = "SMMT[\\sÜÃœ�\\u0080-\\u00BF\\uFFFD]*[UÜ]?[\\sÜÃœ�\\u0080-\\u00BF\\uFFFD]*RK";
 
+/**
+ * Peta homoglyph Latin → ASCII, case-faithful (kapital→kapital,
+ * small-cap→huruf kecil). Daftar EXHAUSTIVE dari sensus HEX prod 8 Okt
+ * (876 kategori + 7434 layanan): hanya codepoint yang benar-benar muncul.
+ * - İ/ı/ɪ (U+0130/0131/026A): samaran "PROVİDER"/"Provɪder".
+ * - Small-cap U+1D00–U+1D20 + ʀ/ʜ/ʟ: "ᴘʀɪᴠᴀᴛᴇ", "ᴅɪʀᴇᴄᴛ", "ᴺᴱᵂ"-style.
+ * NFKD di bawah menangani sisanya (math-bold/sans 𝗣, modifier cap ᴾ,
+ * fullwidth). Emoji/flag/simbol/Cyrillic TIDAK disentuh.
+ */
+const HOMOGLYPH_MAP: Record<string, string> = {
+  "İ": "I", // U+0130
+  "ı": "i", // U+0131
+  "ɪ": "i", // U+026A
+  "ʀ": "r", // U+0280
+  "ʜ": "H", // U+029C
+  "ʟ": "L", // U+029F
+  "ᴀ": "a", // U+1D00
+  "ᴄ": "c", // U+1D04
+  "ᴅ": "d", // U+1D05
+  "ᴇ": "e", // U+1D07
+  "ᴍ": "m", // U+1D0D
+  "ᴏ": "o", // U+1D0F
+  "ᴘ": "p", // U+1D18
+  "ᴛ": "t", // U+1D1B
+  "ᴜ": "u", // U+1D1C
+  "ᴠ": "v", // U+1D20
+};
+
+/**
+ * Normalisasi homoglyph → ASCII sebelum deteksi brand.
+ * - Petakan eksplisit dulu (İ→I; NFKD akan menurunkannya jadi "i"),
+ * - NFKD untuk blok math/modifier-capital/fullwidth,
+ * - buang HANYA combining dot above (U+0307, sisa nyata NFKD di korpus;
+ *   variation selector FE00-FE0F (❤️→❤) dan mark lain DIPERTAHANKAN),
+ * - buang lone surrogate (byte rusak provider, tampil sebagai �).
+ */
+export function normalizeHomoglyphs(s: string): string {
+  let o = "";
+  for (const ch of String(s ?? "")) o += HOMOGLYPH_MAP[ch] ?? ch;
+  o = o.normalize("NFKD").replace(/\u0307/gu, "");
+  // buang lone surrogate (setengah pasangan UTF-16 yatim)
+  o = o.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "").replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
+  return o;
+}
+
 /** Ada token brand hulu (varian SMMT, Provider, PROV?DER) di teks? */
 function hasBrandToken(s: string): boolean {
+  const n = normalizeHomoglyphs(s);
   return (
-    new RegExp(SMMT_PAT, "i").test(s) || /P\s*R\s*O\s*V\s*\?\s*D\s*E\s*R\s*S?/i.test(s) || /\bProviders?\b/i.test(s)
+    new RegExp(SMMT_PAT, "i").test(n) || /P\s*R\s*O\s*V\s*\?\s*D\s*E\s*R\s*S?/i.test(n) || /\bProviders?\b/i.test(n)
   );
 }
 
@@ -98,6 +144,11 @@ export function serviceDisplayName(name: string): string {
   // SMMTÜRK / double-encode SMMTÃRK). Owner 7 Okt: nama masih bocor di UI
   // karena spasi + char non-ASCII memisahkan token.
   fixed = fixed.replace(new RegExp(SMMT_PAT, "gi"), "Socio");
+  // Normalisasi homoglyph (İ/ı/ɪ, math-bold 𝗣, superscript ᴾ, dst) → ASCII
+  // SEBELUM deteksi Provider — pola brand disamarkan lewat blok Unicode
+  // eksotis (owner 8 Okt, HEX prod: "PROVİDER", "ᴾᴿᴼⱽᴵᴰᴱᴿ", "𝗣𝗥𝗢𝗩𝗜𝗗𝗘𝗥").
+  // Emoji/flag/simbol tidak disentuh.
+  fixed = normalizeHomoglyphs(fixed);
   // Remove bracket tags containing "Provider" (e.g. "[ Provider ]", "[%100 Provider]", "[ %100 Provider ]")
   fixed = fixed.replace(/\[\s*%?\d*\s*Provider\s*\]/gi, "");
   // ... maupun versi kurung biasa "(Provider)" / "(Main Provider)" (owner 8
@@ -105,15 +156,21 @@ export function serviceDisplayName(name: string): string {
   fixed = fixed.replace(/\(\s*[^)]*\bProviders?\b[^)]*\)/gi, "");
   // ... maupun SAMARAN "PROV?DER" (? ganti I) + kata "Provider" standalone
   // ("Provider Service ?", "Youtube Provider", "? Provider" — owner 8 Okt:
-  // 11 kategori aktif bocor pola ini, 0 layanan kena).
+  // 11 kategori aktif bocor pola ini) + versi SPASI "P R O V I D E R".
   fixed = fixed.replace(/P\s*R\s*O\s*V\s*\?\s*D\s*E\s*R\s*S?/gi, "");
   fixed = fixed.replace(/\bProviders?\b/gi, "");
+  fixed = fixed.replace(/\bP\s+R\s+O\s+V\s+I\s+D\s+E\s+R(\s+S)?\b/gi, "");
   // Collapse whitespace left by removals + buang pemisah menggantung
-  // di ujung ("... -" setelah "(Main Provider)" dihapus)
+  // di ujung ("... -" setelah "(Main Provider)" dihapus, "... - !" setelah
+  // "PROVİDER!" dihapus) + pasangan
+  // kurung/siku hampa sisa penghapusan ("[]", "()").
   fixed = fixed
     .replace(/\s{2,}/g, " ")
     .trim()
     .replace(/(?:\s*[-|,:;])+$/, "")
+    .replace(/\s*[-|,:;]\s*!+\s*$/, "")
+    .replace(/\[\s*\]/g, "")
+    .replace(/\(\s*\)/g, "")
     .trim();
   // Extract head before first [ metadata tag
   const head = (fixed.split("[")[0] ?? fixed).trim();
@@ -130,11 +187,13 @@ export function serviceDisplayName(name: string): string {
  * 1. buang grup dalam kurung yang menyebut brand,
  * 2. buang segmen ber-pipe yang menyebut brand,
  * 3. buang anak-kalimat trailing (setelah , : - –) yang masih menyebut brand,
- * 4. netralisasi sisa token brand → "Socio",
- * 5. rapikan kata noise ("Own"/"Exclusive"/"Special Update") + separator
- *    menggantung,
- * 6. buang tag `[...Provider...]` (bracket-wrapped), suffix `| Provider`,
- *    dan trailing ` | Provider(s) ` (idempotent, owner 7 Okt).
+  * 4. netralisasi sisa token brand → "Socio",
+  * 4b. normalisasi homoglyph (İ/ı/ɪ, math-bold, superscript) → ASCII,
+  * 5. rapikan kata noise ("Own"/"Exclusive"/"Special Update") + separator
+  *    menggantung,
+  * 6. buang tag `[...Provider...]` (bracket/paren-wrapped), kata "Provider"
+  *    standalone, samaran "PROV?DER"/"P R O V I D E R", suffix `| Provider`,
+  *    dan frasa `of Provider(s)` (idempotent, owner 7-8 Okt).
  */
 export function whitelabel(raw: string): string {
   let s = fixMojibake(String(raw ?? ""));
@@ -147,6 +206,10 @@ export function whitelabel(raw: string): string {
   s = (kept.length ? kept : parts).join("|");
   s = s.replace(new RegExp(`[:,–-—\\u2013]\\s*[^|]*${SMMT_PAT}[^|]*$`, "gi"), "");
   s = s.replace(new RegExp(SMMT_PAT, "gi"), "Socio");
+  // Normalisasi homoglyph (lihat serviceDisplayName) — WAJIB setelah
+  // penanganan SMMT (varian Ü/Ã cocok pra-normalisasi) dan sebelum
+  // deteksi Provider.
+  s = normalizeHomoglyphs(s);
   // Provider patterns — bracket-wrapped `[Provider]` MAUPUN paren-wrapped
   // `(Provider)`/`(Main Provider)` (owner 8 Okt: 2 label dropdown Telegram
   // lolos karena pola lama bracket-only) OR trailing ` | Provider` suffix OR
@@ -154,18 +217,22 @@ export function whitelabel(raw: string): string {
   // karena bukan brand panel — itu penanda marketplace.
   s = s.replace(/\[\s*[^\]]*\bProvider(s)?\b[^\]]*\]/gi, "");
   s = s.replace(/\(\s*[^)]*\bProvider(s)?\b[^)]*\)/gi, "");
-  // Samaran "PROV?DER" + "Provider" standalone (lihat serviceDisplayName —
-  // pola yang sama, 11 kategori aktif; layanan 0 kena tapi future-proof).
+  // Samaran "PROV?DER", "Provider" standalone, dan "P R O V I D E R" spasi
+  // (lihat serviceDisplayName — pola yang sama).
   s = s.replace(/P\s*R\s*O\s*V\s*\?\s*D\s*E\s*R\s*S?/gi, "");
   s = s.replace(/\bProviders?\b/gi, "");
+  s = s.replace(/\bP\s+R\s+O\s+V\s+I\s+D\s+E\s+R(\s+S)?\b/gi, "");
+  s = s.replace(/\[\s*\]/g, "").replace(/\(\s*\)/g, "");
   s = s.replace(/\|\s*Provider(s)?\s*$/gi, "");
   s = s.replace(/\s+of\s+Providers?\b/gi, "");
   s = s.replace(/(^|\||,|;|\s|[-–—:])(\s*)(Special Update|Own|Exclusive)\b/gi, "$1");
   s = s.replace(/\s{2,}/g, " ").trim();
-  // buang pemisah menggantung di ujung hasil penghapusan (mis. "... -", "... |")
+  // buang pemisah menggantung di ujung hasil penghapusan (mis. "... -",
+  // "... |", "... - !" sisa "PROVİDER!")
   s = s
     .replace(/^(?:[-|,:;]\s*)+/, "")
     .replace(/(?:\s*[-|,:;])+$/, "")
+    .replace(/\s*[-|,:;]\s*!+\s*$/, "")
     .trim();
   // Anti-label-kosong: raw semacam "Exclusive" (murni noise word) ikut
   // habis ke-strip → kembalikan mentah; yang ber-brand → "Uncategorized".
