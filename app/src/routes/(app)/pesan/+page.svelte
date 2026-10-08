@@ -850,7 +850,7 @@ import {
                             style={`background:${pc?.color ?? "#0f172a"}`}
                           >
                             {pc?.label ?? selectedPlatform}
-                            <Icon name="close" size={10} />
+                            <Icon name="x" size={10} />
                           </button>
                         {/if}
                         {#if selectedKind}
@@ -866,7 +866,7 @@ import {
                             class="inline-flex items-center gap-1 rounded-full border border-ink-300 bg-surface px-2 py-0.5 text-[11px] font-bold text-ink-700"
                           >
                             {kc?.label ?? selectedKind}
-                            <Icon name="close" size={10} />
+                            <Icon name="x" size={10} />
                           </button>
                         {/if}
                       </div>
