@@ -382,6 +382,15 @@
       .sort((a, b) => (b.isRefill ? 1 : 0) - (a.isRefill ? 1 : 0) || a.pricePer1k - b.pricePer1k),
   );
 
+  // Badge "Termurah" wajib menandai harga efektif paling murah SESUNGGUHNYA,
+  // bukan indeks 0 — urutan display refill-duluan bikin item pertama (refill
+  // termurah) belum tentu yang paling murah secara global.
+  const cheapestServiceId = $derived(
+    visibleServices.length
+      ? visibleServices.reduce((m, s) => (s.pricePer1k < m.pricePer1k ? s : m)).id
+      : -1,
+  );
+
   async function pickService(svc: Svc) {
     haptic(10);
     // Layanan tanpa garansi refill → minta konfirmasi dulu, jangan langsung pilih.
@@ -912,7 +921,7 @@
                     role="listbox"
                     aria-label="Daftar layanan"
                   >
-                    {#each visibleServices as svc, i (svc.id)}
+                    {#each visibleServices as svc (svc.id)}
                       <li>
                         <button
                           type="button"
@@ -935,7 +944,7 @@
                               >
                               <span>/1000</span>
                               <span>· Min {svc.min.toLocaleString("id-ID")}</span>
-                              {#if i === 0 && visibleServices.length > 1}
+                              {#if svc.id === cheapestServiceId && visibleServices.length > 1}
                                 <span
                                   class="rounded-full bg-mango-500/15 px-1.5 py-px text-[10px] font-extrabold text-mango-700"
                                   >Termurah</span

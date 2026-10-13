@@ -218,8 +218,13 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     };
   });
 
-  // Refillduluan: layanan bergaransi refill naik ke atas, lalu termurah.
-  mapped.sort((a, b) => (b.isRefill ? 1 : 0) - (a.isRefill ? 1 : 0) || a.pricePer1k - b.pricePer1k);
+  // Server TETAP urut harga-asc. Refill-duluan dilakukan DI CLIENT setelah
+  // filter platform/kind (lihat +page.svelte `visibleServices`). Kenapa bukan
+  // di sini: respons dibatasi `.slice(0, 1000)`; sort refill-duluan global di
+  // sini akan mendorong layanan refill platform lain ke pucuk dan MENDESOT
+  // layanan non-refill (mis. Instagram yang ~93% non-refill) keluar dari 1000
+  // -> chip platform jadi kosong. Harga-asc menjaga diversity lintas platform.
+  mapped.sort((a, b) => a.pricePer1k - b.pricePer1k);
 
   const filtered = mapped.filter(
     (s) => (!platform || s.platform === platform) && (!kind || s.kind === kind),
