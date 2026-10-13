@@ -419,6 +419,41 @@
                   </span>
                   <span class="hidden text-xs font-medium text-ink-300 lg:inline">#{o.id}</span>
                 </div>
+                <!-- Mobile action row — buka Detail (Refill/Cancel hidup di sini) + Pilih utk selectMode -->
+                <div class="mt-3 flex items-center gap-2 border-t border-ink-100 pt-3">
+                  {#if selectMode}
+                    <button
+                      type="button"
+                      onclick={() => toggleCheck(o.id)}
+                      class="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold shadow-[2px_2px_0_var(--color-ink-900)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
+                        {checked.has(o.id)
+                        ? 'border-ink-900 bg-primary text-white'
+                        : 'border-ink-900 bg-surface text-ink-900'}"
+                    >
+                      <span
+                        class="grid h-4 w-4 place-items-center rounded-full {checked.has(o.id)
+                          ? 'bg-white text-primary'
+                          : 'bg-ink-100'}"><Icon name="check" size={10} stroke={3} /></span
+                      >
+                        {checked.has(o.id) ? "Terpilih" : "Pilih"}
+                      </button>
+                  {:else}
+                    <button
+                      onclick={() => openDetail(o.id)}
+                      class="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border-2 border-ink-900 bg-ink-900 px-4 py-2 text-xs font-bold text-white shadow-[2px_2px_0_var(--color-ink-300)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                    >
+                      <Icon name="eye" size={14} />
+                      Detail
+                    </button>
+                    <button
+                      onclick={() => repeatOrder(o)}
+                      class="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border-2 border-ink-900 bg-surface px-4 py-2 text-xs font-bold text-ink-900 shadow-[2px_2px_0_var(--color-ink-900)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                    >
+                      <Icon name="refresh" size={14} stroke={2} />
+                      Pesan lagi
+                    </button>
+                  {/if}
+                </div>
               </div>
             </SwipeRow>
           </div>
