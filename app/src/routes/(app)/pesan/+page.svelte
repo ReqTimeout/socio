@@ -1,5 +1,5 @@
 <script lang="ts">
-import {
+  import {
     Input,
     QtyStepper,
     Button,
@@ -10,6 +10,7 @@ import {
     NumberFlow,
     Sparko,
     Select,
+    ConfirmDialog,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -25,7 +26,7 @@ import {
     type PlatformId,
     type KindId,
   } from "@socio/core/catalog";
-  import { formatRupiah, serviceDisplayName, whitelabel } from "$lib/format";
+  import { formatRupiah, whitelabel } from "$lib/format";
   import { svcEventBadge } from "$lib/news-meta";
   import { applyAction, enhance } from "$app/forms";
   import { goto } from "$app/navigation";
@@ -65,6 +66,10 @@ import {
   let serviceList = $state<Svc[]>([]);
   let loadingServices = $state(false);
   let selectedService = $state<Svc | null>(null);
+  // Gerbang konfirmasi layanan non-refill (owner Okt-2026): user wajib paham
+  // 'bisa drop & tanpa refund' sebelum layanan terpilih masuk ringkasan.
+  let showNoRefill = $state(false);
+  let pendingNoRefill = $state<Svc | null>(null);
 
   // Dropdown options dari server (kategori provider, sudah whitelabel).
   // Filter chip-icon di-narrow di sini — kalau user klik icon platform/jenis,
@@ -118,9 +123,7 @@ import {
     obs.observe(el);
     return () => obs.disconnect();
   });
-  const totalServiceCount = $derived(
-    data.platforms.reduce((acc, p) => acc + p.count, 0),
-  );
+  const totalServiceCount = $derived(data.platforms.reduce((acc, p) => acc + p.count, 0));
 
   // ── Search global lintas platform ────────────────────────
   let searchQuery = $state("");
@@ -376,11 +379,21 @@ import {
           (!selectedPlatform || s.platform === selectedPlatform) &&
           (!selectedKind || s.kind === selectedKind),
       )
-      .sort((a, b) => a.pricePer1k - b.pricePer1k),
+      .sort((a, b) => (b.isRefill ? 1 : 0) - (a.isRefill ? 1 : 0) || a.pricePer1k - b.pricePer1k),
   );
 
   async function pickService(svc: Svc) {
     haptic(10);
+    // Layanan tanpa garansi refill → minta konfirmasi dulu, jangan langsung pilih.
+    if (!svc.isRefill) {
+      pendingNoRefill = svc;
+      showNoRefill = true;
+      return;
+    }
+    await applyPick(svc);
+  }
+
+  async function applyPick(svc: Svc) {
     selectedService = svc;
     quantity = svc.min || 1000;
     komen = "";
@@ -712,7 +725,9 @@ import {
                   role="radio"
                   aria-checked={selectedPlatform === ""}
                   onclick={() => setPlatformFilter("")}
-                  class="svc-tile justify-center text-center {selectedPlatform === '' ? 'is-selected' : ''}"
+                  class="svc-tile justify-center text-center {selectedPlatform === ''
+                    ? 'is-selected'
+                    : ''}"
                 >
                   <Icon name="grid" size={16} class="text-ink-500" />
                   <span class="block truncate text-xs font-bold">Semua</span>
@@ -727,7 +742,9 @@ import {
                     aria-checked={selectedPlatform === p.id}
                     onclick={() => setPlatformFilter(p.id as PlatformId)}
                     title={p.label}
-                    class="svc-tile justify-center text-center {selectedPlatform === p.id ? 'is-selected' : ''}"
+                    class="svc-tile justify-center text-center {selectedPlatform === p.id
+                      ? 'is-selected'
+                      : ''}"
                     style="--brand: {p.color}"
                   >
                     <Icon name={p.icon} size={16} class="brand-icon" />
@@ -744,7 +761,9 @@ import {
                   onclick={() => (showAllPlatforms = !showAllPlatforms)}
                   class="mt-1.5 hidden w-full items-center justify-center gap-1 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/5 active:scale-[0.98] lg:inline-flex"
                 >
-                  {showAllPlatforms ? "Lebih sedikit" : `Tampilkan semua (${data.platforms.length})`}
+                  {showAllPlatforms
+                    ? "Lebih sedikit"
+                    : `Tampilkan semua (${data.platforms.length})`}
                   <Icon name={showAllPlatforms ? "chevron_up" : "chevron_down"} size={13} />
                 </button>
               {/if}
@@ -759,7 +778,9 @@ import {
               <Select
                 value={selectedCat}
                 options={catsOptions}
-                placeholder={selectedPlatform ? `Kategori ${platformById(selectedPlatform).label}…` : "Pilih kategori…"}
+                placeholder={selectedPlatform
+                  ? `Kategori ${platformById(selectedPlatform).label}…`
+                  : "Pilih kategori…"}
                 searchPlaceholder="Cari kategori…"
                 multiline
                 onChange={(v) => selectCategory(Number(v))}
@@ -902,9 +923,9 @@ import {
                             ? 'is-selected'
                             : ''}"
                         >
-<span class="min-w-0 flex-1 text-left">
+                          <span class="min-w-0 flex-1 text-left">
                             <span class="block line-clamp-2 text-sm font-bold leading-snug">
-                            {whitelabel(svc.serviceName)}
+                              {whitelabel(svc.serviceName)}
                             </span>
                             <span
                               class="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-ink-500"
@@ -952,6 +973,12 @@ import {
                                 class="rounded-full bg-success/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600"
                                 >♻ Refill</span
                               >
+                            {:else}
+                              <span
+                                class="rounded-full bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold text-warning-ink"
+                                title="Non-Refill — sistem tidak auto-refill; hasil bisa menurun/drop, tanpa refund"
+                                >Non-Refill</span
+                              >
                             {/if}
                           </span>
                         </button>
@@ -962,6 +989,18 @@ import {
               </div>
             {/if}
           {/if}
+
+          <ConfirmDialog
+            bind:open={showNoRefill}
+            title="Layanan Non-Refill"
+            message="Layanan ini tidak mendukung refill. Jumlah bisa berkurang (drop) setelah proses selesai dan TIDAK ada refund. Yakin lanjut pilih layanan ini?"
+            confirmLabel="Saya paham, lanjut"
+            cancelLabel="Batal"
+            danger
+            onConfirm={() => {
+              if (pendingNoRefill) applyPick(pendingNoRefill);
+            }}
+          />
 
           <form
             id="pesan-form"
@@ -1274,7 +1313,9 @@ import {
         + pointer-events none saat hidden = tidak ganggu klik target di
         belakang, dan tetap accessible (focusable di luar scroll). -->
         <div
-          class="lg:hidden fixed inset-x-3 bottom-[88px] z-40 max-w-xl mx-auto transition-[opacity,transform] duration-200 ease-out {stickyBarVisible ? 'opacity-100 translate-y-0' : 'pointer-events-none translate-y-2 opacity-0'}"
+          class="lg:hidden fixed inset-x-3 bottom-[88px] z-40 max-w-xl mx-auto transition-[opacity,transform] duration-200 ease-out {stickyBarVisible
+            ? 'opacity-100 translate-y-0'
+            : 'pointer-events-none translate-y-2 opacity-0'}"
           aria-label="Total dan submit"
           aria-hidden={!stickyBarVisible}
         >

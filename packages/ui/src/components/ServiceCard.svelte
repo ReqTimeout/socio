@@ -206,6 +206,12 @@
           class="ml-1 rounded-full bg-mango-soft px-1.5 py-0.5 font-bold text-mango-ink"
           >Refill</span
         >
+      {:else}
+        <span
+          class="ml-1 rounded-full bg-warning-soft px-1.5 py-0.5 font-bold text-warning-ink"
+          title="Non-Refill — sistem tidak auto-refill; hasil bisa menurun/drop, tanpa refund"
+          >Non-Refill</span
+        >
       {/if}
     </span>
     <span

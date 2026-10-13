@@ -42,12 +42,16 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     filters.push(favIds.length ? inArray(services.id, favIds) : sql`0 = 1`);
   }
 
-  const orderBy =
+  // Refillduluan (owner Okt-2026): layanan bergaransi refill selalu naik ke atas
+  // di semua mode sort (termurah/termahal/terlaris). Prepended ke ORDER BY DB supaya
+  // benar lintas halaman (limit/offset), bukan cuma di halaman pertama.
+  const primarySort =
     sort === "termahal"
       ? desc(services.price)
       : sort === "terlaris"
         ? desc(services.id)
         : asc(services.price);
+  const orderBy = [desc(services.isRefill), primarySort];
 
   const rows = await db
     .select({
@@ -67,7 +71,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     .from(services)
     .leftJoin(categories, eq(services.categoryId, categories.id))
     .where(and(...filters))
-    .orderBy(orderBy)
+    .orderBy(...orderBy)
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE);
 

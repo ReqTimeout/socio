@@ -25,9 +25,9 @@ import type { RequestHandler } from "./$types";
  * hari ini → label "Naik"). Bukan double badge "Turun + Naik" yang
  * membingungkan. Sort by detectedAt bukan by event type priority.
  */
-async function attachEventBadges<
-  T extends { id: number },
->(rows: T[]): Promise<Array<T & { events: Array<{ event: string; detectedAt: string }> }>> {
+async function attachEventBadges<T extends { id: number }>(
+  rows: T[],
+): Promise<Array<T & { events: Array<{ event: string; detectedAt: string }> }>> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
   const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
@@ -218,7 +218,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     };
   });
 
-  mapped.sort((a, b) => a.pricePer1k - b.pricePer1k);
+  // Refillduluan: layanan bergaransi refill naik ke atas, lalu termurah.
+  mapped.sort((a, b) => (b.isRefill ? 1 : 0) - (a.isRefill ? 1 : 0) || a.pricePer1k - b.pricePer1k);
 
   const filtered = mapped.filter(
     (s) => (!platform || s.platform === platform) && (!kind || s.kind === kind),
