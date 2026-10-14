@@ -347,17 +347,29 @@
   }
 
   // Filter SEKUNDER dari chip icon — client-side narrowing, no re-fetch.
-  // Klik platform/kind: toggle on/off. JANGAN reset kategori saat filter
-  // tidak match — biar empty state di section Layanan yang informatif
-  // muncul (lihat line 832), plus tombol reset supaya user bisa keluar
-  // dari kondisi kosong. Reset kategori diam-diam (logic lama) bikin
-  // UI silent fail: section Layanan hilang dan user bingung kenapa.
+  // Klik platform/kind: toggle on/off.
   function setPlatformFilter(p: PlatformId | "") {
     haptic(8);
     selectedPlatform = p === selectedPlatform ? "" : p;
     // selectedService di-clear supaya Ringkasan ikut reset ke kategori
     // (layanan sebelumnya bisa di luar intersection platform/kind baru).
     selectedService = null;
+    // BUG FIX (owner Okt-2026): kalau kategori AKTIF tidak punya layanan untuk
+    // platform terpilih (mis. lagi di kategori TikTok lalu klik Instagram),
+    // menyaring tanpa ganti kategori = daftar KOSONG yang membingungkan. Jadi
+    // otomatis lompat ke kategori yang memang punya platform itu (prioritas
+    // yang juga cocokkan jenis/`kind` aktif), lalu muat layanannya.
+    if (selectedPlatform) {
+      const plat = selectedPlatform;
+      const cur = data.cats.find((c) => c.id === selectedCat);
+      if (!cur || !(cur.platforms ?? []).includes(plat)) {
+        const matches = data.cats.filter((c) => (c.platforms ?? []).includes(plat));
+        const match =
+          (selectedKind && matches.find((c) => (c.kinds ?? []).includes(selectedKind))) ||
+          matches[0];
+        if (match) void selectCategory(match.id);
+      }
+    }
   }
   function setKindFilter(k: KindId) {
     haptic(8);
