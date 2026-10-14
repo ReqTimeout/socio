@@ -10,7 +10,6 @@
     NumberFlow,
     Sparko,
     Select,
-    ConfirmDialog,
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -66,10 +65,9 @@
   let serviceList = $state<Svc[]>([]);
   let loadingServices = $state(false);
   let selectedService = $state<Svc | null>(null);
-  // Gerbang konfirmasi layanan non-refill (owner Okt-2026): user wajib paham
-  // 'bisa drop & tanpa refund' sebelum layanan terpilih masuk ringkasan.
-  let showNoRefill = $state(false);
-  let pendingNoRefill = $state<Svc | null>(null);
+  // Layanan non-refill TIDAK diblokir popup lagi (owner Okt-2026: popup
+  // mengganggu). User langsung masuk form; peringatan + saran refill
+  // ditampilkan sebagai notice highlighted di dalam form (lihat `pesan-form`).
 
   // Dropdown options dari server (kategori provider, sudah whitelabel).
   // Filter chip-icon di-narrow di sini — kalau user klik icon platform/jenis,
@@ -391,14 +389,28 @@
       : -1,
   );
 
+  // Saran saat layanan TERPILIH adalah non-refill: tawarkan max 3 layanan refill
+  // terdekat (sama platform + jenis, fallback = sama platform saja), urut
+  // termurah. Dipakai notice highlighted di form — bukan popup. User tetap bisa
+  // lanjut beli non-refill; ini cuma jalan keluar sebelum komplain.
+  const refillAlternatives = $derived.by((): Svc[] => {
+    const p = selectedService;
+    if (!p || p.isRefill) return [];
+    const sameKind = serviceList
+      .filter((s) => s.isRefill && s.id !== p.id && s.platform === p.platform && s.kind === p.kind)
+      .sort((a, b) => a.pricePer1k - b.pricePer1k);
+    const pool = sameKind.length
+      ? sameKind
+      : serviceList
+          .filter((s) => s.isRefill && s.id !== p.id && s.platform === p.platform)
+          .sort((a, b) => a.pricePer1k - b.pricePer1k);
+    return pool.slice(0, 3);
+  });
+
   async function pickService(svc: Svc) {
     haptic(10);
-    // Layanan tanpa garansi refill → minta konfirmasi dulu, jangan langsung pilih.
-    if (!svc.isRefill) {
-      pendingNoRefill = svc;
-      showNoRefill = true;
-      return;
-    }
+    // Langsung pilih — non-refill tidak lagi dipagari popup. Warning + saran
+    // muncul di form (lihat banner `pesan-form`).
     await applyPick(svc);
   }
 
@@ -999,18 +1011,6 @@
             {/if}
           {/if}
 
-          <ConfirmDialog
-            bind:open={showNoRefill}
-            title="Layanan Non-Refill"
-            message="Layanan ini tidak mendukung refill. Jumlah bisa berkurang (drop) setelah proses selesai dan TIDAK ada refund. Yakin lanjut pilih layanan ini?"
-            confirmLabel="Saya paham, lanjut"
-            cancelLabel="Batal"
-            danger
-            onConfirm={() => {
-              if (pendingNoRefill) applyPick(pendingNoRefill);
-            }}
-          />
-
           <form
             id="pesan-form"
             method="POST"
@@ -1045,6 +1045,47 @@
           >
             <input type="hidden" name="serviceId" value={selectedService?.id ?? ""} />
             <input type="hidden" name="quantity" value={effectiveQty} />
+
+            <!-- Notice non-refill highlighted (ganti popup) — hanya saat layanan
+                 terpilih tidak mendukung refill. Peringatan risiko + saran refill
+                 terdekat yang bisa di-tap buat ganti, tepat sebelum user submit. -->
+            {#if selectedService && !selectedService.isRefill}
+              <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-3.5 shadow-[0_0_0_3px_rgba(251,191,36,0.15)]">
+                <p class="flex items-start gap-2 text-xs font-semibold leading-relaxed text-amber-900">
+                  <Icon name="alert" size={16} class="mt-0.5 shrink-0 text-amber-600" />
+                  <span>
+                    <strong>Non-Refill.</strong> Jumlah bisa berkurang (drop) setelah proses
+                    selesai, dan TIDAK ada refund.
+                  </span>
+                </p>
+                {#if refillAlternatives.length > 0}
+                  <p class="mb-2 mt-3 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+                    <Icon name="info" size={12} />
+                    Lebih aman — coba versi Refill
+                  </p>
+                  <div class="flex flex-col gap-1.5">
+                    {#each refillAlternatives as alt (alt.id)}
+                      <button
+                        type="button"
+                        onclick={() => {
+                          haptic(12);
+                          applyPick(alt);
+                        }}
+                        title={whitelabel(alt.serviceName)}
+                        class="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border border-amber-300 bg-white px-3 py-2 text-left transition active:scale-[0.99] hover:border-amber-500 hover:bg-amber-100/60"
+                      >
+                        <span class="min-w-0 flex-1 truncate text-xs font-bold text-ink-900">
+                          {whitelabel(alt.serviceName)}
+                        </span>
+                        <span class="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-extrabold tabular-nums text-emerald-700">
+                          {formatRupiah(alt.pricePer1k)}/rb
+                        </span>
+                      </button>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            {/if}
 
             <!-- Link / Username — UX3.3 inline validation -->
             <div>
