@@ -115,6 +115,56 @@
     return Math.min(100, Math.max(0, ((qty - rem) / qty) * 100));
   }
 
+  // --- Status refill per order (satu sumber kebenaran utk chip baris & sheet) ---
+  // can=true hanya saat: layanan bergaransi (isRefill) & status Berhasil & punya
+  // providerOrderId valid & belum ada klaim Pending. Semua keadaan lain tetap
+  // diberi `reason` supaya user ngerti KENAPA gak bisa refill (bukan cuma tombol
+  // yang hilang begitu saja).
+  function refillInfo(o: (typeof orders)[0]) {
+    const hasProvider = !!o.providerOrderId && o.providerOrderId !== "0";
+    if (o.refillStatus === "Pending")
+      return {
+        can: false,
+        chip: {
+          label: "Refill diproses",
+          icon: "refresh",
+          cls: "bg-status-progress/10 text-status-progress",
+        },
+        reason:
+          "Klaim refill kamu sedang diproses provider. Status akan berubah otomatis, gak perlu klik dua kali.",
+      };
+    if (!o.isRefill)
+      return {
+        can: false,
+        // Chip 'Tanpa Refill' cuma tempel di order selesai — supaya jelas order
+        // sukses ini memang bukan bergaransi (kasus paling bikin bingung).
+        chip:
+          o.status === "Success"
+            ? { label: "Tanpa Refill", icon: "shield", cls: "bg-ink-100 text-ink-500" }
+            : null,
+        reason:
+          "Layanan ini tidak punya garansi refill. Kalau hasil berkurang, ajukan lewat Tiket.",
+      };
+    if (o.status !== "Success")
+      return {
+        can: false,
+        chip: null,
+        reason: "Garansi refill aktif setelah order berstatus Berhasil.",
+      };
+    if (!hasProvider)
+      return {
+        can: false,
+        chip: null,
+        reason:
+          "Order ini diproses manual/legacy, jadi refill gak bisa otomatis. Ajukan lewat Tiket.",
+      };
+    return {
+      can: true,
+      chip: { label: "Bisa Refill", icon: "shield", cls: "bg-accent/10 text-accent-700" },
+      reason: "Order bergaransi — ajukan refill gratis kalau jumlah berkurang.",
+    };
+  }
+
   // Confetti order pertama (APP V2 §4.2 M6) — sinyal dari /pesan via
   // sessionStorage, dibaca + dihapus sekali di sini (host di inline-stat).
   let firstOrderFire = $state(0);
@@ -413,6 +463,15 @@
                   >
                     {formatRupiah(o.price)}
                   </span>
+                  {#if refillInfo(o).chip}
+                    {@const rc = refillInfo(o).chip!}
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold {rc.cls}"
+                    >
+                      <Icon name={rc.icon} size={12} />
+                      {rc.label}
+                    </span>
+                  {/if}
                   <span class="ml-auto flex items-center gap-1 text-xs text-ink-500">
                     <Icon name="clock" size={12} />
                     {timeAgo(o.createdAt)}
@@ -435,8 +494,8 @@
                           ? 'bg-white text-primary'
                           : 'bg-ink-100'}"><Icon name="check" size={10} stroke={3} /></span
                       >
-                        {checked.has(o.id) ? "Terpilih" : "Pilih"}
-                      </button>
+                      {checked.has(o.id) ? "Terpilih" : "Pilih"}
+                    </button>
                   {:else}
                     <button
                       onclick={() => openDetail(o.id)}
@@ -449,7 +508,7 @@
                       onclick={() => repeatOrder(o)}
                       class="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border-2 border-ink-900 bg-surface px-4 py-2 text-xs font-bold text-ink-900 shadow-[2px_2px_0_var(--color-ink-900)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
                     >
-                      <Icon name="refresh" size={14} stroke={2} />
+                      <Icon name="copy" size={14} stroke={2} />
                       Pesan lagi
                     </button>
                   {/if}
@@ -519,6 +578,15 @@
               >
                 {formatRupiah(o.price)}
               </span>
+              {#if refillInfo(o).chip}
+                {@const rc = refillInfo(o).chip!}
+                <span
+                  class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold {rc.cls}"
+                >
+                  <Icon name={rc.icon} size={12} />
+                  {rc.label}
+                </span>
+              {/if}
               <span class="ml-auto flex items-center gap-1 text-xs text-ink-500">
                 <Icon name="clock" size={12} />
                 {timeAgo(o.createdAt)}
@@ -557,7 +625,7 @@
                   onclick={() => repeatOrder(o)}
                   class="inline-flex items-center justify-center gap-1.5 rounded-full border-2 border-ink-900 bg-surface px-4 py-2 text-xs font-bold text-ink-900 shadow-[2px_2px_0_var(--color-ink-900)] transition-all hover:bg-ink-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
                 >
-                  <Icon name="refresh" size={14} stroke={2} />
+                  <Icon name="copy" size={14} stroke={2} />
                   Pesan lagi
                 </button>
               {/if}
@@ -663,10 +731,10 @@
       </div>
       <div class="space-y-2 pt-2">
         <Button full onclick={() => repeatOrder(detail)}>
-          <Icon name="refresh" size={16} />
+          <Icon name="copy" size={16} />
           Pesan Ulang
         </Button>
-        {#if detail.isRefill && detail.status === "Success" && detail.providerOrderId && detail.providerOrderId !== "0"}
+        {#if refillInfo(detail).can}
           <form
             method="POST"
             action="?/refill"
@@ -685,9 +753,23 @@
             <input type="hidden" name="id" value={detail.id} />
             <Button type="submit" variant="accent" full>
               <Icon name="refresh" size={16} />
-              Refill
+              Refill garansi
             </Button>
           </form>
+        {:else if detail.refillStatus === "Pending"}
+          <div
+            class="flex items-start gap-2 rounded-xl bg-status-progress/10 px-3 py-2.5 text-xs font-semibold text-status-progress"
+          >
+            <Icon name="refresh" size={16} class="mt-0.5 shrink-0" />
+            <span>
+              Refill sedang diproses provider. Status berubah otomatis — gak perlu klik lagi.
+            </span>
+          </div>
+        {:else}
+          <div class="flex items-start gap-2 rounded-xl bg-ink-50 px-3 py-2.5 text-xs text-ink-500">
+            <Icon name="shield" size={16} class="mt-0.5 shrink-0" />
+            <span>{refillInfo(detail).reason}</span>
+          </div>
         {/if}
         {#if detail.status === "Pending"}
           <form

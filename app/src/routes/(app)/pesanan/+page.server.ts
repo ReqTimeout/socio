@@ -51,6 +51,27 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     : [];
   const refillMap = new Map(svcRows.map((s) => [s.id, s.isRefill]));
 
+  // Status refill per order (tabel `refill` — di luar drizzle schema, raw SQL
+  // parameterized). Kalau ada baris Pending → order sedang dalam proses refill,
+  // jadi UI bisa tampil 'Refill diproses' + cegah klaim dobel.
+  const orderIds = rows.map((r) => Number(r.id)).filter((n) => n > 0);
+  const refillStatusMap = new Map<number, string>();
+  if (orderIds.length) {
+    const rf = (await db.execute(
+      sql`SELECT order_id, status FROM refill WHERE order_id IN (${sql.join(
+        orderIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})`,
+    )) as any;
+    const arr: any[] = Array.isArray(rf?.[0]) ? rf[0] : Array.isArray(rf) ? rf : [];
+    for (const row of arr) {
+      const oid = Number(row.order_id);
+      const st = String(row.status ?? "");
+      if (st === "Pending") refillStatusMap.set(oid, "Pending");
+      else if (!refillStatusMap.has(oid) && st) refillStatusMap.set(oid, st);
+    }
+  }
+
   // Counts per tab — tanpa query tambahan berat: hitung dari 30 rows terbaru sudah representatif
   // Untuk total yang akurat, hitung via group-by sekali (ringan, index userId+status)
   const allCounts = await db
@@ -139,11 +160,17 @@ export const load: PageServerLoad = async ({ url, locals }) => {
             };
           });
       }
-    } catch {}
+    } catch {
+      // cross-sell populer bersifat opsional — gagal diam, jangan pecahkan list
+    }
   }
 
   return {
-    orders: rows.map((r) => ({ ...r, isRefill: refillMap.get(Number(r.serviceId)) ?? 0 })),
+    orders: rows.map((r) => ({
+      ...r,
+      isRefill: refillMap.get(Number(r.serviceId)) ?? 0,
+      refillStatus: refillStatusMap.get(Number(r.id)) ?? null,
+    })),
     filter,
     counts: tabCounts,
     popular,
