@@ -54,51 +54,67 @@ export const load: LayoutServerLoad = async (event) => {
   // P2-03: Pakai centralized IP resolver (cf-connecting-ip > x-forwarded-for > x-real-ip)
   const ip = getClientIp(event) ?? "0.0.0.0";
 
-  const [unreadRow, pendingDepositRow, pendingOrderRow, adminNotifRow, latestAdminNotifs] =
-    await Promise.all([
-      db
-        .select({ unreadAdmin: sql<number>`COUNT(*)` })
-        .from(notifications)
-        .where(
-          and(
-            eq(notifications.userId, Number(locals.user.id)),
-            sql`${notifications.readAt} IS NULL`,
-          ),
+  const [
+    unreadRow,
+    pendingDepositRow,
+    pendingOrderRow,
+    pendingTicketRow,
+    adminNotifRow,
+    latestAdminNotifs,
+  ] = await Promise.all([
+    db
+      .select({ unreadAdmin: sql<number>`COUNT(*)` })
+      .from(notifications)
+      .where(
+        and(eq(notifications.userId, Number(locals.user.id)), sql`${notifications.readAt} IS NULL`),
+      ),
+    db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(deposits)
+      .where(eq(deposits.status, "Pending")),
+    db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(orders)
+      .where(sql`${orders.status} IN ('Pending','Processing')`),
+    // Tiket menunggu balasan admin: status message TERBARU per ticket_id =
+    // 'Pending' (user buka) atau 'Reply by user' (user balas lagi). Ini angka
+    // yang tampil sbg badge "Lainnya"/Tickets supaya tiket gak terlewat.
+    db.execute(sql`
+        SELECT COUNT(*) AS c FROM (
+          SELECT m.ticket_id, m.status,
+            ROW_NUMBER() OVER (PARTITION BY m.ticket_id ORDER BY m.id DESC) AS rn
+          FROM message m
+        ) t WHERE t.rn = 1 AND t.status IN ('Pending','Reply by user')
+      `),
+    db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(adminNotifications)
+      .where(
+        and(
+          eq(adminNotifications.adminId, Number(locals.user.id)),
+          sql`${adminNotifications.readAt} IS NULL`,
         ),
-      db
-        .select({ c: sql<number>`COUNT(*)` })
-        .from(deposits)
-        .where(eq(deposits.status, "Pending")),
-      db
-        .select({ c: sql<number>`COUNT(*)` })
-        .from(orders)
-        .where(sql`${orders.status} IN ('Pending','Processing')`),
-      db
-        .select({ c: sql<number>`COUNT(*)` })
-        .from(adminNotifications)
-        .where(
-          and(
-            eq(adminNotifications.adminId, Number(locals.user.id)),
-            sql`${adminNotifications.readAt} IS NULL`,
-          ),
-        ),
-      db
-        .select({
-          id: adminNotifications.id,
-          title: adminNotifications.title,
-          message: adminNotifications.message,
-          actionUrl: adminNotifications.actionUrl,
-          priority: adminNotifications.priority,
-          createdAt: adminNotifications.createdAt,
-        })
-        .from(adminNotifications)
-        .where(eq(adminNotifications.adminId, Number(locals.user.id)))
-        .orderBy(sql`${adminNotifications.createdAt} DESC`)
-        .limit(10),
-    ]);
+      ),
+    db
+      .select({
+        id: adminNotifications.id,
+        title: adminNotifications.title,
+        message: adminNotifications.message,
+        actionUrl: adminNotifications.actionUrl,
+        priority: adminNotifications.priority,
+        createdAt: adminNotifications.createdAt,
+      })
+      .from(adminNotifications)
+      .where(eq(adminNotifications.adminId, Number(locals.user.id)))
+      .orderBy(sql`${adminNotifications.createdAt} DESC`)
+      .limit(10),
+  ]);
   const unreadAdmin = unreadRow[0]?.unreadAdmin ?? 0;
   const pendingDeposits = pendingDepositRow[0]?.c ?? 0;
   const pendingOrders = pendingOrderRow[0]?.c ?? 0;
+  const ptArr = pendingTicketRow as unknown as any[];
+  const ptRows = Array.isArray(ptArr[0]) ? ptArr[0] : ptArr;
+  const pendingTickets = Number(ptRows[0]?.c ?? 0);
 
   return {
     admin: {
@@ -123,6 +139,7 @@ export const load: LayoutServerLoad = async (event) => {
     })),
     pendingDeposits: Number(pendingDeposits),
     pendingOrders: Number(pendingOrders),
+    pendingTickets,
     maintenance: (await getSetting("maintenance_mode")) === "1",
   };
 };

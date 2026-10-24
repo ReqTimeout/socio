@@ -71,6 +71,7 @@
     icon: string;
     group: "Operasional" | "Konten & Sistem";
     keywords?: string[];
+    badge?: "pendingTickets";
   }[] = [
     // OPERASIONAL
     {
@@ -93,6 +94,7 @@
       icon: "ticket",
       group: "Operasional",
       keywords: ["tiket", "komplain", "support"],
+      badge: "pendingTickets",
     },
     { href: "/admin/reporting", label: "Reporting", icon: "chart", group: "Operasional" },
     { href: "/admin/refunds", label: "Refunds", icon: "banknote", group: "Operasional" },
@@ -166,6 +168,14 @@
     return $page.url.pathname.startsWith(href);
   }
   const inMoreActive = $derived(visibleMoreNav.some((n) => isActive(n.href)));
+
+  // Badge count generik untuk item nav (Orders/Deposit di primary, Tickets di more).
+  function badgeCountFor(n: { badge?: string }): number {
+    return n.badge ? Number((data as any)[n.badge] ?? 0) || 0 : 0;
+  }
+  // Agregat untuk tombol "Lainnya" (mobile dock) — jumlah semua badge di moreNav.
+  // Sekarang hanya Tickets, tapi tetap generik kalau nanti ada item ber-badge lain.
+  const moreBadgeTotal = $derived(visibleMoreNav.reduce((s, n) => s + badgeCountFor(n), 0));
 
   async function toggleMaintenanceOff() {
     const fd = new FormData();
@@ -383,6 +393,12 @@
               : 'group-hover:translate-x-0.5'}"
             ><Icon name={n.icon} size={18} stroke={isActive(n.href) ? 2.4 : 1.9} /></span
           >{n.label}
+          {#if badgeCountFor(n) > 0}
+            <span
+              class="ml-auto grid min-h-[18px] min-w-[18px] place-items-center rounded-full bg-danger px-1.5 text-[10px] font-bold leading-none text-white"
+              >{badgeCountFor(n) > 99 ? "99+" : badgeCountFor(n)}</span
+            >
+          {/if}
         </a>
       {/each}
       <div
@@ -412,6 +428,12 @@
               : 'group-hover:translate-x-0.5'}"
             ><Icon name={n.icon} size={18} stroke={isActive(n.href) ? 2.4 : 1.9} /></span
           >{n.label}
+          {#if badgeCountFor(n) > 0}
+            <span
+              class="ml-auto grid min-h-[18px] min-w-[18px] place-items-center rounded-full bg-danger px-1.5 text-[10px] font-bold leading-none text-white"
+              >{badgeCountFor(n) > 99 ? "99+" : badgeCountFor(n)}</span
+            >
+          {/if}
         </a>
       {/each}
     </nav>
@@ -670,12 +692,20 @@
         sheetOpen = true;
       }}
       aria-current={inMoreActive ? "true" : undefined}
-      aria-label="Menu lainnya"
+      aria-label={moreBadgeTotal > 0 ? `Menu lainnya (${moreBadgeTotal} menunggu)` : "Menu lainnya"}
       class="flex h-[52px] flex-col items-center justify-center overflow-hidden gap-1 rounded-full px-1 py-2 text-[9px] font-bold tracking-wide leading-none transition-all duration-300 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 {inMoreActive
         ? 'bg-ink-900 text-ink-50 shadow-[0_4px_16px_rgba(15,23,42,0.22)] dark:bg-ink-800 dark:text-ink-100 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
         : 'text-ink-500 hover:text-ink-700 dark:hover:text-ink-300'}"
     >
-      <Icon name="more_horizontal" size={18} stroke={inMoreActive ? 2.4 : 1.9} />
+      <span class="relative">
+        <Icon name="more_horizontal" size={18} stroke={inMoreActive ? 2.4 : 1.9} />
+        {#if moreBadgeTotal > 0}
+          <span
+            class="absolute -right-1.5 -top-1.5 grid min-h-[14px] min-w-[14px] place-items-center rounded-full bg-danger px-1 text-[8px] font-extrabold leading-none text-ink-50 shadow-sm ring-2 ring-surface"
+            aria-hidden="true">{moreBadgeTotal > 99 ? "99+" : moreBadgeTotal}</span
+          >
+        {/if}
+      </span>
       <span class="whitespace-nowrap leading-none">Lainnya</span>
     </button>
   </nav>
@@ -839,6 +869,12 @@
                     >
                       <Icon name={n.icon} size={18} />
                       <span class="flex-1">{n.label}</span>
+                      {#if badgeCountFor(n) > 0}
+                        <span
+                          class="grid min-h-[18px] min-w-[18px] place-items-center rounded-full bg-danger px-1.5 text-[10px] font-bold leading-none text-white"
+                          >{badgeCountFor(n) > 99 ? "99+" : badgeCountFor(n)}</span
+                        >
+                      {/if}
                       {#if isActive(n.href)}
                         <span
                           class="rounded-full bg-primary-500 px-2 py-0.5 text-[10px] font-bold text-white"
