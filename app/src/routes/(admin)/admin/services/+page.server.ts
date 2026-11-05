@@ -68,7 +68,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (status) conds.push(eq(services.status, status === "1" ? 1 : 0));
   const where = conds.length ? and(...conds) : undefined;
 
-  const [rows, totalRow, statsRow, catRows, provRows] = await Promise.all([
+  const [rows, totalRow, statsRow, catRows, provRows, ruleRows] = await Promise.all([
     db
       .select({
         id: services.id,
@@ -110,12 +110,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       .from(categories)
       .orderBy(asc(categories.name)),
     db.select({ id: provider.id, name: provider.name }).from(provider).orderBy(asc(provider.name)),
+    // E1 (.my 2026-11-01): pricing_rules ikut batch paralel — buang 1 trip sekuensial.
+    db.select().from(pricingRules),
   ]);
 
   const total = Number(totalRow[0]?.total ?? 0);
   const s = statsRow[0] ?? { total: 0, active: 0, categories: 0 };
-
-  const ruleRows = await db.select().from(pricingRules);
 
   return {
     services: rows,
@@ -232,11 +232,21 @@ export const actions: Actions = {
     if (min > max) return fail(400, { error: "Min tidak boleh > Max." });
 
     const p = await computePricing(basePrice);
+    // F2 kontrak [manual-off]: jalur edit juga menulis status — jaga tag tetap
+    // konsisten (status=0 ⇒ bertag, status=1 ⇒ tag dilepas) supaya sync tidak
+    // mengaktifkan ulang layanan yang sengaja dimatikan lewat form edit.
+    const EDIT_OFF_TAG = "[manual-off]";
+    const finalNote =
+      status === 0
+        ? note.includes(EDIT_OFF_TAG)
+          ? note
+          : `${note} ${EDIT_OFF_TAG}`.trim()
+        : note.replace(EDIT_OFF_TAG, "").replace(/\s{2,}/g, " ").trim();
     await db
       .update(services)
       .set({
         serviceName,
-        note,
+        note: finalNote,
         type,
         min,
         max,
@@ -450,13 +460,27 @@ export const actions: Actions = {
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });
     const [cur] = await db
-      .select({ status: services.status, name: services.serviceName })
+      .select({ status: services.status, name: services.serviceName, note: services.note })
       .from(services)
       .where(eq(services.id, id))
       .limit(1);
     if (!cur) return fail(404, { error: "Layanan tidak ditemukan." });
     const next = cur.status === 1 ? 0 : 1;
-    await db.update(services).set({ status: next }).where(eq(services.id, id));
+    // F2 kontrak [manual-off] (port .my db6e240): service-sync MEN-ENABLE Ulang
+    // status=0 yang tidak bertag tiap jam — tanpa tag, disable manual cuma
+    // bertahan ≤1 jam. Enable manual → tag dilepas (sync bebas update normal).
+    const MANUAL_OFF_TAG = "[manual-off]";
+    const curNote = String(cur.note ?? "");
+    const patchedNote =
+      next === 0
+        ? curNote.includes(MANUAL_OFF_TAG)
+          ? curNote
+          : `${curNote.trim()} ${MANUAL_OFF_TAG}`.trim()
+        : curNote.replace(MANUAL_OFF_TAG, "").replace(/\s{2,}/g, " ").trim();
+    await db
+      .update(services)
+      .set({ status: next, note: patchedNote })
+      .where(eq(services.id, id));
     await logAudit({
       adminId: Number(locals.user!.id),
       action: "toggle_service_status",
