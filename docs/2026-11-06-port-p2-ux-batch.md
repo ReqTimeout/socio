@@ -78,6 +78,59 @@
 
 ---
 
+## Batch Verifikasi Uang + UX (C2–C5, E5) — 6 Nov 2026 (sesi ini)
+
+### E5 — Refund state ledger-first (verifikasi, sudah beres Fase 1)
+- `admin/orders/+page.server.ts` sudah pakai `refundStateOf`, `ledgerRefundAmount/At/Exists` (subquery `balance_logs type='ref'`), `isRefund` hanya CAS guard. Tidak ada perubahan baru.
+
+### C2 — Riwayat saldo → link ke detail order (`?oid=` deep-link)
+- `saldo/riwayat/+page.svelte`: `orderOidOf` regex `\((oid)\)` → fallback `#oid`, `orderLogHref` (type order/ord/minus), `cleanNote` buang oid dari display, baris order jadi `<a>` + chevron.
+- `pesanan/+page.server.ts`: handler `?oid=` — query by userId+oid, sisipkan ke rows kalau tidak ada, return `deepLinkId`.
+- `pesanan/+page.svelte`: `onMount` kedua → auto-buka sheet detail saat `deepLinkId != null`.
+
+### C3 — Payment modal UX (bug Tutup)
+- `saldo/top-up/+page.svelte` L481: `goto("/saldo/top-up")` (full reload) → `instructionOpen = false` (Sheet sudah `bind:open`). QR 180px + kontras nominal sudah OK, copy BCA manual sudah adaptif.
+
+### C4 — Notifikasi deposit 3 kanal konsisten (bell + email)
+- Helper baru `notifyDepositSuccess(userId, amount, isReseller)` di `lib/server/deposit-emails.ts`: `createNotification` bell + lookup email user + `depositSuccessMail` + `enqueueEmail` (best-effort try/catch, tidak pernah gagalkan credit path).
+- Dipanggil di 3 situs: webhook Midtrans (sebelumnya cuma bell), admin confirm (sebelumnya cuma email, blok inline ±28 baris dihapus), admin verify approve (sebelumnya tidak ada keduanya).
+
+### C5 — Badge/filter virtual "Kedaluwarsa"
+- `cron/light.ts`: auto-expire kini stamp `verification_notes = "Expired: melewati batas waktu pembayaran"` (sebelumnya cuma status Canceled → admin tidak bisa bedakan expired vs manual reject).
+- `api/webhook/midtrans/+server.ts`: jalur `failed` stamp `"Expired: midtrans status_code=..."` — konsisten prefix `Expired:`.
+- `admin/deposits/+page.server.ts`: projection + `verificationNotes`; filter virtual `status=Expired` = `Canceled AND verification_notes LIKE 'Expired%' OR 'Kedaluwarsa%'`.
+- `admin/deposits/+page.svelte`: chip filter baru "Kedaluwarsa" (amber), badge amber per baris (desktop+mobile) saat `isExpiredDeposit`, title tooltip isi note.
+- Catatan: override admin manual pakai prefix `OVERRIDE tanpa bukti:` (tidak tabrakan dengan prefix Expired).
+
+### F2 — Kontrak `[manual-off]` (feed hysteresis sudah ada di .id)
+- Verifikasi `cron/service-sync.ts` .id: guard `isManualOff` (L309/L399) + ambang harga IDR `PRICE_NEWS_MIN_PCT=2` + min abs Rp100/1k + `NEWS_CAP_PER_SYNC=20` + dedupe 24h — hysteresis SUDAH ada, tidak port ulang.
+- **GAP ditemukan**: aksi `toggleStatus` dan form `edit` admin/services menulis status tanpa tag → disable manual bisa di-reaktivasi sync tiap jam (bug kelas sama yg diperbaiki .my db6e240).
+- Fix: kedua jalur kini append tag `[manual-off]` saat status→0 dan lepas tag saat status→1 (idempoten, tidak duplikat). Sync tidak pernah menulis `note` → tag aman.
+- Data 78 TikTok Live .my TIDAK di-port (keputusan katalog .my).
+
+### B5 — Field order dinamis SMMturk per `services.type` (12 tipe)
+- Probe DB produksi (read-only, via container Coolify): distribusi type — Default 7264, Package 1042, Custom Comments 287, Custom Comments Pkg 136, Subscriptions 92, Invites from Groups 15, Comment Likes 14, Poll 4, SEO 3, Mentions Hashtag 2, Mentions User Followers 1, Mentions Custom List 1, Mentions with Hashtags 1, kosong 4. Sebelum fix, 9 tipe non-Default (~133 layanan) salah payload (selalu link+quantity).
+- **core/catalog.ts**: `OrderParam`, `TYPE_PARAMS` (13 entri + varian "Mentions with Hashtags" = param Mentions Hashtag per docs), `orderFieldParams()`, `orderFieldSpec(type, serviceName)` → `{needsLink, hasQuantity, isComments, needsUsername, params, extra}`. Fallback Default; deteksi Custom Comments dari nama saat type Default/kosong.
+- **core/smmturk.ts**: `smmturkAddFor` menerima `link?`, `username?`, `extra?: Record<string,string>` — param only-sent-when-present.
+- **pesan/+page.server.ts**: `sendToProvider` build payload spec-driven; validasi wajib per spec (username/extra); qty Subscriptions dari `extra.max`; insert order pakai `@username` sbg link fallback utk tipe tanpa link.
+- **pesan/+page.svelte**: `fieldSpec` derived — blok Link disembunyikan utk Subscriptions, input Username khusus (label per tipe), blok extras generik (keywords/usernames/hashtag/groups/answer_number/min/max/delay) via `EXTRA_META`; live total pakai effectiveQty server-parity.
+- **api/v1**: parse `username` + 8 param extras, validasi + payload spec-driven (parity dgn form).
+- Test offline baru `order-field-spec.test.ts` (10 grupo) disambungkan ke chain `@socio/core test` — semua hijau.
+
+### E1 — Admin services perf (verifikasi ADAPT, pola .my tidak port mentah)
+- Panduan handover: profil read-only DB produksi dulu (container `rebicrj…`, 8866 services / 1228 kategori) — BUKAN `vbknf…` (MySQL socio_my, off-limits).
+- `EXPLAIN categories ORDER BY name`: ALL 1175 rows + filesort — murah (1228 baris kecil). Durasi query loader (wrapper docker+mysql handshake ~180ms dasar): categories 253ms, baris tabel 25 (LEFT JOIN cat+prov ORDER BY id DESC) 316ms, stats 184ms, pricing_rules 190ms — **tidak ada anomaly 1 detik** seperti .my karena loader .id memang tidak pernah join+group 1225 kategori (pola A sudah asli beda/lebih murah; pola lama .my bahkan terukur cepat di HW ini).
+- **Bagian B (toggle optimistik) TIDAK berlaku di sini**: aksi `toggleStatus` server .id TIDAK dipakai UI manapun (status diubah lewat modal `editService`) → tidak ada `invalidateAll()` per klik toggle.
+- **Fix diterapkan (1 selisih nyata)**: `pricing_rules` dipindah ke batch `Promise.all` loader — buang 1 trip DB sekuensial di ujung load (pola sama .my §3.A).
+- Gate pasca-edit: svelte-check 0 errors, eslint touched file 0 errors, `vite build` ✓.
+
+### Gerbang batch ini
+- `svelte-check`: 0 errors, 50 warnings (baseline)
+- `eslint` (file touched): 0 errors (fix pre-existing `catch {}` di light.ts + `void currentType` di riwayat)
+- `vite build`: ✓ 19s, adapter-node done
+
+---
+
 ## Ringkasan File yang Disentuh
 
 | Layer | File | Item |
@@ -90,11 +143,11 @@
 | routes/(admin) | admin/news/+page.{svelte,server.ts} | E7 |
 | packages/ui | primitives.css, Sidebar, BottomNav, LiveDot (read-only) | D1,C1 |
 
-## Verifikasi Akhir (per 6 Nov 2026)
+## Verifikasi Akhir (per 6 Nov 2026, upd. B5)
 - `svelte-check`: 0 errors, 50 warnings (baseline)
 - `eslint` (touched): 0 errors, 57+21 warnings (pre-existing navigation/a18y)
-- `@socio/core test`: 69 assertions (refill-window 11 + popularity 21 + format-entities 9 + email-guard 28) pass, 0 fail
-- `vite build`: ✓ 25s, adapter-node done
+- `@socio/core test`: 10 suite hijau — +order-field-spec (B5, selftest print) di atas 69 assertion lama
+- `vite build`: ✓ adapter-node done (diulang setelah B5 — lulus)
 
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
