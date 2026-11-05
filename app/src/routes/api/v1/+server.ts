@@ -11,6 +11,7 @@ import {
 } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { smmturkAddFor, smmturkRefill } from "@socio/core/smmturk";
+import { orderFieldSpec } from "@socio/core/catalog";
 import {
   baseForLevel,
   effectivePer1k,
@@ -226,9 +227,16 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
   const link = String(form["data"] ?? form["link"] ?? "");
   const quantity = Number(form["quantity"] ?? 0);
   const comments = String(form["comments"] ?? "");
+  // B5: param dinamis per tipe ikut docs SMMturk (parity dgn form /pesan).
+  const username = String(form["username"] ?? "").trim();
+  const apiExtra: Record<string, string> = {};
+  for (const p of ["usernames", "hashtag", "groups", "answer_number", "keywords", "min", "max", "delay"]) {
+    const v = String(form[p] ?? "").trim();
+    if (v) apiExtra[p] = v;
+  }
 
-  if (!serviceId || !link || (!quantity && !comments)) {
-    return fail("Wrong Request! Missing service, data (link), or quantity");
+  if (!serviceId) {
+    return fail("Wrong Request! Missing service");
   }
   if (quantity && comments) return fail("Wrong Request! Use either quantity OR comments, not both");
 
@@ -239,7 +247,23 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
     .limit(1);
   if (!svc) return fail("Service not available / inactive");
 
-  const qty = comments ? comments.split("\n").filter(Boolean).length : quantity;
+  // B5: validasi + qty per spec tipe (Custom Comments → baris; Subscriptions →
+  // max per post; sisanya → quantity). Link opsional utk tipe tanpa link.
+  const spec = orderFieldSpec(svc.type, svc.serviceName);
+  if (spec.needsLink && !link.trim()) {
+    return fail("Wrong Request! Missing data (link)");
+  }
+  if (spec.needsUsername && !username) return fail("Wrong Request! Missing username");
+  if (spec.isComments && !comments) return fail("Wrong Request! Missing comments");
+  for (const p of spec.extra) {
+    if (!apiExtra[p]) return fail(`Wrong Request! Missing ${p}`);
+  }
+
+  const qty = spec.isComments
+    ? comments.split("\n").filter(Boolean).length
+    : svc.type === "Subscriptions"
+      ? Number(apiExtra.max) || 0
+      : quantity;
   if (qty < svc.min) return fail(`min order: ${svc.min}`);
   if (qty > svc.max) return fail(`max order: ${svc.max}`);
 
@@ -281,23 +305,21 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
       return fail("Provider not configured");
     }
     try {
-      const result =
-        svc.type === "Custom Comments"
-          ? await smmturkAddFor(p.apiUrlOrder, key, {
-              service: String(svc.providerServiceId),
-              link,
-              comments,
-            })
-          : svc.type === "Package"
-            ? await smmturkAddFor(p.apiUrlOrder, key, {
-                service: String(svc.providerServiceId),
-                link,
-              })
-            : await smmturkAddFor(p.apiUrlOrder, key, {
-                service: String(svc.providerServiceId),
-                link,
-                quantity: qty,
-              });
+      // B5: payload dinamis per tipe — sama pola aksi /pesan (orderFieldSpec).
+      const params: Parameters<typeof smmturkAddFor>[2] = {
+        service: String(svc.providerServiceId),
+      };
+      if (spec.needsLink) params.link = link;
+      if (spec.isComments) params.comments = comments;
+      else if (spec.hasQuantity) params.quantity = qty;
+      if (spec.needsUsername) params.username = username;
+      const pickedExtra: Record<string, string> = {};
+      for (const ep of spec.extra) {
+        const v = apiExtra[ep];
+        if (v) pickedExtra[ep] = v;
+      }
+      if (Object.keys(pickedExtra).length > 0) params.extra = pickedExtra;
+      const result = await smmturkAddFor(p.apiUrlOrder, key, params);
       if (result.error) {
         await refundBalanceAtomic(user.id, totalPrice);
         return fail(`Provider error: ${result.error}`);

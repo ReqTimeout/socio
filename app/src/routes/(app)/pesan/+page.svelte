@@ -16,9 +16,10 @@
   import {
     kindById,
     detectPlatform,
-    isCustomCommentsService,
     linkExample,
     linkShapeForKind,
+    orderFieldSpec,
+    type OrderParam,
     PLATFORM_LINK_NAME,
     platformById,
     KIND_ORDER,
@@ -137,6 +138,16 @@
   let link = $state("");
   let quantity = $state(0);
   let komen = $state("");
+  // B5: field dinamis per tipe layanan (docs SMMturk via orderFieldSpec) —
+  // username utk Subscriptions/Comment Likes/Mentions User Followers, extras
+  // utk keywords/usernames/hashtag/groups/answer_number/min/max/delay.
+  let username = $state("");
+  let extras = $state<Record<string, string>>({});
+  function defaultExtras(svc: Svc | null): Record<string, string> {
+    return svc?.type === "Subscriptions"
+      ? { min: String(svc.min ?? 1), max: String(svc.max ?? 1000), delay: "0" }
+      : {};
+  }
   let saving = $state(false);
 
   // Prefill sekali dari URL (service deep-link / repeat-order) — tidak boleh tertimpa saat invalidate
@@ -154,12 +165,33 @@
     if (!link) link = data.prefill?.link ?? "";
   });
 
-  // Komentar custom terdeteksi dari NAMA layanan (kolom type 99,9% "Default" — mati).
-  const isCustomComments = $derived(
-    selectedService ? isCustomCommentsService(selectedService.serviceName) : false,
+  // B5: spec field per tipe — sumber kebenaran form (link/qty/username/komen/extra).
+  const fieldSpec = $derived(
+    selectedService ? orderFieldSpec(selectedService.type, selectedService.serviceName) : null,
   );
+  // Komentar custom terdeteksi dari spec (type + fallback nama layanan).
+  const isCustomComments = $derived(fieldSpec?.isComments ?? false);
+  const isSubscription = $derived(selectedService?.type === "Subscriptions");
   const lineCount = $derived(komen.split("\n").filter(Boolean).length);
-  const effectiveQty = $derived(isCustomComments ? lineCount : quantity);
+  // Qty preview harus SAMA dgn server: Custom Comments → baris komen;
+  // Subscriptions → max per post; sisanya → stepper quantity.
+  const effectiveQty = $derived(
+    isCustomComments ? lineCount : isSubscription ? Number(extras.max) || 0 : quantity,
+  );
+  const specNeedsLink = $derived(fieldSpec?.needsLink ?? true);
+  const specNeedsUsername = $derived(fieldSpec?.needsUsername ?? false);
+  const specExtraParams = $derived<OrderParam[]>(fieldSpec?.extra ?? []);
+  // Meta render generik param tambahan B5 (label + bentuk input per param).
+  const EXTRA_META: Record<string, { label: string; num: boolean; area: boolean; ph: string }> = {
+    keywords: { label: "Kata Kunci", num: false, area: false, ph: "contoh: wisata bali" },
+    usernames: { label: "Daftar Username (1 per baris)", num: false, area: true, ph: "@user1\n@user2" },
+    hashtag: { label: "Hashtag", num: false, area: false, ph: "#tantangan" },
+    groups: { label: "ID Grup (1 per baris)", num: false, area: true, ph: "-1001234567890\n-1009876543210" },
+    answer_number: { label: "Nomor Jawaban Polling", num: true, area: false, ph: "1" },
+    min: { label: "Min Per Post", num: true, area: false, ph: "" },
+    max: { label: "Max Per Post", num: true, area: false, ph: "" },
+    delay: { label: "Delay Antar Post (menit)", num: true, area: false, ph: "0" },
+  };
   // Total live — sama persis dgn server. Pembagi mengikuti semantik rate
   // `services.type`: per-1000 utk type biasa, PER-PACK utk Package/Custom
   // Comments Package (lihat `qtyDivisorFor` di @socio/core/pricing).
@@ -201,6 +233,7 @@
 
   const qtyOutOfRange = $derived(
     !!selectedService &&
+      (fieldSpec?.hasQuantity ?? true) &&
       ((!isCustomComments && quantity > 0 && quantity < selectedService.min) ||
         quantity > selectedService.max),
   );
@@ -212,7 +245,7 @@
     {
       label: "Order",
       done:
-        linkOk &&
+        (!specNeedsLink || linkOk) &&
         !qtyOutOfRange &&
         (isCustomComments ? lineCount > 0 : quantity >= (selectedService?.min ?? 0)),
     },
@@ -285,9 +318,9 @@
 
   const canSubmit = $derived(
     !!selectedService &&
-      !!link &&
-      linkValid.ok !== false &&
-      !platformMismatch &&
+      (!specNeedsLink || (!!link && linkValid.ok !== false && !platformMismatch)) &&
+      (!specNeedsUsername || username.trim().length > 0) &&
+      specExtraParams.every((p) => (extras[p] ?? "").trim() !== "") &&
       (isCustomComments ? lineCount > 0 : quantity >= (selectedService?.min ?? 0)) &&
       !qtyOutOfRange,
   );
@@ -603,6 +636,9 @@
     selectedService = svc;
     quantity = svc.min || 1000;
     komen = "";
+    // B5: reset param dinamis; Subscriptions default min/max ikut batas layanan.
+    username = "";
+    extras = defaultExtras(svc);
   }
 
   function pickServiceById(id: string | number) {
@@ -1337,7 +1373,9 @@
               </div>
             {/if}
 
-            <!-- Link / Username — UX3.3 inline validation -->
+            <!-- Link / Username — UX3.3 inline validation. B5: tipe tanpa link
+                 (Subscriptions) menyembunyikan blok ini sepenuhnya. -->
+            {#if specNeedsLink}
             <div>
               <label class="mb-1.5 block text-sm font-bold" for="link-input">Link / Username</label>
               {#if data.saved.length > 0}
@@ -1432,8 +1470,41 @@
                 {/if}
               </p>
             </div>
+            {/if}
 
-            <!-- Quantity or Custom Comments -->
+            <!-- B5: Username — label + helper dinamis ikut tipe layanan. -->
+            {#if specNeedsUsername}
+              <div>
+                <label class="mb-1.5 block text-sm font-bold" for="username-input">
+                  {selectedService?.type === "Subscriptions"
+                    ? "Username Kanal (Telegram)"
+                    : selectedService?.type === "Comment Likes"
+                      ? "Username Pemilik Komentar"
+                      : "URL / Username Sumber"}
+                </label>
+                <Input
+                  id="username-input"
+                  name="username"
+                  bind:value={username}
+                  placeholder={selectedService?.type === "Subscriptions"
+                    ? "@kanalsaya"
+                    : "@username"}
+                  required={specNeedsUsername}
+                  autocomplete="off"
+                />
+                <p class="mt-1.5 flex items-center gap-1 text-xs text-ink-500">
+                  <Icon name="info" size={12} class="shrink-0" />
+                  {selectedService?.type === "Subscriptions"
+                    ? "Nama kanal Telegram tujuan (tanpa @ juga boleh)."
+                    : selectedService?.type === "Comment Likes"
+                      ? "Username pemilik komentar yang akan di-like."
+                      : "Akun sumber untuk layanan mention ini."}
+                </p>
+              </div>
+            {/if}
+
+            <!-- Quantity or Custom Comments. Subscriptions tidak pakai stepper
+                 (punya min/max/delay di blok param tambahan di bawah). -->
             {#if isCustomComments}
               <div>
                 <label class="mb-1.5 block text-sm font-bold"> Komentar (1 per baris) </label>
@@ -1449,7 +1520,7 @@
                   <span class="text-ink-500">Min {selectedService?.min ?? 0}</span>
                 </div>
               </div>
-            {:else}
+            {:else if !isSubscription}
               <div>
                 <label class="mb-1.5 block text-sm font-bold">Jumlah</label>
                 <QtyStepper
@@ -1468,6 +1539,41 @@
                     otomatis.
                   {/if}
                 </p>
+              </div>
+            {/if}
+
+            <!-- B5: param tambahan per tipe (docs SMMturk) — dirender generik:
+                 answer_number/keywords/min/max/delay = angka; usernames/groups =
+                 textarea daftar; hashtag = teks. -->
+            {#if selectedService && specExtraParams.length > 0}
+              <div class="space-y-3">
+                {#each specExtraParams as p (p)}
+                  {@const meta = EXTRA_META[p]}
+                  <div>
+                    <label class="mb-1.5 block text-sm font-bold" for={`extra-${p}`}>
+                      {meta.label}
+                    </label>
+                    {#if meta.area}
+                      <textarea
+                        id={`extra-${p}`}
+                        name={p}
+                        rows="3"
+                        bind:value={extras[p]}
+                        placeholder={meta.ph}
+                        class="w-full rounded-xl border border-ink-200 p-3 font-mono text-sm outline-none transition-colors focus:border-primary"
+                      ></textarea>
+                    {:else}
+                      <input
+                        id={`extra-${p}`}
+                        name={p}
+                        type={meta.num ? "number" : "text"}
+                        bind:value={extras[p]}
+                        placeholder={meta.ph}
+                        class="h-11 w-full rounded-xl border border-ink-200 px-3 text-sm outline-none transition-colors focus:border-primary"
+                      />
+                    {/if}
+                  </div>
+                {/each}
               </div>
             {/if}
 

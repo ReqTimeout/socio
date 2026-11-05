@@ -10,7 +10,13 @@ import {
   modalAmountFor,
   type UserLevel,
 } from "@socio/core/pricing";
-import { PLATFORMS, detectPlatform, detectKind, type PlatformId } from "@socio/core/catalog";
+import {
+  PLATFORMS,
+  detectPlatform,
+  detectKind,
+  orderFieldSpec,
+  type PlatformId,
+} from "@socio/core/catalog";
 import { serviceIsOrderable } from "@socio/core/order-guard";
 import { smmturkAddFor } from "@socio/core/smmturk";
 import { decryptSecret } from "$lib/server/crypto";
@@ -203,7 +209,7 @@ async function deductBalance(userId: number, amount: number): Promise<number> {
   return Number(rows?.affectedRows ?? 1);
 }
 
-/** Kirim order ke provider sesuai mapping legacy (port order/new-action.php). */
+/** Kirim order ke provider — payload dinamis per `services.type` (B5, lihat `orderFieldSpec`). */
 async function sendToProvider(
   svc: {
     providerId: number;
@@ -211,9 +217,13 @@ async function sendToProvider(
     type: string;
     isRefill: number;
   },
-  link: string,
-  quantity: number,
-  komen: string,
+  fields: {
+    link: string;
+    quantity: number;
+    komen: string;
+    username: string;
+    extra: Record<string, string>;
+  },
 ): Promise<{ providerOrderId: string } | { error: string }> {
   if (svc.providerId === 1) return { providerOrderId: "0" }; // MANUAL
 
@@ -224,23 +234,25 @@ async function sendToProvider(
   if (!key) return { providerOrderId: "0" };
 
   try {
-    const result =
-      svc.type === "Custom Comments"
-        ? await smmturkAddFor(p.apiUrlOrder, key, {
-            service: String(svc.providerServiceId),
-            link,
-            comments: komen,
-          })
-        : svc.type === "Package"
-          ? await smmturkAddFor(p.apiUrlOrder, key, {
-              service: String(svc.providerServiceId),
-              link,
-            })
-          : await smmturkAddFor(p.apiUrlOrder, key, {
-              service: String(svc.providerServiceId),
-              link,
-              quantity,
-            });
+    // B5: bangun payload berdasar spesifikasi tipe (docs SMMturk) — tiap field
+    // independen: link/quantity/comments/username + param tambahan per tipe
+    // (usernames/hashtag/groups/answer_number/keywords/min/max/delay).
+    const spec = orderFieldSpec(svc.type);
+    const params: Parameters<typeof smmturkAddFor>[2] = {
+      service: String(svc.providerServiceId),
+    };
+    if (spec.needsLink) params.link = fields.link;
+    if (spec.isComments) params.comments = fields.komen;
+    else if (spec.hasQuantity) params.quantity = fields.quantity;
+    if (spec.needsUsername) params.username = fields.username;
+    const extra: Record<string, string> = {};
+    for (const ep of spec.extra) {
+      const v = fields.extra[ep];
+      if (v) extra[ep] = v;
+    }
+    if (Object.keys(extra).length > 0) params.extra = extra;
+
+    const result = await smmturkAddFor(p.apiUrlOrder, key, params);
     if (result.error) return { error: result.error };
     return { providerOrderId: result.order ?? "0" };
   } catch (e: any) {
@@ -255,10 +267,23 @@ export const actions: Actions = {
     const link = String(form.get("link") ?? "").trim();
     const quantity = Number(form.get("quantity")) || 0;
     const komen = String(form.get("komen") ?? "").trim();
+    const username = String(form.get("username") ?? "").trim();
     const saveLink = form.get("saveLink") === "on";
+    // B5: param tambahan per tipe (docs SMMturk): usernames/hashtag/groups/
+    // answer_number/keywords + min/max/delay (Subscriptions).
+    const extra: Record<string, string> = {
+      usernames: String(form.get("usernames") ?? "").trim(),
+      hashtag: String(form.get("hashtag") ?? "").trim(),
+      groups: String(form.get("groups") ?? "").trim(),
+      answer_number: String(form.get("answer_number") ?? "").trim(),
+      keywords: String(form.get("keywords") ?? "").trim(),
+      min: String(form.get("min") ?? "").trim(),
+      max: String(form.get("max") ?? "").trim(),
+      delay: String(form.get("delay") ?? "").trim(),
+    };
 
-    if (!serviceId || !link) {
-      return fail(400, { error: "Layanan dan link wajib diisi." });
+    if (!serviceId) {
+      return fail(400, { error: "Layanan belum dipilih." });
     }
 
     const [s] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
@@ -269,14 +294,45 @@ export const actions: Actions = {
     if (!serviceIsOrderable(s))
       return fail(400, { error: "Layanan ini sudah tidak tersedia. Pilih layanan lain." });
 
-    // Custom Comments: qty dari line count komen, bukan input quantity
-    const isCustomComments = s.type === "Custom Comments";
-    const finalQty = isCustomComments ? komen.split("\n").filter(Boolean).length : quantity;
+    // B5: validasi dinamis per tipe — spec menentukan field mana yang wajib,
+    // bukan lagi cabang hardcoded link/komen.
+    const spec = orderFieldSpec(s.type, s.serviceName);
+    const isCustomComments = spec.isComments;
 
+    // Link wajib kecuali tipe tanpa link (Subscriptions → username+min+max+delay).
+    if (spec.needsLink && !link) {
+      return fail(400, { error: "Link wajib diisi." });
+    }
     if (isCustomComments && !komen) {
       return fail(400, { error: "Komentar wajib diisi untuk layanan Custom Comments." });
     }
-    if (!isCustomComments && (!finalQty || finalQty < s.min)) {
+    if (spec.needsUsername && !username) {
+      return fail(400, { error: "Username wajib diisi untuk layanan ini." });
+    }
+    const EXTRA_LABELS: Record<string, string> = {
+      keywords: "kata kunci",
+      usernames: "daftar username",
+      hashtag: "hashtag",
+      groups: "ID grup",
+      answer_number: "nomor jawaban polling",
+      min: "min per post",
+      max: "max per post",
+      delay: "delay antar post",
+    };
+    for (const p of spec.extra) {
+      if (!extra[p]) {
+        return fail(400, { error: `${EXTRA_LABELS[p] ?? p} wajib diisi untuk layanan ini.` });
+      }
+    }
+
+    // Qty tertagih: Custom Comments → jumlah baris komen; Subscriptions → max
+    // per post (field `max` form, divalidasi dalam range layanan); sisanya → stepper.
+    let finalQty: number;
+    if (isCustomComments) finalQty = komen.split("\n").filter(Boolean).length;
+    else if (s.type === "Subscriptions") finalQty = Number(extra.max) || 0;
+    else finalQty = quantity;
+
+    if (!finalQty || finalQty < s.min) {
       return fail(400, { error: `Jumlah minimal ${s.min}.` });
     }
     if (finalQty > s.max) {
@@ -392,7 +448,7 @@ export const actions: Actions = {
     let providerOrderId = "0";
     let oid = "";
     try {
-      // Kirim order ke provider (per-provider key + URL, custom comments supported)
+      // Kirim order ke provider (per-provider key + URL, B5 payload dinamis per tipe)
       const sent = await sendToProvider(
         {
           providerId: s.providerId,
@@ -400,9 +456,7 @@ export const actions: Actions = {
           type: s.type,
           isRefill: s.isRefill,
         },
-        link,
-        finalQty,
-        komen,
+        { link, quantity: finalQty, komen, username, extra },
       );
       if ("error" in sent) {
         throw new Error(`PROVIDER: ${sent.error}`);
@@ -415,10 +469,10 @@ export const actions: Actions = {
         oid,
         sid: String(s.providerServiceId),
         providerOrderId,
-        user: link,
+        user: link || (username ? `@${username.replace(/^@/, "")}` : ""),
         serviceName: s.serviceName,
         serviceId: s.id,
-        data: link,
+        data: link || (username ? `@${username.replace(/^@/, "")}` : ""),
         komen: isCustomComments ? komen : "",
         quantity: finalQty,
         remains: finalQty,

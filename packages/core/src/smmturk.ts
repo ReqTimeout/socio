@@ -97,16 +97,33 @@ export async function smmturkAdd(
 
 /**
  * Add order ke provider tertentu (pakai URL + key-nya sendiri).
- * Params mendukung Custom Comments (`comments`) & Package (tanpa quantity).
+ * B5: params dinamis per `services.type` (docs SMMturk) — Custom Comments
+ * (`comments`), Package (tanpa quantity), Subscriptions (tanpa link; +
+ * username/min/max/delay), Poll (answer_number), Mentions/Invites/SEO
+ * (usernames/hashtag/groups/keywords). `link` opsional: tipe tanpa link
+ * (Subscriptions) tidak mengirim param link sama sekali.
  */
 export async function smmturkAddFor(
   endpoint: string,
   key: string,
-  params: { service: string; link: string; quantity?: number; comments?: string },
+  params: {
+    service: string;
+    link?: string;
+    quantity?: number;
+    comments?: string;
+    username?: string;
+    /** Param tambahan per tipe: usernames/hashtag/groups/answer_number/keywords/min/max/delay. */
+    extra?: Record<string, string>;
+  },
 ): Promise<SmmturkOrderResult> {
-  const form: Record<string, string> = { action: "add", service: params.service, link: params.link };
+  const form: Record<string, string> = { action: "add", service: params.service };
+  if (params.link) form.link = params.link;
   if (params.comments) form.comments = params.comments;
   else if (params.quantity !== undefined) form.quantity = String(params.quantity);
+  if (params.username) form.username = params.username;
+  if (params.extra) {
+    for (const [k, v] of Object.entries(params.extra)) if (v) form[k] = v;
+  }
   try {
     const json = await postForm(form, endpoint, key);
     if (json.order) return { order: String(json.order) };

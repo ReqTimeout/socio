@@ -376,3 +376,79 @@ export function linkExample(platform: PlatformId | "", kind: KindId | ""): strin
   if (!ex) return "";
   return ex[linkShapeForKind(kind)];
 }
+
+/** ── B5: spesifikasi field order dinamis per `services.type` (docs SMMturk) ──
+ * Port kontrak socio.my 2026-10-27: payload `action=add` berbeda per tipe —
+ * Subscriptions TANPA link/qty (username+min+max+delay), Poll butuh
+ * answer_number, Mentions butuh usernames/hashtag/username, dll. Tipe tidak
+ * dikenal → Default (link+quantity). */
+export type OrderParam =
+  | "link"
+  | "quantity"
+  | "comments"
+  | "username"
+  | "usernames"
+  | "hashtag"
+  | "groups"
+  | "answer_number"
+  | "keywords"
+  | "min"
+  | "max"
+  | "delay";
+
+const TYPE_PARAMS: Record<string, OrderParam[]> = {
+  Default: ["link", "quantity"],
+  Package: ["link"],
+  SEO: ["link", "quantity", "keywords"],
+  "Custom Comments": ["link", "comments"],
+  "Custom Comments Package": ["link", "comments"],
+  "Comment Likes": ["link", "quantity", "username"],
+  "Mentions Custom List": ["link", "usernames"],
+  "Mentions Hashtag": ["link", "quantity", "hashtag"],
+  // Varian nama produksi (1 layanan) — docs SMMturk memakai param yang sama.
+  "Mentions with Hashtags": ["link", "quantity", "hashtag"],
+  "Mentions User Followers": ["link", "quantity", "username"],
+  Poll: ["link", "quantity", "answer_number"],
+  "Invites from Groups": ["link", "quantity", "groups"],
+  Subscriptions: ["username", "min", "max", "delay"],
+};
+const DEFAULT_ORDER_PARAMS: OrderParam[] = ["link", "quantity"];
+/** Param yang sudah punya input khusus di form (bukan bagian `extra`). */
+const BASE_PARAMS = new Set<OrderParam>(["link", "quantity", "comments", "username"]);
+
+/** Daftar param wajib untuk satu tipe layanan (fallback Default). */
+export function orderFieldParams(type: string): OrderParam[] {
+  return TYPE_PARAMS[(type || "").trim()] ?? DEFAULT_ORDER_PARAMS;
+}
+
+export type OrderFieldSpec = {
+  needsUsername: boolean;
+  isComments: boolean;
+  /** true → form menampilkan stepper quantity (bukan textarea). */
+  hasQuantity: boolean;
+  /** true → layanan ini butuh link target (Subscriptions = false). */
+  needsLink: boolean;
+  /** Semua param wajib tipe ini (urutan sesuai docs). */
+  params: OrderParam[];
+  /** Param selain link/quantity/comments/username → dirender generik di form. */
+  extra: OrderParam[];
+};
+
+export function orderFieldSpec(type: string, serviceName = ""): OrderFieldSpec {
+  const t = (type || "").trim();
+  let params = orderFieldParams(t);
+  // Fallback nama untuk data pra-sinkron (type masih "Default"/kosong tapi
+  // nama service-nya Custom Comments) → pakai spec Custom Comments.
+  if ((!t || t === "Default") && /custom comments?/.test((serviceName || "").toLowerCase())) {
+    params = TYPE_PARAMS["Custom Comments"];
+  }
+  const has = (p: OrderParam) => params.includes(p);
+  return {
+    needsUsername: has("username"),
+    isComments: has("comments"),
+    hasQuantity: has("quantity"),
+    needsLink: has("link"),
+    params,
+    extra: params.filter((p) => !BASE_PARAMS.has(p)),
+  };
+}
