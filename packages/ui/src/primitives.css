@@ -268,8 +268,95 @@
     }
     .pop-in.is-visible,
     .wiggle-once,
-    .float-slow {
+    .float-slow,
+    .notif-dot,
+    .notif-badge {
       animation: none;
+    }
+    .notif-dot {
+      box-shadow: 0 0 0 2px #fff;
+    }
+  }
+}
+
+/* ---- Notif unread dot/badge (port D1 .my Nov-2026) ----
+ * Pulse Tailwind animate-pulse (opacity-only) kurang kentel → dot merah
+ * dengan halo box-shadow + scale lebih terlihat di sidebar/header tanpa
+ * mengorbankan GPU: hanya transform scale + box-shadow spread. Warna halo
+ * dari token --notif-halo (flip di dark mode). */
+@layer components {
+  .notif-dot {
+    animation:
+      notif-dot-pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite,
+      notif-halo 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes notif-dot-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.28);
+    }
+  }
+  @keyframes notif-halo {
+    0% {
+      box-shadow:
+        0 0 0 0 var(--notif-halo, rgba(185, 28, 28, 0.55)),
+        0 0 0 2px #fff;
+    }
+    70% {
+      box-shadow:
+        0 0 0 8px transparent,
+        0 0 0 2px #fff;
+    }
+    100% {
+      box-shadow:
+        0 0 0 0 transparent,
+        0 0 0 2px #fff;
+    }
+  }
+  .notif-badge {
+    animation: notif-badge-pulse 1.6s ease-in-out infinite;
+    transform-origin: center;
+  }
+  @keyframes notif-badge-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow: 0 2px 8px var(--notif-halo, rgba(185, 28, 28, 0.55));
+    }
+    50% {
+      transform: scale(1.09);
+      box-shadow: 0 3px 14px var(--notif-halo, rgba(185, 28, 28, 0.65));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .notif-dot,
+    .notif-badge {
+      animation: none;
+    }
+    .notif-dot {
+      box-shadow: 0 0 0 2px #fff;
+    }
+  }
+}
+
+/* ---- Dot amber "deposit pending" (port C1 .my Nov-2026) ----
+ * Varian warna dari pulse notif yang sama (reuse keyframes notif-dot-pulse +
+ * notif-halo) — halo amber via override --notif-halo di pemanggil. Beda dari
+ * dot merah (unread = informasi): dot ini = aksi uang menunggu (transaksional).
+ * Kill reduced-motion mengikuti pola .notif-dot di atas. */
+@layer components {
+  .dot-pulse {
+    animation:
+      notif-dot-pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite,
+      notif-halo 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dot-pulse {
+      animation: none;
+      box-shadow: 0 0 0 2px #fff;
     }
   }
 }

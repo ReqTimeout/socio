@@ -63,6 +63,8 @@
   --color-danger: #b91c1c;
   --color-danger-soft: #fee2e2;
   --color-danger-ink: #991b1b;
+  /* Halo pulse notif-dot/notif-badge (primitives.css) — merah danger pada alpha .55. */
+  --notif-halo: rgba(185, 28, 28, 0.55);
   --color-primary-soft: #e0e7ff;
   --color-primary-ink: #3730a3;
 
@@ -250,6 +252,8 @@
   --color-warning-ink: #fcd34d;
   --color-danger: #f87171;
   --color-danger-ink: #fca5a5;
+  /* Halo pulse terang agar terlihat di surface gelap. */
+  --notif-halo: rgba(248, 113, 113, 0.55);
   --color-primary-ink: #a5b4fc;
   --color-accent-ink: var(--color-accent-400);
   /* Mango playful (F0): soft gelap + ink terang.

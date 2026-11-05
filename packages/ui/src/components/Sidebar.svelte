@@ -7,7 +7,17 @@
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import Sparko from "./Sparko.svelte";
 
-  type Item = { href: string; label: string; icon: string; badge?: number; section?: string };
+  type Item = {
+    href: string;
+    label: string;
+    icon: string;
+    badge?: number;
+    section?: string;
+    /** Unread notifications — dot merah berdenyut + halo glow ring. */
+    unread?: boolean;
+    /** Deposit pending (C1) — dot amber berdenyut; aksi uang menunggu, beda dari unread. */
+    pending?: boolean;
+  };
 
   let {
     items,
@@ -131,7 +141,7 @@
               ></span>
             {/if}
             <span
-              class="grid h-8 w-8 place-items-center rounded-lg transition-all duration-200 group-hover:scale-105
+              class="relative grid h-8 w-8 place-items-center rounded-lg transition-all duration-200 group-hover:scale-105
                 {active ? 'bg-white/15 text-white scale-105 dark:bg-ink-900/10 dark:text-ink-900' : 'bg-ink-50 text-ink-500 group-hover:bg-white group-hover:shadow-sm group-hover:text-ink-700'}"
             >
               <span class={active ? "nav-pop" : ""}>
@@ -139,14 +149,47 @@
               </span>
               {#if item.badge}
                 <span
-                  class="absolute -top-1 -right-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-danger px-1 text-[9px] font-bold text-white ring-2 ring-white"
+                  class="notif-badge absolute -top-1 -right-1 z-10 grid h-4 min-w-[16px] place-items-center rounded-full bg-danger px-1 text-[9px] font-bold text-white ring-2 ring-white"
+                  aria-hidden="true"
                 >
                   {item.badge > 99 ? "99+" : item.badge}
                 </span>
+              {:else if item.unread}
+                <!-- Unread notif — dot merah + halo glow pulse. Dot di-anchor ke
+                     span ikon (relative) supaya tidak "lompat" saat sidebar
+                     toggle collapsed/expanded (port fix D1 .my Nov-2026). -->
+                <span
+                  class="notif-dot absolute -top-0.5 -right-0.5 z-10 h-2.5 w-2.5 rounded-full bg-danger ring-2 ring-white"
+                  aria-hidden="true"
+                ></span>
+              {:else if item.pending}
+                <!-- Deposit pending (C1) — dot amber + halo senada; badge/unread
+                     tetap menang di atasnya. -->
+                <span
+                  class="dot-pulse absolute -top-0.5 -right-0.5 z-10 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white"
+                  style="--notif-halo: rgba(217, 119, 6, 0.55)"
+                  aria-hidden="true"
+                ></span>
               {/if}
             </span>
             {#if !collapsed}
               <span>{item.label}</span>
+              {#if item.badge && !active}
+                <span
+                  class="notif-badge ml-auto grid h-4 min-w-[16px] place-items-center rounded-full bg-danger px-1 text-[9px] font-bold text-white"
+                  aria-hidden="true"
+                >
+                  {item.badge > 99 ? "99+" : item.badge}
+                </span>
+              {:else if item.unread && !active}
+                <span class="notif-dot ml-auto h-2 w-2 rounded-full bg-danger" aria-hidden="true"></span>
+              {:else if item.pending && !active}
+                <span
+                  class="dot-pulse ml-auto h-2 w-2 rounded-full bg-amber-500"
+                  style="--notif-halo: rgba(217, 119, 6, 0.55)"
+                  aria-hidden="true"
+                ></span>
+              {/if}
               {#if active}
                 <Icon name="chevron_right" size={16} class="ml-auto text-primary/60" />
               {/if}
@@ -234,5 +277,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .nav-pop { animation: none !important; }
+    .notif-dot,
+    .notif-badge { animation: none !important; }
   }
 </style>

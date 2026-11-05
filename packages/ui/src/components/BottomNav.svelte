@@ -4,7 +4,7 @@
   import { haptic } from "../haptic.js";
   import Icon from "./Icon.svelte";
 
-  type Item = { href: string; label: string; icon: string; badge?: number };
+  type Item = { href: string; label: string; icon: string; badge?: number; pending?: boolean };
 
   let { items, ticketBadge = 0 }: { items: Item[]; ticketBadge?: number } =
     $props();
@@ -88,6 +88,14 @@
               ? "99+"
               : badgeFor(item.href, item.badge)}
           </span>
+        {:else if item.pending}
+          <!-- Deposit pending (C1) — dot amber berdenyut di ikon Saldo; badge
+             notifikasi tetap menang di atasnya. -->
+          <span
+            class="dot-pulse absolute -top-1 -right-1.5 z-10 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white"
+            style="--notif-halo: rgba(217, 119, 6, 0.55)"
+            aria-hidden="true"
+          ></span>
         {/if}
       </span>
       <!-- Label: full opacity — AA contrast (opacity dim membuat ink-500 turun ke 2.71) -->
