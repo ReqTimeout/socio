@@ -3,6 +3,7 @@ import { deposits, users, adminRoles } from "@socio/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { redirect, fail, error } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
+import { notifyDepositSuccess } from "$lib/server/deposit-emails";
 import { can, normalizeRole } from "@socio/core/rbac";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -78,9 +79,11 @@ export const actions: Actions = {
         try {
           const { activateReseller } = await import("$lib/server/signup");
           await activateReseller(d.userId);
-        } catch {}
+        } catch { /* activateReseller best-effort */ }
       }
       await logAudit({ adminId: Number(locals.user!.id), action: "verify_deposit_approve", entity: "deposit", entityId: id, detail: { amount: Number(d.amount), notes }, ip: (locals as any).ip });
+      // C4: notifikasi sukses deposit (bell + email)
+      await notifyDepositSuccess(d.userId, Number(d.amount), isResellerActivation);
       return { success: `Deposit #${id} disetujui.` };
     } else {
       // reject

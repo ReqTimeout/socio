@@ -20,7 +20,7 @@ export async function runLightCron(): Promise<void> {
     if (expiring.length > 0) {
       await db
         .update(deposits)
-        .set({ status: "Canceled" })
+        .set({ status: "Canceled", verificationNotes: "Expired: melewati batas waktu pembayaran" })
         .where(
           and(
             eq(deposits.status, "Pending"),
@@ -55,7 +55,9 @@ export async function runLightCron(): Promise<void> {
               html: m.html,
             });
           }
-        } catch {}
+        } catch {
+          /* deposit-expire email best-effort — jangan gagalkan cron loop */
+        }
       }
       console.log(`[cron] deposit-expire: ${expiring.length} dibatalkan`);
     }

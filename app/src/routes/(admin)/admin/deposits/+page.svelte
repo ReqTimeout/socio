@@ -14,6 +14,7 @@
   import type { ActionData, PageData } from "./$types";
 
   type Status = "Pending" | "Success" | "Canceled";
+  type StatusFilter = Status | "Expired" | "";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
   let q = $state("");
@@ -39,12 +40,21 @@
   const confirmDep = $derived(data.deposits.find((d) => d.id === confirmId) ?? null);
   const rejectDep = $derived(data.deposits.find((d) => d.id === rejectId) ?? null);
 
-  const STATUS_FILTERS: { key: Status | ""; label: string; icon: string }[] = [
+  const STATUS_FILTERS: { key: StatusFilter; label: string; icon: string }[] = [
     { key: "", label: "Semua", icon: "layers" },
     { key: "Pending", label: "Pending", icon: "clock" },
     { key: "Success", label: "Selesai", icon: "check" },
     { key: "Canceled", label: "Batal", icon: "x" },
+    // C5 status virtual: Canceled + verification_notes LIKE 'Expired%'
+    { key: "Expired", label: "Kedaluwarsa", icon: "clock" },
   ];
+
+  // C5: deteksi virtual status "Kedaluwarsa" — Canceled yang distamp otomatis
+  // oleh cron light / webhook Midtrans expire (prefix "Expired:" / "Kedaluwarsa:").
+  function isExpiredDeposit(d: { status: string; verificationNotes?: string | null }): boolean {
+    const n = (d.verificationNotes ?? "").toLowerCase();
+    return d.status === "Canceled" && (n.startsWith("expired") || n.startsWith("kedaluwarsa"));
+  }
 
   function timeAgo(d: Date | string) {
     return new Date(d).toLocaleDateString("id-ID", {
@@ -75,7 +85,7 @@
     canceled: "before:bg-status-canceled",
   };
 
-  function chipHref(s: Status | "") {
+  function chipHref(s: StatusFilter) {
     const params = new URLSearchParams();
     if (data.q) params.set("q", data.q);
     if (s) params.set("status", s);
@@ -267,7 +277,7 @@
     {#each STATUS_FILTERS as f (f.key)}
       {@const active = (data.status || "") === f.key}
       <a
-        href={chipHref(f.key as Status | "")}
+        href={chipHref(f.key)}
         role="tab"
         aria-selected={active}
         class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
@@ -278,7 +288,9 @@
               ? 'border-transparent bg-status-complete text-ink-50 shadow-sm'
               : f.key === 'Canceled'
                 ? 'border-transparent bg-status-canceled text-ink-50 shadow-sm'
-                : 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
+                : f.key === 'Expired'
+                  ? 'border-transparent bg-amber-500 text-ink-50 shadow-sm'
+                  : 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
           : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
       >
         <Icon name={f.icon} size={11} stroke={2.5} />
@@ -316,6 +328,7 @@
         <tbody>
           {#each data.deposits as d, i (d.id)}
             {@const m = methodIcon(d.methodName)}
+            {@const expired = isExpiredDeposit(d)}
             <tr
               class="reveal border-b border-ink-50 transition-colors hover:bg-ink-50/50 last:border-0"
               style="--d:{240 + i * 30}ms"
@@ -377,7 +390,17 @@
                 {/if}
               </td>
               <td class="px-3 py-3">
-                <StatusBadge status={d.status} />
+                {#if expired}
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-[11px] font-bold text-amber-800"
+                    title={d.verificationNotes ?? undefined}
+                  >
+                    <Icon name="clock" size={11} stroke={2.5} />
+                    Kedaluwarsa
+                  </span>
+                {:else}
+                  <StatusBadge status={d.status} />
+                {/if}
               </td>
               <td class="whitespace-nowrap px-3 py-3 text-xs text-ink-500">
                 {timeAgo(d.createdAt)}
@@ -425,6 +448,7 @@
     <ul class="lg:hidden">
       {#each data.deposits as d, i (d.id)}
         {@const m = methodIcon(d.methodName)}
+        {@const expired = isExpiredDeposit(d)}
         <li
           class="reveal relative border-b border-ink-100 py-3 pl-2 last:border-b-0 transition-colors hover:bg-ink-50/40 before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full {statusAccent[
             d.status?.toLowerCase()
@@ -487,7 +511,17 @@
                     <Icon name="external" size={9} stroke={2.5} class="text-primary-ink" />
                   </a>
                 {/if}
-                <StatusBadge status={d.status} />
+                {#if expired}
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-[11px] font-bold text-amber-800"
+                    title={d.verificationNotes ?? undefined}
+                  >
+                    <Icon name="clock" size={11} stroke={2.5} />
+                    Kedaluwarsa
+                  </span>
+                {:else}
+                  <StatusBadge status={d.status} />
+                {/if}
               </div>
             </div>
           </div>

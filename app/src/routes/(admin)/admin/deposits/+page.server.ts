@@ -4,26 +4,33 @@ import { sql, desc, eq, and, ne } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import { creditAffiliateCommission } from "$lib/server/affiliate";
-import { depositSuccessMail, depositCanceledMail, enqueueEmail } from "$lib/server/deposit-emails";
+import { depositCanceledMail, enqueueEmail, notifyDepositSuccess } from "$lib/server/deposit-emails";
 import { can, normalizeRole } from "@socio/core/rbac";
 import type { PageServerLoad, Actions } from "./$types";
 
 const STATUSES = ["Pending", "Success", "Canceled"] as const;
 type Status = (typeof STATUSES)[number];
+// C5 status virtual: 'Expired' = Canceled + verification_notes LIKE 'Expired%'
+type StatusFilter = Status | "Expired" | "";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   if (!locals.user) throw redirect(303, "/login");
   if (locals.user.level !== "Admin") throw redirect(303, "/");
 
   const q = String(url.searchParams.get("q") ?? "").trim();
-  const status = String(url.searchParams.get("status") ?? "") as Status | "";
+  const status = String(url.searchParams.get("status") ?? "") as StatusFilter;
   const rawP = Number(url.searchParams.get("p") ?? 1);
   const page = Number.isFinite(rawP) && rawP >= 1 && rawP <= 1000 ? rawP : 1; // A-15
   const limit = 25;
   const offset = (page - 1) * limit;
 
   const conds: any[] = [ne(users.level, "Admin")];
-  if (status && STATUSES.includes(status as Status)) {
+  if (status === "Expired") {
+    // C5: badge/filter virtual "Kedaluwarsa" — rows Canceled yang di-stamp
+    // otomatis oleh cron light / webhook Midtrans expire (prefix "Expired:").
+    conds.push(eq(deposits.status, "Canceled"));
+    conds.push(sql`(${deposits.verificationNotes} LIKE ${"Expired%"} OR ${deposits.verificationNotes} LIKE ${"Kedaluwarsa%"})`);
+  } else if (status && STATUSES.includes(status as Status)) {
     conds.push(eq(deposits.status, status as never));
   }
   if (q) {
@@ -48,6 +55,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         type: deposits.type,
         untukApa: deposits.untukApa,
         note: deposits.note,
+        verificationNotes: deposits.verificationNotes,
         createdAt: deposits.createdAt,
       })
       .from(deposits)
@@ -194,33 +202,8 @@ export const actions: Actions = {
       ip: (locals as any).ip,
     });
 
-    // Email sukses ke user (async via queue)
-    try {
-      const [u] = await db
-        .select({ email: users.email, fullName: users.fullName })
-        .from(users)
-        .where(eq(users.id, d.userId))
-        .limit(1);
-      if (u?.email) {
-        const m = depositSuccessMail({
-          name: u.fullName || "Pengguna Socio.id",
-          amount: Number(d.amount),
-          isReseller: isResellerActivation,
-        });
-        await enqueueEmail({
-          to: u.email,
-          userId: d.userId,
-          templateName: "deposit-success",
-          subject: m.subject,
-          body: m.text,
-          ctaText: isResellerActivation ? "Mulai order" : "Buat pesanan",
-          ctaUrl: "https://app.socio.id/pesan",
-          html: m.html,
-        });
-      }
-    } catch {
-      // email best-effort
-    }
+    // C4: notifikasi sukses deposit (bell + email) via helper bersama.
+    await notifyDepositSuccess(d.userId, Number(d.amount), isResellerActivation);
     return {
       success:
         d.untukApa === "reseller"

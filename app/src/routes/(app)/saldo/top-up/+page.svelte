@@ -478,7 +478,7 @@
       upload bukti di halaman riwayat top up untuk konfirmasi cepat.
     </div>
 
-    <Button onclick={() => goto("/saldo/top-up")} class="w-full" variant="ghost">Tutup</Button>
+    <Button onclick={() => { instructionOpen = false; }} class="w-full" variant="ghost">Tutup</Button>
   </div>
 </Sheet>
 

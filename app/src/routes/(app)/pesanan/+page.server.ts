@@ -211,6 +211,39 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     }
   }
 
+  // C2 deep-link dari riwayat saldo (/pesanan?oid=<oid>): order target bisa saja
+  // di luar 30 terbaru. Ambil eksplisit (scoped userId+oid), sisipkan ke rows
+  // supaya client dapat membuka sheet detail-nya. balance_logs tidak punya FK →
+  // penghubung = oid (provider order ID, string unik per order).
+  const deepOid = (url.searchParams.get("oid") ?? "").trim();
+  let deepLinkId: number | null = null;
+  if (deepOid) {
+    const [target] = await db
+      .select({
+        id: orders.id,
+        oid: orders.oid,
+        serviceName: orders.serviceName,
+        data: orders.data,
+        quantity: orders.quantity,
+        price: orders.price,
+        status: orders.status,
+        createdAt: orders.createdAt,
+        remains: orders.remains,
+        serviceId: orders.serviceId,
+        providerOrderId: orders.providerOrderId,
+        isRefund: orders.isRefund,
+        refundedLedger: ledgerRefundAmount,
+        refundedAt: ledgerRefundAt,
+      })
+      .from(orders)
+      .where(and(eq(orders.userId, userId), eq(orders.oid, deepOid)))
+      .limit(1);
+    if (target) {
+      deepLinkId = Number(target.id);
+      if (!rows.some((r) => Number(r.id) === deepLinkId)) rows.unshift(target);
+    }
+  }
+
   return {
     orders: rows.map((r) => ({
       ...r,
@@ -232,6 +265,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     popular,
     // UX4.3 — lastUpdate untuk LiveDot timestamp (initial dari server = now)
     lastUpdate: new Date().toISOString(),
+    deepLinkId,
   };
 };
 

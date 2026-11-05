@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { db } from "@socio/db";
 import { deposits, users, balanceLogs } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { createNotification } from "$lib/server/notification";
+import { notifyDepositSuccess } from "$lib/server/deposit-emails";
 import { creditAffiliateCommission } from "$lib/server/affiliate";
 import type { RequestHandler } from "./$types";
 
@@ -77,16 +77,16 @@ export const POST: RequestHandler = async ({ request }) => {
       await creditAffiliateCommission(dep.userId, Number(dep.amount), dep.untukApa);
     }
 
-    await createNotification(
-      dep.userId,
-      "Deposit berhasil",
-      `Saldo Rp${Number(dep.amount).toLocaleString("id-ID")} telah ditambahkan.`,
-      "deposit",
-    );
+    await notifyDepositSuccess(dep.userId, Number(dep.amount), dep.untukApa === "reseller");
   } else if (failed) {
+    // C5: stamp verification_notes supaya admin bisa bedakan "Expired" (gateway/cron)
+    // dari "Rejected" (manual admin). Cron light juga pakai prefix "Expired:" yang sama.
     await db
       .update(deposits)
-      .set({ status: "Canceled" })
+      .set({
+        status: "Canceled",
+        verificationNotes: `Expired: midtrans status_code=${status}`,
+      })
       .where(and(eq(deposits.id, dep.id), eq(deposits.status, "Pending")));
   }
 

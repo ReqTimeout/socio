@@ -84,6 +84,24 @@
 
   const summary = $derived((data as any).summary ?? { masuk: 0, keluar: 0 });
 
+  // C2: link baris order ke detail — oid di-parsing dari note ("Pesan <svc> (oid)" /
+  // "API Order #oid") → /pesanan?oid=<oid> (auto-buka sheet detail).
+  function orderOidOf(note: string): string | null {
+    const p = /\(([^)]+)\)/.exec(note);
+    if (p) return p[1].trim();
+    const h = /#(\S+)/.exec(note);
+    return h ? h[1].trim() : null;
+  }
+  function orderLogHref(l: { type: string; note: string }): string | null {
+    if (l.type !== "order" && l.type !== "ord" && l.type !== "minus") return null;
+    const oid = orderOidOf(l.note ?? "");
+    return oid ? `/pesanan?oid=${encodeURIComponent(oid)}` : null;
+  }
+  // Bersihkan note untuk display: buang kode oid dari teks supaya gak polusi.
+  function cleanNote(note: string): string {
+    return note.replace(/\s*\([^)]+\)\s*/, " ").replace(/\s{2,}/g, " ").trim();
+  }
+
   // M12 — indicator mango di bawah chip filter aktif (diukur DOM, ikut filter/resize).
   let chipRow: HTMLElement | null = $state(null);
   let chipInd = $state({ left: 0, width: 0, show: false });
@@ -107,7 +125,7 @@
     };
   });
   $effect(() => {
-    currentType; // track → reposisi tiap ganti filter
+    void currentType; // track → reposisi tiap ganti filter
     const t = setTimeout(placeChipInd, 60);
     return () => clearTimeout(t);
   });
@@ -237,6 +255,7 @@
             {#each filtered as l, i (l.id)}
               {@const m = metaOf(l.type, l.note)}
               {@const isOut = isOutLog(l)}
+              {@const href = orderLogHref(l)}
               <tr
                 class="group transition-colors hover:bg-ink-50/70 reveal"
                 style={revealDelay(i, 60, 40)}
@@ -258,10 +277,21 @@
                   </span>
                 </td>
                 <td class="px-4 py-3">
-                  <span
-                    class="block max-w-[260px] truncate text-sm font-medium text-ink-800"
-                    title={l.note}>{l.note}</span
-                  >
+                  {#if href}
+                    <a
+                      href={href}
+                      title={cleanNote(l.note)}
+                      class="inline-flex max-w-[260px] items-center gap-1 text-sm font-medium text-primary hover:underline"
+                    >
+                      <span class="truncate">{cleanNote(l.note)}</span>
+                      <Icon name="chevron_right" size={14} />
+                    </a>
+                  {:else}
+                    <span
+                      class="block max-w-[260px] truncate text-sm font-medium text-ink-800"
+                      title={l.note}>{l.note}</span
+                    >
+                  {/if}
                 </td>
                 <td class="px-4 py-3 text-right">
                   <span

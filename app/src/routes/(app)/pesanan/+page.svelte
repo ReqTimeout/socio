@@ -200,6 +200,13 @@
   // Chip filter aktif ditandai dengan fill bg-primary (lihat tombol chip di bawah) —
   // sliding indikator garis di bawahnya dulu bikin "garis coklat" mengganggu, DIHAPUS.
 
+  // C2 deep-link dari riwayat saldo (/pesanan?oid=…): server menyisipkan order
+  // target ke data.orders + mengirim deepLinkId → buka sheet detail sekali mount.
+  onMount(() => {
+    const id = (data as { deepLinkId?: number | null }).deepLinkId;
+    if (id != null) openDetail(Number(id));
+  });
+
   function openDetail(id: number) {
     haptic(10);
     selected = id;

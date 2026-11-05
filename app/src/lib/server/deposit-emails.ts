@@ -1,7 +1,9 @@
 import { db } from "@socio/db";
-import { emailQueue } from "@socio/db/schema";
+import { emailQueue, users } from "@socio/db/schema";
+import { eq } from "drizzle-orm";
 import { emailShell, emailCta, emailBankCard, emailFooterTransactional, escapeHtml } from "./email/render.js";
 import { EMAIL_COLORS } from "./email/tokens.js";
+import { createNotification } from "./notification.js";
 import type { SparkoPose } from "./email/render.js";
 
 /**
@@ -186,5 +188,51 @@ export async function enqueueEmail(opts: {
     } as any);
   } catch (e) {
     console.error("[email] enqueue failed:", e);
+  }
+}
+
+/**
+ * C4 — notifikasi sukses deposit (bell in-app + email).
+ * Dipanggil dari: webhook Midtrans, admin/deposits confirm, admin/deposits/verify approve.
+ * Best-effort: gagal diam, jangan pecahkan flow utama.
+ */
+export async function notifyDepositSuccess(
+  userId: number,
+  amount: number,
+  isReseller = false,
+): Promise<void> {
+  try {
+    // 1. Bell in-app + Web Push
+    await createNotification(
+      userId,
+      "Deposit berhasil",
+      `Saldo ${idr(amount)} telah ditambahkan.`,
+      "deposit",
+    );
+    // 2. Email sukses
+    const [u] = await db
+      .select({ email: users.email, fullName: users.fullName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (u?.email) {
+      const m = depositSuccessMail({
+        name: u.fullName || "Pengguna Socio.id",
+        amount,
+        isReseller,
+      });
+      await enqueueEmail({
+        to: u.email,
+        userId,
+        templateName: "deposit-success",
+        subject: m.subject,
+        body: m.text,
+        ctaText: isReseller ? "Mulai order" : "Buat pesanan",
+        ctaUrl: "https://app.socio.id/pesan",
+        html: m.html,
+      });
+    }
+  } catch (e) {
+    console.error("[deposit-emails] notifyDepositSuccess failed:", e);
   }
 }
