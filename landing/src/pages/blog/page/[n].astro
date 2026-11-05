@@ -65,7 +65,8 @@ const schema = {
   numberOfItems: items.length,
   itemListElement: items.map((a, i) => ({
     '@type': 'ListItem',
-    position: (page - 1) * 3 + i + 1,
+    // offset posisi global = (halaman-1) × PER_PAGE (12, sinkron getStaticPaths)
+    position: (page - 1) * 12 + i + 1,
     url: `https://socio.id/blog/${a.id}`,
     name: a.data.title,
   })),
