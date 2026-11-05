@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
 import { news } from "@socio/db/schema";
-import { desc, eq, sql, count, like, or } from "drizzle-orm";
+import { desc, eq, sql, count, like, or, and } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
@@ -10,19 +10,23 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (locals.user.level !== "Admin") throw redirect(303, "/");
 
   const q = (url.searchParams.get("q") ?? "").trim();
+  // E7: pemisah sumber — 'manual' = pengumuman admin, 'sync' = berita otomatis Service Sync.
+  const srcRaw = (url.searchParams.get("src") ?? "").trim();
+  const src = srcRaw === "manual" || srcRaw === "sync" ? srcRaw : "";
   const rawPage = Number(url.searchParams.get("page") ?? 1);
   const page = Number.isFinite(rawPage) && rawPage >= 1 && rawPage <= 1000 ? rawPage : 1; // A-15
   const perPage = 20;
 
   // A-11: WHERE di DB (sebelumnya fetch-all + JS filter).
-  const where = q
+  const term = q
     ? or(
         like(sql<string>`LOWER(${news.kategori})`, `%${q.toLowerCase()}%`),
         like(sql<string>`LOWER(${news.content})`, `%${q.toLowerCase()}%`),
       )
     : undefined;
+  const where = src ? (term ? and(term, eq(news.source, src)) : eq(news.source, src)) : term;
 
-  const [rows, totalRow] = await Promise.all([
+  const [rows, totalRow, cntManual, cntSync] = await Promise.all([
     db
       .select()
       .from(news)
@@ -31,6 +35,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       .limit(perPage)
       .offset((page - 1) * perPage),
     db.select({ c: count() }).from(news).where(where),
+    db.select({ c: count() }).from(news).where(eq(news.source, "manual")),
+    db.select({ c: count() }).from(news).where(eq(news.source, "sync")),
   ]);
 
   return {
@@ -38,9 +44,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       id: Number(r.id),
       kategori: String(r.kategori ?? ""),
       content: String(r.content ?? ""),
+      source: String(r.source ?? "manual"),
+      isHidden: Number(r.isHidden ?? 0),
       createdAt: r.createdAt,
     })),
     total: Number(totalRow[0]?.c ?? 0),
+    counts: { manual: Number(cntManual[0]?.c ?? 0), sync: Number(cntSync[0]?.c ?? 0) },
+    src,
     page,
     perPage,
     pages: Math.max(1, Math.ceil(Number(totalRow[0]?.c ?? 0) / perPage)),
@@ -66,12 +76,15 @@ export const actions: Actions = {
 
     if (id > 0) {
       const [existing] = await db
-        .select({ id: news.id })
+        .select({ id: news.id, source: news.source, kategori: news.kategori })
         .from(news)
         .where(eq(news.id, id))
         .limit(1);
       if (!existing) return fail(404, { error: "Berita tidak ditemukan." });
-      await db.update(news).set({ kategori, content }).where(eq(news.id, id));
+      // E7: baris sync hanya boleh koreksi konten — jangan timpa kategori.
+      const patch =
+        existing.source === "sync" ? { content } : { kategori: kategori || existing.kategori, content };
+      await db.update(news).set(patch).where(eq(news.id, id));
       await logAudit({
         adminId: Number(locals.user.id),
         action: "update_news",
@@ -83,7 +96,7 @@ export const actions: Actions = {
       return { success: `Berita #${id} diperbarui.` };
     }
 
-    await db.insert(news).values({ kategori, content, createdAt: new Date() });
+    await db.insert(news).values({ kategori, content, source: "manual", eventType: "manual", createdAt: new Date() });
     // A-11: broadcast read_popup legacy. Bungkus best-effort (kalau kolom
     // sudah di-drop, gak fatal). User.notification insert sudah di-batasi.
     try {
@@ -136,5 +149,34 @@ export const actions: Actions = {
       ip: (locals as any).ip,
     });
     return { success: `Berita #${id} dihapus.` };
+  },
+
+  /** E7: Tayang ⇄ sembunyi (news.is_hidden). */
+  toggle: async ({ request, locals }) => {
+    assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "news:edit");
+    if (_g) return _g;
+    const _rate = await assertAdminRate("news-toggle", (locals as any).ip ?? "0.0.0.0", 30, 60);
+    if (_rate) return _rate;
+    const form = await request.formData();
+    const id = Number(form.get("id"));
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID wajib." });
+    const [row] = await db
+      .select({ id: news.id, isHidden: news.isHidden, kategori: news.kategori })
+      .from(news)
+      .where(eq(news.id, id))
+      .limit(1);
+    if (!row) return fail(404, { error: "Berita tidak ditemukan." });
+    const next = Number(row.isHidden ?? 0) ? 0 : 1;
+    await db.update(news).set({ isHidden: next }).where(eq(news.id, id));
+    await logAudit({
+      adminId: Number(locals.user.id),
+      action: next === 1 ? "hide_news" : "publish_news",
+      entity: "news",
+      entityId: id,
+      detail: { kategori: row.kategori, is_hidden: next },
+      ip: (locals as any).ip,
+    });
+    return { success: `Berita #${id} di-${next === 1 ? "sembunyikan" : "tampilkan"}.` };
   },
 };

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/stores";
-  import { goto } from "$app/navigation";
   import {
     BottomNav,
     AppFooter,
@@ -58,26 +57,36 @@
   // Nav utama mobile (UX1 — 5 item sesuai plan redesign):
   // Beranda · Saldo · Pesan · Pesanan · Akun
   // Tiket + Katalog dipindah ke FAB quick actions Sheet.
-  const navItems = [
+  // `pending` (C1 port .my): dot amber berdenyut di Saldo saat ada deposit
+  // Pending belum expired — user sadar ada pembayaran yang menunggu.
+  const navItems = $derived([
     { href: "/", label: "Beranda", icon: "home" },
-    { href: "/saldo", label: "Saldo", icon: "wallet" },
+    { href: "/saldo", label: "Saldo", icon: "wallet", pending: data.hasPendingDeposit },
     { href: "/pesanan", label: "Pesanan", icon: "receipt" },
     { href: "/layanan", label: "Layanan", icon: "grid" },
     { href: "/akun", label: "Akun", icon: "user" },
-  ];
+  ]);
 
   // Sidebar nav (desktop) — lengkap + 8 item (sesuai audit UI/UX)
   // Item "Dashboard Admin" hanya untuk level Admin (RBAC di server tetap berlaku).
-  const sidebarBase = [
+  const sidebarBase: {
+    href: string;
+    label: string;
+    icon: string;
+    section: string;
+    unread?: boolean;
+    pending?: boolean;
+  }[] = $derived([
     { href: "/", label: "Home", icon: "home", section: "Menu" },
     { href: "/pesanan", label: "Pesanan", icon: "receipt", section: "Menu" },
-    { href: "/saldo", label: "Saldo", icon: "wallet", section: "Menu" },
+    { href: "/refill", label: "Refill", icon: "refresh", section: "Menu" },
+    { href: "/saldo", label: "Saldo", icon: "wallet", section: "Menu", pending: data.hasPendingDeposit },
     { href: "/tiket", label: "Tiket", icon: "ticket", section: "Menu" },
     { href: "/layanan", label: "Layanan", icon: "grid", section: "Lainnya" },
     { href: "/affiliate", label: "Affiliate", icon: "gift", section: "Lainnya" },
     { href: "/akun", label: "Akun", icon: "user", section: "Lainnya" },
-    { href: "/notif", label: "Notifikasi", icon: "bell", section: "Lainnya" },
-  ];
+    { href: "/notif", label: "Notifikasi", icon: "bell", section: "Lainnya", unread: data.unreadCount > 0 },
+  ]);
   const isAdminUser = $derived((data.user as any)?.level === "Admin");
   const sidebarItems = $derived(
     isAdminUser
@@ -101,6 +110,7 @@
     "/affiliate": "Program Affiliate",
     "/tiket": "Tiket Bantuan",
     "/notif": "Notifikasi",
+    "/refill": "Pusat Refill",
   };
   const pageTitle = $derived(pageTitles[$page.url.pathname] ?? "socio.id");
   // Greeting mikro header desktop — HANYA dashboard (APP V2 §5.3)

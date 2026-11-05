@@ -4,6 +4,14 @@ import { sql, eq, ne, and, desc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import { notifyOrderUpdate } from "$lib/server/notification";
+import { modalAmountFor } from "@socio/core/pricing";
+import {
+  ledgerRefundAmount,
+  ledgerRefundAt,
+  ledgerRefundExists,
+  refundStateOf,
+  charged,
+} from "$lib/server/refund";
 import type { PageServerLoad, Actions } from "./$types";
 
 const UPDATABLE_FROM = ["Pending", "Processing", "In progress"];
@@ -48,10 +56,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         price: orders.price,
         profit: orders.profit,
         // MODAL per-1k dari katalog SMMturk (services.price_api = rate provider
-        // IDR/1k pasca rebase Sep-2026). ModalTotal = modalPer1k × qty / 1000.
+        // IDR/1k pasca rebase Sep-2026). ModalTotal = modal × qty / divisor,
+        // divisor mengikuti semantik rate `services.type` (Package = per-pack).
         // Dipakai admin utk sanity-check: hargaJual - modalTotal harus ≈ profit
         // dan jual:modal ratio ≈ (1 + markupPctLevel/100).
         modalPer1k: services.priceApi,
+        serviceType: services.type,
         status: orders.status,
         startCount: orders.startCount,
         remains: orders.remains,
@@ -59,6 +69,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         providerOrderId: orders.providerOrderId,
         isApi: orders.isApi,
         isRefund: orders.isRefund,
+        // Bukti refund = ledger saldo (balance_logs type 'ref'), BUKAN flag
+        // is_refund saja. Lihat lib/server/refund.ts untuk alasannya (flag bisa
+        // bohong dua arah; ledger uang tidak).
+        refundedLedger: ledgerRefundAmount,
+        refundedAt: ledgerRefundAt,
         komen: orders.komen,
         apiOrderLog: orders.apiOrderLog,
         apiStatusLog: orders.apiStatusLog,
@@ -90,6 +105,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         processingTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Processing','In progress','Refilling') THEN ${orders.price} ELSE 0 END),0)`,
         errorCount: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Canceled','Error','Partial') THEN 1 ELSE 0 END),0)`,
         errorTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Canceled','Error','Partial') THEN ${orders.price} ELSE 0 END),0)`,
+        // Refund terbukti dari ledger, bukan flag — jawaban "order batal/gagal sudah
+        // kembali uang customer belum?".
+        refundedCount: sql<number>`COALESCE(SUM(CASE WHEN ${ledgerRefundExists} THEN 1 ELSE 0 END),0)`,
+        refundedTotal: sql<number>`COALESCE((SELECT SUM(bl.amount) FROM balance_logs bl WHERE bl.type = 'ref' AND bl.user_id NOT IN (SELECT u2.id FROM users u2 WHERE u2.level = 'Admin')),0)`,
+        // WAJIB 0. Kalau >0: ada order batal/gagal yang saldonya belum kembali
+        // → cron auto-refund (*/15 menit) macet atau order di-escape manual.
+        refundPending: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Canceled','Error','Partial') AND ${orders.isRefund} = 0 AND NOT ${ledgerRefundExists} THEN 1 ELSE 0 END),0)`,
       })
       .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
@@ -100,14 +122,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const s = statRow[0];
 
   // Kaya-row utk admin: hitung total modal + margin riil per order.
-  //   modalTotal = services.price_api (IDR/1k) × qty / 1000
+  //   modalTotal = services.price_api × qty dengan pembagi mengikuti semantik
+  //   rate `services.type` (per-1000 tipe biasa, per-pack utk Package) — sama
+  //   seperti jalur checkout (lihat pricing.ts `modalAmountFor`).
   //   jual:modal ratio = price / modalTotal — harus ≈ (1 + markup%/100) kalau
   //   pricing rules tidak berubah sejak order dibuat.
   const ordersView = rows.map((o) => {
     const modal = Number((o as any).modalPer1k ?? 0);
     const qty = Number(o.quantity) || 0;
-    const modalTotal = Math.round((modal * qty) / 1000);
+    const modalTotal = modalAmountFor((o as any).serviceType, modal, qty);
     const paid = Number(o.price) || 0;
+    const refunded = Number((o as any).refundedLedger ?? 0);
     const profitActual = Number(o.profit) || 0;
     const profitExpected = paid - modalTotal;
     const ratio = modalTotal > 0 ? paid / modalTotal : 0;
@@ -118,6 +143,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       profitExpected,
       ratioPct: Math.round((ratio - 1) * 1000) / 10,
       profitMismatch: Math.abs(profitActual - profitExpected) > 1,
+      // Refund untuk label UI: state + nominal ledger + harga awal sesungguhnya.
+      refunded,
+      refundState: refundStateOf({
+        status: o.status,
+        isRefund: o.isRefund,
+        refundedLedger: refunded,
+      }),
+      charged: charged(paid, refunded),
     };
   });
 
@@ -134,6 +167,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       pending: { count: Number(s.pendingCount), total: Number(s.pendingTotal) },
       processing: { count: Number(s.processingCount), total: Number(s.processingTotal) },
       error: { count: Number(s.errorCount), total: Number(s.errorTotal) },
+      refunded: { count: Number(s.refundedCount), total: Number(s.refundedTotal) },
+      refundPending: Number(s.refundPending),
     },
   };
 };

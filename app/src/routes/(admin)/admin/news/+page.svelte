@@ -25,6 +25,7 @@
     q = data.q ?? "";
   });
   let modal = $state<"add" | number | null>(null);
+  let modalIsSync = $state(false);
   let fKategori = $state("");
   let fContent = $state("");
   const KATEGORI_PRESET = [
@@ -48,11 +49,13 @@
 
   function openAdd() {
     modal = "add";
+    modalIsSync = false;
     fKategori = "";
     fContent = "";
   }
   function openEdit(r: Item) {
     modal = r.id;
+    modalIsSync = r.source === "sync";
     fKategori = r.kategori;
     fContent = r.content;
   }
@@ -66,6 +69,31 @@
     else u.searchParams.delete("q");
     u.searchParams.delete("page");
     goto(u.toString(), { keepFocus: true });
+  }
+
+  // E7: source tabs — Semua/Manual/Sync
+  function selectSrc(v: string) {
+    const u = new URL($page.url);
+    if (v) u.searchParams.set("src", v);
+    else u.searchParams.delete("src");
+    u.searchParams.delete("page");
+    goto(u.toString(), { keepFocus: true });
+  }
+
+  // E7: toggle tayang⇄sembunyi
+  function doToggle(r: Item) {
+    const fd = new FormData();
+    fd.set("id", String(r.id));
+    fetch("?/toggle", { method: "POST", body: fd, headers: { Origin: location.origin } }).then(
+      async (res) => {
+        const json = await res.json().catch(() => null);
+        if (!json) return;
+        const d = json.data ?? json;
+        if (json.type === "failure" || d?.error) toast(d.error ?? "Gagal", "error");
+        else toast(d.success ?? "OK", "success");
+        goto($page.url.toString(), { invalidateAll: true });
+      },
+    );
   }
 
   let confirm = $state<{
@@ -172,6 +200,22 @@
     {/if}
   </form>
 
+  <!-- E7: Source tabs -->
+  <div class="flex flex-wrap items-center gap-2">
+    {#each [{ v: "", label: "Semua", n: data.counts.manual + data.counts.sync }, { v: "manual", label: "Manual", n: data.counts.manual }, { v: "sync", label: "Sync", n: data.counts.sync }] as t}
+      <button
+        type="button"
+        onclick={() => selectSrc(t.v)}
+        class="rounded-full px-3 py-1.5 text-xs font-bold transition {data.src === t.v
+          ? 'bg-ink-900 text-ink-50'
+          : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
+      >
+        {t.label}
+        <span class="ml-1 tabular-nums opacity-70">{t.n}</span>
+      </button>
+    {/each}
+  </div>
+
   <p class="text-[11px] font-medium text-ink-400">
     💡 Tip: setiap <span class="font-semibold text-ink-600">Simpan</span> akan push ke
     <span class="font-bold">NotifBell</span>
@@ -208,7 +252,13 @@
                 r.kategori,
               )}">{r.kategori || "—"}</span
             >
-            <span class="font-mono text-[11px] text-ink-400">#{r.id} · {fmtDate(r.createdAt)}</span>
+            <span class="flex items-center gap-1.5">
+              {#if r.isHidden}
+                <span class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">Sembunyi</span>
+              {/if}
+              <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold {r.source === "sync" ? 'bg-violet-100 text-violet-700' : 'bg-sky-100 text-sky-700'}">{r.source === "sync" ? "Sync" : "Manual"}</span>
+              <span class="font-mono text-[11px] text-ink-400">#{r.id}</span>
+            </span>
           </div>
           <p
             class="line-clamp-4 whitespace-pre-wrap px-3 py-2.5 text-sm leading-relaxed text-ink-700"
@@ -221,6 +271,12 @@
               onclick={() => openEdit(r)}
               class="flex-1 rounded-full bg-ink-900 px-3 py-2 text-xs font-bold text-ink-50 hover:bg-ink-800"
               >Edit</button
+            >
+            <button
+              type="button"
+              onclick={() => doToggle(r)}
+              class="rounded-full border border-ink-200 bg-surface px-3 py-2 text-xs font-bold text-ink-600 hover:bg-ink-50"
+              >{r.isHidden ? "Tayang" : "Sembunyi"}</button
             >
             <button
               type="button"
@@ -240,6 +296,7 @@
           <tr>
             <th class="px-4 py-2.5 font-semibold">ID</th>
             <th class="px-3 py-2.5 font-semibold">Kategori</th>
+            <th class="px-3 py-2.5 font-semibold">Sumber</th>
             <th class="px-4 py-2.5 font-semibold">Konten</th>
             <th class="px-4 py-2.5 font-semibold">Tanggal</th>
             <th class="px-4 py-2.5 text-right font-semibold">Aksi</th>
@@ -255,6 +312,12 @@
                     r.kategori,
                   )}">{r.kategori}</span
                 >
+                {#if r.isHidden}
+                  <span class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">Sembunyi</span>
+                {/if}
+              </td>
+              <td class="px-3 py-3">
+                <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold {r.source === "sync" ? 'bg-violet-100 text-violet-700' : 'bg-sky-100 text-sky-700'}">{r.source === "sync" ? "Sync" : "Manual"}</span>
               </td>
               <td class="max-w-[520px] px-4 py-3">
                 <div
@@ -273,6 +336,12 @@
                     onclick={() => openEdit(r)}
                     class="grid h-8 w-8 place-items-center rounded-full bg-ink-900 text-ink-50 hover:bg-ink-800"
                     title="Edit"><Icon name="settings" size={14} /></button
+                  >
+                  <button
+                    type="button"
+                    onclick={() => doToggle(r)}
+                    class="grid h-8 w-8 place-items-center rounded-full border border-ink-200 bg-surface text-ink-500 hover:bg-ink-50"
+                    title={r.isHidden ? "Tayang" : "Sembunyi"}><Icon name={r.isHidden ? "globe" : "eye"} size={14} /></button
                   >
                   <button
                     type="button"
@@ -377,15 +446,19 @@
             id="news-kategori"
             name="kategori"
             bind:value={fKategori}
-            required
+            required={!modalIsSync}
+            readonly={modalIsSync}
             maxlength="128"
             list="news-kategori-list"
             placeholder="Ketik atau pilih preset…"
-            class={input}
+            class={input + (modalIsSync ? " bg-ink-50 text-ink-400 cursor-not-allowed" : "")}
           />
           <datalist id="news-kategori-list">
             {#each KATEGORI_PRESET as k}<option value={k}></option>{/each}
           </datalist>
+          {#if modalIsSync}
+            <p class="mt-1 text-[11px] text-ink-400">Baris Sync — kategori terkunci, hanya konten yang bisa diedit.</p>
+          {/if}
         </div>
         <div>
           <label class="mb-1 block text-sm font-semibold" for="news-content"

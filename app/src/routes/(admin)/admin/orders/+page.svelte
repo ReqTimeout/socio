@@ -51,6 +51,81 @@
   ];
   const STATUS_ACTIONS = ["Success", "Processing", "Error", "Partial"];
 
+  // Label refund. Sumber kebenaran = ledger saldo (balance_logs type 'ref'),
+  // BUKAN flag orders.is_refund — flag terbukti bisa salah dua arah.
+  // refundStateOf() dihitung di server load.
+  function refundChip(o: OrderRow): { cls: string; icon: string; label: string } | null {
+    switch (o.refundState) {
+      case "refunded":
+        return {
+          cls: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/15",
+          icon: "check",
+          label: `Refund ${formatRupiah(Number(o.refunded ?? 0))}`,
+        };
+      case "pending":
+        return {
+          cls: "bg-amber-50 text-amber-700 ring-1 ring-amber-600/15",
+          icon: "clock",
+          label: "Refund menunggu",
+        };
+      case "flag-no-ledger":
+        return {
+          cls: "bg-rose-50 text-rose-700 ring-1 ring-rose-600/15",
+          icon: "alert",
+          label: "Ditandai, tanpa saldo",
+        };
+      default:
+        return null;
+    }
+  }
+
+  // Band bukti refund di drawer detail — menjawab "uang customer sudah balik
+  // atau belum" lengkap dengan nominal + tanggal dari balance ledger.
+  function refundBand(o: OrderRow): {
+    box: string;
+    tone: string;
+    icon: string;
+    title: string;
+    sub: string;
+  } | null {
+    switch (o.refundState) {
+      case "refunded":
+        return {
+          box: "border-emerald-200 bg-emerald-50/70",
+          tone: "bg-emerald-100 text-emerald-700",
+          icon: "check",
+          title: `Dana dikembalikan · ${formatRupiah(Number(o.refunded ?? 0))}`,
+          sub: o.refundedAt
+            ? `${fmtDate(o.refundedAt)} — tercatat di ledger saldo.`
+            : "Tercatat di ledger saldo.",
+        };
+      case "flag-no-ledger":
+        return {
+          box: "border-rose-200 bg-rose-50/70",
+          tone: "bg-rose-100 text-rose-700",
+          icon: "alert",
+          title: "Ditandai refund, tapi saldo tak kembali",
+          sub: "is_refund=1 tanpa catatan ledger — selidiki, jangan refund ulang.",
+        };
+      case "pending":
+        return {
+          box: "border-amber-200 bg-amber-50/70",
+          tone: "bg-amber-100 text-amber-700",
+          icon: "clock",
+          title: "Refund belum dieksekusi",
+          sub: "Order batal/gagal; cron auto-refund (*/15 mnt) akan memproses.",
+        };
+      default:
+        return null;
+    }
+  }
+
+  // Manual refund boleh hanya kalau ledger BELUM membuktikan refund (hindari
+  // dobel kredit). "refunded"/"flag-no-ledger" → kunci form.
+  const canManualRefund = (o: OrderRow) =>
+    (o.refundState === "pending" || o.refundState === "none") &&
+    REFUNDABLE_STATUS.includes(o.status);
+
   const filters = [
     "",
     "Pending",
@@ -310,6 +385,22 @@
       <div class="mt-0.5 truncate text-[10px] text-ink-500 sm:text-[11px]">
         Lost {formatRupiah(data.stats.error.total)}
       </div>
+      <!-- Refund terbukti ledger + alarm kalau ada saldo customer belum balik.
+           refundPending WAJIB 0; bukan 0 = cron auto-refund macet. -->
+      <div
+        class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-bold sm:text-[11px]"
+      >
+        <span class="inline-flex items-center gap-1 text-emerald-700">
+          <Icon name="check" size={10} stroke={3} />
+          Refunded {fmt(data.stats.refunded.count)} · {formatRupiah(data.stats.refunded.total)}
+        </span>
+        {#if data.stats.refundPending > 0}
+          <span class="inline-flex items-center gap-1 text-amber-700">
+            <Icon name="clock" size={10} stroke={3} />
+            {fmt(data.stats.refundPending)} refund belum jalan
+          </span>
+        {/if}
+      </div>
     </div>
   </div>
   <p class="-mt-0.5 text-[10px] text-ink-400 sm:text-[11px]">
@@ -461,7 +552,9 @@
               </td>
               <td class="px-3 py-3 text-right tabular-nums text-ink-700">{fmt(o.quantity)}</td>
               <td class="px-3 py-3 text-right font-semibold tabular-nums text-ink-900"
-                >{formatRupiah(o.price)}</td
+                title={Number(o.refunded ?? 0) > 0
+                  ? `Sudah di-refund ${formatRupiah(Number(o.refunded))}`
+                  : "Total dibayar user (harga awal)"}>{formatRupiah(o.charged)}</td
               >
               <td class="px-3 py-3 text-right tabular-nums text-ink-500"
                 >{o.modalTotal > 0 ? formatRupiah(o.modalTotal) : "—"}</td
@@ -481,7 +574,19 @@
                   {/if}
                 </div>
               </td>
-              <td class="px-3 py-3"><StatusBadge status={o.status} /></td>
+              <td class="px-3 py-3">
+                <div class="flex flex-col items-start gap-1">
+                  <StatusBadge status={o.status} />
+                  {#if refundChip(o)}
+                    {@const rc = refundChip(o)!}
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold {rc.cls}"
+                    >
+                      <Icon name={rc.icon} size={10} stroke={3} />{rc.label}
+                    </span>
+                  {/if}
+                </div>
+              </td>
               <td class="whitespace-nowrap px-3 py-3 text-xs text-ink-500"
                 >{fmtDate(o.createdAt)}</td
               >
@@ -543,7 +648,7 @@
                 </div>
                 <div>
                   <dt class="text-ink-400">Jual</dt>
-                  <dd class="tabular-nums font-bold text-ink-900">{formatRupiah(o.price)}</dd>
+                  <dd class="tabular-nums font-bold text-ink-900">{formatRupiah(o.charged)}</dd>
                 </div>
                 <div>
                   <dt class="text-ink-400">Modal</dt>
@@ -575,6 +680,14 @@
             </div>
             <div class="flex shrink-0 flex-col items-end gap-1.5">
               <StatusBadge status={o.status} />
+              {#if refundChip(o)}
+                {@const rc = refundChip(o)!}
+                <span
+                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold {rc.cls}"
+                >
+                  <Icon name={rc.icon} size={10} stroke={3} />{rc.label}
+                </span>
+              {/if}
             </div>
           </div>
           <div class="mt-3 flex gap-2 pl-2">
@@ -670,6 +783,20 @@
         </button>
       </div>
 
+      <!-- Band bukti refund (ledger-first) — jawab "uang customer sudah balik?" -->
+      {#if refundBand(detail)}
+        {@const rb = refundBand(detail)!}
+        <div class="flex items-start gap-3 rounded-xl border {rb.box} p-3">
+          <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg {rb.tone}">
+            <Icon name={rb.icon} size={16} stroke={2.5} />
+          </span>
+          <div class="min-w-0">
+            <p class="text-sm font-bold text-ink-900">{rb.title}</p>
+            <p class="mt-0.5 text-xs text-ink-500">{rb.sub}</p>
+          </div>
+        </div>
+      {/if}
+
       <!-- Info: 2-col grid with icon labels -->
       <div class="space-y-1.5 text-sm">
         <div
@@ -693,7 +820,7 @@
           <div>
             <dt class="text-[10px] font-bold uppercase tracking-wide text-ink-400">Jual</dt>
             <dd class="tabular-nums text-sm font-extrabold text-ink-900">
-              {formatRupiah(detail.price)}
+              {formatRupiah(detail.charged)}
             </dd>
           </div>
           <div>
@@ -869,7 +996,7 @@
       {/if}
 
       <!-- Refund manual (G-refund) — full atau parsial, idempotent -->
-      {#if !detail.isRefund && REFUNDABLE_STATUS.includes(detail.status)}
+      {#if canManualRefund(detail)}
         <hr class="border-ink-100" />
         <div class="space-y-2">
           <div class="flex items-center gap-1.5 text-xs font-bold text-ink-500">

@@ -1,13 +1,22 @@
 import { db } from "@socio/db";
 import { services, categories, savedLinks, orders, users, balanceLogs, provider } from "@socio/db/schema";
-import { eq, desc, asc, sql } from "drizzle-orm";
+import { eq, desc, asc, sql, and } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
-import { computePrice, baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
+import {
+  computePrice,
+  baseForLevel,
+  effectivePer1k,
+  qtyDivisorFor,
+  modalAmountFor,
+  type UserLevel,
+} from "@socio/core/pricing";
 import { PLATFORMS, detectPlatform, detectKind, type PlatformId } from "@socio/core/catalog";
+import { serviceIsOrderable } from "@socio/core/order-guard";
 import { smmturkAddFor } from "@socio/core/smmturk";
 import { decryptSecret } from "$lib/server/crypto";
 import { getPricingRules } from "$lib/server/pricing";
 import { validateCoupon, consumeCoupon, releaseCoupon } from "$lib/server/coupons";
+import { getServicePopularity } from "$lib/server/service-popularity";
 import { asciiSafe, whitelabel } from "$lib/format";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -44,22 +53,29 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   // Whitelabel diterapkan server-side (SMMTURK/[Provider]/Own/Exclusive dll)
   // supaya client tidak pernah melihat brand hulu. Hanya kategori yang punya
   // layanan aktif (JOIN exclude mati).
-  // Sort = layanan TERBARU dulu (MAX services.created_at DESC, owner 8 Okt:
-  // kategori berisi layanan baru SMMturk gampang ditemukan di atas),
-  // tiebreak alfabetis. COALESCE ke epoch supaya baris legacy tanpa
-  // created_at jatuh ke bawah, bukan ke atas (NULLS handling eksplisit).
+  // Sort = layanan PALING BARU DI-UPDATE dulu (port B3 socio.my 30 Okt).
+  // Owner .my: khawatir user mengorder kategori yang "sudah lama tidak
+  // di-update". `services.updated_at` diisi service-sync HANYA saat provider
+  // benar-benar mengubah layanan (harga/nama/min-max/aktif) — bukan tiap
+  // sync — jadi sinyal kesegaran yang andal. GREATEST(created_at,
+  // updated_at) supaya kategori berisi layanan baru TETAP naik, dan kategori
+  // tertinggal turun ke bawah. Tiebreak alfabetis; COALESCE ke epoch agar
+  // baris tanpa timestamp jatuh ke bawah (NULLS handling eksplisit).
   const catRows = await db
     .select({
       id: categories.id,
       name: categories.name,
       svcCount: sql<number>`COUNT(${services.id})`,
-      latestAt: sql<string | null>`MAX(${services.createdAt})`,
+      latestAt: sql<string | null>`MAX(GREATEST(COALESCE(${services.createdAt}, '1970-01-01'), COALESCE(${services.updatedAt}, '1970-01-01')))`
     })
     .from(categories)
     .leftJoin(services, sql`${services.categoryId} = ${categories.id} AND ${services.status} = 1`)
     .groupBy(categories.id, categories.name)
     .having(sql`COUNT(${services.id}) > 0`)
-    .orderBy(sql`COALESCE(MAX(${services.createdAt}), '1970-01-01') DESC`, asc(categories.name));
+    .orderBy(
+      sql`COALESCE(MAX(GREATEST(COALESCE(${services.createdAt}, '1970-01-01'), COALESCE(${services.updatedAt}, '1970-01-01'))), '1970-01-01') DESC`,
+      asc(categories.name),
+    );
   const cats = catRows.map((c) => ({
     id: c.id,
     name: whitelabel(c.name),
@@ -104,7 +120,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
         categoryId: services.categoryId,
       })
       .from(services)
-      .where(eq(services.id, serviceId))
+      .where(and(eq(services.id, serviceId), eq(services.status, 1)))
       .limit(1);
     if (s) {
       const modal = Number(s.priceApi ?? 0);
@@ -123,6 +139,9 @@ export const load: PageServerLoad = async ({ url, locals }) => {
         note: s.note,
         waktu: s.waktu,
         categoryId: s.categoryId,
+        // Rate jual: per-1000 utk type biasa, PER-PACK utk Package/Custom Comments
+        // Package. Client menerapkan pembagi yang sama (`qtyDivisorFor(type)`)
+        // supaya preview selalu identik dgn tagihan server.
         pricePer1k: effectivePer1k(base, level, rule, modal),
         platform: detectPlatform(s.serviceName),
         kind: detectKind(s.serviceName),
@@ -144,6 +163,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
   return {
     service,
+    // Deep-link ke layanan yang sudah di-disable admin (status=0) ATAU dihapus dari
+    // katalog: `service` jadi null (query di-gate status=1) → flag ini menyalakan
+    // banner penjelas di client, bukan form kosong misterius. Guard uang sebenarnya
+    // tetap di action `default` (cek `s.status !== 1` sebelum potong saldo).
+    serviceUnavailable: serviceId > 0 && !service,
     // Daftar platform bersih + jumlah layanan aktif (live count, anti-sampah).
     platforms,
     // Daftar kategori dari PROVIDER (1132 aktif, sudah whitelabel). PRIMARY —
@@ -153,6 +177,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     balance: locals.user!.balance ?? 0,
     level,
     prefill: { link: prefillLink, qty: prefillQty },
+    // Rekomendasi "Paling laris" (port B4 socio.my) — order SUKSES semua user
+    // (jendela 24j/7h/30h), dicocokkan client-side dengan chip JENIS yang
+    // dipilih. KOSONG = band tak dirender (data belum cukup; jangan tampil
+    // kotak kosong).
+    popular: await getServicePopularity(level),
     // Catatan: harga base/modal & persentase markup TIDAK dikirim ke client.
     // Harga efektif per-1000 sudah dihitung server per level (lihat `service`
     // dan endpoint /pesan/services). Anti-kebocoran margin.
@@ -234,6 +263,11 @@ export const actions: Actions = {
 
     const [s] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
     if (!s) return fail(400, { error: "Layanan tidak ditemukan." });
+    // Gate layanan nonaktif (status!=1): admin manual-off / kategori mati / provider
+    // mati menulis status=0. Tanpa cek ini, order tetap lolos ke layanan mati (parity
+    // API v1 yang sudah filter status=1). Saldo BELUM dipotong di titik ini → aman.
+    if (!serviceIsOrderable(s))
+      return fail(400, { error: "Layanan ini sudah tidak tersedia. Pilih layanan lain." });
 
     // Custom Comments: qty dari line count komen, bukan input quantity
     const isCustomComments = s.type === "Custom Comments";
@@ -278,7 +312,17 @@ export const actions: Actions = {
       },
       level,
     );
-    const finalPrice = computePrice(basePer1k, finalQty, level, rule, Number(s.priceApi));
+    // `s.type` WAJIB ikut dikirim: layanan Package punya rate per-pack, bukan
+    // per-1000 (lihat pricing.ts `isFixedPackageType`) — tanpa ini Package
+    // ditagih 1/1000 harga sebenarnya.
+    const finalPrice = computePrice(
+      basePer1k,
+      finalQty,
+      level,
+      rule,
+      Number(s.priceApi),
+      s.type,
+    );
     if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
       return fail(400, { error: "Harga layanan tidak valid." });
     }
@@ -309,7 +353,9 @@ export const actions: Actions = {
         const modalIdr = Math.max(Number(s.priceApi), 0);
         const { getUsdToIdr } = await import("$lib/server/fx");
         const usdRate = await getUsdToIdr();
-        const needUsd = (modalIdr / usdRate) * (finalQty / 1000);
+        // Provider menagih dengan semantik rate yang sama dgn katalog: per-1000
+        // utk type biasa, per-pack utk Package → pakai pembagi dari `qtyDivisorFor`.
+        const needUsd = (modalIdr / usdRate) * (finalQty / qtyDivisorFor(s.type));
         const haveUsd = pv ? Number((pv as any).balanceProvider ?? 0) : 0;
         if (pv && modalIdr > 0 && haveUsd > 0 && needUsd > haveUsd) {
           return fail(400, {
@@ -379,8 +425,9 @@ export const actions: Actions = {
         startCount: 0,
         price: payable,
         // Profit riil = dibayar (pasca-kupon) − modal provider untuk qty ini.
-        // Katalog menyimpan modal murni di price_api (lihat service-sync).
-        profit: Math.round(payable - (Math.max(Number(s.priceApi), 0) * finalQty) / 1000),
+        // Katalog menyimpan modal murni di price_api (lihat service-sync), dan
+        // `modalAmountFor` menyesuaikan semantik rate per type (per-1000 / per-pack).
+        profit: Math.round(payable - modalAmountFor(s.type, Number(s.priceApi), finalQty)),
         status: "Pending",
         date: new Date().toISOString().slice(0, 10),
         time: new Date().toISOString().slice(11, 19),

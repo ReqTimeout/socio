@@ -2,7 +2,14 @@ import { db } from "@socio/db";
 import { emailQueue, emailCampaignTracking, emailCampaignLog } from "@socio/db/schema";
 import { eq, and, lt, sql } from "drizzle-orm";
 import { sendEmail } from "$lib/server/email";
-import { emailShell, emailCta, emailFooterTransactional } from "$lib/server/email/render.js";
+import {
+  emailShell,
+  emailCta,
+  emailTextBlock,
+  emailAbsoluteUrl,
+  emailFooterTransactional,
+} from "$lib/server/email/render.js";
+import { blankReason, describeEmail } from "@socio/core/email-guard";
 
 /**
  * Drain antrian `email_queue` → kirim via SMTP/Resend.
@@ -49,6 +56,7 @@ export async function runEmailQueue(): Promise<void> {
   let sent = 0;
   let failed = 0;
   let skippedCap = 0;
+  let blanked = 0;
   let sentMarketing = 0;
   let sentGmail = 0;
   for (const q of pending) {
@@ -67,9 +75,12 @@ export async function runEmailQueue(): Promise<void> {
       let subject = `Socio.id`;
       let html = "";
       let text = "";
+      let unsubUrl: string | undefined;
       try {
         const d = JSON.parse(q.templateData ?? "{}");
         subject = d.subject ?? subject;
+        unsubUrl =
+          typeof d.unsubscribe_url === "string" && d.unsubscribe_url ? d.unsubscribe_url : undefined;
         // Custom HTML penuh (mis. email deposit dengan kartu bank) — pakai langsung
         if (d.html && String(d.html).includes("<html")) {
           html = String(d.html);
@@ -78,12 +89,15 @@ export async function runEmailQueue(): Promise<void> {
           const body = String(d.body ?? "");
           const ctaText = d.cta_text;
           const ctaUrl = d.cta_url;
+          // CTA relatif ("/admin/deposits") → absolut, kalau tidak linknya mati
+          // di email client (RELATIF = tombol lead ke domain email client).
+          const ctaHref = ctaUrl ? emailAbsoluteUrl(String(ctaUrl)) : "";
           // Sumber HTML: $lib/server/email/render.ts (token DNA).
-          // Isi (body + CTA + footer) IDENTIK dengan template lama; yang berubah
-          // hanya warna sub-AA (#94a3b8 → #64748b) + preheader + dark-mode.
+          // Body di-ESCAPE: tanpa itu `User: Ali <ali@mail.com>` dimakan parser
+          // HTML sebagai tag tak dikenal → alamat email hilang dari email.
           const contentHtml =
-            `<div>${body.replace(/\n/g, "<br>")}</div>` +
-            (ctaText && ctaUrl ? emailCta({ label: String(ctaText), href: String(ctaUrl) }) : "");
+            emailTextBlock(body) +
+            (ctaText && ctaHref ? emailCta({ label: String(ctaText), href: ctaHref }) : "");
           html = emailShell({
             preheader: body.slice(0, 100),
             maxWidth: 520,
@@ -93,12 +107,45 @@ export async function runEmailQueue(): Promise<void> {
           text = body;
         }
       } catch {
-        // templateData bukan JSON — kirim sebagai plain
-        text = q.templateData ?? "";
-        html = `<pre>${text}</pre>`;
+        // templateData bukan JSON → bangun shell sungguhan (dulu `<pre>` polos
+        // yang praktis tak terbaca = email "kosong" sampai owner protes).
+        const raw = String(q.templateData ?? "");
+        html = emailShell({
+          preheader: raw.slice(0, 100),
+          maxWidth: 520,
+          content: emailTextBlock(raw),
+          footer: emailFooterTransactional("bare"),
+        });
+        text = raw;
       }
 
-      const ok = await sendEmail({ to: q.recipientEmail, subject, html, text });
+      // GUARD anti-kosong: email kosong/ringkas TIDAK boleh dikirim ke user.
+      // Row ditandai `failed` + alasannya supaya kelihatan di panel admin.
+      const why = blankReason(html);
+      if (why) {
+        await db
+          .update(emailQueue)
+          .set({
+            attempts: (q.attempts ?? 0) + 1,
+            status: "failed",
+            errorMessage: `blank email blocked: ${why} — ${describeEmail(html)}`,
+          })
+          .where(eq(emailQueue.id, q.id));
+        failed++;
+        blanked++;
+        console.error(
+          `[cron] email-queue: blank email diblokir id=${q.id} template=${q.templateName} — ${why}`,
+        );
+        continue;
+      }
+
+      const ok = await sendEmail({
+        to: q.recipientEmail,
+        subject,
+        html,
+        text,
+        unsubscribeUrl: unsubUrl,
+      });
       if (ok) {
         await db
           .update(emailQueue)
@@ -151,6 +198,6 @@ export async function runEmailQueue(): Promise<void> {
     }
   }
   console.log(
-    `[cron] email-queue: sent=${sent} failed=${failed} skippedCap=${skippedCap} (mkt=${sentMarketing} gmail=${sentGmail})`,
+    `[cron] email-queue: sent=${sent} failed=${failed} blanked=${blanked} skippedCap=${skippedCap} (mkt=${sentMarketing} gmail=${sentGmail})`,
   );
 }

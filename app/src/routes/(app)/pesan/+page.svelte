@@ -17,6 +17,8 @@
     kindById,
     detectPlatform,
     isCustomCommentsService,
+    linkExample,
+    linkShapeForKind,
     PLATFORM_LINK_NAME,
     platformById,
     KIND_ORDER,
@@ -25,11 +27,12 @@
     type PlatformId,
     type KindId,
   } from "@socio/core/catalog";
+  import { qtyDivisorFor } from "@socio/core/pricing";
   import { formatRupiah, whitelabel } from "$lib/format";
   import { svcEventBadge } from "$lib/news-meta";
   import { applyAction, enhance } from "$app/forms";
   import { goto } from "$app/navigation";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { fly } from "svelte/transition";
   import type { ActionData, PageData } from "./$types";
 
@@ -157,9 +160,15 @@
   );
   const lineCount = $derived(komen.split("\n").filter(Boolean).length);
   const effectiveQty = $derived(isCustomComments ? lineCount : quantity);
-  // Total live — sama persis dgn server (round(qty/1000 * harga efektif per-1000)).
+  // Total live — sama persis dgn server. Pembagi mengikuti semantik rate
+  // `services.type`: per-1000 utk type biasa, PER-PACK utk Package/Custom
+  // Comments Package (lihat `qtyDivisorFor` di @socio/core/pricing).
   const total = $derived(
-    selectedService ? Math.round((effectiveQty / 1000) * selectedService.pricePer1k) : 0,
+    selectedService
+      ? Math.round(
+          (effectiveQty / qtyDivisorFor(selectedService.type)) * selectedService.pricePer1k,
+        )
+      : 0,
   );
 
   // ── Inline validation (UX3.3) — link pattern + qty range
@@ -290,8 +299,20 @@
     "X / Twitter": "https://x.com/username",
     Telegram: "https://t.me/username",
   };
+  // ── Placeholder link CERDAS: platform × jenis (port B1 socio.my 30 Okt).
+  // Sumber platform/jenis = layanan terpilih (paling akurat); fallback chip.
+  // linkExample() → URL panutan sesuai bentuk (profil vs postingan) utk 6
+  // platform inti; kalau kosong (platform lain / jenis belum jelas) →
+  // fallback placeholderByPlatform.
+  const activePlatformId = $derived<PlatformId | "">(
+    selectedService ? selectedService.platform : selectedPlatform,
+  );
+  const activeKind = $derived<KindId | "">(selectedService ? selectedService.kind : selectedKind);
+  const smartExample = $derived(linkExample(activePlatformId, activeKind));
+  // Bentuk link utk helper teks: true = profil/akun, false = postingan.
+  const linkIsProfile = $derived(activeKind !== "" && linkShapeForKind(activeKind) === "profile");
   const dynamicPlaceholder = $derived(
-    placeholderByPlatform[expectedPlatform] ?? "https://link-target-kamu",
+    smartExample || placeholderByPlatform[expectedPlatform] || "https://link-target-kamu",
   );
 
   // ── Sparko asisten kontekstual — 1 instance, pesan mengikuti state paling urgent.
@@ -374,8 +395,160 @@
   function setKindFilter(k: KindId) {
     haptic(8);
     selectedKind = k === selectedKind ? "" : k;
+    // selectedService di-clear: layanan lama bisa di luar jenis baru.
     selectedService = null;
+    // Port B3 socio.my (auto-lompat kategori): jenis TIDAK lagi menunggu
+    // kategori — kalau kategori aktif tidak punya kombinasi platform+jenis
+    // terpilih, lompat ke kategori yang punya (pool `kinds` per kategori
+    // sudah dihitung server di data.cats) supaya daftar tak pernah kosong.
+    if (selectedKind) {
+      const kid = selectedKind;
+      const cur = data.cats.find((c) => c.id === selectedCat);
+      const curOk =
+        cur &&
+        (cur.kinds ?? []).includes(kid) &&
+        (!selectedPlatform || (cur.platforms ?? []).includes(selectedPlatform));
+      if (!curOk) {
+        const match = data.cats.find(
+          (c) =>
+            (c.kinds ?? []).includes(kid) &&
+            (!selectedPlatform || (c.platforms ?? []).includes(selectedPlatform)),
+        );
+        if (match) void selectCategory(match.id);
+      }
+    }
   }
+
+  // ── Rekomendasi "Paling laris" (port B4 socio.my) ──────────────────────────
+  // Order SUKSES semua user (jendela 24 jam / 7 hari / 30 hari) dikirim server
+  // lewat load halaman (TANPA request tambahan). Di-filter di CLIENT sesuai
+  // chip JENIS + PLATFORM → re-rank INSTAN saat user ganti jenis, tanpa fetch
+  // ulang. Kategori cuma PREFERENSI (item dalam kategori aktif naik ke depan),
+  // bukan filter — kalau difilter, hanya segelintir dari ±1100 kategori yang
+  // punya data → fitur nyaris tak pernah terlihat.
+  type PopularItem = PageData["popular"][number];
+  // v4: band jadi DROPDOWN kumpulan rekomendasi — muat lebih banyak item karena
+  // dropdown memang untuk di-scroll (owner: "jangan 4 kotak gitu").
+  const POPULAR_MAX = 8;
+  const popularAll: PopularItem[] = $derived(data.popular ?? []);
+  // Semua kandidat yang COCOK dengan jenis/platform terpilih (tanpa limit) —
+  // dipakai untuk badge "Terlaris" di daftar Layanan.
+  const popularMatches = $derived.by((): PopularItem[] => {
+    const kind = selectedKind;
+    const plat = selectedPlatform;
+    const cat = selectedCat;
+    return popularAll
+      .filter((p) => (!kind || p.kind === kind) && (!plat || p.platform === plat))
+      .sort((a, b) => {
+        // Kategori AKTIF naik ke depan → strip terbaca "terlaris di sini"; yang
+        // lain tetap ditampilkan (dengan chip nama kategori) karena daftar
+        // layanan di bawah cuma setinggi 320px — layanan proven bisa terkubur.
+        const inCat = (x: PopularItem) => (cat && x.categoryId === cat ? 1 : 0);
+        if (inCat(a) !== inCat(b)) return inCat(b) - inCat(a);
+        if (a.successCount !== b.successCount) return b.successCount - a.successCount;
+        if (a.successRate !== b.successRate) return b.successRate - a.successRate;
+        const la = a.lastSuccessAt ?? "";
+        const lb = b.lastSuccessAt ?? "";
+        if (la !== lb) return lb.localeCompare(la);
+        return a.pricePer1k - b.pricePer1k;
+      });
+  });
+  const popularItems = $derived(popularMatches.slice(0, POPULAR_MAX));
+  // Jendela data (global): "hari ini" / "minggu ini" / "bulan ini" — jujur.
+  const popularTierLabel = $derived(
+    popularAll[0]?.window === "day"
+      ? "hari ini"
+      : popularAll[0]?.window === "week"
+        ? "minggu ini"
+        : popularAll[0]?.window === "month"
+          ? "bulan ini"
+          : "",
+  );
+  // Badge silang di daftar Layanan: layanan yang masuk rekomendasi.
+  const popularIds = $derived(new Set(popularMatches.map((p) => p.id)));
+  // Strip dirender di DUA state: sebelum kategori dipilih (discovery) dan
+  // sesudahnya (di atas daftar layanan). Dulu cuma ada di state pertama →
+  // owner lapor "mana ga ada" karena dia selalu masuk lewat pilih kategori.
+  const popularChipCat = (p: PopularItem) => selectedCat > 0 && p.categoryId !== selectedCat;
+  const selectedCatName = $derived(data.cats.find((c) => c.id === selectedCat)?.name ?? "");
+
+  // Opsi dropdown: label = nama layanan, hint = harga/minal/bukti/asal kategori,
+  // badge = "Terlaris" khusus urutan pertama.
+  const popularOptions = $derived(
+    popularItems.map((p, i) => {
+      const bits = [`${formatRupiah(p.pricePer1k)}/1000`, `Min ${p.min.toLocaleString("id-ID")}`];
+      if (p.successCount >= 2) bits.push(`${p.successCount}× dipesan`);
+      if (popularChipCat(p)) bits.push(trimCatLabel(p.categoryName));
+      return {
+        value: p.id,
+        label: trimCatLabel(p.serviceName),
+        hint: bits.join(" · "),
+        badge: i === 0 ? "Terlaris" : undefined,
+      };
+    }),
+  );
+  // Menu sekali-pakai: setelah dipilih, trigger balik ke placeholder supaya tidak
+  // kelihatan seperti "filter aktif" (layanan terpilih sudah tampil di daftar).
+  let popularPick = $state<string | number>("");
+  function pickPopularById(v: string | number) {
+    const p = popularItems.find((x) => String(x.id) === String(v));
+    popularPick = "";
+    if (p) void pickPopular(p);
+  }
+
+  // v5 (owner: "kenapa ga auto ke kategori dan pilihan layanannya ??"): pick dari
+  // dropdown HARUS terasa sama dengan klik manual — kategori ikut berpindah, kartu
+  // layanan ikut terpilih, dan keduanya TERLIHAT. Karena itu jangan menyusun objek
+  // layanan sendiri; pakai jalur kanonik selectCategory() lalu ambil baris ASLI dari
+  // serviceList yang baru dimuat (punya note/waktu/events lengkap seperti klik manual).
+  async function pickPopular(p: PopularItem) {
+    haptic(10);
+    // Platform + jenis dari item: kombinasi ini yang membuat kartunya pasti
+    // terlihat di daftar (visibleServices menyaring keduanya).
+    selectedPlatform = p.platform;
+    selectedKind = p.kind;
+    await selectCategory(p.categoryId);
+    const found = serviceList.find((s) => s.id === p.id);
+    if (found) await pickService(found);
+    else {
+      // Fallback: layanan tak ada di daftar kategori (baru di-nonaktifkan /
+      // whitelabel lain level) — tetap pakai data rekomendasi supaya pick tidak
+      // gagal diam-diam. `categoryId` opsi di tipe Svc → cast lokal.
+      await applyPick({
+        id: p.id,
+        serviceName: p.serviceName,
+        type: p.type,
+        min: p.min,
+        max: p.max,
+        isRefill: p.isRefill,
+        note: p.note,
+        waktu: p.waktu,
+        categoryId: p.categoryId,
+        pricePer1k: p.pricePer1k,
+        platform: p.platform,
+        kind: p.kind,
+      } as Svc);
+    }
+    toast(`Terpilih: ${whitelabel(p.serviceName)}`, "success");
+    // Tunggu DOM supaya kartu is-selected-nya ada sebelum digulirkan ke pandangan.
+    await tick();
+    const card = document.getElementById("svc-dipilih");
+    (card ?? document.getElementById("layanan-list"))?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
+
+  // Pool chip JENIS (port B3 .my final): gabungan kinds seluruh kategori
+  // (dibatasi platform aktif bila ada) — chip tidak menunggu kategori dipilih.
+  const kindPool = $derived.by(() => {
+    const pool = new Set<string>();
+    for (const c of data.cats) {
+      if (selectedPlatform && !(c.platforms ?? []).includes(selectedPlatform)) continue;
+      for (const k of c.kinds ?? []) pool.add(k);
+    }
+    return KIND_ORDER.filter((k) => pool.has(k));
+  });
 
   // Layanan yang tampil = fetch by kategori, di-narrow oleh platform/kind,
   // di-sort ASCENDING by harga efektif per-1000. Server sudah sort juga (lihat
@@ -484,6 +657,48 @@
   });
 </script>
 
+<!-- ══ Dropdown "Paling laris" (port B4 v4/v5 socio.my) ═══════════════════
+     Order SUKSES semua user (jendela 24 jam / 7 hari / 30 hari), dicocokkan
+     dengan chip JENIS/PLATFORM aktif. Owner .my 1 Nov: "jangan 4 kotak gitu,
+     buat jadi dropdown aja pake warna yang agak terang" → SATU field ringan
+     berisi SEMUA rekomendasi (maks 8), bukan barisan kartu. Warna mango-50
+     (krem terang, DNA Sparko) — bukan container indigo + shadow yang ditolak
+     v1. Dirender di DUA tempat: (a) sebelum kategori dipilih, (b) di atas
+     daftar layanan sesudahnya (Susulan 2: cuma (a) = fitur tak terlihat). -->
+{#snippet popularBand()}
+  <div class="mb-2.5 rounded-xl bg-mango-50 px-2.5 py-2">
+    <p
+      class="mb-1.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] font-bold text-mango-800"
+      title={`${popularItems.length} layanan paling sering berhasil dipesan semua user · ${popularTierLabel}`}
+    >
+      <span class="text-mango-600" aria-hidden="true">✦</span>
+      Paling laris
+      <span class="font-normal text-mango-700/70">· {popularTierLabel}</span>
+      <span class="ml-auto font-normal text-mango-700/70"
+        >{popularItems.length} layanan siap dipilih</span
+      >
+    </p>
+    <Select
+      value={popularPick}
+      options={popularOptions}
+      placeholder="Pilih layanan terlaris…"
+      searchable={false}
+      size="sm"
+      onChange={pickPopularById}
+    />
+    <!-- Chip konteks (adaptasi .id tanpa ubah compact() global): strip ini
+         muncul sebelum kategori dipilih, saat label Layanan saja belum
+         jelas maknanya. -->
+    {#if selectedKind}
+      <p class="mt-1.5 text-[10px] font-bold text-mango-700/80">
+        Untuk jenis {trimCatLabel(kindById(selectedKind).label)}
+        {#if selectedPlatform}· {platformById(selectedPlatform).label}{/if}
+        {#if selectedCat > 0 && selectedCatName}· kategori {trimCatLabel(selectedCatName)}{/if}
+      </p>
+    {/if}
+  </div>
+{/snippet}
+
 <svelte:head>
   <title>Buat Pesanan — Socio.id | Panel SMM Indonesia</title>
   <meta
@@ -550,6 +765,15 @@
         <div
           class="mx-auto w-full max-w-none space-y-4 rounded-2xl lg:rounded-[22px] border-2 border-ink-900 bg-surface p-4 sm:p-5 lg:p-6 sm:max-w-xl shadow-[6px_6px_0_var(--color-ink-900)]"
         >
+          {#if data.serviceUnavailable && !form?.error}
+            <div
+              transition:fly={{ y: 8, duration: 260 }}
+              class="flex items-center gap-2 rounded-xl border-2 border-status-progress/40 bg-status-progress/10 px-3 py-2.5 text-sm font-medium text-status-progress"
+            >
+              <Icon name="alert" size={16} />
+              Layanan ini sudah tidak tersedia. Silakan pilih layanan lain.
+            </div>
+          {/if}
           {#if form?.error}
             <div
               transition:fly={{ y: 8, duration: 260 }}
@@ -800,7 +1024,48 @@
                   <Icon name={showAllPlatforms ? "chevron_up" : "chevron_down"} size={13} />
                 </button>
               {/if}
+              <!-- (a) State discovery: band DI ATAS dropdown kategori — owner
+                   selalu masuk lewat pilih kategori; tanpa ini fitur tak pernah
+                   terlihat (Susulan 2 .my). -->
+              {#if popularItems.length > 0}{@render popularBand()}{/if}
             </div>
+
+            <!-- Kind chip filter — port B3 .my FINAL (Susulan 3+5): JENIS di
+                 ATAS kategori, pool dari seluruh kategori (dibatasi platform
+                 aktif), TIDAK menunggu kategori dipilih, flex-wrap di semua
+                 breakpoint (bukan slider) + label tampil di mobile. Klik =
+                 auto-lompat kategori yang cocok. -->
+            {#if kindPool.length > 0}
+              <div class="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Filter jenis">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedKind === ""}
+                  onclick={() => setKindFilter("" as KindId)}
+                  title="Semua jenis"
+                  class="icon-chip {selectedKind === '' ? 'is-selected' : ''}"
+                >
+                  <Icon name="grid" size={13} />
+                  Semua
+                </button>
+                {#each kindPool as kid (kid)}
+                  {@const kd = kindById(kid)}
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selectedKind === kid}
+                    onclick={() => setKindFilter(kid)}
+                    title={kd.label}
+                    data-kind={kid}
+                    style="--kind-tint: {kd.tint}"
+                    class="icon-chip {selectedKind === kid ? 'is-selected' : ''}"
+                  >
+                    <Icon name={kd.icon} size={13} />
+                    <span>{kd.label}</span>
+                  </button>
+                {/each}
+              </div>
+            {/if}
 
             <!-- Kategori dropdown — di-narrow oleh selectedPlatform (0824).
                  Tetap PRIMARY (1132 whitelabel dari provider). multiline=true
@@ -820,45 +1085,10 @@
               />
             </div>
 
-            <!-- Kind chip filter — kecil, scrollable, setelah kategori.
-                 Menyesempitkan card dalam kategori. -->
-            {#if selectedCat && serviceList.length > 0}
-              <div
-                class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
-                role="radiogroup"
-                aria-label="Filter jenis"
-              >
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={selectedKind === ""}
-                  onclick={() => setKindFilter("" as KindId)}
-                  title="Semua jenis"
-                  class="icon-chip shrink-0 {selectedKind === '' ? 'is-selected' : ''}"
-                >
-                  <Icon name="grid" size={13} />
-                  Semua
-                </button>
-                {#each KIND_ORDER.filter((k) => serviceList.some((s) => s.kind === k)) as kid (kid)}
-                  {@const kd = kindById(kid)}
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={selectedKind === kid}
-                    onclick={() => setKindFilter(kid)}
-                    title={kd.label}
-                    class="icon-chip shrink-0 {selectedKind === kid ? 'is-selected' : ''}"
-                  >
-                    <Icon name={kd.icon} size={13} />
-                    <span class="hidden lg:inline">{kd.label}</span>
-                  </button>
-                {/each}
-              </div>
-            {/if}
-
             <!-- Layanan — daftar card radio. Muncul setelah kategori dipilih. -->
             {#if selectedCat}
               <div id="layanan-list">
+                {#if popularItems.length > 0}{@render popularBand()}{/if}
                 <div class="mb-1.5 flex items-center justify-between">
                   <span class="text-sm font-bold">Layanan</span>
                   {#if loadingServices}
@@ -946,7 +1176,9 @@
                     aria-label="Daftar layanan"
                   >
                     {#each visibleServices as svc (svc.id)}
-                      <li>
+                      <!-- id anchor: pick dari dropdown rekomendasi menggulirkan
+                           kartu TERPILIH ini ke tengah layar (pickPopular v5). -->
+                      <li id={selectedService?.id === svc.id ? "svc-dipilih" : undefined}>
                         <button
                           type="button"
                           role="option"
@@ -972,6 +1204,12 @@
                                 <span
                                   class="rounded-full bg-mango-500/15 px-1.5 py-px text-[10px] font-extrabold text-mango-700"
                                   >Termurah</span
+                                >
+                              {/if}
+                              {#if popularIds.has(svc.id)}
+                                <span
+                                  class="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-extrabold text-primary"
+                                  >Terlaris</span
                                 >
                               {/if}
                               {#each (svc.events ?? []).slice(0, 1) as ev (ev.detectedAt)}
@@ -1185,7 +1423,9 @@
                   Platform {linkPlatform} cocok
                 {:else if expectedPlatform}
                   <Icon name="info" size={12} class="shrink-0" />
-                  Layanan ini butuh link {expectedPlatform}
+                  {linkIsProfile
+                    ? `Layanan ini butuh link profil ${expectedPlatform}`
+                    : `Layanan ini butuh link postingan ${expectedPlatform}`}
                 {:else}
                   <Icon name="info" size={12} class="shrink-0" />
                   {copy.order.linkHelper}
@@ -1591,6 +1831,22 @@
   .icon-chip.is-selected {
     background: var(--color-ink-900);
     border-color: var(--color-ink-900);
+    color: #fff;
+  }
+  /* Port B2 .my (Okt-2026): tiap jenis punya tint sendiri dari catalog
+     (KindDef.tint — kalibrasi DNA Sparko, token .id). data-kind hanya
+     dipasang ke chip JENIS; chip "Semua" tetap netral ink-900. */
+  .icon-chip[data-kind] {
+    border-color: color-mix(in oklab, var(--kind-tint) 45%, white);
+    color: var(--kind-tint);
+  }
+  .icon-chip[data-kind]:hover {
+    background: color-mix(in oklab, var(--kind-tint) 10%, white);
+    border-color: var(--kind-tint);
+  }
+  .icon-chip[data-kind].is-selected {
+    background: var(--kind-tint);
+    border-color: var(--kind-tint);
     color: #fff;
   }
   /* PESAN_REVAMP rev 5: platform card tile — PRIMARY filter (icon + label

@@ -2,6 +2,7 @@ import { db } from "@socio/db";
 import { orders, users, balanceLogs } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { notifyOrderUpdate } from "$lib/server/notification";
+import { ledgerRefundSum } from "$lib/server/refund";
 
 /**
  * Auto-refund order Error / Partial / Canceled yang belum di-refund.
@@ -33,6 +34,18 @@ export async function runAutoRefund(): Promise<void> {
       }
       if (refundAmount <= 0) {
         await db.update(orders).set({ isRefund: 1 }).where(eq(orders.id, o.id));
+        continue;
+      }
+
+      // Guard ledger: `is_refund` boleh bohong (flag 0, price utuh, tapi saldo
+      // sudah pernah ditambah). Tanpa cek ini, cron akan menambah saldo lagi →
+      // refund ganda. Kalau ledger sudah ada refund untuk order ini, cukup perbaiki
+      // flag lalu lewati (self-heal, bukan kredit ulang).
+      if (await ledgerRefundSum(Number(o.userId), Number(o.id))) {
+        await db.update(orders).set({ isRefund: 1 }).where(eq(orders.id, o.id));
+        console.warn(
+          `[cron] auto-refund: order #${o.id} sudah ada refund di ledger → flag dipaksa 1, tidak kredit ulang`,
+        );
         continue;
       }
 

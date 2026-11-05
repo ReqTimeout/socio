@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
   import { Icon, revealDelay, EmptyBalanceArt, NumberFlow, Sparko } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
@@ -79,6 +80,23 @@
     if (s < 86400) return `Sisa ${Math.floor(s / 3600)}j ${Math.floor((s % 3600) / 60)}m`;
     return `Sisa ${Math.floor(s / 86400)} hari`;
   }
+
+  // ── C1 (port .my Nov-2026): banner deposit pending ════════════════════
+  // Pending yang MASIH HIDUP (belum expired) — tujuan-aware: aktivasi
+  // reseller (`untukApa==='reseller'`, jendela bayar 72j) vs top-up biasa
+  // (24j). Baris pending aktif tak diulang di daftar bawah (pola .my).
+  const pending = $derived(
+    data.topups.find(
+      (t) =>
+        t.status === "Pending" &&
+        t.expire != null &&
+        new Date(String(t.expire).replace(" ", "T")).getTime() > now,
+    ) ?? null,
+  );
+  const pendingLeft = $derived(pending ? expireLeft(pending.expire) : null);
+  const pendingFrac = $derived(pending ? expireFrac(pending.expire) : null);
+  const pendingIsReseller = $derived(pending?.untukApa === "reseller");
+  const listTopups = $derived(data.topups.filter((t) => t.id !== pending?.id));
 </script>
 
 <svelte:head>
@@ -152,6 +170,77 @@
       </div>
     </div>
   </div>
+
+  <!-- Banner deposit pending (C1, port .my Nov-2026) — sticker chrome amber
+       setelah kartu saldo, sebelum daftar top-up. Tujuan-aware: aktivasi
+       reseller (crown) vs top-up biasa (clock). Semantik .id = transfer BCA
+       manual + kode unik sen (Midtrans nonaktif) → CTA ke halaman Top Up
+       (instruksi + upload bukti), BUKAN sheet QR seperti .my. -->
+  {#if pending}
+    <div
+      class="pop-in relative overflow-hidden rounded-[var(--radius-sticker)] border-2 border-ink-900 bg-amber-50 p-4 shadow-[4px_4px_0_var(--color-ink-900)] lg:p-5"
+    >
+      <div class="flex items-start gap-3">
+        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700 ring-1 ring-ink-900/10">
+          <Icon name={pendingIsReseller ? "crown" : "clock"} size={20} stroke={2.4} />
+        </div>
+        <div class="min-w-0 flex-1">
+          <h2 class="text-sm font-bold text-amber-900 lg:text-[15px]">
+            {pendingIsReseller
+              ? "Aktivasi Reseller menunggu pembayaran"
+              : "Top-up menunggu pembayaran"}
+          </h2>
+          <div
+            class="mt-1 font-display text-[1.75rem] leading-none font-extrabold tabular-nums text-ink-900"
+          >
+            {formatRupiah(Number(pending.postAmount ?? pending.amount))}
+          </div>
+          <p class="mt-2 text-xs leading-relaxed text-amber-800">
+            Transfer PERSIS {formatRupiah(Number(pending.postAmount ?? pending.amount))} ke BCA
+            — kode unik di 3 digit akhir membantu kami mencocokkan transfer kamu otomatis.
+          </p>
+          {#if pendingLeft}
+            <div class="mt-2 flex items-center gap-2">
+              <span class="text-[11px] font-bold tabular-nums text-amber-900">{pendingLeft}</span>
+              {#if pendingFrac !== null}
+                <div
+                  class="h-1.5 w-28 overflow-hidden rounded-full bg-amber-200"
+                  role="progressbar"
+                  aria-label="Sisa waktu pembayaran"
+                  aria-valuenow={Math.round(pendingFrac * 100)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div
+                    class="h-full w-full origin-left rounded-full bg-amber-600 motion-safe:transition-transform motion-safe:duration-1000"
+                    style={`transform: scaleX(${pendingFrac})`}
+                  ></div>
+                </div>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      </div>
+      <div class="mt-3.5 flex flex-wrap items-center gap-2.5">
+        <button
+          type="button"
+          onclick={() => {
+            haptic(10);
+            void goto("/saldo/top-up");
+          }}
+          class="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border-2 border-ink-900 bg-primary px-4 py-2 text-sm font-bold text-white shadow-[2px_2px_0_var(--color-ink-900)] transition-all hover:-translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-ink-900)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+        >
+          <Icon name="receipt" size={16} stroke={2.5} />
+          Buka instruksi &amp; upload bukti
+        </button>
+        {#if pendingIsReseller}
+          <span class="text-[11px] font-semibold text-amber-800">
+            Akun aktif otomatis begitu transfer dikonfirmasi admin.
+          </span>
+        {/if}
+      </div>
+    </div>
+  {/if}
 
   <!-- min-w-0 wajib: grid item default min-width auto — konten flex (note panjang
        + amount) tak bisa shrink → track melar 444px di 390px viewport (overflow 70px) -->
@@ -241,7 +330,7 @@
         </div>
       {:else}
         <ul class="space-y-2">
-          {#each data.topups as t, i (t.id)}
+          {#each listTopups as t, i (t.id)}
             <li
               class="card-lift flex items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3 reveal"
               style={revealDelay(i, 60, 35)}
@@ -299,6 +388,58 @@
       {/if}
     </div>
   </div>
+
+  <!-- Cara kerja top-up (C1, port .my) — 3 langkah bernomor (baris angka,
+       bukan kartu → hemat chrome budget `looks-expensive`) + catatan jujur. -->
+  <div class="rounded-2xl border border-ink-100 bg-surface p-4 lg:p-5">
+    <h2 class="text-sm font-bold lg:text-[15px]">Cara kerja top-up</h2>
+    <ol class="mt-3 space-y-2.5">
+      {#each [
+        "Buka Top Up, pilih nominal — kamu dapat nomor rekening BCA + nominal persis dengan kode unik 3 digit akhir.",
+        "Transfer nominal PERSIS (termasuk kode unik) dari app bank manapun — kode unik membuat pencocokan otomatis.",
+        "Upload bukti transfer (opsional) dan tunggu konfirmasi admin (jam kerja) — saldo masuk, ada notifikasi & email.",
+      ] as step, i (i)}
+        <li class="flex items-start gap-2.5 text-[13px] leading-relaxed text-ink-700">
+          <span
+            class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ink-900 text-[11px] font-bold tabular-nums text-white">{i + 1}</span
+          >
+          <span>{step}</span>
+        </li>
+      {/each}
+    </ol>
+    <p class="mt-3 text-[11px] leading-relaxed text-ink-500">
+      Nominal tidak persis? Transfer tetap tercatat tapi verifikasi lebih lama — buka tiket bila
+      perlu. Bonus 10% sudah termasuk di total yang masuk saldo.
+    </p>
+  </div>
+
+  <!-- Teaser Member → daftar Reseller (C1; .id: level Member masih bisa daftar
+       reseller — akun existing tak bisa upgrade mandiri, arahkan ke tiket).
+       mango = aksen saja, bukan chrome penuh. -->
+  {#if data.level === "Member"}
+    <a
+      href="/tiket"
+      class="card-lift flex items-center gap-3 rounded-2xl border border-mango-200 bg-mango-50 px-4 py-3.5 transition active:scale-[0.99]"
+      onclick={() => haptic(10)}
+    >
+      <div
+        class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-amber-500 ring-1 ring-mango-200"
+      >
+        <Icon name="crown" size={20} />
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="text-sm font-bold text-ink-900">Mau order lebih murah?</div>
+        <div class="mt-0.5 text-xs leading-relaxed text-ink-600">
+          Reseller dapat harga grosir — aktivasi Rp50.000 (sudah termasuk saldo Rp20.000). Tanya
+          cara upgrade lewat tiket.
+        </div>
+      </div>
+      <span class="hidden shrink-0 items-center gap-1 text-xs font-bold text-amber-700 sm:inline-flex"
+        >Tanya upgrade <Icon name="chevron_right" size={14} /></span
+      >
+      <Icon name="chevron_right" size={16} class="shrink-0 text-amber-700 sm:hidden" />
+    </a>
+  {/if}
 </section>
 
 <style>

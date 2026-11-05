@@ -12,6 +12,11 @@ export const load: PageServerLoad = async ({ locals }) => {
     .select({
       id: deposits.id,
       amount: deposits.amount,
+      // C1 (port .my): nominal TEPAT yang harus ditransfer (termasuk kode unik
+      // sen) + tujuan deposit — banner aksi bedakan top-up smm vs aktivasi
+      // reseller (`untukApa === "reseller"`).
+      postAmount: deposits.postAmount,
+      untukApa: deposits.untukApa,
       methodName: deposits.methodName,
       status: deposits.status,
       createdAt: deposits.createdAt,
@@ -37,6 +42,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   return {
     balance: locals.user.balance ?? 0,
+    // Level untuk gerbang teaser C1 (Member saja — sama pola .my).
+    level: locals.user.level ?? "Member",
     topups,
     logs,
   };

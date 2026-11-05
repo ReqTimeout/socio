@@ -11,7 +11,13 @@ import {
 } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { smmturkAddFor, smmturkRefill } from "@socio/core/smmturk";
-import { baseForLevel, effectivePer1k, computePrice, type UserLevel } from "@socio/core/pricing";
+import {
+  baseForLevel,
+  effectivePer1k,
+  computePrice,
+  modalAmountFor,
+  type UserLevel,
+} from "@socio/core/pricing";
 import { getPricingRules } from "$lib/server/pricing";
 import { decryptSecret } from "$lib/server/crypto";
 import { rateLimit } from "$lib/server/rate-limit";
@@ -250,7 +256,10 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
     },
     level,
   );
-  const totalPrice = computePrice(basePer1k, qty, level, rules[level], Number(svc.priceApi));
+  // `svc.type` menentukan semantik rate: layanan Package punya rate PER-PACK,
+  // bukan per-1000 (di bawah ini provider memang di-panggil tanpa `quantity`
+  // untuk Package — sisi tagihan harus memakai semantik yang sama).
+  const totalPrice = computePrice(basePer1k, qty, level, rules[level], Number(svc.priceApi), svc.type);
   if (!Number.isFinite(totalPrice) || totalPrice <= 0) return fail("Invalid service price");
 
   // Deduct saldo atomik SEBELUM kontak provider (fix P0-1)
@@ -305,7 +314,8 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
   const oid = String(Date.now());
   // Profit riil = dibayar − modal provider (katalog menyimpan modal murni di
   // price_api; svc.profit hanyalah margin informatif level Member).
-  const profit = Math.round(totalPrice - (Math.max(Number(svc.priceApi) || 0, 0) * qty) / 1000);
+  // `modalAmountFor` mengikuti semantik rate per type (per-1000 / per-pack).
+  const profit = Math.round(totalPrice - modalAmountFor(svc.type, Number(svc.priceApi) || 0, qty));
   await db.insert(orders).values({
     userId: user.id,
     oid,

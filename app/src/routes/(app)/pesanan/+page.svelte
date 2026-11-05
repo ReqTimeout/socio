@@ -57,7 +57,7 @@
   );
   const checkedIds = $derived([...checked]);
   const massRefundable = $derived(
-    orders.filter((o) => checked.has(o.id) && o.status === "Pending"),
+    orders.filter((o) => checked.has(o.id) && o.status === "Pending" && o.allowCancel),
   );
   const massRefundTotal = $derived(massRefundable.reduce((s, o) => s + Number(o.price), 0));
 
@@ -104,6 +104,25 @@
     if (f === "all") p.delete("f");
     else p.set("f", f);
     goto(`/pesanan?${p.toString()}`);
+  }
+
+  // B6 search ID order — shareable via ?q=, pindah tab filter ikut memelihara q.
+  let searchInput = $state("");
+  $effect(() => {
+    searchInput = String((data as { searchQuery?: string }).searchQuery ?? "");
+  });
+  function applySearch(raw: string) {
+    const p = new URLSearchParams($page.url.searchParams);
+    if (raw) p.set("q", raw);
+    else p.delete("q");
+    goto(`/pesanan?${p.toString()}`);
+  }
+  function doSearch() {
+    applySearch(searchInput.trim().slice(0, 64));
+  }
+  function clearSearch() {
+    searchInput = "";
+    applySearch("");
   }
 
   // Progres determinate 0-100 dari remains/qty (update live via SSE).
@@ -206,6 +225,12 @@
 
   function repeatOrder(o: (typeof orders)[0]) {
     haptic(12);
+    // Layanan sudah di-disable/dihapus dari katalog → jangan bawa ke /pesan (deep-link
+    // akan kosong). Server `pesan` tetap menolak submit sebagai guard terakhir.
+    if (!o.serviceActive) {
+      toast("Layanan ini sudah tidak tersedia. Pilih layanan lain.", "error");
+      return;
+    }
     sheetOpen = false;
     goto(`/pesan?service=${o.serviceId}&link=${encodeURIComponent(o.data)}&qty=${o.quantity}`);
   }
@@ -222,6 +247,14 @@
 <section class="space-y-3 lg:space-y-5">
   <!-- h1 sr-only — mobile tidak punya heading visible; a11y tetap punya konteks halaman -->
   <h1 class="sr-only">Riwayat Pesanan</h1>
+
+  <!-- Entry mobile Pusat Refill (BottomNav tetap 5 — pintu masuk via sini, pola .my) -->
+  <a
+    href="/refill"
+    class="lg:hidden mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-extrabold text-emerald-700 ring-1 ring-emerald-600/15"
+  >
+    <Icon name="refresh" size={13} stroke={2.4} /> Pusat Refill <span aria-hidden="true">›</span>
+  </a>
 
   <!-- Intro header (desktop) -->
   <div class="hidden items-end justify-between lg:flex">
@@ -269,6 +302,58 @@
         <LiveDot {lastUpdate} label={sseConnected ? "Live" : "Reconnect"} />
       {/if}
     </div>
+  {/if}
+
+  {#if counts.all > 0}
+    <!-- B6 search order — cari #id, oid, nama layanan, atau link. Shareable via ?q=. -->
+    <form
+      role="search"
+      onsubmit={(e) => {
+        e.preventDefault();
+        doSearch();
+      }}
+      class="flex items-center gap-2 rounded-2xl border border-ink-200 bg-surface px-3 shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"
+    >
+      <Icon name="search" size={16} class="shrink-0 text-ink-400" />
+      <input
+        type="search"
+        name="q"
+        enterkeyhint="search"
+        value={searchInput}
+        oninput={(e) => (searchInput = e.currentTarget.value)}
+        onkeydown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            clearSearch();
+          }
+        }}
+        placeholder="Cari #ID, nama layanan, atau link…"
+        aria-label="Cari pesanan"
+        class="min-h-[44px] min-w-0 flex-1 border-0 bg-transparent text-sm font-medium text-ink-900 outline-none placeholder:text-ink-400"
+      />
+      {#if searchInput}
+        <button
+          type="button"
+          onclick={clearSearch}
+          aria-label="Hapus pencarian"
+          class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-ink-100 text-ink-500 transition hover:bg-ink-200 active:scale-90"
+        >
+          <Icon name="x" size={13} stroke={2.5} />
+        </button>
+      {/if}
+      <button
+        type="submit"
+        aria-label="Cari"
+        class="min-h-[36px] shrink-0 rounded-full bg-primary px-3.5 text-xs font-bold text-white transition active:scale-95 hover:bg-primary-800"
+      >
+        Cari
+      </button>
+    </form>
+    {#if data.searchQuery && orders.length > 0}
+      <p class="-mt-1 px-1 text-[11px] font-semibold text-ink-500">
+        Hasil untuk "{data.searchQuery}" — {orders.length} pesanan ditemukan
+      </p>
+    {/if}
   {/if}
 
   <!-- Filter chips -->
@@ -648,6 +733,8 @@
           toast((result.data as any)?.error ?? "Gagal", "error");
         } else if (result.type === "success") {
           toast((result.data as any)?.success ?? "Refund massal berhasil", "success");
+          const warn = (result.data as any)?.warning;
+          if (warn) toast(warn, "error");
           checked = new Set();
           selectMode = false;
           await applyAction(result);
@@ -729,8 +816,23 @@
           <div class="mt-0.5 text-xs font-semibold">{timeAgo(detail.createdAt)}</div>
         </div>
       </div>
+      {#if detail.refundState === "refunded"}
+        <div
+          class="flex items-start gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-700"
+        >
+          <Icon name="check" size={16} class="mt-0.5 shrink-0" />
+          <span>Dana {formatRupiah(Number(detail.refunded ?? 0))} sudah dikembalikan ke saldo Anda.</span>
+        </div>
+      {:else if detail.refundState === "pending"}
+        <div
+          class="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-700"
+        >
+          <Icon name="clock" size={16} class="mt-0.5 shrink-0" />
+          <span>Pesanan dibatalkan/gagal — dana otomatis dikembalikan ke saldo.</span>
+        </div>
+      {/if}
       <div class="space-y-2 pt-2">
-        <Button full onclick={() => repeatOrder(detail)}>
+        <Button full disabled={!detail.serviceActive} onclick={() => repeatOrder(detail)}>
           <Icon name="copy" size={16} />
           Pesan Ulang
         </Button>
@@ -771,7 +873,7 @@
             <span>{refillInfo(detail).reason}</span>
           </div>
         {/if}
-        {#if detail.status === "Pending"}
+        {#if detail.status === "Pending" && detail.allowCancel}
           <form
             method="POST"
             action="?/cancel"

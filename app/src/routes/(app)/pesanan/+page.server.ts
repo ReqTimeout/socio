@@ -1,16 +1,25 @@
 import { db } from "@socio/db";
 import { orders, services, users, balanceLogs } from "@socio/db/schema";
-import { eq, desc, sql, and, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, or, like } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
-import { smmturkRefill, smmturkCancel } from "@socio/core/smmturk";
+import { smmturkCancel, isProviderRejection } from "@socio/core/smmturk";
+import { requestOrderRefill } from "$lib/server/refill-request";
+import { refillServerMsgs } from "$lib/refill-copy";
 import { baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
 import { getPricingRules } from "$lib/server/pricing";
 import { notifyOrderCancel } from "$lib/server/notification";
 import { notifyAdmins } from "$lib/server/email-templates";
+import {
+  ledgerRefundAmount,
+  ledgerRefundAt,
+  refundStateOf,
+  charged,
+} from "$lib/server/refund";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
   const filter = url.searchParams.get("f") ?? "all";
+  const q = (url.searchParams.get("q") ?? "").trim().slice(0, 64);
   const userId = Number(locals.user!.id);
 
   const conditions = [eq(orders.userId, userId)];
@@ -20,6 +29,31 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   else if (filter === "selesai") conditions.push(eq(orders.status, "Success"));
   else if (filter === "gagal") conditions.push(sql`${orders.status} IN ('Error','Canceled')`);
   else if (filter === "partial") conditions.push(eq(orders.status, "Partial"));
+
+  // B6 search order — owner: "penting buat sy dan user". ID internal (#id), oid,
+  // nama layanan, atau link. Selalu SCOPE userId (tak pernah bocor order user lain).
+  if (q) {
+    const likeArg = `%${q}%`;
+    if (/^\d+$/.test(q)) {
+      const num = Number(q);
+      conditions.push(
+        or(
+          eq(orders.id, num),
+          like(orders.oid, likeArg),
+          like(orders.serviceName, likeArg),
+          like(orders.data, likeArg),
+        )!,
+      );
+    } else {
+      conditions.push(
+        or(
+          like(orders.serviceName, likeArg),
+          like(orders.data, likeArg),
+          like(orders.oid, likeArg),
+        )!,
+      );
+    }
+  }
 
   const rows = await db
     .select({
@@ -34,6 +68,10 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       remains: orders.remains,
       serviceId: orders.serviceId,
       providerOrderId: orders.providerOrderId,
+      // Label refund user = ledger saldo (balance_logs 'ref'), bukan flag is_refund.
+      isRefund: orders.isRefund,
+      refundedLedger: ledgerRefundAmount,
+      refundedAt: ledgerRefundAt,
     })
     .from(orders)
     .where(and(...conditions))
@@ -45,11 +83,19 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const svcIds = [...new Set(rows.map((r) => Number(r.serviceId)))];
   const svcRows = svcIds.length
     ? await db
-        .select({ id: services.id, isRefill: services.isRefill })
+        .select({ id: services.id, isRefill: services.isRefill, allowCancel: services.allowCancel, status: services.status })
         .from(services)
         .where(inArray(services.id, svcIds))
     : [];
   const refillMap = new Map(svcRows.map((s) => [s.id, s.isRefill]));
+  // Flag SMMturk per layanan apakah order bisa di-cancel. Gate tombol Cancel di
+  // UI + guard aksi cancel (lihat action `cancel`) — cegah refund buta seperti
+  // order #74 di mana provider tetap memproses tapi saldo user sudah di-refund.
+  const cancelMap = new Map(svcRows.map((s) => [s.id, s.allowCancel === 1]));
+  // Layanan masih aktif (status=1)? Untuk gate "Pesan lagi" di klien — cegah
+  // deep-link order ulang ke layanan yang sudah di-disable/dihapus (parity guard
+  // submit). Layanan dihapus dari katalog otomatis `false` (tidak ada di map).
+  const activeMap = new Map(svcRows.map((s) => [s.id, s.status === 1]));
 
   // Status refill per order (tabel `refill` — di luar drizzle schema, raw SQL
   // parameterized). Kalau ada baris Pending → order sedang dalam proses refill,
@@ -170,8 +216,18 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       ...r,
       isRefill: refillMap.get(Number(r.serviceId)) ?? 0,
       refillStatus: refillStatusMap.get(Number(r.id)) ?? null,
+      allowCancel: cancelMap.get(Number(r.serviceId)) === true,
+      serviceActive: activeMap.get(Number(r.serviceId)) === true,
+      refunded: Number((r as any).refundedLedger ?? 0),
+      refundState: refundStateOf({
+        status: r.status,
+        isRefund: (r as any).isRefund,
+        refundedLedger: Number((r as any).refundedLedger ?? 0),
+      }),
+      charged: charged(Number(r.price ?? 0), Number((r as any).refundedLedger ?? 0)),
     })),
     filter,
+    searchQuery: q,
     counts: tabCounts,
     popular,
     // UX4.3 — lastUpdate untuk LiveDot timestamp (initial dari server = now)
@@ -181,51 +237,15 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
 export const actions: Actions = {
   refill: async ({ request, locals }) => {
+    // Helper bersama (port .my) — provider-safe + set 'Refilling' + guard jendela
+    // waktu. Bug lama: hardcoded smmturkRefill (salah key utk provider lain) dan
+    // status tak di-set → runRefillPolling tidak pernah memantau request.
+    const sm = { ...refillServerMsgs, locale: "id" };
     const form = await request.formData();
     const orderId = Number(form.get("id"));
-    if (!orderId) return fail(400, { error: "ID order tidak valid" });
-
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(and(eq(orders.id, orderId), eq(orders.userId, Number(locals.user!.id))))
-      .limit(1);
-    if (!order) return fail(404, { error: "Order tidak ditemukan" });
-
-    const [svc] = await db
-      .select({ isRefill: services.isRefill })
-      .from(services)
-      .where(eq(services.id, Number(order.serviceId)))
-      .limit(1);
-    if (!svc?.isRefill) return fail(400, { error: "Layanan ini tidak mendukung refill" });
-    if (order.status !== "Success")
-      return fail(400, { error: "Hanya order Berhasil yang bisa di-refill" });
-    if (!order.providerOrderId || order.providerOrderId === "0")
-      return fail(400, { error: "Order ini tidak bisa refill otomatis (manual/legacy)." });
-
-    // Cek sudah refill pending
-    const [existing] = (await db
-      .select()
-      .from(sql`refill`)
-      .where(eq(sql`order_id`, orderId))
-      .limit(1)) as any[];
-    if (existing && existing.status === "Pending")
-      return fail(400, { error: "Refill sedang diproses" });
-
-    let refillId = "0";
-    try {
-      const result = await smmturkRefill([order.providerOrderId]);
-      refillId = String(result?.refill ?? result?.order ?? "0");
-    } catch (e: any) {
-      return fail(500, { error: `Gagal refill: ${e?.message ?? e}` });
-    }
-
-    await db.execute(sql`
-      INSERT INTO refill (refill_id, order_id, status, api_log, api_log_status, created_at)
-      VALUES (${refillId}, ${orderId}, 'Pending', 'web', 'Pending', NOW())
-    `);
-
-    return { success: "Refill diajukan. Cek status dalam 5 menit." };
+    const r = await requestOrderRefill(orderId, Number(locals.user!.id), sm);
+    if (!r.ok) return fail(400, { error: r.error });
+    return { success: sm.refillOk };
   },
 
   cancel: async ({ request, locals }) => {
@@ -242,12 +262,38 @@ export const actions: Actions = {
     if (order.status !== "Pending")
       return fail(400, { error: "Hanya order Pending yang bisa dibatalkan" });
 
-    // Try cancel di provider (kalau support)
-    if (order.providerId !== 1 && order.providerOrderId) {
+    // Guard ganda: layanan harus support cancel (flag SMMturk tersimpan di
+    // services.allow_cancel). UI sudah gate tombolnya — ini jaga-jaga request
+    // lama/cache/direct POST supaya tidak bocor refund-butal seperti order #74.
+    const [svc] = await db
+      .select({ allowCancel: services.allowCancel })
+      .from(services)
+      .where(eq(services.id, Number(order.serviceId)))
+      .limit(1);
+    if (!svc || svc.allowCancel !== 1)
+      return fail(400, { error: "Layanan ini tidak bisa dibatalkan setelah di-order." });
+
+    // Try cancel di provider — HANYA proceed lokal kalau provider berhasil cancel
+    // ATAU terjadi network error (proteksi saldo user). Kalau provider MENOLAK
+    // secara eksplisit (order sudah mulai diproses), batalkan intent & beri tahu
+    // user — kalau tetap refund, Socio bayar provider DAN kembalikan saldo (rugi).
+    if (order.providerOrderId && order.providerOrderId !== "0") {
       try {
         await smmturkCancel([order.providerOrderId]);
-      } catch {
-        // ignore — masih lanjut refund
+      } catch (e: any) {
+        if (isProviderRejection(e)) {
+          // Provider eksplisit menolak (order sudah jalan/pending di SMMturk).
+          // JANGAN cancel lokal — order masih diproses.
+          console.warn(
+            `[cancel] provider menolak cancel order #${orderId} (provId ${order.providerOrderId}): ${e.message}`,
+          );
+          return fail(400, { error: "Order sudah mulai diproses provider, tidak bisa dibatalkan." });
+        }
+        // Network/API failure → proceed cancel lokal untuk lindungi saldo user.
+        console.error(
+          `[cancel] provider tidak terjangkau utk order #${orderId}, lanjut cancel lokal:`,
+          e,
+        );
       }
     }
 
@@ -307,13 +353,40 @@ export const actions: Actions = {
     if (!pending.length)
       return fail(400, { error: "Tidak ada order Pending yang bisa dibatalkan" });
 
+    // Prefilter: hanya order dengan service yang allowCancel=1 boleh dibatalkan
+    // (flag SMMturk per-service). Lainnya dihitung rejected tanpa dipanggil API —
+    // cegah Socio bayar provider DAN kembalikan saldo user (rugi ganda).
+    const pendingSvcIds = [...new Set(pending.map((o) => Number(o.serviceId)))];
+    const pendingSvcRows = pendingSvcIds.length
+      ? await db
+          .select({ id: services.id, allowCancel: services.allowCancel })
+          .from(services)
+          .where(inArray(services.id, pendingSvcIds))
+      : [];
+    const pendingCancelMap = new Map(pendingSvcRows.map((s) => [s.id, s.allowCancel === 1]));
+
     let refunded = 0;
+    let rejectedCount = 0;
     for (const o of pending) {
-      if (o.providerId !== 1 && o.providerOrderId) {
+      if (pendingCancelMap.get(Number(o.serviceId)) !== true) {
+        // Layanan tidak mendukung cancel — skip, jangan panggil provider.
+        rejectedCount++;
+        continue;
+      }
+      if (o.providerOrderId && o.providerOrderId !== "0") {
         try {
           await smmturkCancel([o.providerOrderId]);
-        } catch {
-          // ignore
+        } catch (e: any) {
+          if (isProviderRejection(e)) {
+            // Provider eksplisit menolak (order sudah jalan) — JANGAN refund lokal.
+            console.warn(
+              `[massCancel] provider menolak cancel #${o.id} (provId ${o.providerOrderId})`,
+            );
+            rejectedCount++;
+            continue;
+          }
+          // Network error → proceed lokal untuk lindungi saldo user.
+          console.error(`[massCancel] provider tidak terjangkau #${o.id}, lanjut lokal:`, e);
         }
       }
       await db
@@ -322,6 +395,12 @@ export const actions: Actions = {
         .where(and(eq(orders.id, o.id), eq(orders.status, "Pending")));
       refunded += Number(o.price);
     }
+
+    const cancelledCount = pending.length - rejectedCount;
+    if (cancelledCount === 0)
+      return fail(400, {
+        error: `Semua order (${rejectedCount}) sudah mulai diproses provider / tidak bisa dibatalkan.`,
+      });
 
     // Refund saldo atomik (fix P0-1: bukan read-then-write)
     if (refunded > 0) {
@@ -334,21 +413,27 @@ export const actions: Actions = {
       userId,
       type: "ref",
       amount: refunded,
-      note: `Mass refund ${pending.length} order dibatalkan`,
+      note: `Mass refund ${cancelledCount} order dibatalkan${rejectedCount ? ` (${rejectedCount} ditolak provider)` : ""}`,
       createdAt: new Date(),
     });
 
     // Alert admin mass cancel (1 email agregat; tidak spam in-app user).
     await notifyAdmins({
-      subject: `[Mass Cancel] ${pending.length} order user #${userId}`,
-      body: `User melakukan pembatalan massal: ${pending.length} order Pending dibatalkan. Total refund ${new Intl.NumberFormat("id-ID").format(refunded)}. IDs: ${pending.map((o) => o.id).join(", ")}`,
+      subject: `[Mass Cancel] ${cancelledCount} order user #${userId}`,
+      body: `User melakukan pembatalan massal: ${cancelledCount} order Pending dibatalkan${rejectedCount ? `, ${rejectedCount} ditolak provider` : ""}. Total refund ${new Intl.NumberFormat("id-ID").format(refunded)}. IDs: ${pending.map((o) => o.id).join(", ")}`,
       ctaText: "Lihat Pesanan",
       ctaUrl: `/admin/orders`,
       templateName: "admin-alert",
     });
 
+    if (rejectedCount > 0) {
+      return {
+        success: `Refund ${cancelledCount} order. Saldo +Rp ${refunded.toLocaleString("id-ID")}`,
+        warning: `${rejectedCount} order ditolak provider (sudah diproses) — tidak di-refund.`,
+      };
+    }
     return {
-      success: `Refund ${pending.length} order. Saldo +Rp ${refunded.toLocaleString("id-ID")}`,
+      success: `Refund ${cancelledCount} order. Saldo +Rp ${refunded.toLocaleString("id-ID")}`,
     };
   },
 };
