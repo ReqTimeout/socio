@@ -26,6 +26,22 @@ interface SendArgs {
   subject: string;
   html: string;
   text?: string;
+  /**
+   * URL HTTPS unsubscribe (halaman /u/... ATAU endpoint one-click /api/u/...).
+   * Hanya untuk email MARKETING. Bila diisi → header List-Unsubscribe menyertakan
+   * URL (selain mailto) + List-Unsubscribe-Post untuk one-click RFC 8058.
+   * Transaksional TIDAK memakai ini (footer-nya tanpa unsubscribe massal).
+   * Catatan .id: sistem token `/u/[token]` belum ada (bagian G1 CONFIRM) — param
+   * ini disiapkan supaya caller yang punya URL HTTPS (mis. halaman preferensi)
+   * langsung memenuhi syarat bulk-sender Gmail tanpa menunggu G1.
+   */
+  unsubscribeUrl?: string;
+}
+
+/** Nilai header List-Unsubscribe: mailto selalu ada, HTTPS hanya bila ada URL. */
+export function listUnsubscribeHeader(unsubscribeUrl?: string): string {
+  const mailto = `<mailto:${SUPPORT}?subject=unsubscribe>`;
+  return unsubscribeUrl ? `${mailto}, <${unsubscribeUrl}>` : mailto;
 }
 
 /**
@@ -43,7 +59,13 @@ interface SendArgs {
  * (dev / pre-email-setup). This keeps auth flows functional before the
  * email work is finalized.
  */
-export async function sendEmail({ to, subject, html, text }: SendArgs): Promise<boolean> {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  unsubscribeUrl,
+}: SendArgs): Promise<boolean> {
   const useSmtp = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
   const useResend = Boolean(RESEND_API_KEY);
 
@@ -55,13 +77,15 @@ export async function sendEmail({ to, subject, html, text }: SendArgs): Promise<
   }
 
   try {
+    // `unsubscribeUrl` WAJIB diteruskan: tanpa itu header List-Unsubscribe
+    // cuma mailto → Gmail (bulk sender) mensyaratkan one-click HTTPS.
     if (useResend) {
-      const ok = await sendViaResend({ to, subject, html, text });
+      const ok = await sendViaResend({ to, subject, html, text, unsubscribeUrl });
       if (ok) return true;
       if (!useSmtp) return false;
-      return await sendViaSmtp({ to, subject, html, text });
+      return await sendViaSmtp({ to, subject, html, text, unsubscribeUrl });
     }
-    return await sendViaSmtp({ to, subject, html, text });
+    return await sendViaSmtp({ to, subject, html, text, unsubscribeUrl });
   } catch (e) {
     console.error("[email] exception", e);
     return false;
@@ -97,7 +121,7 @@ async function sendViaSmtp(args: SendArgs): Promise<boolean> {
       text: args.text,
       // Wajib untuk bulk-sender reputation (aturan Gmail) + memberi jalan keluar user.
       headers: {
-        "List-Unsubscribe": `<mailto:${SUPPORT}?subject=unsubscribe>`,
+        "List-Unsubscribe": listUnsubscribeHeader(args.unsubscribeUrl),
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     });
@@ -121,7 +145,10 @@ async function sendViaResend(args: SendArgs): Promise<boolean> {
     html: args.html,
     text: args.text,
     headers: {
-      "List-Unsubscribe": `<mailto:${SUPPORT}?subject=unsubscribe>`,
+      "List-Unsubscribe": listUnsubscribeHeader(args.unsubscribeUrl),
+      ...(args.unsubscribeUrl
+        ? { "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+        : {}),
     },
   });
   if (error) {

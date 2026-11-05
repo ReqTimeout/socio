@@ -74,9 +74,70 @@ export function effectivePer1k(
 }
 
 /**
+ * ⚠ FIXED-PACKAGE PRICING — SMMturk memakai DUA semantik rate pada kolom harga
+ * yang sama (`services.price` / `price_api` / `price_reseller`):
+ *
+ *   - "Default", "Custom Comments", "Subscriptions", dll
+ *       rate = per **1000 item** → total = (qty / 1000) × rate; min/max = rentang item.
+ *   - "Package", "Custom Comments Package"
+ *       rate = per **PACK penuh** (satu bundle + bonus) → total = qty × rate; min = max = 1.
+ *
+ * Kalau formula per-1000 dipakai ke Package, Socio menagih 1/1000 harga
+ * sebenarnya sementara provider dibayar penuh → rugi sampai ~1000× per order
+ * (kasus nyata socio.my: Order #58). Di socio.id jalur ini LUAS: terukur di DB
+ * produksi 2026-11-05 ada **1.042 `Package` + 136 `Custom Comments Package`
+ * aktif**, semuanya `min = max = 1` (mengonfirmasi semantik pack).
+ *
+ * Semua perhitungan tagihan/modal WAJIB lewat dispatcher di bawah — jangan
+ * kalikan `/ 1000` manual lagi di route manapun.
+ */
+export function isFixedPackageType(type: string | null | undefined): boolean {
+  if (!type) return false;
+  return type === "Package" || type === "Custom Comments Package";
+}
+
+/** Pembagi quantity sesuai semantik rate type: 1000 (per-item) atau 1 (per-pack). */
+export function qtyDivisorFor(type: string | null | undefined): number {
+  return isFixedPackageType(type) ? 1 : 1000;
+}
+
+/**
+ * Total tagihan dari rate jual (per-1000 ATAU per-pack, tergantung `type`) × qty.
+ * Pembulatan dilakukan di sini — satu kali, identik server & client preview.
+ * Rate/qty non-finite atau nonpositif → 0 (pemanggil menolak hasil `<= 0`).
+ */
+export function orderBillableFor(
+  type: string | null | undefined,
+  rateJual: number,
+  quantity: number,
+): number {
+  const r = Number(rateJual);
+  const q = Number(quantity);
+  if (!Number.isFinite(r) || !Number.isFinite(q) || r <= 0 || q <= 0) return 0;
+  return Math.round((q / qtyDivisorFor(type)) * r);
+}
+
+/**
+ * Modal provider untuk qty ini, mengikuti semantik rate `type` (kolom
+ * `price_api` menyimpan rate provider dengan semantik yang sama).
+ */
+export function modalAmountFor(
+  type: string | null | undefined,
+  modalRate: number,
+  quantity: number,
+): number {
+  const m = Math.max(Number(modalRate) || 0, 0);
+  const q = Number(quantity);
+  if (!Number.isFinite(m) || !Number.isFinite(q) || m <= 0 || q <= 0) return 0;
+  return Math.round((q / qtyDivisorFor(type)) * m);
+}
+
+/**
  * Compute the user-facing price for an order.
  * `basePricePer1k` = harga dasar per 1000 sesuai level (lihat `baseForLevel`).
  * `modalPer1k` (opsional) = harga provider per 1000, untuk floor `modal + minProfit`.
+ * `serviceType` (opsional) = `services.type` — WAJIB dikirim pemanggil order,
+ * supaya layanan Package ditagih per-pack, bukan per-1000 (lihat di atas).
  */
 export function computePrice(
   basePricePer1k: number,
@@ -84,9 +145,10 @@ export function computePrice(
   level: UserLevel = "Member",
   rule?: PricingRule,
   modalPer1k?: number,
+  serviceType?: string | null,
 ): number {
   const per1k = effectivePer1k(basePricePer1k, level, rule, modalPer1k);
-  return Math.round((quantity / 1000) * per1k);
+  return orderBillableFor(serviceType, per1k, quantity);
 }
 
 export interface CouponInput {

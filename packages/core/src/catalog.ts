@@ -157,27 +157,43 @@ export interface KindDef {
   label: string;
   /** Icon per jenis — sama, setiap jenis punya icon sendiri. */
   icon: string;
+  /**
+   * Warna identitas jenis (port B2 .my Okt-2026, kalibrasi ulang dari DNA
+   * Sparko) — hex literal karena dipakai di catalog murni (tanpa CSS).
+   * Nilai = token `packages/ui/src/tokens.css` .id: primary-600..800,
+   * sky/cyan Tailwind, mango-600..800, danger-700, success-700, ink-600.
+   * Semua tone ≥ AA 4.5:1 vs putih supaya teks idle kebaca, dan solid
+   * background saat selected (teks putih ≥ AA juga).
+   */
+  tint: string;
 }
 
 export const KINDS: KindDef[] = [
-  { id: "followers", label: "Followers", icon: "user_plus" },
-  { id: "likes", label: "Likes", icon: "heart" },
-  { id: "views", label: "Views", icon: "eye" },
-  { id: "live", label: "Live", icon: "radio" },
-  { id: "comments", label: "Comments", icon: "message" },
-  { id: "subscribers", label: "Subscribers", icon: "users" },
-  { id: "members", label: "Members", icon: "users" },
-  { id: "shares", label: "Shares", icon: "share" },
-  { id: "reactions", label: "Reactions", icon: "zap" },
-  { id: "plays", label: "Plays", icon: "play" },
-  { id: "reviews", label: "Reviews", icon: "star" },
-  { id: "saves", label: "Saves", icon: "bookmark" },
-  { id: "impressions", label: "Impressions", icon: "chart" },
-  { id: "reach", label: "Reach", icon: "trending_up" },
-  { id: "watchtime", label: "Watch Time", icon: "clock" },
-  { id: "traffic", label: "Traffic", icon: "globe" },
-  { id: "mentions", label: "Mentions", icon: "hash" },
-  { id: "other", label: "Lainnya", icon: "tag" },
+  // ── Audience growth (indigo brand) ──
+  { id: "followers", label: "Followers", icon: "user_plus", tint: "#4f46e5" }, // primary-600 7.1:1
+  { id: "subscribers", label: "Subscribers", icon: "users", tint: "#4338ca" }, // primary-700 8.6:1
+  { id: "members", label: "Members", icon: "users", tint: "#3730a3" }, // primary-800 11.5:1
+  { id: "mentions", label: "Mentions", icon: "hash", tint: "#1d4ed8" }, // blue-700 8.3:1
+  // ── Reach / view count (Sky = Sparko brand action) ──
+  { id: "views", label: "Views", icon: "eye", tint: "#0284c7" }, // sky-600 sparko-sky-deep
+  { id: "plays", label: "Plays", icon: "play", tint: "#0369a1" }, // sky-700
+  { id: "impressions", label: "Impressions", icon: "chart", tint: "#075985" }, // sky-800
+  { id: "reach", label: "Reach", icon: "trending_up", tint: "#0c4a6e" }, // sky-900
+  // ── Media dwell (Cyan = Sparko accent) ──
+  { id: "watchtime", label: "Watch Time", icon: "clock", tint: "#0e7490" }, // cyan-700
+  { id: "traffic", label: "Traffic", icon: "globe", tint: "#155e75" }, // cyan-800
+  // ── Engagement (Mango = Sparko sparkle) ──
+  { id: "likes", label: "Likes", icon: "heart", tint: "#b98600" }, // mango-600 5.8:1
+  { id: "reactions", label: "Reactions", icon: "zap", tint: "#8a6300" }, // mango-700 5.4:1
+  { id: "comments", label: "Comments", icon: "message", tint: "#5c4300" }, // mango-800 8.5:1
+  { id: "saves", label: "Saves", icon: "bookmark", tint: "#a16207" }, // yellow-700 (warm variant)
+  { id: "reviews", label: "Reviews", icon: "star", tint: "#ca8a04" }, // yellow-600 (warm brighter)
+  // ── Urgent / Live (Berry = Sparko danger) ──
+  { id: "live", label: "Live", icon: "radio", tint: "#b91c1c" }, // red-700 (sparko-berry dark)
+  // ── Spread / Success (Emerald = Sparko success) ──
+  { id: "shares", label: "Shares", icon: "share", tint: "#047857" }, // success-700
+  // ── Netral (Ink/Slate) ──
+  { id: "other", label: "Lainnya", icon: "tag", tint: "#334155" }, // ink-600 .id (#475569 dipergelap di token .id)
 ];
 
 /** Urutan tampil chip jenis — yang paling laku duluan. */
@@ -306,3 +322,57 @@ export const PLATFORM_LINK_NAME: Record<PlatformId, string> = {
   seo: "",
   other: "",
 };
+
+/** ── Bentuk link per jenis (port B1 socio.my 30 Okt 2026) ──
+ * followers/subscribers/members → link PROFIL/akun; jenis lain → link
+ * POSTINGAN/video/uttusan. Dipakai linkExample() + helper teks di form pesan. */
+export type LinkShape = "profile" | "post";
+export function linkShapeForKind(kind: KindId | ""): LinkShape {
+  return kind === "followers" || kind === "subscribers" || kind === "members"
+    ? "profile"
+    : "post";
+}
+
+/**
+ * CONTOH URL placeholder per platform × bentuk link. Di sini (bukan copy/i18n)
+ * karena URL bersifat universal — bukan teks terjemahan. Hanya 6 platform yang
+ * divalidasi validateLink(); platform lain → "" (form jatuh ke fallback
+ * placeholderByPlatform yang sudah ada). "" juga dipakai saat platform/jenis
+ * belum jelas. Tanpa keterangan berbahasa (parenthetical) — netral.
+ */
+const LINK_EXAMPLES: Partial<Record<PlatformId, { profile: string; post: string }>> = {
+  instagram: {
+    profile: "https://instagram.com/username",
+    post: "https://instagram.com/p/xxxxx",
+  },
+  tiktok: {
+    profile: "https://tiktok.com/@username",
+    post: "https://tiktok.com/@username/video/xxxxx",
+  },
+  youtube: {
+    profile: "https://youtube.com/@channelname",
+    post: "https://youtube.com/watch?v=xxxxx",
+  },
+  facebook: {
+    profile: "https://facebook.com/username",
+    post: "https://facebook.com/username/posts/xxxxx",
+  },
+  x: {
+    profile: "https://x.com/username",
+    post: "https://x.com/username/status/xxxxx",
+  },
+  telegram: {
+    profile: "https://t.me/channelname",
+    post: "https://t.me/channelname/123",
+  },
+};
+
+/** Contoh placeholder pintar: URL panutan sesuai platform + jenis layanan.
+ *  Return "" bila platform tak dikenal / jenis belum diketahui → pemanggil
+ *  memakai fallback. Bentuk (profile vs post) dari linkShapeForKind. */
+export function linkExample(platform: PlatformId | "", kind: KindId | ""): string {
+  if (!platform || !kind) return "";
+  const ex = LINK_EXAMPLES[platform];
+  if (!ex) return "";
+  return ex[linkShapeForKind(kind)];
+}

@@ -16,13 +16,22 @@ import { EMAIL_COLORS as C, EMAIL_FONTS as F, EMAIL_LAYOUT as L } from "./tokens
 const FONT = F.sans;
 const DISPLAY = F.display;
 
-function esc(s: string): string {
+/**
+ * Escape data dinamis sebelum masuk HTML email.
+ * WAJIB dipakai di setiap titik masuk data dinamis — tanpa ini teks seperti
+ * `User: Ali <ali@mail.com>` dimakan parser HTML (tag tak dikenal) sehingga
+ * alamat email hilang dari email, dan `&` merusak entity.
+ */
+export function escapeHtml(s: string): string {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+/** Alias lama (dipakai internal). */
+const esc = escapeHtml;
 
 export interface ShellOpts {
   preheader?: string;
@@ -44,11 +53,11 @@ export function emailShell(o: ShellOpts): string {
   const w = o.maxWidth ?? 480;
   return `<!doctype html><html lang="${o.lang ?? "id"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><style>@media (prefers-color-scheme: dark){.em-body{background:#07161c !important;}.em-card{background:#0e2129 !important;border-color:#1e3a44 !important;}.em-text{color:#e2e8f0 !important;}.em-muted{color:#94a3b8 !important;}}</style></head>
 <body class="em-body" style="margin:0;padding:0;background:${C.bodyBg}">
-${o.preheader ? `  <div style="display:none;max-height:0;overflow:hidden;opacity:0">${o.preheader}</div>` : ""}
+${o.preheader ? `  <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(o.preheader)}</div>` : ""}
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${C.bodyBg};padding:24px 12px">
     <tr><td align="center">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" class="em-card" style="max-width:${w}px;background:${C.surface};border-radius:${L.cardRadius}px;overflow:hidden;border:1px solid ${C.borderCard}">
-        <tr><td style="background:${C.surface};padding:18px 24px 14px 24px;text-align:center;border-bottom:1px solid ${C.dividerSoft}">
+        <tr><td class="em-head" style="background:${C.surface};padding:18px 24px 14px 24px;text-align:center;border-bottom:1px solid ${C.dividerSoft}">
           <div style="font-family:${DISPLAY};font-size:19px;font-weight:800;letter-spacing:-0.02em;color:${C.inkTitle}">socio<span style="color:${C.accentInk}">.id</span></div>${
             o.headerSub
               ? `
@@ -72,6 +81,28 @@ export function emailTitleBlock(title: string, intro: string): string {
     <h1 style="margin:0;font-family:${DISPLAY};font-size:20px;line-height:1.3;font-weight:800;letter-spacing:-0.01em;color:${C.inkTitle}">${title}</h1>
     <p style="margin:10px 0 0 0;font-family:${FONT};font-size:14px;line-height:1.65;color:${C.inkBody}">${intro}</p>
   </div>`;
+}
+
+/**
+ * Blok teks bebas multi-baris (body notifikasi admin, isi tiket, body
+ * campaign). Semua karakter di-escape; newline → <br>. Dipakai kapan isi
+ * email berupa TEKS MURNI, bukan HTML susunan.
+ */
+export function emailTextBlock(text: string): string {
+  return `<div style="font-family:${FONT};font-size:14px;line-height:1.7;color:${C.inkBody}">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+}
+
+/**
+ * URL absolut untuk CTA/link di email. Link RELATIF ("/admin/deposits") mati di
+ * email client — client tak tahu domain asalnya, jadi tombolnya lead ke
+ * `https://mail.google.com/admin/deposits`. Selalu absolut sebelum masuk HTML.
+ */
+export function emailAbsoluteUrl(href: string): string {
+  const h = String(href ?? "").trim();
+  if (!h) return "";
+  if (/^https?:\/\//i.test(h) || /^mailto:/i.test(h)) return h;
+  const base = process.env.SOCIO_APP_URL ?? "https://app.socio.id";
+  return `${base}${h.startsWith("/") ? "" : "/"}${h}`;
 }
 
 export interface CtaOpts {

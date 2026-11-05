@@ -147,8 +147,37 @@ export async function smmturkRefill(ids: string[]): Promise<any> {
   return postForm({ action: "refill", orders: ids.join(",") });
 }
 
+/**
+ * Refill untuk provider tertentu (endpoint + key milik provider order tsb).
+ * Provider-safe — dipakai helper requestOrderRefill (port .my, Refill Center).
+ */
+export async function smmturkRefillFor(
+  endpoint: string,
+  key: string,
+  ids: string[],
+): Promise<any> {
+  return postForm({ action: "refill", orders: ids.join(",") }, endpoint, key);
+}
+
 export async function smmturkCancel(ids: string[]): Promise<any> {
   return postForm({ action: "cancel", orders: ids.join(",") });
+}
+
+/**
+ * Klasifikasi error dari `smmturkCancel`/`smmturkRefill` untuk keputusan refund.
+ *
+ * `postForm` melempar `Error("Provider error: ...")` bila SMMturk membalas body
+ * berisi `error` — artinya provider MENOLAK secara eksplisit (order sudah mulai
+ * diproses). Kasus ini caller TIDAK BOLEH refund lokal (kalau iya: Socio bayar
+ * provider DAN kembalikan saldo user → rugi ganda). Sebaliknya error lain
+ * (network/timeout/non-JSON) = provider tidak terkonfirmasi → caller boleh
+ * refund lokal untuk lindungi saldo user.
+ *
+ * Pure, tanpa DB/network — aman di-unit-test offline.
+ */
+export function isProviderRejection(e: unknown): boolean {
+  const msg = (e as any)?.message;
+  return typeof msg === "string" && msg.startsWith("Provider error");
 }
 
 /** Simple promise pool with fixed concurrency + inter-request delay. */

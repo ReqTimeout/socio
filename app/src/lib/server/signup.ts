@@ -3,7 +3,7 @@ import { users, accounts, verifications, deposits, balanceLogs } from "@socio/db
 import { eq, or, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
-import { emailShell, emailAmountBox, emailFooterTransactional } from "./email/render.js";
+import { emailShell, emailAmountBox, emailFooterTransactional, escapeHtml } from "./email/render.js";
 import { EMAIL_COLORS } from "./email/tokens.js";
 import { sendEmail } from "./email";
 
@@ -249,7 +249,7 @@ async function sendResellerInstructionsEmail(
     headerSub: "Aktivasi Akun Reseller",
     maxWidth: 480,
     content:
-      `<p style="margin:0 0 12px">Halo <b>${u.fullName}</b>,</p>` +
+      `<p style="margin:0 0 12px">Halo <b>${escapeHtml(u.fullName)}</b>,</p>` +
       `<p style="margin:0 0 12px">Terima kasih sudah mendaftar sebagai <b>Reseller Socio.id</b>. Tinggal selangkah lagi! Silakan transfer biaya aktivasi sebesar:</p>` +
       emailAmountBox({ amount: `Rp${amt}`, caption: target }) +
       `<p style="margin:0 0 12px"><b>Penting:</b> transfer <u>sesuai nominal</u> (termasuk 3 digit terakhir) supaya bisa dicocokkan, maksimal <b>${resellerActivationDeadlineLabel()}</b> dari email ini (sebelum ${deadline} WIB).</p>` +
@@ -297,7 +297,7 @@ export async function activateReseller(userId: number): Promise<void> {
       headerSub: "Selamat Datang Reseller",
       maxWidth: 480,
       content:
-        `<p style="margin:0 0 12px">Halo <b>${u.fullName}</b>,</p>` +
+        `<p style="margin:0 0 12px">Halo <b>${escapeHtml(u.fullName)}</b>,</p>` +
         `<p style="margin:0 0 12px">Pembayaran aktivasi reseller kamu sudah kami terima. 🎉</p>` +
         `<p style="margin:0 0 12px">Akun kamu sudah aktif — saldo <b>Rp${bonus.toLocaleString("id-ID")} sudah masuk</b> dan siap dipakai. Nikmati harga spesial reseller!</p>` +
         `<p style="margin:0;color:${EMAIL_COLORS.inkSecondary};font-size:13px">Sukses selalu!<br>Tim Socio.id</p>`,

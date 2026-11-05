@@ -56,6 +56,66 @@ export function fixMojibake(s: string): string {
 }
 
 /**
+ * Entitas HTML bernama yang perlu dinormalkan dari nama provider. Daftar ini
+ * dari korpus produksi `.id` (audit read-only 5 Nov: `&amp;` bocor di 167 nama
+ * layanan + 20 kategori); sisanya ditangani jalur numeric.
+ */
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  ndash: "\u2013",
+  mdash: "\u2014",
+  lsquo: "\u2018",
+  rsquo: "\u2019",
+  ldquo: "\u201C",
+  rdquo: "\u201D",
+  hellip: "\u2026",
+  copy: "\u00A9",
+  reg: "\u00AE",
+  trade: "\u2122",
+  times: "\u00D7",
+  middot: "\u00B7",
+  bull: "\u2022",
+  deg: "\u00B0",
+  laquo: "\u00AB",
+  raquo: "\u00BB",
+};
+
+/**
+ * Decode entitas HTML dari nama provider — mis. "Music &amp; Sound Promotion"
+ * → "Music & Sound Promotion", "&#039;" → "'", "&#x27;" → "'" (port E2
+ * socio.my 1 Nov 2026). Provider mengembalikan nama yang ter-escape HTML;
+ * kolom display menampilkannya mentah sehingga admin/user melihat "&amp;".
+ * Idempotent untuk string bersih (tidak ada '&' → kembali apa adanya).
+ * Aman di browser & Node (tanpa DOM).
+ */
+export function decodeHtmlEntities(s: string): string {
+  if (!s || !s.includes("&")) return s;
+  return String(s).replace(
+    /&#(?:[xX][0-9a-fA-F]+|[0-9]+);|&[a-zA-Z][a-zA-Z0-9]*;/g,
+    (m) => {
+      if (m[1] === "#") {
+        const isHex = m[2] === "x" || m[2] === "X";
+        const code = parseInt(isHex ? m.slice(3, -1) : m.slice(2, -1), isHex ? 16 : 10);
+        if (Number.isFinite(code) && code >= 0 && code <= 0x10ffff) {
+          try {
+            return String.fromCodePoint(code);
+          } catch {
+            return m;
+          }
+        }
+        return m;
+      }
+      return NAMED_ENTITIES[m.slice(1, -1).toLowerCase()] ?? m;
+    },
+  );
+}
+
+/**
  * Short display label for service cards/quick-order/dropdown.
  * - Strips provider branding ("SMMturk" → "Socio", removes "[...Provider...]" tags).
  * - Fixes mojibake emoji.
@@ -131,7 +191,7 @@ function hasBrandToken(s: string): boolean {
  */
 function nonEmptyDisplay(stripped: string, raw: string): string {
   if (stripped) return stripped;
-  const clean = fixMojibake(String(raw ?? ""))
+  const clean = decodeHtmlEntities(fixMojibake(String(raw ?? "")))
     .replace(/\s{2,}/g, " ")
     .trim();
   if (!clean || hasBrandToken(clean)) return "Uncategorized";
@@ -139,7 +199,7 @@ function nonEmptyDisplay(stripped: string, raw: string): string {
 }
 
 export function serviceDisplayName(name: string): string {
-  let fixed = fixMojibake(name);
+  let fixed = decodeHtmlEntities(fixMojibake(name));
   // Replace provider branding with "Socio" (varian: SMMTURK / SMMTurk /
   // SMMTÜRK / double-encode SMMTÃRK). Owner 7 Okt: nama masih bocor di UI
   // karena spasi + char non-ASCII memisahkan token.
@@ -196,7 +256,7 @@ export function serviceDisplayName(name: string): string {
   *    dan frasa `of Provider(s)` (idempotent, owner 7-8 Okt).
  */
 export function whitelabel(raw: string): string {
-  let s = fixMojibake(String(raw ?? ""));
+  let s = decodeHtmlEntities(fixMojibake(String(raw ?? "")));
   // (SMMT_PAT kini konstanta module-level — dipakai bersama
   // serviceDisplayName() + hasBrandToken().) Owner 7 Okt: nama kategori
   // masih bocor di dropdown karena space memisahkan Ü dari RK.

@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
 import { emailQueue } from "@socio/db/schema";
-import { emailShell, emailCta, emailBankCard, emailFooterTransactional } from "./email/render.js";
+import { emailShell, emailCta, emailBankCard, emailFooterTransactional, escapeHtml } from "./email/render.js";
 import { EMAIL_COLORS } from "./email/tokens.js";
 import type { SparkoPose } from "./email/render.js";
 
@@ -83,7 +83,7 @@ export function depositInstructionMail(i: DepositMailInput): {
   const amt = idr(i.amount);
   const exp = fmtExpire(i.expireAt);
   const title = i.isReseller ? "Selesaikan aktivasi Reseller" : "Selesaikan pembayaran deposit";
-  const body = `<p style="margin:0 0 4px 0">Halo <b>${i.name}</b>,</p>
+  const body = `<p style="margin:0 0 4px 0">Halo <b>${escapeHtml(i.name)}</b>,</p>
     <p style="margin:8px 0 0 0">${title} sebesar <b>${amt}</b> dengan transfer ke rekening berikut:</p>
     ${bankCard(amt, i.invoiceId, exp)}
     ${steps()}
@@ -106,7 +106,7 @@ export function depositReminderMail(i: DepositMailInput & { leftText: string }):
   text: string;
 } {
   const amt = idr(i.amount);
-  const body = `<p style="margin:0 0 4px 0">Halo <b>${i.name}</b>,</p>
+  const body = `<p style="margin:0 0 4px 0">Halo <b>${escapeHtml(i.name)}</b>,</p>
     <p style="margin:8px 0 0 0">Deposit <b>${amt}</b> (invoice ${i.invoiceId}) <b style="color:${EMAIL_COLORS.berryInk}">segera kedaluwarsa — sisa ${i.leftText}</b>. Transfer sekarang agar tidak batal otomatis:</p>
     ${bankCard(amt, i.invoiceId, fmtExpire(i.expireAt))}
     ${cta("Bayar sekarang", "https://app.socio.id/saldo")}`;
@@ -123,7 +123,7 @@ export function depositSuccessMail(i: { name: string; amount: number; isReseller
   text: string;
 } {
   const amt = idr(i.amount);
-  const body = `<p style="margin:0 0 4px 0">Halo <b>${i.name}</b>,</p>
+  const body = `<p style="margin:0 0 4px 0">Halo <b>${escapeHtml(i.name)}</b>,</p>
     <p style="margin:8px 0 0 0">${i.isReseller ? `Akun Reseller Anda <b>sudah aktif</b>. Biaya aktivasi ${amt} terkonfirmasi.` : `Deposit <b>${amt}</b> sudah masuk ke saldo Anda dan siap dipakai order.`}</p>
     ${cta(i.isReseller ? "Mulai order" : "Buat pesanan", "https://app.socio.id/pesan")}`;
   return {
@@ -146,8 +146,8 @@ export function depositCanceledMail(i: { name: string; amount: number; reason: s
   text: string;
 } {
   const amt = idr(i.amount);
-  const body = `<p style="margin:0 0 4px 0">Halo <b>${i.name}</b>,</p>
-    <p style="margin:8px 0 0 0">Deposit <b>${amt}</b> dibatalkan (${i.reason}). Saldo tidak berubah. Silakan buat deposit baru kapan saja:</p>
+  const body = `<p style="margin:0 0 4px 0">Halo <b>${escapeHtml(i.name)}</b>,</p>
+    <p style="margin:8px 0 0 0">Deposit <b>${amt}</b> dibatalkan (${escapeHtml(i.reason)}). Saldo tidak berubah. Silakan buat deposit baru kapan saja:</p>
     ${cta("Top up lagi", "https://app.socio.id/saldo/topup")}`;
   return {
     subject: `Deposit ${amt} dibatalkan`,
