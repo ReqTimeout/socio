@@ -212,39 +212,8 @@
         </Button>
       </form>
     </div>
-
-    <!-- Signup verify -->
-    <div class="flex items-center justify-between rounded-2xl border border-ink-100 bg-surface p-4">
-      <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-2">
-          <span
-            class="grid h-8 w-8 place-items-center rounded-lg {data.signupVerify
-              ? 'bg-success-soft text-success'
-              : 'bg-ink-100 text-ink-500'}"
-          >
-            <Icon name="mail" size={14} stroke={2.5} />
-          </span>
-          <h2 class="text-sm font-semibold">Verifikasi Email Signup</h2>
-        </div>
-        <p class="mt-1 text-xs text-ink-500">Wajibkan konfirmasi email sebelum akun aktif.</p>
-      </div>
-      <form
-        method="POST"
-        action="?/toggleSignupVerify"
-        use:enhance={() =>
-          async ({ result }) => {
-            const r = result as any;
-            if (result.type === "failure") toast(r.data?.error ?? "Gagal", "error");
-            else toast(extractActionMsg(r.data) ?? "OK", "success");
-            await applyAction(result);
-          }}
-      >
-        <input type="hidden" name="on" value={data.signupVerify ? "0" : "1"} />
-        <Button type="submit" variant={data.signupVerify ? "ghost" : "primary"}>
-          {data.signupVerify ? "Nonaktifkan" : "Aktifkan"}
-        </Button>
-      </form>
-    </div>
+    <!-- G2 retire-verify: kartu "Verifikasi Email Signup" dihapus — gate verifikasi
+         member sudah pensiun; toggle signup_verify_required tidak lagi dipakai. -->
   </div>
 
   <!-- ===== Pricing Rules ===== -->

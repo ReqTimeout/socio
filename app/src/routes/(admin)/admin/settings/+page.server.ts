@@ -24,7 +24,6 @@ export const load: PageServerLoad = async ({ locals }) => {
   const maintenance = (await getSetting("maintenance_mode")) === "1";
   const require2fa = (await getSetting("require_2fa_for_admin")) === "1"; // G7: enforce di (admin) layout
   const apiPublic = (await getSetting("public_api_enabled")) === "1";
-  const signupVerify = (await getSetting("signup_verify_required")) === "1";
 
   // Pricing rules
   const pricingList = await db.select().from(pricingRules).orderBy(asc(pricingRules.level));
@@ -84,7 +83,6 @@ export const load: PageServerLoad = async ({ locals }) => {
     maintenance,
     require2fa,
     apiPublic,
-    signupVerify,
     pricing: pricingList.map((p) => ({
       id: p.id,
       level: p.level,
@@ -165,28 +163,9 @@ export const actions: Actions = {
     return { success: on ? "API publik AKTIF." : "API publik nonaktif." };
   },
 
-  toggleSignupVerify: async ({ request, locals }) => {
-    assertAdmin(locals);
-    const _g = await assertAdminCan(locals, "settings:edit");
-    if (_g) return _g;
-    const _rate = await assertAdminRate(
-      "settings-signup-verify",
-      (locals as any).ip ?? "0.0.0.0",
-      10,
-      60,
-    );
-    if (_rate) return _rate;
-    const form = await request.formData();
-    const on = form.get("on") === "1";
-    await setSetting("signup_verify_required", on ? "1" : "0");
-    await logAudit({
-      adminId: Number(locals.user!.id),
-      action: on ? "enable_signup_verify" : "disable_signup_verify",
-      entity: "auth",
-      ip: (locals as any).ip,
-    });
-    return { success: on ? "Verifikasi signup AKTIF." : "Verifikasi signup nonaktif." };
-  },
+  // G2 retire-verify: toggle `signup_verify_required` dihapus — gate verifikasi
+  // email member sudah tidak ada di login/signup, jadi setting ini tidak lagi
+  // dibaca kode. Audit log enable/disable_signup_verify lama tetap sebagai histori.
 
   // G7: paksa semua admin enroll 2FA. Saat AKTIF, admin dengan totp_enabled=0
   // akan dialihkan ke /admin/2fa/setup oleh (admin) layout sampai mereka enroll.
