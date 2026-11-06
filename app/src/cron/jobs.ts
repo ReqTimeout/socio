@@ -11,6 +11,7 @@ import { runAllServiceSync } from "./service-sync";
 import { runStatusPolling, runRefillPolling } from "./status-polling";
 import { runAutoRefund } from "./refund";
 import { runEmailQueue } from "./email-queue";
+import { runEmailLifecycle } from "./email-lifecycle";
 import { runLightCron } from "./light";
 import { runBackup } from "../lib/server/backup";
 import { refreshFxRate } from "../lib/server/fx";
@@ -21,6 +22,8 @@ export interface CronJobDef {
   label: string;
   /** node-cron expression */
   expr: string;
+  /** zona waktu node-cron (opsional). Default TZ server. Pakai utk jam WIB deterministik. */
+  tz?: string;
   /** label jadwal untuk UI (id) */
   scheduleLabel: string;
   /** menit antar run — untuk hitung next run */
@@ -83,6 +86,16 @@ export const CRON_JOBS: CronJobDef[] = [
     intervalMin: 5,
     note: "Kirim antrian email via Resend (batch 30)",
     run: () => runEmailQueue(),
+  },
+  {
+    key: "email-lifecycle",
+    label: "Email Lifecycle",
+    expr: "0 9 * * *",
+    tz: "Asia/Jakarta",
+    scheduleLabel: "Tiap hari 09:00 WIB",
+    intervalMin: 1440,
+    note: "Email perilaku (activation) — kill switch OFF = skip, ≤" + 25 + "/hari",
+    run: (triggeredBy: number) => runEmailLifecycle(triggeredBy),
   },
   {
     key: "light",

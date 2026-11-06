@@ -1,7 +1,8 @@
 import { db } from "@socio/db";
-import { emailQueue, emailCampaignTracking, emailCampaignLog } from "@socio/db/schema";
-import { eq, and, lt, sql } from "drizzle-orm";
+import { emailQueue, emailCampaignTracking, emailCampaignLog, emailSuppressions } from "@socio/db/schema";
+import { eq, and, lt, inArray, sql } from "drizzle-orm";
 import { sendEmail } from "$lib/server/email";
+import { marketingEnabled } from "$lib/server/marketing/config.js";
 import {
   emailShell,
   emailCta,
@@ -53,16 +54,57 @@ export async function runEmailQueue(): Promise<void> {
     .limit(100);
   if (pending.length === 0) return;
 
+  // G1 compliance — gerbang KHUSUS email marketing (transaksional tak terpengaruh):
+  //  - Kill switch `EMAIL_MARKETING_ENABLED` OFF → marketing DITAHAN (tetap pending,
+  //    tidak di-drop; akan terkirim begitu switch dinyalakan).
+  //  - Penerima yang ada di `email_suppressions` (sudah unsubscribe) → baris
+  //    ditandai failed "suppressed", tidak usah dicoba ulang.
+  const mktEnabled = marketingEnabled();
+  const suppressed = new Set<string>();
+  const mktEmails = pending
+    .filter((q) => isMarketing(q.templateName))
+    .map((q) => (q.recipientEmail ?? "").toLowerCase())
+    .filter(Boolean);
+  if (mktEmails.length > 0) {
+    try {
+      const rows = await db
+        .select({ email: emailSuppressions.email })
+        .from(emailSuppressions)
+        .where(inArray(emailSuppressions.email, mktEmails));
+      for (const r of rows) suppressed.add(String(r.email).toLowerCase());
+    } catch (e) {
+      console.error("[cron] email-queue: lookup suppression gagal (fail-open=aman utk transaksional):", e);
+    }
+  }
+
   let sent = 0;
   let failed = 0;
   let skippedCap = 0;
   let blanked = 0;
+  let held = 0;
+  let suppressedCount = 0;
   let sentMarketing = 0;
   let sentGmail = 0;
   for (const q of pending) {
     if (sent + failed >= BATCH) break;
     const mk = isMarketing(q.templateName);
     const gm = GMAIL_RE.test(q.recipientEmail ?? "");
+    if (mk) {
+      // Kill switch marketing OFF → tahan (jangan kirim, jangan tandai failed).
+      if (!mktEnabled) {
+        held++;
+        continue;
+      }
+      // Sudah unsubscribe → jangan pernah kirim lagi; buang dari antrian.
+      if (suppressed.has((q.recipientEmail ?? "").toLowerCase())) {
+        await db
+          .update(emailQueue)
+          .set({ status: "failed", errorMessage: "suppressed: penerima telah berhenti berlangganan" })
+          .where(eq(emailQueue.id, q.id));
+        suppressedCount++;
+        continue;
+      }
+    }
     if (mk && sentMarketing >= MAX_MARKETING_PER_RUN) {
       skippedCap++;
       continue;
@@ -198,6 +240,6 @@ export async function runEmailQueue(): Promise<void> {
     }
   }
   console.log(
-    `[cron] email-queue: sent=${sent} failed=${failed} blanked=${blanked} skippedCap=${skippedCap} (mkt=${sentMarketing} gmail=${sentGmail})`,
+    `[cron] email-queue: sent=${sent} failed=${failed} blanked=${blanked} skippedCap=${skippedCap} held=${held} suppressed=${suppressedCount} (mkt=${sentMarketing} gmail=${sentGmail})`,
   );
 }

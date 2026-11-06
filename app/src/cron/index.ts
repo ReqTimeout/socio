@@ -38,11 +38,14 @@ export function startCron(): void {
 
   for (const def of CRON_JOBS) {
     if (def.expr === "chained") continue;
-    cron.schedule(def.expr, () => {
+    const task = () => {
       runJob(def.key, () => def.run(0)).catch((e) =>
         console.error(`[cron] ${def.key} failed:`, e?.message ?? e),
       );
-    });
+    };
+    // `tz` opsional — kunci jadwal ke zona tertentu (mis. WIB) terlepas dari
+    // timezone server. Tanpa tz, node-cron pakai TZ server (perilaku lama).
+    cron.schedule(def.expr, task, def.tz ? { timezone: def.tz } : undefined);
   }
 
   console.log(`[cron] ${CRON_JOBS.length} job terdaftar (1 chained):`, CRON_JOBS.map((j) => j.key).join(", "));
