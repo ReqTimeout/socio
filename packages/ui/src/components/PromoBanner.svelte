@@ -73,7 +73,18 @@
         aria-hidden={!active}
       >
         {#if b.img}
-          <img src={b.img} alt={b.title} class="h-full w-full object-cover" />
+          <!-- C7 (port .my): artwork ter-upload sudah membawa judul/subtitle-nya
+               sendiri, jadi tampilkan image utuh DAN suppress overlay teks —
+               menghindari copy dobel + teks putih di atas artwork terang yang
+               tidak terbaca. Tinggi slide mengikuti rasio aspek gambar (lihat
+               spacer di bawah) supaya object-cover tidak memotong artwork. -->
+          <img
+            src={b.img}
+            alt={b.title}
+            class="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
         {:else}
           <div
             class="h-full w-full bg-gradient-to-br {b.gradient ??
@@ -85,44 +96,51 @@
           <div
             class="pointer-events-none absolute -bottom-16 right-16 h-40 w-40 rounded-full bg-white/10 blur-3xl"
           ></div>
-        {/if}
 
-        <div
-          class="relative flex h-full flex-col justify-center gap-1.5 p-5 lg:p-7 pb-10 lg:pb-7"
-        >
-          {#if b.badge}
-            <span
-              class="inline-flex w-fit items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white backdrop-blur"
-            >
-              <Icon name="sparkles" size={12} stroke={2.5} />
-              {b.badge}
-            </span>
-          {/if}
-          <!-- h2: heading-order — banner muncul tepat setelah h1 halaman -->
-          <h2
-            class="max-w-[80%] font-display text-lg font-extrabold leading-tight tracking-tight text-white drop-shadow-sm lg:text-2xl"
+          <div
+            class="relative flex h-full flex-col justify-center gap-1.5 p-5 lg:p-7 pb-10 lg:pb-7"
           >
-            {b.title}
-          </h2>
-          {#if b.subtitle}
-            <p class="max-w-[85%] text-xs text-white/85 lg:text-sm">
-              {b.subtitle}
-            </p>
-          {/if}
-          {#if b.cta}
-            <span
-              class="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-primary-700 shadow-sm transition-transform group-hover:translate-x-0.5 lg:text-sm"
+            {#if b.badge}
+              <span
+                class="inline-flex w-fit items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white backdrop-blur"
+              >
+                <Icon name="sparkles" size={12} stroke={2.5} />
+                {b.badge}
+              </span>
+            {/if}
+            <!-- h2: heading-order — banner muncul tepat setelah h1 halaman -->
+            <h2
+              class="max-w-[80%] font-display text-lg font-extrabold leading-tight tracking-tight text-white drop-shadow-sm lg:text-2xl"
             >
-              {b.cta}
-              <Icon name="arrow_right" size={15} stroke={2.5} />
-            </span>
-          {/if}
-        </div>
+              {b.title}
+            </h2>
+            {#if b.subtitle}
+              <p class="max-w-[85%] text-xs text-white/85 lg:text-sm">
+                {b.subtitle}
+              </p>
+            {/if}
+            {#if b.cta}
+              <span
+                class="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-primary-700 shadow-sm transition-transform group-hover:translate-x-0.5 lg:text-sm"
+              >
+                {b.cta}
+                <Icon name="arrow_right" size={15} stroke={2.5} />
+              </span>
+            {/if}
+          </div>
+        {/if}
       </a>
     {/each}
 
-    <!-- Spacer untuk tinggi (banner absolute) — proporsional, tidak memanjang di desktop -->
-    <div class="h-[176px] sm:h-[184px] lg:h-[190px]" aria-hidden="true"></div>
+    {#if banners.some((b) => b.img)}
+      <!-- Spacer = rasio artwork banner .id terukur (1200×360, probe prod
+           2026-11-06) supaya object-cover TIDAK memotong artwork di viewport
+           manapun — port pola .my, rasio adaptasi dari 1200/630 .my. -->
+      <div class="w-full aspect-[1200/360]" aria-hidden="true"></div>
+    {:else}
+      <!-- Spacer tetap utk set murni teks/gradient — tinggi nyaman utk CTA. -->
+      <div class="h-[176px] sm:h-[184px] lg:h-[190px]" aria-hidden="true"></div>
+    {/if}
 
     {#if many}
       <div
