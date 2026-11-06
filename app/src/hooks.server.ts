@@ -126,7 +126,11 @@ async function maintenanceHook({ event, resolve }: Parameters<Handle>[0]) {
     path.startsWith("/manifest") ||
     path.startsWith("/icon") ||
     path.startsWith("/_app") ||
-    path.startsWith("/api/auth");
+    path.startsWith("/api/auth") ||
+    // G1 compliance: unsubscribe harus tetap bisa dieksekusi walau maintenance
+    // (halaman /u/<token> manusia + /api/u/<token> one-click RFC 8058).
+    path.startsWith("/u/") ||
+    path.startsWith("/api/u/");
   const isAdmin =
     path.startsWith("/admin") || path.startsWith("/login") || path.startsWith("/dev-admin-login");
   if (isStatic || isAdmin) return resolve(event);
