@@ -214,6 +214,17 @@ Label tracker "C7" tidak ada di master doc; hasil investigasi: pipeline banner .
 - **Verifikasi**: svelte-check 0 errors (baseline 50 warnings tetap) · build ✓ · L3 **0 findings**.
 - **COMMIT 06ac016 · push aedcb24..06ac016 (SSH HEAD:main) · DEPLOYED 06ac016 · LIVE** (Coolify `7p30w26xtmnet2fdpaes8b3f` finished; container `nqsjafrei6k8dkup1pxkcuwf-20261106T144600` tag sha `06ac016…`; marker `1200/360` ada di chunk client `CJ00Bo3D.js` + CSS `0.Dcm0_gMC.css` + chunk server; `/login`=200; token API revoked, sisa 0).
 
+## H1 — Jalur upgrade mandiri Member→Reseller (CONFIRM owner, diputuskan 6 Nov 2026)
+
+Master doc §534-560 + spec .my `2026-10-31-fase-a-reseller-upgrade.md`. Keputusan owner: **port penuh pola .my** (halaman `/reseller` + action upgrade) · **tetap Rp50.000 termasuk saldo Rp20.000** (BCA manual transfer, bukan QR .my). Investigasi: infra aktivasi .id SUDAH ~90% lengkap (`issueResellerActivationInvoice` deposit Pending `untuk_apa=reseller` + email BCA; `activateReseller` dipanggil admin verify + midtrans webhook). Gap NYATA: (a) `activateReseller` **tidak pernah flip `level`** — bug laten, pricing key-nya `level` sehingga upgrade tanpa flip tidak berdampak uang; (b) tidak ada surface `/reseller`/action/nav utk Member existing.
+
+- **Flip level (uang-kritis)** `signup.ts`: `activateReseller` set `level = CASE WHEN level='Member' THEN 'Reseller' ELSE level END` — no-op utk jalur signup (sudah Reseller), melindungi Admin/Agen dari clobber. Level berubah HANYA setelah bayar dikonfirmasi, bukan dari klik user.
+- **Route baru** `(app)/reseller/+page.server.ts`: `load` chart **JUJUR** dari `pricing_rules` LIVE (probe prod: Member 225% / Reseller 200%, BUKAN hardcode .my 275/250) via `effectivePer1k` — anti-leak: client hanya terima total rupiah + `savePct`, tak ada base/markup. `actions.upgradeToReseller`: rate-limit 1/60s → guard `level==='Member'` (DB otoritatif) → idempoten invoice Pending hidup → reuse `issueResellerActivationInvoice`.
+- **UI** `(app)/reseller/+page.svelte`: hero StickerCard + manfaat×5 + Chart + 3 langkah + fee NumberFlow + FAQ×4 + CTA **4-state** (sudah aktif / aktivasi-pending→dashboard / invoice-pending→saldo / tombol upgrade). Reseller warisan 234 blm lunas TIDAK diklaim aktif (diarah ke banner resend dashboard). Copy ID hardcoded (no i18n).
+- **Nav**: `Sidebar.svelte` prop `hot?` (dot `dot-pulse` accent + glyph crown), `+layout.svelte` splice entri "Upgrade Reseller" khusus Member; teaser `saldo/+page.svelte` `/tiket`→`/reseller`.
+- **Verifikasi**: svelte-check 0 error (baseline 50 warnings) · eslint 0 error · build ✓ · guard selftest source-scan 4 invarian (CASE flip ada L288, action tanpa mutation level, guard-chain lengkap, anti-leak totals-only).
+- **COMMIT d02a142 · push 58b58e4..d02a142 (SSH HEAD:main) · L3 0 findings · DEPLOYED d02a142 · LIVE** (Coolify `irscvdnftfm0of0sroha9gff` finished; container `nqsjafrei6k8dkup1pxkcuwf-20261106T163018` tag sha `d02a142…`; marker "Beli lebih murah" di chunk client node 40 + server `reseller/_page.svelte.js`; action `upgradeToReseller` di `reseller/_page.server.ts.js`; `/reseller`=303 [guard unauth OK], `/login`=200; token API revoked, sisa 0).
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
@@ -253,7 +264,8 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | F2 | Kontrak [manual-off] | ✅ LIVE | 791363a |
 | G1 | Email lifecycle/winback | ✅ LIVE | **32735db (sesi ini)** — activation only, kill-switch OFF, ID+Sparko+DNA |
 | G2 | Retire-verify flow | ✅ LIVE | **f03c831 (sesi ini)** — Member retire pure, `reseller_activated` separasi (backfill 56), toggle settings hapus |
-| H1/H2/H3 | Reseller / coupon loop | ⏸️ CONFIRM | belum disentuh |
+| H1 | Upgrade mandiri Member→Reseller | ✅ LIVE | **d02a142 (sesi ini)** — flip level CASE + `/reseller` (chart jujur dr pricing_rules, anti-leak) + action invoice + nav dot |
+| H2/H3 | Reseller dashboard / coupon loop | ⏸️ CONFIRM | belum disentuh |
 | I | Multi-provider | ⏸️ CONFIRM | proyek besar + migrasi `provider.status` |
 | P4 | SEO subsystem port | ⏸️ CONFIRM | proyek terpisah |
 
