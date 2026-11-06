@@ -265,7 +265,7 @@
           class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-300"
         >
           <Icon name="trending_up" size={12} stroke={2.5} class="text-accent-400" />
-          Revenue hari ini
+          Kas masuk hari ini
         </p>
         <div class="mt-1.5 font-display text-4xl font-extrabold tabular-nums sm:text-5xl">
           {rp($revenueTween)}
@@ -286,7 +286,7 @@
       </div>
       <div class="w-full sm:w-64 lg:w-72">
         <Chart
-          series={[{ label: "Revenue", data: m.revenue.spark, color: "var(--color-accent-400)" }]}
+          series={[{ label: "Kas masuk", data: m.revenue.spark, color: "var(--color-accent-400)" }]}
           labels={chartSrc.labels}
           height={72}
           formatValue={(v) => rp(v)}

@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
 import { users, orders, deposits, auditLog, jobQueue, providerSyncLog } from "@socio/db/schema";
-import { sql, desc, gte, lt, and, eq, inArray } from "drizzle-orm";
+import { sql, desc, gte, lt, and, eq, isNotNull, inArray } from "drizzle-orm";
 import type { RequestHandler } from "./$types";
 
 const ACTIVE_ORDER_STATUS = ["Pending", "Processing", "In progress", "Refilling"] as const;
@@ -38,11 +38,12 @@ async function fetchDashboard() {
     db.select({ c: sql<number>`count(*)`, rev: sql<number>`COALESCE(SUM(${orders.price}),0)` }).from(orders).where(gte(orders.createdAt, startToday)),
     db.select({ c: sql<number>`count(*)` }).from(orders).where(and(gte(orders.createdAt, startYest), lt(orders.createdAt, startToday))),
     db.select({ c: sql<number>`count(*)`, amt: sql<number>`COALESCE(SUM(${deposits.amount}),0)` }).from(deposits).where(eq(deposits.status, "Pending")),
-    db.select({ rev: sql<number>`COALESCE(SUM(${orders.price}),0)` }).from(orders).where(gte(orders.createdAt, startToday)),
-    db.select({ rev: sql<number>`COALESCE(SUM(${orders.price}),0)` }).from(orders).where(and(gte(orders.createdAt, startYest), lt(orders.createdAt, startToday))),
+    // E6: KPI revenue = kas-masuk deposit diverifikasi manual (bukan GMV order; Midtrans nonaktif).
+    db.select({ rev: sql<number>`COALESCE(SUM(${deposits.amount}),0)` }).from(deposits).where(and(eq(deposits.status, "Success"), isNotNull(deposits.verifiedBy), gte(deposits.verifiedAt, startToday))),
+    db.select({ rev: sql<number>`COALESCE(SUM(${deposits.amount}),0)` }).from(deposits).where(and(eq(deposits.status, "Success"), isNotNull(deposits.verifiedBy), gte(deposits.verifiedAt, startYest), lt(deposits.verifiedAt, startToday))),
     db.select({ d: sql<string>`DATE(${orders.createdAt})`, c: sql<number>`count(*)` }).from(orders).where(gte(orders.createdAt, start7)).groupBy(sql`DATE(${orders.createdAt})`),
     db.select({ d: sql<string>`DATE(${users.createdAt})`, c: sql<number>`count(*)` }).from(users).where(gte(users.createdAt, start7)).groupBy(sql`DATE(${users.createdAt})`),
-    db.select({ d: sql<string>`DATE(${orders.createdAt})`, rev: sql<number>`COALESCE(SUM(${orders.price}),0)` }).from(orders).where(gte(orders.createdAt, start7)).groupBy(sql`DATE(${orders.createdAt})`),
+    db.select({ d: sql<string>`DATE(${deposits.verifiedAt})`, rev: sql<number>`COALESCE(SUM(${deposits.amount}),0)` }).from(deposits).where(and(eq(deposits.status, "Success"), isNotNull(deposits.verifiedBy), gte(deposits.verifiedAt, start7))).groupBy(sql`DATE(${deposits.verifiedAt})`),
     db.select({ status: providerSyncLog.status, fetched: providerSyncLog.fetched, changed: providerSyncLog.changed, createdAt: providerSyncLog.createdAt }).from(providerSyncLog).orderBy(desc(providerSyncLog.createdAt)).limit(1),
     db.select({ c: sql<number>`count(*)` }).from(jobQueue).where(eq(jobQueue.status, "pending")),
     db.select({ c: sql<number>`count(*)` }).from(orders).where(inArray(orders.status, [...ACTIVE_ORDER_STATUS])),

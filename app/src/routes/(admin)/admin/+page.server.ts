@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
 import { users, orders, deposits, auditLog, jobQueue, providerSyncLog } from "@socio/db/schema";
-import { sql, desc, and, gte, lt, eq, inArray } from "drizzle-orm";
+import { sql, desc, and, gte, lt, eq, isNotNull, inArray } from "drizzle-orm";
 import { redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
@@ -75,14 +75,30 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
       .select({ c: sql<number>`count(*)`, amt: sql<number>`COALESCE(SUM(${deposits.amount}),0)` })
       .from(deposits)
       .where(eq(deposits.status, "Pending")),
+    // E6 (.my admin-revenue-verified-deposits): KPI "Revenue hari ini" + chart 7d =
+    // KAS MASUK nyata dari deposit yang ADMIN VERIFY manual (Midtrans .id nonaktif),
+    // bukan GMV order. Sumber kebenaran: deposits Success + verified_by + bucket verified_at.
     db
-      .select({ rev: sql<number>`COALESCE(SUM(${orders.price}),0)` })
-      .from(orders)
-      .where(gte(orders.createdAt, startToday)),
+      .select({ rev: sql<number>`COALESCE(SUM(${deposits.amount}),0)` })
+      .from(deposits)
+      .where(
+        and(
+          eq(deposits.status, "Success"),
+          isNotNull(deposits.verifiedBy),
+          gte(deposits.verifiedAt, startToday),
+        ),
+      ),
     db
-      .select({ rev: sql<number>`COALESCE(SUM(${orders.price}),0)` })
-      .from(orders)
-      .where(and(gte(orders.createdAt, startYest), lt(orders.createdAt, startToday))),
+      .select({ rev: sql<number>`COALESCE(SUM(${deposits.amount}),0)` })
+      .from(deposits)
+      .where(
+        and(
+          eq(deposits.status, "Success"),
+          isNotNull(deposits.verifiedBy),
+          gte(deposits.verifiedAt, startYest),
+          lt(deposits.verifiedAt, startToday),
+        ),
+      ),
     db
       .select({ d: sql<string>`DATE(${orders.createdAt})`, c: sql<number>`count(*)` })
       .from(orders)
@@ -95,12 +111,18 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
       .groupBy(sql`DATE(${users.createdAt})`),
     db
       .select({
-        d: sql<string>`DATE(${orders.createdAt})`,
-        rev: sql<number>`COALESCE(SUM(${orders.price}),0)`,
+        d: sql<string>`DATE(${deposits.verifiedAt})`,
+        rev: sql<number>`COALESCE(SUM(${deposits.amount}),0)`,
       })
-      .from(orders)
-      .where(gte(orders.createdAt, start7))
-      .groupBy(sql`DATE(${orders.createdAt})`),
+      .from(deposits)
+      .where(
+        and(
+          eq(deposits.status, "Success"),
+          isNotNull(deposits.verifiedBy),
+          gte(deposits.verifiedAt, start7),
+        ),
+      )
+      .groupBy(sql`DATE(${deposits.verifiedAt})`),
     db
       .select({
         status: providerSyncLog.status,
