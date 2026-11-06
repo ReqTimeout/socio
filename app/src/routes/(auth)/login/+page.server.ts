@@ -1,8 +1,8 @@
 import type { Actions, PageServerLoad } from "./$types";
 import { fail, redirect } from "@sveltejs/kit";
 import { db } from "@socio/db";
-import { users, accounts, sessions, verifications } from "@socio/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { users, accounts, sessions } from "@socio/db/schema";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { rateLimit } from "$lib/server/rate-limit";
@@ -66,31 +66,10 @@ export const actions: Actions = {
       return fail(401, { error: "Email atau password salah.", email });
     }
 
-    // U-02: gate login sampai email verifikasi (kecuali Admin/Reseller agar
-    // operasional tidak terkunci). Pakai setting signup_verify_required biar
-    // admin bisa toggle (sesuai ADMIN_GAP settings flow).
-    if (user.level === "Member" || user.level === "Agen") {
-      const [gateRow] = await db
-        .select({ value: sql<string>`value` })
-        .from(verifications)
-        .where(
-          and(
-            eq(verifications.identifier, `email-verification:${user.email}`),
-            sql`${verifications.expiresAt} > NOW()`,
-          ),
-        )
-        .limit(1);
-      // `verifications` row ada = token belum di-klik → belum verified.
-      // Cek `users.verify === "Yes"` (authoritative).
-      if (gateRow && user.verify !== "Yes") {
-        return fail(403, {
-          error:
-            "Email belum diverifikasi. Cek inbox/spam, atau klik 'Kirim ulang' di halaman verifikasi.",
-          email,
-          unverified: true,
-        });
-      }
-    }
+    // G2 retire-verify: gate verifikasi email Member/Agen (U-02) DIHAPUS —
+    // signup member tidak lagi mengirim email verifikasi, jadi login langsung
+    // boleh. Aktivasi reseller kini lewat users.reseller_activated (bukan
+    // verify) dan hanya menggating order di /pesan, bukan login.
 
     // V-LOGIN-SUSPENDED: tahan akun suspended/blacklist agar tidak bisa login.
     // PHP legacy pakai kolom `status` varchar "1"/"0" + "Blacklist" untuk permanent.

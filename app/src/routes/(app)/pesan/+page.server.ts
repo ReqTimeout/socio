@@ -342,15 +342,15 @@ export const actions: Actions = {
     const userId = Number(locals.user!.id);
     const level = (locals.user!.level as UserLevel) ?? "Member";
 
-    // Gate aktivasi reseller: order diblokir sampai verify=Yes (biaya
-    // pendaftaran lunas + admin confirm). Login/dashboard tetap boleh.
+    // Gate aktivasi reseller (G2): order diblokir sampai reseller_activated=1
+    // (biaya pendaftaran lunas + admin confirm). Login/dashboard tetap boleh.
     if (level === "Reseller") {
       const [ru] = await db
-        .select({ verify: users.verify })
+        .select({ resellerActivated: users.resellerActivated })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
-      if (!ru || ru.verify !== "Yes") {
+      if (!ru || ru.resellerActivated !== 1) {
         return fail(403, {
           error: "Akun reseller belum aktif. Selesaikan pembayaran aktivasi dulu — cek dashboard.",
         });

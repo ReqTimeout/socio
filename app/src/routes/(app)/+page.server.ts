@@ -71,11 +71,11 @@ export const load: PageServerLoad = async ({ locals }) => {
     const bonus = Number.isFinite(bonusEnv) && bonusEnv >= 0 ? Math.round(bonusEnv) : 20000;
     try {
       const [ru] = await db
-        .select({ verify: users.verify })
+        .select({ resellerActivated: users.resellerActivated })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
-      if (!ru || ru.verify !== "Yes") {
+      if (!ru || ru.resellerActivated !== 1) {
         const [pend] = await db
           .select({ id: deposits.id, amount: deposits.amount, expire: deposits.expire })
           .from(deposits)
@@ -437,11 +437,11 @@ export const actions: Actions = {
       return fail(403, { error: "Khusus akun reseller." });
     }
     const [ru] = await db
-      .select({ verify: users.verify })
+      .select({ resellerActivated: users.resellerActivated })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
-    if (ru?.verify === "Yes") {
+    if (ru?.resellerActivated === 1) {
       return fail(400, { error: "Akun reseller sudah aktif." });
     }
     const [pend] = await db

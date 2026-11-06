@@ -6,11 +6,7 @@ import { eq } from "drizzle-orm";
 import { verifyTurnstile, TURNSTILE_SITEKEY } from "$lib/server/turnstile";
 import { rateLimit } from "$lib/server/rate-limit";
 import { isDisposableEmail } from "$lib/server/disposable-emails";
-import {
-  createUserRow,
-  createResellerSignup,
-  sendMemberVerificationEmail,
-} from "$lib/server/signup";
+import { createUserRow, createResellerSignup } from "$lib/server/signup";
 import { dev } from "$app/environment";
 
 /** Referral cookie — port `?r_program=` dari signup-edit.php (awet 10 hari). */
@@ -113,13 +109,14 @@ export const actions: Actions = {
       upLink = u ? Number(u.id) : null;
     }
 
-    let emailSent = false;
     try {
       if (mode === "reseller") {
         await createResellerSignup({ email, password, username, fullName, whatsapp, upLink });
         throw redirect(303, "/login?registered=reseller");
       }
-      const userId = await createUserRow({
+      // G2 retire-verify: member tidak lagi dikirim email verifikasi saat
+      // signup — akun langsung aktif dan bisa login tanpa gate.
+      await createUserRow({
         email,
         password,
         username,
@@ -127,23 +124,12 @@ export const actions: Actions = {
         whatsapp,
         upLink,
       });
-      // U-04: kalau email gagal kirim, tetap buat akun tapi flag ke UI agar
-      // user tidak diam-diam tidak terima verifikasi. Pesan error minta user
-      // resend manual di halaman verifikasi.
-      try {
-        emailSent = await sendMemberVerificationEmail(userId);
-      } catch (e) {
-        console.error("[signup] sendMemberVerificationEmail failed", (e as Error)?.message);
-      }
     } catch (e) {
       if (e && typeof e === "object" && "status" in e) throw e; // SvelteKit redirect
       const msg = e instanceof Error ? e.message : "Gagal membuat akun. Coba lagi.";
       return fail(400, { ...baseErr, error: msg });
     }
 
-    if (!emailSent) {
-      throw redirect(303, `/verifikasi?resend=1&email=${encodeURIComponent(email)}`);
-    }
     throw redirect(303, "/login?registered=1");
   },
 };

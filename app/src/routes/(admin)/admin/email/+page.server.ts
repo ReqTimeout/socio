@@ -312,8 +312,12 @@ export const actions: Actions = {
       );
     } else {
       const recipients = await db.execute(
+        // G2 retire-verify: filter `verify='Yes'` DIHAPUS — pasca retire, member
+        // baru tidak pernah dapat verify=Yes lagi → broadcast akan menyusut ke
+        // nol. Sama seperti keputusan BASE_FILTER G1: eligibility cukup email
+        // non-kosong + audienceFilter (subs/level) di bawah.
         sql`SELECT u.id, u.email FROM users u
-            WHERE u.verify = 'Yes' AND u.email <> ''
+            WHERE u.email <> ''
               AND ${group === "all" ? sql`1=1` : sql`u.level = ${group}`}
               AND ${audienceFilter}
             LIMIT 5000`,

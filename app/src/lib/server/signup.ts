@@ -268,11 +268,16 @@ async function sendResellerInstructionsEmail(
 
 /**
  * Dipanggil saat admin confirm deposit `untuk_apa=reseller`:
- * aktifkan akun (verify=Yes) + kredit saldo Rp20.000 yang sudah termasuk di tagihan 50k (net).
+ * aktifkan akun (reseller_activated=1) + kredit saldo Rp20.000 yang sudah
+ * termasuk di tagihan 50k (net). G2: tidak lagi menulis `verify` — kolom itu
+ * dulunya overload penanda email-verification member.
  */
 export async function activateReseller(userId: number): Promise<void> {
   const bonus = Number(process.env.SOCIO_RESELLER_BONUS ?? 20000);
-  await db.update(users).set({ verify: "Yes" }).where(eq(users.id, userId));
+  await db
+    .update(users)
+    .set({ resellerActivated: 1 })
+    .where(eq(users.id, userId));
   await db
     .update(users)
     .set({ balance: sql`GREATEST(${users.balance}, 0) + ${bonus}` })
