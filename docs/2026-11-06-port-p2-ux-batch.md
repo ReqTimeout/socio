@@ -193,6 +193,18 @@ Keputusan owner: **hanya segmen `activation`** yang dijadwalkan dulu · ambang `
 - **COMMIT 178a3eb→32735db (4 granular: schema/lib/routes/cron) · L3 0 findings · DEPLOYED 32735db · LIVE** (Coolify `k5kwd00lbedn7hzgu2n0miwj` finished; container tag `32735db2e905`; `/u/*`=400 & `/api/u/*` POST=200; cron registry 11 job incl `email-lifecycle`; `ensureAdminSchema` di hooks → 2 tabel terbentuk). **Kill switch OFF** → belum ada email terkirim sampai owner mengaktifkan.
 - **UPDATE 6 Nov 2026 — kill switch ON**: sampel 1 email aktivasi dikirim ke inbox owner (Resend 200, HTML 9.209 byte, grid nyata, unsubscribe valid) → **konfirmasi OK** → `EMAIL_MARKETING_ENABLED=1` via API Coolify (env uuid `1uvrulnhjr0wwvvpsppsbxys`) + deploy `apyauzua8zo7jykeh9xk7f2n` finished; container image `1f0d019`, env terverifikasi `=1`, cron 11 job incl email-lifecycle, tanpa error marketing. **Activation live**: cron 09:00 WIB enqueue ≤25/hari (cap + cooldown 7 hari + quiet 08:00–20:00 WIB); calon 3.247 user. Opsional menyusul: rapikan nama kategori grid email pakai helper `whitelabel()` (konvensi repo sudah ada).
 
+## G2 — Retire-verify + separasi `reseller_activated` (CONFIRM owner, diputuskan 6 Nov 2026)
+
+Keputusan owner: **retire verifikasi email utk Member saja** (pure retire — berhenti kirim) · **tambah `users.reseller_activated`** (kolom baru, pisahkan aktivasi reseller dari `verify` yang overload) · **hapus toggle `signup_verify_required`** dari admin settings. Ancaman uang teridentifikasi: retire naif (mass verify=Yes) akan melepas 234 reseller BELUM bayar ke markup Reseller — karena pricing key-nya `level`, bukan verify.
+
+- **Fase 0 (DB prod, sebelum kode deploy)**: backup `users_bak_g2` (3.468 baris) · `ALTER TABLE users ADD COLUMN reseller_activated TINYINT NOT NULL DEFAULT 0` · backfill `=1 WHERE level='Reseller' AND verify='Yes'` → **tepat 56** (234 pending tetap 0). Resep mysql2-absolute-path dalam container; skrip temp dihapus.
+- **Fase 1 (schema)**: `packages/db/src/schema/users.ts` + kolom `resellerActivated`; `ensure.ts` `tryExec ADD COLUMN` idempoten utk env lain.
+- **Fase 2 (auth/gates)**: `activateReseller()` tulis `resellerActivated=1` (bukan verify) · gate order `/pesan` Reseller + banner aktivasi dashboard + `resendActivation` baca kolom baru · gate login Member/Agen (U-02) **dihapus** (gate suspended tetap) · `/daftar` tidak lagi kirim email verifikasi (selalu `/login?registered=1`). Route `/verifikasi` legacy + `sendMemberVerificationEmail` dibiarkan hidup (resend user lama); `verify` tetap informasional (hooks emailVerified, display admin, segmen broadcast).
+- **Drop-on (konsekuensi retire)**: broadcast `admin/email` tidak lagi hard-filter `verify='Yes'` — pasca retire member baru tak pernah verify=Yes lagi → blast menyusut ke nol; konsisten keputusan BASE_FILTER G1.
+- **Fase 3 (admin)**: toggle `signup_verify_required` dihapus (load var, action `toggleSignupVerify`, kartu UI settings); audit log lama tetap histori.
+- **Verifikasi**: selftest source-scan 18/18 OK · svelte-check 0 error · eslint 0 error baru (1 no-empty pre-existing) · build ✓ · DB pasca-deploy cross-tab utuh (56/234).
+- **COMMIT b92070c→f03c831 (3 granular: schema/retire+gates/settings) · L3 1 medium pada route unsubscribe G1 (desain RFC8058; owner: **terima, lanjut**) · DEPLOYED f03c831 · LIVE** (Coolify `oik1pm313mrpd2ahen5mfstp` finished; container `nqsjafrei6k8dkup1pxkcuwf-20261106T140608` tag `f03c831`; `/`=303, `/u/bogus`=400 [G1 regression OK], `/login?registered=1`=200; cron 11 job sehat).
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
@@ -231,7 +243,7 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | F1 | News threshold IDR | 🔍 decide (no-code) | 2%/Rp100 dipertahankan; minmax/cancel changelog-only |
 | F2 | Kontrak [manual-off] | ✅ LIVE | 791363a |
 | G1 | Email lifecycle/winback | ✅ LIVE | **32735db (sesi ini)** — activation only, kill-switch OFF, ID+Sparko+DNA |
-| G2 | Retire-verify flow | ⏸️ CONFIRM | belum disentuh |
+| G2 | Retire-verify flow | ✅ LIVE | **f03c831 (sesi ini)** — Member retire pure, `reseller_activated` separasi (backfill 56), toggle settings hapus |
 | H1/H2/H3 | Reseller / coupon loop | ⏸️ CONFIRM | belum disentuh |
 | I | Multi-provider | ⏸️ CONFIRM | proyek besar + migrasi `provider.status` |
 | P4 | SEO subsystem port | ⏸️ CONFIRM | proyek terpisah |
