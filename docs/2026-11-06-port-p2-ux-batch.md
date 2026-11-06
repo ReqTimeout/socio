@@ -149,6 +149,38 @@
 - `@socio/core test`: 10 suite hijau — +order-field-spec (B5, selftest print) di atas 69 assertion lama
 - `vite build`: ✓ adapter-node done (diulang setelah B5 — lulus)
 
+---
+
+## F1 — News feed recalibration (CONFIRM owner, 6 Nov 2026) — KEPUTUSAN: tidak ada perubahan kode
+- Handover .my memakai ambang `PRICE_NEWS_MIN_ABS` RM0.10/1k — **TIDAK diport mentah** (skala IDR berbeda jauh).
+- **Keputusan 1 (ambang harga):** .id SUDAH di 2% DAN ≥ Rp100/1k (`service-sync.ts` L64-65) sejak keputusan owner sebelumnya → **dipertahankan**. Changelog tetap mencatat SEMUA perubahan untuk admin.
+- **Keputusan 2 (jenis berita baru):** `minmax_changed` + `cancel_changed` tetap **changelog-only (admin)**, TIDAK dinaikkan ke feed publik `/berita`.
+- Dasar data (probe read-only DB prod): 30 hari terakhir `cancel_changed` 1.796 event/732 layanan, `minmax_changed` 881/453 → total ~2.700/bulan; feed publik saat ini ~2.200 item sepanjang masa (price_up 957, price_down 710, new_service 391, discontinued 159). Menaikkan keduanya akan menenggelamkan berita harga/layanan baru; keduanya sinyal ops admin, bukan keputusan beli user.
+- Konsekuensi: TIDAK ada edit kode → tidak perlu gate/commit/deploy. Konfigurasi .id sudah benar; dokumentasi ini mencegah re-litigasi / salah port angka RM oleh sesi berikutnya.
+
+---
+
+## E3/E4 — Admin categories (CONFIRM owner, 6 Nov 2026) — Opsi A: bulk disable band per kategori
+- Handover .my: redesign dua-pane `/admin/categories` (rail + switch + chip New + disable band). Owner pilih **Opsi A** — ambil pola berguna saja, BUKAN rombak struktur .id (tangan .my dilarang dipaksakan, kata handover).
+- **Keputusan:** tambah aksi **bulk nonaktif/aktif SEMUA layanan dalam satu kategori** di list "Kelola Kategori" yang sudah ada (/admin/services) — TIDAK bikin halaman /admin/categories baru.
+- **Server** (`+page.server.ts`): aksi baru `toggleCategoryServices(categoryId, mode)` — guard triad (admin/can/rate `category-toggle` 10/60s). OFF: `UPDATE ... SET status=0, note=CASE... CONCAT(' [manual-off]') WHERE categoryId=? AND status=1` (1 bulk stmt, CASE cegah dobel tag). ON: hanya `status=0 AND note LIKE '%[manual-off]%'` → status=1 + REPLACE buang tag. Audit `bulk_disable_category`/`bulk_enable_category`. TIDAK batalkan order (konsisten toggleStatus).
+- **Kontrak [manual-off] (F2):** tag ditulis saat OFF supaya service-sync TIDAK reaktivasi tiap jam; ON hanya membangunkan yang dimatikan MANUAL (yang hilang dari provider / dimatikan sync tetap off). Ini integrasi kunci E3/E4↔F2.
+- **UI** (`+page.svelte`): helper `runCategoryToggle(catId,name,mode)` + 2 tombol ghost per baris kategori ("Matikan semua" danger / "Nyalakan semua") lewat ConfirmDialog. Parameter SQL ter-bound (`${likeTag}`/`${TAG}`), categoryId via `eq()` → no SQLi.
+- Gate: svelte-check 0 errors (50 warning baseline), eslint 0 errors (47 warning baseline), build ✓ adapter-node.
+- Belum di-commit/deploy — ride bersama batch P3 berikutnya.
+
+---
+
+## E6 — Admin revenue verified-deposits (CONFIRM owner, 6 Nov 2026) — Opsi A: ganti KPI ke kas-masuk deposit
+- Handover .my menduga .id "Midtrans settlement otomatis" → **KOREKSI owner**: Midtrans .id NONAKTIF, kas masuk = deposit yang admin verify manual (BCA + kode unik sen). Jadi model .my Justru portabel penuh ke .id.
+- Temuan: dashboard .id SEBELUMNYA menghitung "Revenue hari ini" = `SUM(orders.price)` (GMV order) — bukan Midtrans, bukan deposit. Ada di **2 sumber**: load `(admin)/admin/+page.server.ts` + SSE `api/admin/events/+server.ts`.
+- **Keputusan Opsi A:** ganti KPI "Revenue hari ini" + chart 7d + delta-vs-kemarin jadi **kas-masuk deposit terverifikasi**: `SUM(deposits.amount)` WHERE `status='Success' AND verified_by IS NOT NULL`, bucket `DATE(verified_at)`. Sumber kebenaran sama dgn aksi verify admin (`UPDATE deposits SET status='Success', verified_by, verified_at=NOW()`).
+- **Semantik:** deposit = uang riil masuk (liabilitas saldo sampai dipakai); GMV order = nilai layanan terjual. Owner pilih kas-masuk sbg KPI utama. GMV order TETAP tersedia di `/admin/reporting` (analitik order) — tidak diutak-atik.
+- **Label UI:** "Revenue hari ini" → "Kas masuk hari ini"; chart series "Revenue" → "Kas masuk". Nama properti payload internal (`revenue.today/spark/delta`) TIDAK diubah → kontrak SSE ke client tidak pecah, hanya nilainya bersumber deposit.
+- Query `depPendingRow` (pending deposit) & `ordersTodayRow` (jumlah order) tetap — hanya 3 query revenue (today/yest/byDay) × 2 file yang diarahkan ke deposits + `isNotNull(deposits.verifiedBy)`.
+- Gate: svelte-check 0 errors (50 warning baseline), eslint 0 error BARU (6 `no-empty` pre-existing catch{}), build ✓ adapter-node.
+- Belum di-commit/deploy.
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
