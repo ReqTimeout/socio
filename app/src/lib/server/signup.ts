@@ -271,12 +271,22 @@ async function sendResellerInstructionsEmail(
  * aktifkan akun (reseller_activated=1) + kredit saldo Rp20.000 yang sudah
  * termasuk di tagihan 50k (net). G2: tidak lagi menulis `verify` — kolom itu
  * dulunya overload penanda email-verification member.
+ *
+ * H1 (port .my): flip level Member→Reseller via CASE. Selama ini level sudah
+ * terset di `createUserRow` (jalur signup mode=reseller) sehingga tidak
+ * kelihatan — tapi untuk jalur upgrade Member aktif (halaman /reseller),
+ * tanpa CASE ini admin konfirmasi hanya memberi flag+bonus sementara level
+ * tetap Member → markup Reseller (pricing key = level) tidak pernah aktif.
+ * Reseller signup = no-op; Admin/Agen tidak pernah di-clobber.
  */
 export async function activateReseller(userId: number): Promise<void> {
   const bonus = Number(process.env.SOCIO_RESELLER_BONUS ?? 20000);
   await db
     .update(users)
-    .set({ resellerActivated: 1 })
+    .set({
+      resellerActivated: 1,
+      level: sql`CASE WHEN ${users.level} = 'Member' THEN 'Reseller' ELSE ${users.level} END`,
+    })
     .where(eq(users.id, userId));
   await db
     .update(users)

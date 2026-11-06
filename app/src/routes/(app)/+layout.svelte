@@ -76,6 +76,7 @@
     section: string;
     unread?: boolean;
     pending?: boolean;
+    hot?: boolean;
   }[] = $derived([
     { href: "/", label: "Home", icon: "home", section: "Menu" },
     { href: "/pesanan", label: "Pesanan", icon: "receipt", section: "Menu" },
@@ -88,13 +89,23 @@
     { href: "/notif", label: "Notifikasi", icon: "bell", section: "Lainnya", unread: data.unreadCount > 0 },
   ]);
   const isAdminUser = $derived((data.user as any)?.level === "Admin");
+  // H1 (port .my): undangan upgrade Reseller — HANYA Member (Reseller/Admin/Agen
+  // tidak melihatnya; Reseller warisan masuk lewat halaman lalu diarahkan ke
+  // banner dashboard). Dot accent + mahkota; redup saat halaman aktif.
+  const isMemberUser = $derived((data.user as any)?.level === "Member");
   const sidebarItems = $derived(
     isAdminUser
       ? [
           ...sidebarBase,
           { href: "/admin", label: "Dashboard Admin", icon: "shield", section: "Lainnya" },
         ]
-      : sidebarBase,
+      : isMemberUser
+        ? [
+            ...sidebarBase.slice(0, 7),
+            { href: "/reseller", label: "Upgrade Reseller", icon: "crown", section: "Lainnya", hot: true },
+            ...sidebarBase.slice(7),
+          ]
+        : sidebarBase,
   );
 
   // Judul halaman untuk desktop header (breadcrumb ringan)
@@ -108,6 +119,7 @@
     "/saldo/riwayat": "Riwayat Saldo",
     "/akun": "Akun Saya",
     "/affiliate": "Program Affiliate",
+    "/reseller": "Upgrade Reseller",
     "/tiket": "Tiket Bantuan",
     "/notif": "Notifikasi",
     "/refill": "Pusat Refill",

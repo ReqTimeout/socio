@@ -17,6 +17,8 @@
     unread?: boolean;
     /** Deposit pending (C1) — dot amber berdenyut; aksi uang menunggu, beda dari unread. */
     pending?: boolean;
+    /** Undangan upgrade Reseller (H1) — dot accent berdenyut + mahkota kecil; hanya untuk level Member. */
+    hot?: boolean;
   };
 
   let {
@@ -170,6 +172,14 @@
                   style="--notif-halo: rgba(217, 119, 6, 0.55)"
                   aria-hidden="true"
                 ></span>
+              {:else if item.hot}
+                <!-- Upgrade reseller (H1) — dot accent + halo cyan, beda rona
+                     dari pending amber supaya dua sinyal tidak tertukar. -->
+                <span
+                  class="dot-pulse absolute -top-0.5 -right-0.5 z-10 h-2.5 w-2.5 rounded-full bg-accent-500 ring-2 ring-white"
+                  style="--notif-halo: rgba(8, 145, 178, 0.5)"
+                  aria-hidden="true"
+                ></span>
               {/if}
             </span>
             {#if !collapsed}
@@ -189,6 +199,10 @@
                   style="--notif-halo: rgba(217, 119, 6, 0.55)"
                   aria-hidden="true"
                 ></span>
+              {:else if item.hot && !active}
+                <!-- H1: mahkota accent penanda undangan upgrade (dot di ikon
+                     sudah cover saat active). -->
+                <Icon name="crown" size={14} stroke={2.5} class="ml-auto shrink-0 text-accent-600" />
               {/if}
               {#if active}
                 <Icon name="chevron_right" size={16} class="ml-auto text-primary/60" />

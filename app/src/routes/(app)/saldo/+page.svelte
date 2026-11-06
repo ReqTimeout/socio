@@ -413,12 +413,12 @@
     </p>
   </div>
 
-  <!-- Teaser Member → daftar Reseller (C1; .id: level Member masih bisa daftar
-       reseller — akun existing tak bisa upgrade mandiri, arahkan ke tiket).
-       mango = aksen saja, bukan chrome penuh. -->
+  <!-- Teaser Member → upgrade Reseller (C1; H1 Nov-2026 mengganti arah tiket
+       dengan jalur upgrade mandiri — invoice aktivasi terbit dari halaman
+       /reseller). mango = aksen saja, bukan chrome penuh. -->
   {#if data.level === "Member"}
     <a
-      href="/tiket"
+      href="/reseller"
       class="card-lift flex items-center gap-3 rounded-2xl border border-mango-200 bg-mango-50 px-4 py-3.5 transition active:scale-[0.99]"
       onclick={() => haptic(10)}
     >
@@ -430,12 +430,12 @@
       <div class="min-w-0 flex-1">
         <div class="text-sm font-bold text-ink-900">Mau order lebih murah?</div>
         <div class="mt-0.5 text-xs leading-relaxed text-ink-600">
-          Reseller dapat harga grosir — aktivasi Rp50.000 (sudah termasuk saldo Rp20.000). Tanya
-          cara upgrade lewat tiket.
+          Reseller dapat harga grosir — aktivasi Rp50.000 (sudah termasuk saldo
+          Rp20.000). Bisa upgrade mandiri, invoice langsung dikirim.
         </div>
       </div>
       <span class="hidden shrink-0 items-center gap-1 text-xs font-bold text-amber-700 sm:inline-flex"
-        >Tanya upgrade <Icon name="chevron_right" size={14} /></span
+        >Upgrade sekarang <Icon name="chevron_right" size={14} /></span
       >
       <Icon name="chevron_right" size={16} class="shrink-0 text-amber-700 sm:hidden" />
     </a>
