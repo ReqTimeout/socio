@@ -181,6 +181,17 @@
 - Gate: svelte-check 0 errors (50 warning baseline), eslint 0 error BARU (6 `no-empty` pre-existing catch{}), build ✓ adapter-node.
 - **COMMIT a3a3a09 · DEPLOYED 0010967 · LIVE** (bersama E3/E4, L3 0 findings).
 
+## G1 — Email lifecycle/winback (CONFIRM owner, diputuskan 6 Nov 2026) — email perilaku, BUKAN blast
+
+Keputusan owner: **hanya segmen `activation`** yang dijadwalkan dulu · ambang `balance_low` **< Rp10.000** · irama **Konservatif** (cap 25/hari, 1 per 7 hari per user, quiet hours 08:00–20:00 WIB). WAJIB Design DNA Socio (`render.ts`) + maskot Sparko + bahasa Indonesia.
+
+- **Fase A (compliance)**: token unsubscribe HMAC-SHA256 (`SOCIO_AUTH_SECRET`, fail-fast ≥16), one-click RFC8058 (`/api/u/[token]` 200 silent) + halaman konfirmasi `/u/[token]` (CSRF + Sparko), tabel `email_suppressions` (worker filter marketing-only), kill switch `EMAIL_MARKETING_ENABLED` **default OFF**.
+- **Fase B (lifecycle engine)**: `email_triggers_sent` UNIQUE(user,trigger,periodKey) idempoten (7-hari cooldown via `weekPeriodKey`), `segments.ts` BASE_FILTER **tanpa gerbang verify='Yes'** (verify .id = penanda aktivasi reseller; gating salah exclusi 1489 user — diverifikasi read-only prod: 3463 eligible marketing), `templates.ts` buildLifecycleEmail (emailShell+emailHero+emailServiceGrid+emailStatStrip+emailFooterMarketing, pose Sparko idle|wave|sad|celebrate), `enqueue.ts` claim→render→insert `email_queue` (`marketing-${trigger}`).
+- **Fase cron**: `email-lifecycle.ts` + registrasi `jobs.ts` (expr `0 9 * * *`, **`tz: Asia/Jakarta`** — field baru, `index.ts` teruskan timezone ke `cron.schedule`); gerbang suppression + kill-switch di `email-queue.ts` (marketing-only, transaksional tak terpengaruh).
+- **Adaptasi .id**: balance = int Rupiah (sen .my dibuang); **coupon_expiring dropped** (tak ada `user_coupons`).
+- **Verifikasi**: svelte-check 0 error, eslint bersih (1 no-empty pre-existing), build ✓, selftest esbuild (HMAC roundtrip + tamper-reject + fail-fast secret + WIB math 02:00Z=09:00WIB + periodKey) → OK.
+- **COMMIT 178a3eb→32735db (4 granular: schema/lib/routes/cron) · L3 0 findings · DEPLOYED 32735db · LIVE** (Coolify `k5kwd00lbedn7hzgu2n0miwj` finished; container tag `32735db2e905`; `/u/*`=400 & `/api/u/*` POST=200; cron registry 11 job incl `email-lifecycle`; `ensureAdminSchema` di hooks → 2 tabel terbentuk). **Kill switch OFF** → belum ada email terkirim sampai owner mengaktifkan.
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
@@ -218,7 +229,7 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | E8 | Coupons personal view | ⏸️ CONFIRM | tergantung H3 |
 | F1 | News threshold IDR | 🔍 decide (no-code) | 2%/Rp100 dipertahankan; minmax/cancel changelog-only |
 | F2 | Kontrak [manual-off] | ✅ LIVE | 791363a |
-| G1 | Email lifecycle/winback | ⏸️ CONFIRM | belum disentuh |
+| G1 | Email lifecycle/winback | ✅ LIVE | **32735db (sesi ini)** — activation only, kill-switch OFF, ID+Sparko+DNA |
 | G2 | Retire-verify flow | ⏸️ CONFIRM | belum disentuh |
 | H1/H2/H3 | Reseller / coupon loop | ⏸️ CONFIRM | belum disentuh |
 | I | Multi-provider | ⏸️ CONFIRM | proyek besar + migrasi `provider.status` |
