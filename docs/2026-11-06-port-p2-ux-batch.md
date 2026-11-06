@@ -167,7 +167,7 @@
 - **Kontrak [manual-off] (F2):** tag ditulis saat OFF supaya service-sync TIDAK reaktivasi tiap jam; ON hanya membangunkan yang dimatikan MANUAL (yang hilang dari provider / dimatikan sync tetap off). Ini integrasi kunci E3/E4↔F2.
 - **UI** (`+page.svelte`): helper `runCategoryToggle(catId,name,mode)` + 2 tombol ghost per baris kategori ("Matikan semua" danger / "Nyalakan semua") lewat ConfirmDialog. Parameter SQL ter-bound (`${likeTag}`/`${TAG}`), categoryId via `eq()` → no SQLi.
 - Gate: svelte-check 0 errors (50 warning baseline), eslint 0 errors (47 warning baseline), build ✓ adapter-node.
-- Belum di-commit/deploy — ride bersama batch P3 berikutnya.
+- **COMMIT 4988b5a · DEPLOYED 0010967 · LIVE** (Coolify `qejbjdmjmotmwurez31v3lbn` finished; container tag 0010967fbab1; L3 0 findings).
 
 ---
 
@@ -179,9 +179,49 @@
 - **Label UI:** "Revenue hari ini" → "Kas masuk hari ini"; chart series "Revenue" → "Kas masuk". Nama properti payload internal (`revenue.today/spark/delta`) TIDAK diubah → kontrak SSE ke client tidak pecah, hanya nilainya bersumber deposit.
 - Query `depPendingRow` (pending deposit) & `ordersTodayRow` (jumlah order) tetap — hanya 3 query revenue (today/yest/byDay) × 2 file yang diarahkan ke deposits + `isNotNull(deposits.verifiedBy)`.
 - Gate: svelte-check 0 errors (50 warning baseline), eslint 0 error BARU (6 `no-empty` pre-existing catch{}), build ✓ adapter-node.
-- Belum di-commit/deploy.
+- **COMMIT a3a3a09 · DEPLOYED 0010967 · LIVE** (bersama E3/E4, L3 0 findings).
 
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
-- Semua perubahan **belum commit** — menunggu instruksi eksplisit user.
+
+---
+
+## 📊 Tracker Handover socio.my → socio.id (A→K) — per 6 Nov 2026
+
+Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸️ CONFIRM (menunggu keputusan) · ❌ skip (keputusan .my, tidak diport)
+
+| Kode | Item | Status | Catatan |
+|---|---|---|---|
+| P0 ×4 | Financial bug fixes Fase 1 | ✅ LIVE | commit sesi sblm (refund/price/markup) |
+| A4 | Refill Center `/refill` | ✅ LIVE | |
+| A5 | Email hardening | ✅ LIVE | |
+| B1 | Smart link placeholder | ✅ LIVE | da0a106 |
+| B2 | Kind tint chips | ✅ LIVE | da0a106 |
+| B3 | Kategori sort GREATEST | ✅ LIVE | da0a106 |
+| B4 | Popularitas "Terlaris" | ✅ LIVE | da0a106 |
+| B5 | Field order dinamis SMMturk (12 tipe) | ✅ LIVE | a779a74 |
+| B6 | Search pesanan `?q=` | ✅ LIVE | da0a106 |
+| C1 | Banner pending + nav dot | ✅ LIVE | da0a106 |
+| C2 | Riwayat saldo → link order `?oid=` | ✅ LIVE | 53b8127 |
+| C3 | Modal top-up Tutup (no reload) | ✅ LIVE | 53b8127 |
+| C4 | Notif sukses deposit (bell+email) | ✅ LIVE | 53b8127 |
+| C5 | Badge virtual "Kedaluwarsa" | ✅ LIVE | 53b8127 |
+| C7 | Banner promo (preset .my) | ⏸️ CONFIRM | belum diputuskan |
+| D1 | Notif badge halo | ✅ LIVE | da0a106 |
+| E1 | Admin services perf | 🔍 verify-only | 791363a (pricing_rules paralel) |
+| E2 | decodeHtmlEntities | ✅ LIVE | da0a106 |
+| E3/E4 | Admin categories bulk toggle | ✅ LIVE | **4988b5a (sesi ini)** — Opsi A |
+| E5 | Refund label ledger-first | 🔍 verify-only | sudah beres Fase 1 |
+| E6 | Revenue = kas-masuk deposit | ✅ LIVE | **a3a3a09 (sesi ini)** — Opsi A |
+| E7 | Admin news separation | ✅ LIVE | da0a106 |
+| E8 | Coupons personal view | ⏸️ CONFIRM | tergantung H3 |
+| F1 | News threshold IDR | 🔍 decide (no-code) | 2%/Rp100 dipertahankan; minmax/cancel changelog-only |
+| F2 | Kontrak [manual-off] | ✅ LIVE | 791363a |
+| G1 | Email lifecycle/winback | ⏸️ CONFIRM | belum disentuh |
+| G2 | Retire-verify flow | ⏸️ CONFIRM | belum disentuh |
+| H1/H2/H3 | Reseller / coupon loop | ⏸️ CONFIRM | belum disentuh |
+| I | Multi-provider | ⏸️ CONFIRM | proyek besar + migrasi `provider.status` |
+| P4 | SEO subsystem port | ⏸️ CONFIRM | proyek terpisah |
+
+**Deploy batch sesi ini:** 3 commit (4988b5a E3/E4 · a3a3a09 E6 · 0010967 docs) → push `da0a106..0010967 → main` → L3 0 findings → Coolify finished → container tag 0010967fbab1 (Up).
