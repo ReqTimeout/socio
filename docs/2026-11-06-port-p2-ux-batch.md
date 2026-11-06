@@ -205,6 +205,15 @@ Keputusan owner: **retire verifikasi email utk Member saja** (pure retire — be
 - **Verifikasi**: selftest source-scan 18/18 OK · svelte-check 0 error · eslint 0 error baru (1 no-empty pre-existing) · build ✓ · DB pasca-deploy cross-tab utuh (56/234).
 - **COMMIT b92070c→f03c831 (3 granular: schema/retire+gates/settings) · L3 1 medium pada route unsubscribe G1 (desain RFC8058; owner: **terima, lanjut**) · DEPLOYED f03c831 · LIVE** (Coolify `oik1pm313mrpd2ahen5mfstp` finished; container `nqsjafrei6k8dkup1pxkcuwf-20261106T140608` tag `f03c831`; `/`=303, `/u/bogus`=400 [G1 regression OK], `/login?registered=1`=200; cron 11 job sehat).
 
+## C7 — Banner promo dashboard: mode artwork self-contained (CONFIRM owner, diputuskan 6 Nov 2026)
+
+Label tracker "C7" tidak ada di master doc; hasil investigasi: pipeline banner .id SUDAH lengkap dan lebih kaya dari .my (CMS `promotion_banners` position='dashboard' + window jadwal + limit 5 → fallback `dashboard_banners` setting JSON → `DUMMY_BANNERS` · admin CRUD `/admin/banners` + upload R2 · `PromoBanner.svelte` di packages/ui). Gap NYATA hanya satu: renderer .id menumpuk overlay teks (badge/h2/subtitle/CTA putih) di ATAS banner bergambar → copy dobel + tak terbaca. Probe prod: 3 banner CMS aktif semuanya `has_img=1`, artwork terukur **1200×360** → spacer pakai `aspect-[1200/360]` (BUKAN 1200/630 milik .my — port membabi buta akan letterbox/crop).
+
+- **Keputusan owner**: port fix artwork .my (opsi sterilisasi dummy ditolak — pipeline CMS tetap dipakai).
+- **Perubahan** (1 file `packages/ui/src/components/PromoBanner.svelte`): branch `b.img` tampil image utuh (`loading="lazy"` + `decoding="async"`) TANPA overlay · overlay badge/h2/subtitle/CTA pindah ke `{:else}` (murni gradient/teks) · spacer kondisional: ada img → `aspect-[1200/360]`, tidak ada → tinggi tetap lama (176/184/190px). Prop `lang` .my tidak diport (.id tanpa i18n).
+- **Verifikasi**: svelte-check 0 errors (baseline 50 warnings tetap) · build ✓ · L3 **0 findings**.
+- **COMMIT 06ac016 · push aedcb24..06ac016 (SSH HEAD:main) · DEPLOYED 06ac016 · LIVE** (Coolify `7p30w26xtmnet2fdpaes8b3f` finished; container `nqsjafrei6k8dkup1pxkcuwf-20261106T144600` tag sha `06ac016…`; marker `1200/360` ada di chunk client `CJ00Bo3D.js` + CSS `0.Dcm0_gMC.css` + chunk server; `/login`=200; token API revoked, sisa 0).
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
@@ -231,7 +240,7 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | C3 | Modal top-up Tutup (no reload) | ✅ LIVE | 53b8127 |
 | C4 | Notif sukses deposit (bell+email) | ✅ LIVE | 53b8127 |
 | C5 | Badge virtual "Kedaluwarsa" | ✅ LIVE | 53b8127 |
-| C7 | Banner promo (preset .my) | ⏸️ CONFIRM | belum diputuskan |
+| C7 | Banner promo artwork mode | ✅ LIVE | **06ac016 (sesi ini)** — suppress overlay utk img, spacer aspect 1200/360 (port .my) |
 | D1 | Notif badge halo | ✅ LIVE | da0a106 |
 | E1 | Admin services perf | 🔍 verify-only | 791363a (pricing_rules paralel) |
 | E2 | decodeHtmlEntities | ✅ LIVE | da0a106 |
