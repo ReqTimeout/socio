@@ -1,6 +1,6 @@
 import { db } from "@socio/db";
 import { services, categories, provider, pricingRules } from "@socio/db/schema";
-import { sql, eq, and, or, desc, asc } from "drizzle-orm";
+import { sql, eq, and, or, like, desc, asc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import type { Actions, PageServerLoad } from "./$types";
@@ -490,6 +490,103 @@ export const actions: Actions = {
       ip: (locals as any).ip,
     });
     return { success: `${cur.name} → ${next === 1 ? "Aktif" : "Nonaktif"}.` };
+  },
+
+  /**
+   * E3/E4 (.my category disable-band) — bulk nonaktif/aktif SEMUA layanan dalam
+   * satu kategori lewat list "Kelola Kategori". TULIS tag `[manual-off]` (kontrak
+   * F2) saat OFF supaya service-sync TIDAK meng-reaktivasi-nya tiap jam; saat ON
+   * hanya layanan yang KITA matikan manual (status=0 + bertag) yang dinyalakan
+   * balik — layanan yang dimatikan sync (provider hilang, tanpa tag) tetap off.
+   * Disengaja TIDAK membatalkan order aktif (konsisten dgn toggleStatus per
+   * layanan) — admin membatalkan order terpisah kalau perlu.
+   */
+  toggleCategoryServices: async ({ request, locals }) => {
+    assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "services:edit");
+    if (_g) return _g;
+    const _rate = await assertAdminRate(
+      "category-toggle",
+      (locals as any).ip ?? "0.0.0.0",
+      10,
+      60,
+    );
+    if (_rate) return _rate;
+    const form = await request.formData();
+    const cid = Number(form.get("categoryId"));
+    const mode = String(form.get("mode"));
+    if (!Number.isFinite(cid) || cid <= 0) return fail(400, { error: "Kategori tidak valid." });
+    if (mode !== "off" && mode !== "on") return fail(400, { error: "Mode tidak valid." });
+    const [cat] = await db
+      .select({ id: categories.id, name: categories.name })
+      .from(categories)
+      .where(eq(categories.id, cid))
+      .limit(1);
+    if (!cat) return fail(404, { error: "Kategori tidak ditemukan." });
+
+    const TAG = "[manual-off]";
+    const likeTag = `%${TAG}%`;
+    if (mode === "off") {
+      const [cnt] = await db
+        .select({ n: sql<number>`COUNT(*)` })
+        .from(services)
+        .where(and(eq(services.categoryId, cid), eq(services.status, 1)));
+      const changed = Number(cnt?.n ?? 0);
+      if (changed > 0) {
+        // CASE menjaga supaya baris yang (langka) sudah bertag tidak dobel tag.
+        await db
+          .update(services)
+          .set({
+            status: 0,
+            note: sql`CASE WHEN note IS NULL OR note NOT LIKE ${likeTag}
+              THEN TRIM(CONCAT(COALESCE(note, ''), ' ', ${TAG})) ELSE note END`,
+          })
+          .where(and(eq(services.categoryId, cid), eq(services.status, 1)));
+      }
+      await logAudit({
+        adminId: Number(locals.user!.id),
+        action: "bulk_disable_category",
+        entity: "category",
+        entityId: cid,
+        detail: { name: cat.name, changed, mode: "off" },
+        ip: (locals as any).ip,
+      });
+      return {
+        success:
+          changed === 0
+            ? `Tidak ada layanan aktif di "${cat.name}".`
+            : `${changed} layanan di "${cat.name}" → Nonaktif (tahan-sync).`,
+      };
+    }
+    // ON: hanya yang manual-off (status=0 + bertag) — buang tag, jadi aktif.
+    const [cnt] = await db
+      .select({ n: sql<number>`COUNT(*)` })
+      .from(services)
+      .where(and(eq(services.categoryId, cid), eq(services.status, 0), like(services.note, likeTag)));
+    const changed = Number(cnt?.n ?? 0);
+    if (changed > 0) {
+      await db
+        .update(services)
+        .set({
+          status: 1,
+          note: sql`TRIM(REPLACE(COALESCE(note, ''), ${" " + TAG}, ''))`,
+        })
+        .where(and(eq(services.categoryId, cid), eq(services.status, 0), like(services.note, likeTag)));
+    }
+    await logAudit({
+      adminId: Number(locals.user!.id),
+      action: "bulk_enable_category",
+      entity: "category",
+      entityId: cid,
+      detail: { name: cat.name, changed, mode: "on" },
+      ip: (locals as any).ip,
+    });
+    return {
+      success:
+        changed === 0
+          ? `Tidak ada layanan yang dimatikan manual di "${cat.name}".`
+          : `${changed} layanan di "${cat.name}" → Aktif.`,
+    };
   },
 
   addCategory: async ({ request, locals }) => {

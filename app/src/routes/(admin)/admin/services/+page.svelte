@@ -152,6 +152,21 @@
     data.services.length > 0 && data.services.every((x) => selected.has(x.id)),
   );
 
+  // E3/E4: bulk nonaktif/aktif semua layanan satu kategori (kontrak manual-off F2).
+  async function runCategoryToggle(catId: number, catName: string, mode: "off" | "on") {
+    const fd = new FormData();
+    fd.append("categoryId", String(catId));
+    fd.append("mode", mode);
+    const r = await fetch("?/toggleCategoryServices", { method: "POST", body: fd });
+    const j = (await r.json().catch(() => null)) as any;
+    if (j?.type === "success") {
+      toast(j.data?.success ?? `${catName} diupdate`, "success");
+      location.reload();
+    } else {
+      toast(j?.data?.error ?? "Gagal mengubah status kategori", "error");
+    }
+  }
+
   const hasFilter = $derived(!!(data.q || data.cat || data.status));
 
   function chipHref(c: number | null) {
@@ -733,6 +748,34 @@
               <td class="p-3 text-ink-700">{c.name}</td>
               <td class="p-3 text-right">
                 <div class="inline-flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onclick={() =>
+                      (confirm = {
+                        open: true,
+                        title: `Matikan SEMUA layanan di "${c.name}"?`,
+                        message:
+                          "Semua layanan aktif pada kategori ini dinonaktifkan sekaligus (tag manual-off, tahan dari auto-reaktivasi sync). Pesanan berjalan TIDAK dibatalkan — batalkan terpisah bila perlu.",
+                        label: "Ya, Matikan Semua",
+                        danger: true,
+                        action: () => runCategoryToggle(c.id, c.name, "off"),
+                      })}>Matikan semua</Button
+                  >
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onclick={() =>
+                      (confirm = {
+                        open: true,
+                        title: `Nyalakan kembali layanan "${c.name}"?`,
+                        message:
+                          "Hanya layanan yang DIMATIKAN MANUAL oleh aksi ini yang dinyalakan balik. Layanan yang hilang dari provider (dimatikan sync) tetap nonaktif.",
+                        label: "Ya, Nyalakan Semua",
+                        danger: false,
+                        action: () => runCategoryToggle(c.id, c.name, "on"),
+                      })}>Nyalakan semua</Button
+                  >
                   <Button
                     size="sm"
                     variant="ghost"
