@@ -359,6 +359,35 @@ export async function ensureAdminSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
 
+  // ── G1 lifecycle/winback — email_suppressions (daftar hitam marketing).
+  // Unique pada email → upsert `applyUnsubscribe` idempoten. Disaring oleh
+  // worker email-queue (marketing only) + NOT EXISTS di segmen BASE_FILTER.
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS email_suppressions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      email VARCHAR(255) NOT NULL,
+      reason VARCHAR(20) NOT NULL DEFAULT 'unsubscribe',
+      source VARCHAR(32) DEFAULT NULL,
+      detail VARCHAR(100) DEFAULT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY email_suppressions_email_uq (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  // ── G1 lifecycle — email_triggers_sent (klaim idempotensi per periode).
+  // UNIQUE (user,trigger,periode) → cron dua-run seminggu gak kirim dobel.
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS email_triggers_sent (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      trigger_key VARCHAR(40) NOT NULL,
+      period_key VARCHAR(24) NOT NULL,
+      queue_id INT DEFAULT NULL,
+      sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY email_triggers_sent_uq (user_id, trigger_key, period_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
   // ── Charset: tabel penampung teks MENTAH provider (bisa ada emoji 4-byte,
   // mis. kategori "IMPOSSIBLE SERVICES ❤️"). ADD COLUMN service-sync v2 mewarisi
   // charset tabel lama (latin1/utf8mb3) → INSERT/UPDATE "Incorrect string value"

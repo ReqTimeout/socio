@@ -8,8 +8,10 @@ import {
   text,
   timestamp,
   tinyint,
+  unique,
   varchar,
 } from "drizzle-orm/mysql-core";
+import { sql } from "drizzle-orm";
 
 export const emailCampaigns = mysqlTable("email_campaigns", {
   id: int("id").autoincrement().primaryKey(),
@@ -122,3 +124,49 @@ export type EmailCampaign = typeof emailCampaigns.$inferSelect;
 export type NewEmailCampaign = typeof emailCampaigns.$inferInsert;
 export type EmailQueueItem = typeof emailQueue.$inferSelect;
 export type NewEmailQueueItem = typeof emailQueue.$inferInsert;
+
+/**
+ * G1 lifecycle/winback — daftar hitam email MARKETING (Fase A compliance).
+ * Sumber kebenaran yang disaring worker `email-queue.ts` + segmen marketing.
+ * Email TRANSAKSIONAL tidak pernah membaca tabel ini (reset/deposit/refund tetap
+ * jalan walau user opt-out). Ditulis oleh `applyUnsubscribe` (unsubscribe token).
+ */
+export const emailSuppressions = mysqlTable(
+  "email_suppressions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    email: varchar("email", { length: 255 }).notNull(),
+    reason: mysqlEnum("reason", ["unsubscribe", "bounce", "complaint", "manual"]).default(
+      "unsubscribe",
+    ),
+    source: varchar("source", { length: 32 }),
+    detail: varchar("detail", { length: 100 }),
+    createdAt: datetime("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => ({ emailUq: unique("email_suppressions_email_uq").on(t.email) }),
+);
+
+/**
+ * G1 lifecycle — klaim idempotensi pengiriman per (user, trigger, periode).
+ * UNIQUE-nya yang mencegah do/kirim-ulang saat cron jalan dua kali di periode
+ * sama. `period_key` = token periode (mis. "2026-W45" mingguan) dari cron.
+ */
+export const emailTriggersSent = mysqlTable(
+  "email_triggers_sent",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("user_id").notNull(),
+    triggerKey: varchar("trigger_key", { length: 40 }).notNull(),
+    periodKey: varchar("period_key", { length: 24 }).notNull(),
+    queueId: int("queue_id"),
+    sentAt: datetime("sent_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => ({
+    claimUq: unique("email_triggers_sent_uq").on(t.userId, t.triggerKey, t.periodKey),
+  }),
+);
+
+export type EmailSuppression = typeof emailSuppressions.$inferSelect;
+export type NewEmailSuppression = typeof emailSuppressions.$inferInsert;
+export type EmailTriggerSent = typeof emailTriggersSent.$inferSelect;
+export type NewEmailTriggerSent = typeof emailTriggersSent.$inferInsert;
