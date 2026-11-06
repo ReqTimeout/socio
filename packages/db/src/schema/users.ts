@@ -6,6 +6,7 @@ import {
   mysqlEnum,
   mysqlTable,
   text,
+  tinyint,
   varchar,
   index,
   primaryKey,
@@ -50,6 +51,9 @@ export const users = mysqlTable(
     astatus: mysqlEnum("astatus", ["1", "2"]).notNull().default("1"),
     readPopup: varchar("read_popup", { length: 255 }).notNull(),
     verify: varchar("verify", { length: 288 }).notNull(),
+    // G2: status aktivasi reseller dipisah dari `verify` (yang dulunya overload
+    // penanda email-verification member + aktivasi reseller). 1 = sudah bayar.
+    resellerActivated: tinyint("reseller_activated").notNull().default(0),
     token: varchar("token", { length: 255 }).notNull(),
     has: varchar("has", { length: 255 }).notNull(),
     resetLink: varchar("reset_link", { length: 280 }).notNull(),

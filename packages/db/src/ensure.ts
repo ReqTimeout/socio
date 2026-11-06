@@ -388,6 +388,13 @@ export async function ensureAdminSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
 
+  // ── G2 retire-verify — pemisahan status aktivasi reseller dari kolom
+  // `verify` (overload). Prod sudah di-backfill manual (56 reseller aktif);
+  // tryExec ini cuma menjamin env lain (dev/lokal) ikut punya kolomnya.
+  await tryExec(
+    sql`ALTER TABLE users ADD COLUMN reseller_activated TINYINT NOT NULL DEFAULT 0`,
+  );
+
   // ── Charset: tabel penampung teks MENTAH provider (bisa ada emoji 4-byte,
   // mis. kategori "IMPOSSIBLE SERVICES ❤️"). ADD COLUMN service-sync v2 mewarisi
   // charset tabel lama (latin1/utf8mb3) → INSERT/UPDATE "Incorrect string value"
