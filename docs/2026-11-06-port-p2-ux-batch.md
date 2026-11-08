@@ -225,6 +225,33 @@ Master doc §534-560 + spec .my `2026-10-31-fase-a-reseller-upgrade.md`. Keputus
 - **Verifikasi**: svelte-check 0 error (baseline 50 warnings) · eslint 0 error · build ✓ · guard selftest source-scan 4 invarian (CASE flip ada L288, action tanpa mutation level, guard-chain lengkap, anti-leak totals-only).
 - **COMMIT d02a142 · push 58b58e4..d02a142 (SSH HEAD:main) · L3 0 findings · DEPLOYED d02a142 · LIVE** (Coolify `irscvdnftfm0of0sroha9gff` finished; container `nqsjafrei6k8dkup1pxkcuwf-20261106T163018` tag sha `d02a142…`; marker "Beli lebih murah" di chunk client node 40 + server `reseller/_page.svelte.js`; action `upgradeToReseller` di `reseller/_page.server.ts.js`; `/reseller`=303 [guard unauth OK], `/login`=200; token API revoked, sisa 0).
 
+## I — Multi-provider (switcher 1-aktif + routing per-kategori) + TikTok → SMMfollows
+
+Owner instruction 8 Nov 2026: *"pastikan layanan tiktok menggunakan smmfollow, apinya kamu lihat, semua harus berfungsi, jangan test order"*. Keputusan owner: (a) API key **dari .my** (decrypt di container .my, re-encrypt dgn key .id — key tak pernah keluar host); (b) scope routing **"Cerdas ala .my"** = klasifikasi COVERED/KEEP + review CSV sebelum apply (bukan flip semua, bukan kind-clean-only); (c) UI **lengkap**: `/admin/routing` baru + tombol "Jadikan Aktif" di `/admin/providers`.
+
+**Temuan investigasi (beda penting .my vs .id):** `.id` **tidak punya** `category_pricing_rules` (markup hanya per-level di `pricing_rules`) ⇒ blocker terbesar .my (carry-over markup kategori) **tidak berlaku**. Kontrak API SMMfollows **identik** v2 dengan SMMturk (`https://smmfollows.com/api/v2`; action services/add/status/refill/refill_status/cancel/balance; USD) ⇒ **tanpa adapter** — `packages/core/src/smmturk.ts` sudah generic (endpoint+key per call).
+
+**Implementasi (6 layer):**
+1. **Core murni** `packages/core/src/routing-policy.ts` — `MANUAL_OFF_TAG`, `deriveServingState`, `planReconcile`, `allowedForRouting` + `kind-signature.ts`; selftest `packages/core/test/routing-policy.test.ts` **15/15 assertion** (port dari .my).
+2. **Skema** — `provider.status` (tinyint 1-aktif), tabel `category_provider_routing` (unik per kategori), `services.service_name`/`service_name_raw` → **1024** (nama terpanjang SMMfollows 326 vs varchar lama 255 ⇒ `ER_DATA_TOO_LONG`), `provider_services.category` → 512; DDL idempotent di `packages/db/src/ensure.ts`.
+3. **Helper server** — `app/src/lib/server/active-provider.ts` (`getActiveProviderId` cache 30s + self-heal, `getCategoryRoutingMap`, `isProviderAllowedForCategory`, `getRoutedProviderIds`) + `app/src/lib/server/category-routing.ts` (`listRoutingRows`, `setRouting`, `reconcileAllServices` bulk UPDATE JOIN).
+4. **Gerbang sync** — `service-sync` pakai `allowedForRouting` (routing **menang** atas provider aktif global); route-off **tanpa** tag `[manual-off]` (kontrak F2 tetap utuh) & tanpa berita "dihentikan"; `provider-sync` mirror hanya ∪ (aktif ∪ routed).
+5. **Guard order** — `pesan` + `api/v1` cek `isProviderAllowedForCategory` **sebelum** potong saldo; `pesanan` popular-services de-hardcode `provider_id=2` → key `(providerId, providerServiceId)` (anti tabrakan id antar provider).
+6. **UI admin** — `/admin/providers` status + badge AKTIF + action `setActive` + tombol "Bandingkan Aktif"; `/admin/routing` baru (list + filter search/kind/onlyRouted + action `setRouting`, RBAC `providers:read`/`providers:edit`, rate-limit, audit log) + nav.
+
+**Prod (backup dulu — mysqldump 55.474.919 B / 53 tabel, sha256 `66608561…`):** migrasi applied (provider.status + tabel routing + widen kolom) → provider **SMMfollows id=10** dipasang (status=0, key re-encrypt, round-trip encrypt OK) → sync mirror (7.554 services, **0 aktif** = inert ⇒ tidak ada jendela katalog dobel) → routing plan COVERED/KEEP (158 COVERED / 18 KEEP / 77 kategori SMMfollows) → review CSV → **233 baris routing** ter-apply (2 duplikat kategori shared dibuang) → service-sync kedua provider.
+
+**Bug yang ketemu saat verifikasi live (sudah difix):** gerbang enable `service-sync` versi awal pakai OR (`providerId === activeId || routed === providerId`) ⇒ provider aktif global tetap melayani kategori yang sudah di-route ⇒ TikTok **dobel** (SMMturk 175 kategori/1.539 aktif + SMMfollows 77/828). Fix: pakai fungsi murni `allowedForRouting` (routing menang atas aktif). Commit `4572fee` → L3 0 findings → push `4a798e9..4572fee` → Coolify `qt3odbw3eqerthge5li2icyi` finished → container `nqsjafrei6k8dkup1pxkcuwf-20261108T152051` tag sha `4572fee777f55…` → service-sync ulang: provider 2 **routeOff=1.138** dimatikan, provider 10 828 updated.
+
+**Verifikasi live (tanpa order sama sekali — hanya `action=services`/`action=balance`):**
+- Katalog: **kategori duplikat = 0**, **route violation = 0** (tiap kategori ter-route dilayani HANYA provider target).
+- SMMfollows: **828 layanan aktif / 77 kategori** (TikTok); SMMturk: 6.559 aktif / 712 kategori; sisa TikTok di SMMturk **401 layanan / 16 kategori** = kategori KEEP (emergency server, coins, top-in-market, organic growth) — disengaja.
+- Guard order (`isProviderAllowedForCategory` dari chunk build): 3 kategori TikTok ter-route → `allowTarget=true`, `allowOther=false` ⇒ SMMturk DITOLAK di kategori TikTok, SMMfollows DITERIMA. Kategori non-TikTok (YouTube dll) tetap SMMturk saja (routing ter-scope).
+- API kedua provider hidup: SMMfollows katalog **7.554** layanan terbaca, saldo **5.8261 USD**; SMMturk saldo **1.5734 USD**. `app.socio.id`=303 (guard login), `socio.id`=200, cron semua `ok`.
+- ⚠️ **Perlu perhatian owner**: saldo SMMfollows 5.83 USD & SMMturk 1.57 USD — tipis utk volume TikTok. Perlu top-up dua-duanya (SMMturk sempat 1.92 → 1.57 selama pengerjaan).
+
+**Side-fix order nyangkut (jawaban atas "order konsumen nyangkut di smmturk gmn"):** `status-polling` mengabaikan error per-order (`{"error":"Incorrect order ID"}`) ⇒ order lama nyangkut **Pending** selamanya; auto-refund lama hanya cover Error/Partial/Canceled. Fix: (a) error per-order → status `Error` (guard umur ≥2 jam), (b) cron baru `stale-refund` tiap 30 menit → order Pending/Processing/In progress lebih tua dari `SOCIO_STALE_ORDER_DAYS` (default 7) dana konsumen dikembalikan penuh (ledger-first + CAS `is_refund`). Commit `4a798e9`. Order in-flight SMMturk **tidak** terganggu: polling/refill/cancel semua key `order.provider_id`.
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
@@ -266,7 +293,9 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | G2 | Retire-verify flow | ✅ LIVE | **f03c831 (sesi ini)** — Member retire pure, `reseller_activated` separasi (backfill 56), toggle settings hapus |
 | H1 | Upgrade mandiri Member→Reseller | ✅ LIVE | **d02a142 (sesi ini)** — flip level CASE + `/reseller` (chart jujur dr pricing_rules, anti-leak) + action invoice + nav dot |
 | H2/H3 | Reseller dashboard / coupon loop | ⏸️ CONFIRM | belum disentuh |
-| I | Multi-provider | ⏸️ CONFIRM | proyek besar + migrasi `provider.status` |
+| I | Multi-provider (+ TikTok → SMMfollows) | ✅ LIVE | **4572fee (sesi ini)** — switcher 1-aktif + routing per-kategori; TikTok dilayani SMMfollows (828 svc/77 kategori), duplikat=0, route violation=0 |
 | P4 | SEO subsystem port | ⏸️ CONFIRM | proyek terpisah |
 
 **Deploy batch sesi ini:** 3 commit (4988b5a E3/E4 · a3a3a09 E6 · 0010967 docs) → push `da0a106..0010967 → main` → L3 0 findings → Coolify finished → container tag 0010967fbab1 (Up).
+
+**Deploy batch item I (8 Nov 2026):** 5 commit (d662de6 schema · a47a867 helper+gerbang+guard · 67c6f5a UI admin · 4a798e9 order nyangkut · 4572fee fix gerbang routing) → push `cf946bb..4572fee → main` (SSH) → L3 0 findings → Coolify `qt3odbw3eqerthge5li2icyi` finished → container `nqsjafrei6k8dkup1pxkcuwf-20261108T152051` tag sha `4572fee777f55…`.
