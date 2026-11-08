@@ -252,6 +252,28 @@ Owner instruction 8 Nov 2026: *"pastikan layanan tiktok menggunakan smmfollow, a
 
 **Side-fix order nyangkut (jawaban atas "order konsumen nyangkut di smmturk gmn"):** `status-polling` mengabaikan error per-order (`{"error":"Incorrect order ID"}`) ⇒ order lama nyangkut **Pending** selamanya; auto-refund lama hanya cover Error/Partial/Canceled. Fix: (a) error per-order → status `Error` (guard umur ≥2 jam), (b) cron baru `stale-refund` tiap 30 menit → order Pending/Processing/In progress lebih tua dari `SOCIO_STALE_ORDER_DAYS` (default 7) dana konsumen dikembalikan penuh (ledger-first + CAS `is_refund`). Commit `4a798e9`. Order in-flight SMMturk **tidak** terganggu: polling/refill/cancel semua key `order.provider_id`.
 
+## P4 — SEO subsystem: port loop pengukuran socio.my → socio.id
+
+Owner instruction 8 Nov 2026: *"P4 SEO subsystem"* (porting `.my` → `.id`). Plan disetujui: `docs/plans/P4_SEO_measurement_loop_f8bdf691.md` (2 skrip + 2 siklus host).
+
+**Temuan audit (8 Nov 2026) — premis awal plan dikoreksi:** pipeline SEO socio.id **sudah jalan** (generate ✓, publish-git ✓, llm-ping tiap 15 mnt ✓ — IndexNow 1.055 URL + Bing 1.052 URL). Yang TIDAK ada:
+- Siklus index harian: **sudah ada** (`/etc/cron.d/seo-measure` → `seo-measure-cycle` → `runner/daily.mjs` → indexer) — jadi plan tidak perlu membuat ulang.
+- `gsc-analytics.mjs` (mining query) + `seo-status.mjs` (status report) — **tidak ada** di repo produksi; `seo-measure-cycle` menjalankan lapisan GSC/status untuk **socio.my** (`/opt/seo-my/repo`).
+
+**Akar masalah yang sebenarnya ditemukan (bukan yang di plan):** `publish-git.mjs` menandai artikel published di `queue.json` tapi **tidak pernah menambah entri ke `state.published[]`**. Akibatnya `state.published` tertinggal **340 entri vs 1.006 artikel live** → `gsc-inspect` (filter `daysAgo(firstSeen)`) tak pernah melihat artikel baru → `gsc-inspect: tidak ada URL baru untuk dicek` → label `indexed` kosong → ramp-gate buta (`discovery gap 100%`, `daily_count` beku di 15). Ditambah 335 entri warisan tanpa field `firstSeen` sama sekali (tidak pernah terlihat oleh filter window).
+
+**Yang dikerjakan:**
+1. **`seo/reconcile-published.mjs` (baru)** — rekonsiliasi ADITIF `state.published[]` vs korpus MDX live: menambah entri hilang, backfill field kosong (`firstSeen` dari `pubDate`, `indexed` default `unknown`), TIDAK PERNAH menghapus entri / menimpa nilai yang sudah ada / menyentuh `indexnow.submitted`, `bing.submitted`, `gsc`, `rampGate`. Idempoten. → `state.published` 340 → **1.006**.
+2. **`seo/gsc-analytics.mjs` (baru — port dari .my)** — mining query GSC 28 hari + query tanpa halaman (calon page) + halaman CTR rendah (revisi title) + halaman yang impression tapi tak terindex. Pakai helper `searchAnalytics()` `seo/lib/gsc.mjs` (bukan fetch mentah).
+3. **`seo/seo-status.mjs` (baru — port dari .my)** — ringkasan pipeline harian + alert (index_rate, kuota Bing, runway, discovery gap, overshoot). `--strict` untuk exit 1; default exit 0 supaya cron tak putus.
+4. **`seo/gsc-inspect.mjs` (patch)** — simpan `state.json` **berkala** (tiap 10 URL). Inspeksi 1.006 URL butuh ~1-2 jam (URL Inspection API ~6 detik/URL); tanpa save parsial, proses mati di tengah menghilangkan SEMUA hasil.
+5. **Output UNTRACKED** — laporan ditulis ke `SEO_REPORT_DIR` (default `/app/data/reports` di container), BUKAN `docs/`. Di .my laporan `docs/SEO-QUERIES.md` yang tracked ditulis harian → tree dirty → `git pull --rebase` siklus publish gagal (insiden 3-8 Nov 2026).
+6. **Siklus host baru** (tanpa menyentuh siklus .my): `/etc/cron.d/seo-index-coid` (05:40 + 11:40 UTC → `seo-index-coid-cycle`: reconcile → `gsc-inspect --days 3`) + `/etc/cron.d/seo-measure-coid` (06:40 UTC → `seo-measure-coid-cycle`: gsc-analytics → seo-status). Load guard + flock, sama seperti siklus existing.
+
+**Deploy:** 3 skrip + patch `gsc-inspect` di-commit & push ke repo produksi `ReqTimeout/socio-seo-runner` (commit `d611e51` → `6e5ee42` → `479665d`), lewat `GITHUB_TOKEN` extraHeader (tanpa token di argv). Backup `state.json` sebelum rekonsiliasi: `/app/data/state.json.bak-20261108T161128`.
+
+**Verifikasi:** `state.published` 340 → 1.006 tanpa duplikat URL; `gsc.inspections`/`indexnow.submitted` (1.055)/`bing.submitted` (1.052)/`rampGate`/`indexer` utuh; target inspeksi naik 671 → **1.006 URL**; repo .my tetap bersih (`git status` kosong). Backlog inspeksi 1.006 URL dijalankan 8 Nov 2026 (hasil di tracker §P4 pada commit docs).
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
@@ -294,7 +316,7 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | H1 | Upgrade mandiri Member→Reseller | ✅ LIVE | **d02a142 (sesi ini)** — flip level CASE + `/reseller` (chart jujur dr pricing_rules, anti-leak) + action invoice + nav dot |
 | H2/H3 | Reseller dashboard / coupon loop | ⏸️ CONFIRM | belum disentuh |
 | I | Multi-provider (+ TikTok → SMMfollows) | ✅ LIVE | **4572fee (sesi ini)** — switcher 1-aktif + routing per-kategori; TikTok dilayani SMMfollows (828 svc/77 kategori), duplikat=0, route violation=0 |
-| P4 | SEO subsystem port | ⏸️ CONFIRM | proyek terpisah |
+| P4 | SEO subsystem port | ✅ LIVE | **d611e51+ (sesi ini)** — loop pengukuran: `reconcile-published` (state.published 340→1.006), `gsc-analytics`, `seo-status`, `gsc-inspect` save parsial, siklus `seo-index-coid` + `seo-measure-coid` |
 
 **Deploy batch sesi ini:** 3 commit (4988b5a E3/E4 · a3a3a09 E6 · 0010967 docs) → push `da0a106..0010967 → main` → L3 0 findings → Coolify finished → container tag 0010967fbab1 (Up).
 

@@ -351,6 +351,33 @@ ssh root@130.254.47.93 \
 
 > Cron job jalan di single instance (app container). Kalau ada multiple replicas (skala horizontal), perlu distributed lock (Redis/DB) untuk prevent double-execution. Saat ini single-instance aman.
 
+### 7.1 Siklus SEO di VPS host (socio.id)
+
+Pipeline SEO socio.id **tidak** jalan sebagai Coolify scheduled task, tapi sebagai **cron host + `docker exec`** ke container runner (`ssoe-new:latest`, repo `/app/data/repo` = `github.com/ReqTimeout/socio-seo-runner`).
+
+| Cron host | Wrapper | Jadwal (UTC) | Isi | Log |
+|---|---|---|---|---|
+| `/etc/cron.d/seo-llm-ping-coid` | `seo-llm-ping-coid-cycle` | */15 mnt | `llm-ping.mjs` → IndexNow + Bing URL API (money page + artikel + file AI) | `/var/log/seo-llm-ping-coid.log` |
+| `/etc/cron.d/seo-generate-coid` | `seo-generate-coid-cycle` | 21:40 | generate draft artikel (LLM) | `/var/log/seo-generate-coid.log` |
+| `/etc/cron.d/seo-publish-git` | `seo-publish-git-cycle` | 08:15 | publish git-only (flip `draft:false` + commit) | `/var/log/seo-publish.log` |
+| `/etc/cron.d/seo-measure` | `seo-measure-cycle` | 06:20 | `runner/daily.mjs` → indexer (bing + gsc + remedy + ramp-gate) | `/var/log/seo-measure.log` |
+| **`/etc/cron.d/seo-index-coid`** | **`seo-index-coid-cycle`** | **05:40 + 11:40** | `reconcile-published.mjs` → `gsc-inspect.mjs --days 3` | `/var/log/seo-index-coid.log` |
+| **`/etc/cron.d/seo-measure-coid`** | **`seo-measure-coid-cycle`** | **06:40** | `gsc-analytics.mjs` (mining query) + `seo-status.mjs` (ringkasan + alert) | `/var/log/seo-measure-coid.log` |
+
+> PENTING: `seo-measure-cycle` milik **socio.my** — tahap GSC + status-nya menunjuk `/opt/seo-my/repo`. Siklus `*-coid` di atas adalah milik **socio.id** dan tidak boleh ikut diubah.
+
+**Kenapa `seo-index-coid` ada (P4, 8 Nov 2026):** jalur publish produksi (`publish-git.mjs`) menandai artikel published di `queue.json` tapi tidak pernah menambah entri ke `state.published[]` → artikel baru tidak pernah masuk GSC inspection / ramp-gate / remedy, dan ramp-gate buta (`discovery gap 100%` → `daily_count` beku). `reconcile-published.mjs` menutupnya secara aditif (tidak pernah menghapus entri, tidak menimpa nilai yang sudah ada).
+
+Siklus `seo-index-coid` dijalankan **sebelum** `seo-measure` (05:40 vs 06:20) supaya label `indexed` segar ketika ramp-gate membacanya. Backlog 1.006 URL sudah diproses sekali pada 8 Nov 2026; window harian 3 hari cukup untuk artikel baru (~15/hari) dan menutup 2 siklus yang terlewat.
+
+```bash
+# Status siklus + report
+ssh root@130.254.47.93 'tail -20 /var/log/seo-index-coid.log'
+ssh root@130.254.47.93 'docker exec $(docker ps --format "{{.Names}}" | grep ssoe-new | head -1) cat /app/data/reports/SEO-DAILY.md'
+```
+
+> Laporan (`SEO-DAILY.md`, `SEO-QUERIES.md`) ditulis ke `/app/data/reports` — **di luar repo git**. Laporan yang ditulis ke path tracked membuat `git pull --rebase` di siklus publish gagal (insiden .my 3-8 Nov 2026).
+
 ---
 
 ## 8. Backup & restore
