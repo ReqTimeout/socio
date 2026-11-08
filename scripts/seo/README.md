@@ -7,12 +7,12 @@ Pipeline SEO socio.id = **cron host + `docker exec`** ke container runner
 
 ## Berkas di sini
 
-| Berkas | Dipasang ke | Isi |
-|---|---|---|
-| `seo-index-coid-cycle` | `/usr/local/bin/seo-index-coid-cycle` (0755) | reconcile `state.published` → GSC URL Inspection |
-| `seo-measure-coid-cycle` | `/usr/local/bin/seo-measure-coid-cycle` (0755) | `gsc-analytics` (mining query) → `seo-status` (ringkasan + alert) |
-| `cron.d-seo-index-coid` | `/etc/cron.d/seo-index-coid` (0644) | 05:40 + 11:40 UTC |
-| `cron.d-seo-measure-coid` | `/etc/cron.d/seo-measure-coid` (0644) | 06:40 UTC |
+| Berkas                    | Dipasang ke                                    | Isi                                                               |
+| ------------------------- | ---------------------------------------------- | ----------------------------------------------------------------- |
+| `seo-index-coid-cycle`    | `/usr/local/bin/seo-index-coid-cycle` (0755)   | reconcile `state.published` → GSC URL Inspection                  |
+| `seo-measure-coid-cycle`  | `/usr/local/bin/seo-measure-coid-cycle` (0755) | `gsc-analytics` (mining query) → `seo-status` (ringkasan + alert) |
+| `cron.d-seo-index-coid`   | `/etc/cron.d/seo-index-coid` (0644)            | 05:40 + 11:40 UTC                                                 |
+| `cron.d-seo-measure-coid` | `/etc/cron.d/seo-measure-coid` (0644)          | 06:40 UTC                                                         |
 
 ## Cara pasang
 
