@@ -1,0 +1,49 @@
+#!/bin/bash
+# Siklus index + rekonsiliasi untuk socio.id.
+# Dijalankan dari /etc/cron.d/seo-index-coid (2 slot/hari).
+#
+# Dua tahap, ringan (network + file sahaja, TIDAK build, TIDAK publish):
+#   1. reconcile-published  → state.published[] selaras dengan korpus MDX live.
+#      Tanpa ini artikel baru tak pernah masuk state (publish-git tak pernah
+#      menambah entri) → gsc-inspect tak pernah melihatnya.
+#   2. gsc-inspect --days N → isi label `indexed` yang dibaca ramp-gate
+#      (index_rate) + remedy (remedi not_indexed/not_discovered).
+#
+# PENTING: siklus ini TIDAK menggantikan siklus measure (/etc/cron.d/seo-measure
+# → seo-measure-cycle) yang menjalankan indexer penuh (bing + ramp-gate). Ia
+# PRA-SIKLUS: pastikan state + label indexed segar sebelum ramp-gate membaca.
+set -u
+LOG=/var/log/seo-index-coid.log
+LOCK=/run/seo-index-coid.lock
+C=$(docker ps --filter "name=ssoe-new\|ancestor=ssoe-new" --format "{{.Names}}" | head -1)
+[ -z "$C" ] && C=c9iqug5vvi9kjywt1fn6xnsc-135758379657
+umask 077
+
+# LOAD GUARD: SEO tak boleh mengganggu app.socio.id yang dipakai user.
+LOAD1=$(cut -d" " -f1 /proc/loadavg)
+AVAIL=$(awk '/^MemAvailable:/{print $2}' /proc/meminfo)
+AVAIL_MB=$((AVAIL / 1024))
+LOAD_INT=${LOAD1%.*}
+if [ "$LOAD_INT" -ge 8 ]; then
+  echo "$(date +%FT%T) [index-coid] SKIP load tinggi ($LOAD1)" >>"$LOG"; exit 0
+fi
+if [ "$AVAIL_MB" -lt 700 ]; then
+  echo "$(date +%FT%T) [index-coid] SKIP RAM sisa ${AVAIL_MB}MB" >>"$LOG"; exit 0
+fi
+
+exec 9>"$LOCK"
+flock -n 9 || { echo "$(date +%FT%T) [index-coid] sudah jalan, skip" >>"$LOG"; exit 0; }
+
+# Window inspeksi: 3 hari → menutup 2 siklus yang terlewat. Backlog 90 hari
+# sudah pernah diproses sekali (8 Nov 2026) dan tak perlu diulang tiap hari.
+DAYS="${SEO_INSPECT_DAYS:-3}"
+
+echo "=== $(date +%FT%T) mulai index-coid (load=$LOAD1 ram=${AVAIL_MB}MB days=$DAYS) ===" >>"$LOG"
+timeout 300 docker exec -e SEO_CONTENT_DIR=/app/data/repo/landing/src/content/blog \
+  "$C" node /app/data/repo/seo/reconcile-published.mjs >>"$LOG" 2>&1
+echo "[reconcile] rc=$?" >>"$LOG"
+timeout 1800 docker exec -e SEO_CONTENT_DIR=/app/data/repo/landing/src/content/blog \
+  "$C" node /app/data/repo/seo/gsc-inspect.mjs --days "$DAYS" >>"$LOG" 2>&1
+echo "[gsc-inspect] rc=$?" >>"$LOG"
+
+tail -n 300 "$LOG" | grep -vE "^$" > /tmp/seo-index-coid.trim && mv /tmp/seo-index-coid.trim "$LOG"

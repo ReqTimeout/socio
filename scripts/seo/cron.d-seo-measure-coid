@@ -1,0 +1,7 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+# Lapisan laporan harian socio.id: gsc-analytics (mining query) + seo-status.
+# Terpisah dari /etc/cron.d/seo-measure karena siklus itu GSC/status-nya
+# menunjuk repo socio.MY (/opt/seo-my/repo).
+40 6 * * * root /usr/local/bin/seo-measure-coid-cycle

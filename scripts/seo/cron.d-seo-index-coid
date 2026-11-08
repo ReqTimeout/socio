@@ -1,0 +1,9 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+# Index + rekonsiliasi state.published untuk socio.id (ringan: network + file,
+# TANPA build, TANPA publish). Slot 05:40 UTC = pra-siklus measure 06:20 UTC
+# supaya label `indexed` segar sebelum ramp-gate membacanya.
+40 5 * * * root /usr/local/bin/seo-index-coid-cycle
+# Slot kedua cadangan: kalau slot pertama gagal/terlewat, backlog masih tertangkap.
+40 11 * * * root /usr/local/bin/seo-index-coid-cycle

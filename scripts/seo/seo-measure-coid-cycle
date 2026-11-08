@@ -1,0 +1,37 @@
+#!/bin/bash
+# Lapisan laporan harian untuk socio.id (query GSC + status pipeline).
+# Dijalankan dari /etc/cron.d/seo-measure-coid (1×/hari).
+#
+# Kenapa siklus sendiri: /etc/cron.d/seo-measure (seo-measure-cycle) menjalankan
+# tahap GSC + status untuk repo socio.MY (/opt/seo-my/repo) — jadi laporan
+# socio.id tidak pernah ada. Siklus ini menutup gap itu tanpa menyentuh
+# siklus .my.
+#
+# Tahap:
+#   1. gsc-analytics  → mining query 28 hari + calon page + CTR rendah +
+#                        halaman yang impression tapi tak terindex.
+#   2. seo-status     → ringkasan pipeline + alert (index_rate, kuota Bing,
+#                        runway, discovery gap).
+#
+# Output ke /app/data/reports (UNTRACKED) — laporan yang ditulis ke path
+# tracked akan membuat `git pull --rebase` siklus publish gagal.
+# Kegagalan satu tahap tidak menghentikan tahap berikutnya.
+set -u
+LOG=/var/log/seo-measure-coid.log
+LOCK=/run/seo-measure-coid.lock
+C=$(docker ps --filter "name=ssoe-new\|ancestor=ssoe-new" --format "{{.Names}}" | head -1)
+[ -z "$C" ] && C=c9iqug5vvi9kjywt1fn6xnsc-135758379657
+umask 077
+
+exec 9>"$LOCK"
+flock -n 9 || { echo "$(date +%FT%T) [measure-coid] sudah jalan, skip" >>"$LOG"; exit 0; }
+
+echo "=== $(date +%FT%T) mulai measure-coid ===" >>"$LOG"
+timeout 600 docker exec -e SEO_REPORT_DIR=/app/data/reports \
+  "$C" node /app/data/repo/seo/gsc-analytics.mjs >>"$LOG" 2>&1
+echo "[gsc-analytics] rc=$?" >>"$LOG"
+timeout 300 docker exec -e SEO_REPORT_DIR=/app/data/reports \
+  "$C" node /app/data/repo/seo/seo-status.mjs >>"$LOG" 2>&1
+echo "[seo-status] rc=$?" >>"$LOG"
+
+tail -n 300 "$LOG" | grep -vE "^$" > /tmp/seo-measure-coid.trim && mv /tmp/seo-measure-coid.trim "$LOG"

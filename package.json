@@ -26,7 +26,10 @@
     "seo:state": "node seo/bootstrap-state.mjs",
     "seo:gsc-doctor": "node seo/scripts/gsc-doctor.mjs",
     "seo:gsc-inspect": "node seo/gsc-inspect.mjs",
-    "seo:bing-submit": "node seo/bing-submit.mjs"
+    "seo:bing-submit": "node seo/bing-submit.mjs",
+    "seo:reconcile-published": "node seo/reconcile-published.mjs",
+    "seo:gsc-analytics": "node seo/gsc-analytics.mjs",
+    "seo:status": "node seo/seo-status.mjs"
   },
   "packageManager": "pnpm@9.15.9",
   "devDependencies": {
