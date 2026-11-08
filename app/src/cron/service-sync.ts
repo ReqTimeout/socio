@@ -52,7 +52,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { logSync } from "./provider-sync";
 import { getPricingRules } from "$lib/server/pricing";
 import { whitelabel } from "$lib/format";
-import { MANUAL_OFF_TAG } from "@socio/core/routing-policy";
+import { MANUAL_OFF_TAG, allowedForRouting } from "@socio/core/routing-policy";
 import { getActiveProviderId, getCategoryRoutingMap } from "$lib/server/active-provider";
 
 // NOTE: konversi USD→IDR terjadi di provider-sync via getUsdToIdr() (kurs terpusat).
@@ -132,14 +132,16 @@ export async function runServiceSync(providerId: number): Promise<void> {
 
     // ── Multi-provider: gerbang enable per-kategori ──
     // Sebuah layanan BOLEH aktif (status=1) hanya bila:
-    //   (a) provider ini = provider aktif global (satu-aktif), ATAU
-    //   (b) kategori tsb di-route ke provider ini (category_provider_routing).
-    // Tanpa gerbang ini, menambah provider kedua akan menyalakan katalog DUA
-    // provider sekaligus → layanan dobel di /pesan (jebakan .my §6).
+    //   (a) kategorinya TIDAK di-route → provider ini = provider aktif global, ATAU
+    //   (b) kategorinya di-route → HANYA provider target routing (routing MENANG
+    //       atas provider aktif global).
+    // Tanpa (b) diterapkan benar, kategori yang sudah di-route ke provider lain
+    // tetap dilayani provider aktif → katalog dobel di /pesan.
+    // Pakai allowedForRouting (murni, teruji selftest) sebagai satu sumber.
     const activeId = await getActiveProviderId();
     const routingMap = await getCategoryRoutingMap();
     const providerAllowed = (catId: number): boolean =>
-      providerId === activeId || routingMap.get(catId) === providerId;
+      allowedForRouting(providerId, routingMap.get(catId), activeId);
 
     // Kategori: build display (whitelabel) + raw per display, lalu resolve/create.
     const catDisplayToRaw = new Map<string, string>();
