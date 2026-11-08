@@ -77,7 +77,34 @@ export async function runStatusPolling(): Promise<void> {
       const result = await smmturkStatusFor(endpoint, key, ids);
       for (const o of list) {
         const r: any = result[o.providerOrderId];
-        if (!r || typeof r === "string") continue;
+        if (!r) continue;
+        if (typeof r === "string") continue;
+        // ERROR PER-ORDER dari provider (mis. "Incorrect order ID") = provider tak
+        // kenal order ini (order lama/ditutup provider) → tak akan pernah selesai.
+        // Tanpa cabang ini order menggantung "Pending" SELAMANYA & saldo konsumen
+        // tak pernah dikembalikan (prod: 53 order s/d 2021, Rp527rb tertahan).
+        // Tandai Error → cron auto-refund mengembalikan dana penuh.
+        // Guard usia 2 jam: order yang baru dibuat mungkin belum terlihat provider.
+        if (r.error) {
+          const ageMs = Date.now() - new Date(o.createdAt ?? Date.now()).getTime();
+          if (ageMs < 2 * 60 * 60 * 1000) {
+            await db
+              .update(orders)
+              .set({ nextPollAt: new Date(Date.now() + 10 * 60 * 1000) })
+              .where(eq(orders.id, o.id));
+            continue;
+          }
+          await db
+            .update(orders)
+            .set({ status: "Error" as any, updatedAt: new Date(), nextPollAt: null })
+            .where(eq(orders.id, o.id));
+          try {
+            await notifyOrderUpdate(o.userId, o.id, "Error");
+          } catch {
+            // notif best-effort
+          }
+          continue;
+        }
         const newStatus = mapProviderStatus(r.status);
         const remains = Number(r.remains ?? o.remains);
         const startCount = Number(r.start_count ?? o.startCount);

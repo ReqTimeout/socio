@@ -9,7 +9,7 @@
 import { runAllProviderSync } from "./provider-sync";
 import { runAllServiceSync } from "./service-sync";
 import { runStatusPolling, runRefillPolling } from "./status-polling";
-import { runAutoRefund } from "./refund";
+import { runAutoRefund, runStaleOrderRefund } from "./refund";
 import { runEmailQueue } from "./email-queue";
 import { runEmailLifecycle } from "./email-lifecycle";
 import { runLightCron } from "./light";
@@ -77,6 +77,15 @@ export const CRON_JOBS: CronJobDef[] = [
     intervalMin: 15,
     note: "Refund otomatis order Error/Partial/Canceled",
     run: () => runAutoRefund(),
+  },
+  {
+    key: "stale-refund",
+    label: "Stale Order Refund",
+    expr: "*/30 * * * *",
+    scheduleLabel: "Tiap 30 menit",
+    intervalMin: 30,
+    note: "Refund order nyangkut (Pending/Processing/In progress) yang lewat batas umur",
+    run: () => runStaleOrderRefund(),
   },
   {
     key: "email-queue",
