@@ -1,11 +1,16 @@
 import { db } from "@socio/db";
 import { provider, services } from "@socio/db/schema";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, ne } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import { env } from "$env/dynamic/private";
 import { triggerProviderSync } from "$lib/server/cron";
 import { encryptSecret, decryptSecret, isEncrypted } from "$lib/server/crypto";
+import {
+  clearActiveProviderCache,
+  clearCategoryRoutingCache,
+} from "$lib/server/active-provider";
+import { reconcileAllServices } from "$lib/server/category-routing";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -22,7 +27,9 @@ export const load: PageServerLoad = async ({ locals }) => {
       SUBSTRING(p.api_key, 1, 6) AS api_key_prefix,
       LENGTH(p.api_key) AS api_key_len,
       p.balance_provider,
-      (SELECT COUNT(*) FROM services WHERE provider_id = p.id) AS services_count
+      p.status,
+      (SELECT COUNT(*) FROM services WHERE provider_id = p.id) AS services_count,
+      (SELECT COUNT(*) FROM services WHERE provider_id = p.id AND status = 1) AS services_active
     FROM provider p
     ORDER BY p.id ASC
   `);
@@ -30,6 +37,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     ...p,
     balanceProvider: Number(p.balance_provider ?? 0),
     encrypted: String(p.api_key_prefix ?? "").startsWith("enc:"),
+    active: Number(p.status ?? 0) === 1,
   }));
 
   // Last sync log per provider (kalau ada tabel)
@@ -252,6 +260,92 @@ export const actions: Actions = {
     } catch (e: any) {
       return fail(502, { error: `Sync gagal: ${e.message ?? String(e)}` });
     }
+  },
+
+  /**
+   * Jadikan provider ini AKTIF global (satu-aktif). Semua provider lain jadi
+   * status=0. Kategori yang punya routing sendiri (category_provider_routing)
+   * TIDAK ikut berubah — routing menang atas provider aktif global.
+   *
+   * Efek katalog: rekonsiliasi status layanan seluruh katalog (winner per
+   * kategori = routing target atau provider aktif baru), lalu sync provider
+   * lama & baru (harga & katalog mirror selalu segar).
+   */
+  setActive: async ({ request, locals }) => {
+    assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "providers:edit");
+    if (_g) return _g;
+    const _rate = await assertAdminRate(
+      "provider-set-active",
+      (locals as any).ip ?? "0.0.0.0",
+      5,
+      60,
+    );
+    if (_rate) return _rate;
+    const form = await request.formData();
+    const id = Number(form.get("id"));
+    if (!id) return fail(400, { error: "ID wajib." });
+
+    const [target] = await db.select().from(provider).where(eq(provider.id, id)).limit(1);
+    if (!target) return fail(404, { error: "Provider tidak ditemukan." });
+    if (!target.apiKey || !target.apiUrlOrder) {
+      return fail(400, { error: "Provider tanpa API key tak bisa diaktifkan." });
+    }
+
+    // Provider lama yang aktif → ikut di-sync (layanannya harus dimatikan).
+    const before = await db
+      .select({ id: provider.id, name: provider.name, status: provider.status })
+      .from(provider);
+    const prevActive = before.find((p) => Number(p.status ?? 0) === 1);
+
+    // Tepat satu aktif: target=1, sisanya=0.
+    await db.update(provider).set({ status: 0 }).where(ne(provider.id, id));
+    await db.update(provider).set({ status: 1 }).where(eq(provider.id, id));
+    clearActiveProviderCache();
+    clearCategoryRoutingCache();
+
+    // Rekonsiliasi katalog: service non-winner mati, winner hidup (kecuali
+    // yang owner matikan manual via [manual-off]).
+    let enabled = 0;
+    let disabled = 0;
+    try {
+      const r = await reconcileAllServices(id);
+      enabled = r.enabled;
+      disabled = r.disabled;
+    } catch (e: any) {
+      console.error("[providers] reconcile gagal:", e?.message ?? e);
+    }
+
+    // Sync provider lama + baru (harga & katalog mirror). Best-effort: kalau
+    // sync gagal, flip tetap berlaku & cron berikutnya akan menyusul.
+    let warn = "";
+    const toSync = new Set<number>([id]);
+    if (prevActive && prevActive.id !== id) toSync.add(Number(prevActive.id));
+    for (const pid of toSync) {
+      try {
+        await triggerProviderSync(pid);
+      } catch (e: any) {
+        warn = `Sync provider #${pid} gagal: ${e?.message ?? e}.`;
+      }
+    }
+
+    await logAudit({
+      adminId: Number(locals.user!.id),
+      action: "set_active_provider",
+      entity: "provider",
+      entityId: id,
+      detail: {
+        provider: target.name,
+        previous_active: prevActive?.name ?? null,
+        enabled,
+        disabled,
+      },
+      ip: (locals as any).ip,
+    });
+    return {
+      success: `${target.name} sekarang jadi provider aktif. ${enabled} layanan diaktifkan, ${disabled} dimatikan.`,
+      warn,
+    };
   },
 
   /** Test koneksi provider — fetch balance via API key + URL-nya */

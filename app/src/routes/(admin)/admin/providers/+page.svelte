@@ -85,6 +85,26 @@
     };
   }
 
+  // Multi-provider: jadikan provider ini aktif global (satu-aktif).
+  function askSetActive(p: any) {
+    confirm = {
+      open: true,
+      title: `Jadikan ${p.name} provider aktif?`,
+      message:
+        "Provider lain akan menjadi non-aktif dan layanannya dimatikan (kategori dengan routing khusus tidak berubah). Pesanan berjalan TIDAK dibatalkan.",
+      action: async () => {
+        const fd = new FormData();
+        fd.set("id", String(p.id));
+        const res = await fetch("?/setActive", { method: "POST", body: fd });
+        const json = await res.json();
+        if (json.type === "failure") toast(extractActionMsg(json.data) ?? "Gagal", "error");
+        else toast(extractActionMsg(json.data) ?? "OK", "success");
+        confirm = null;
+        await applyAction(json);
+      },
+    };
+  }
+
   // G5: encrypt at rest semua API key yang masih plain text
   function askEncryptAll() {
     confirm = {
@@ -271,9 +291,9 @@
                 <div class="min-w-0">
                   <p class="flex items-center gap-1.5 truncate font-bold text-ink-900">
                     {p.name}
-                    {#if isPrimary}<span
-                        class="rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
-                        >aktif</span
+                    {#if p.active}<span
+                        class="rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+                        >AKTIF</span
                       >{/if}
                   </p>
                   <p class="truncate font-mono text-[11px] text-ink-400">
@@ -330,6 +350,14 @@
                 >
                 <span>{log.at} · {fmt(log.fetched)} fetched</span>
               </div>
+            {/if}
+            {#if !p.active}
+              <button
+                type="button"
+                onclick={() => askSetActive(p)}
+                class="mt-2 inline-flex w-full items-center justify-center gap-1 rounded-full bg-emerald-600 px-2 py-2 text-xs font-bold text-white hover:bg-emerald-700"
+                ><Icon name="check" size={12} />Jadikan Aktif</button
+              >
             {/if}
             <div class="mt-3 grid grid-cols-4 gap-1.5">
               <button
@@ -396,9 +424,9 @@
                       ><Icon name={isPrimary ? "zap" : "package"} size={13} stroke={2.5} /></span
                     >
                     {p.name}
-                    {#if isPrimary}<span
-                        class="rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
-                        >aktif</span
+                    {#if p.active}<span
+                        class="rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+                        >AKTIF</span
                       >{/if}
                   </span>
                 </td>
@@ -440,6 +468,15 @@
                 >
                 <td class="px-4 py-3">
                   <div class="flex justify-end gap-1">
+                    {#if !p.active}
+                      <button
+                        type="button"
+                        onclick={() => askSetActive(p)}
+                        title="Jadikan provider aktif"
+                        class="grid h-8 w-8 place-items-center rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
+                        ><Icon name="check" size={14} /></button
+                      >
+                    {/if}
                     <button
                       type="button"
                       onclick={() => askSync(p)}
@@ -675,7 +712,7 @@
           <input
             type="password"
             name="apiKey"
-            placeholder="Kosongkan untuk不改"
+            placeholder="Kosongkan untuk tidak mengubah"
             class="w-full rounded-xl border border-ink-200 px-3 py-2 font-mono text-xs focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
           />
           <span class="mt-1 block text-[10px] text-ink-400">

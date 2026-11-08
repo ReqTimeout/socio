@@ -107,6 +107,13 @@
       group: "Konten & Sistem",
     },
     { href: "/admin/providers", label: "Provider", icon: "zap", group: "Konten & Sistem" },
+    {
+      href: "/admin/routing",
+      keywords: ["routing", "pembagian", "provider", "kategori"],
+      label: "Routing",
+      icon: "share",
+      group: "Konten & Sistem",
+    },
     { href: "/admin/affiliate", label: "Affiliate", icon: "gift", group: "Konten & Sistem" },
     { href: "/admin/banners", label: "Banner", icon: "image", group: "Konten & Sistem" },
     { href: "/admin/news", label: "Berita", icon: "megaphone", group: "Konten & Sistem" },
