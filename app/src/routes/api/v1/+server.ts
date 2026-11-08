@@ -21,6 +21,7 @@ import {
 } from "@socio/core/pricing";
 import { getPricingRules } from "$lib/server/pricing";
 import { decryptSecret } from "$lib/server/crypto";
+import { isProviderAllowedForCategory } from "$lib/server/active-provider";
 import { rateLimit } from "$lib/server/rate-limit";
 import type { RequestHandler } from "./$types";
 
@@ -246,6 +247,13 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
     .where(and(eq(services.id, serviceId), eq(services.status, 1)))
     .limit(1);
   if (!svc) return fail("Service not available / inactive");
+
+  // Gate multi-provider: provider yang melayani kategori ini harus provider
+  // aktif global atau provider target routing. Ditaruh SEBELUM potong saldo
+  // (tidak perlu refund) — parity dengan gate /pesan.
+  if (!(await isProviderAllowedForCategory(Number(svc.providerId), Number(svc.categoryId)))) {
+    return fail("Service not available / inactive");
+  }
 
   // B5: validasi + qty per spec tipe (Custom Comments → baris; Subscriptions →
   // max per post; sisanya → quantity). Link opsional utk tipe tanpa link.

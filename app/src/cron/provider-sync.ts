@@ -4,6 +4,7 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { smmturkBalanceFor, smmturkServicesFor, withConcurrency } from "@socio/core/smmturk";
 import { decryptSecret, encryptSecret } from "$lib/server/crypto";
 import { getUsdToIdr } from "$lib/server/fx";
+import { getActiveProviderId, getRoutedProviderIds } from "$lib/server/active-provider";
 
 /** Record a sync run for monitoring (G10). */
 export async function logSync(
@@ -230,6 +231,8 @@ export async function seedSmmturkProvider(): Promise<number | null> {
       apiUrlOrder: SMMTURK_URL,
       apiUrlStatus: SMMTURK_URL,
       apiKey,
+      // Provider utama = incumbent → jadi provider aktif global saat di-seed.
+      status: 1,
     })
     .$returningId();
   console.log(`[cron] provider utama di-seed (id=${inserted.id})`);
@@ -239,6 +242,10 @@ export async function seedSmmturkProvider(): Promise<number | null> {
 /**
  * Sync semua provider aktif yang punya api_key (bukan MANUAL).
  * Dijalankan tiap jam oleh cron. Per-provider di-handle runProviderSync.
+ *
+ * Multi-provider: yang di-sync HANYA provider aktif global ∪ provider yang
+ * dipakai routing (kategori spesifik, mis. TikTok → SMMfollows). Provider lain
+ * tidak disentuh → katalog tidak pernah dobel di /pesan.
  */
 export async function runAllProviderSync(): Promise<void> {
   if (syncing) {
@@ -250,10 +257,28 @@ export async function runAllProviderSync(): Promise<void> {
     await seedSmmturkProvider().catch((e) =>
       console.error("[cron] seed smmturk provider failed:", e),
     );
-    const rows = await db
-      .select({ id: provider.id, name: provider.name, apiKey: provider.apiKey })
-      .from(provider)
-      .where(and(sql`${provider.apiKey} <> ''`, sql`${provider.apiKey} IS NOT NULL`));
+    const activeId = await getActiveProviderId();
+    const routedIds = await getRoutedProviderIds();
+    const wanted = new Set<number>();
+    if (activeId) wanted.add(activeId);
+    for (const id of routedIds) wanted.add(id);
+
+    const wantedIds = Array.from(wanted);
+    const hasKey = and(sql`${provider.apiKey} <> ''`, sql`${provider.apiKey} IS NOT NULL`);
+
+    // Fallback: belum ada provider aktif & belum ada routing → sync semua
+    // provider ber-key supaya katalog tak berhenti senyap (self-heal).
+    const rows =
+      wantedIds.length > 0
+        ? await db
+            .select({ id: provider.id, name: provider.name, apiKey: provider.apiKey })
+            .from(provider)
+            .where(and(hasKey, inArray(provider.id, wantedIds)))
+        : await db
+            .select({ id: provider.id, name: provider.name, apiKey: provider.apiKey })
+            .from(provider)
+            .where(hasKey);
+
     for (const r of rows) {
       try {
         await runProviderSync(Number(r.id));

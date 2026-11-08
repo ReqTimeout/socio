@@ -21,6 +21,7 @@ import { serviceIsOrderable } from "@socio/core/order-guard";
 import { smmturkAddFor } from "@socio/core/smmturk";
 import { decryptSecret } from "$lib/server/crypto";
 import { getPricingRules } from "$lib/server/pricing";
+import { isProviderAllowedForCategory } from "$lib/server/active-provider";
 import { validateCoupon, consumeCoupon, releaseCoupon } from "$lib/server/coupons";
 import { getServicePopularity } from "$lib/server/service-popularity";
 import { asciiSafe, whitelabel } from "$lib/format";
@@ -293,6 +294,16 @@ export const actions: Actions = {
     // API v1 yang sudah filter status=1). Saldo BELUM dipotong di titik ini → aman.
     if (!serviceIsOrderable(s))
       return fail(400, { error: "Layanan ini sudah tidak tersedia. Pilih layanan lain." });
+
+    // Gate multi-provider: provider yang melayani kategori ini harus provider
+    // aktif global atau provider target routing. Tanpa cek ini, order bisa masuk
+    // ke provider yang tak lagi melayani kategori tsb (mis. setelah admin pindah
+    // routing TikTok) → order nyangkut di provider yang tak ditagih.
+    if (!(await isProviderAllowedForCategory(Number(s.providerId), Number(s.categoryId)))) {
+      return fail(400, {
+        error: "Layanan ini sedang tidak dilayani. Pilih layanan lain ya.",
+      });
+    }
 
     // B5: validasi dinamis per tipe — spec menentukan field mana yang wajib,
     // bukan lagi cabang hardcoded link/komen.

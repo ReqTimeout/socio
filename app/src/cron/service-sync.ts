@@ -52,10 +52,12 @@ import { eq, and, sql } from "drizzle-orm";
 import { logSync } from "./provider-sync";
 import { getPricingRules } from "$lib/server/pricing";
 import { whitelabel } from "$lib/format";
+import { MANUAL_OFF_TAG } from "@socio/core/routing-policy";
+import { getActiveProviderId, getCategoryRoutingMap } from "$lib/server/active-provider";
 
 // NOTE: konversi USD→IDR terjadi di provider-sync via getUsdToIdr() (kurs terpusat).
 // File ini membaca ps.rate yang SUDAH IDR — tidak pakai rate langsung.
-const MANUAL_OFF_TAG = "[manual-off]";
+// MANUAL_OFF_TAG sekarang diimpor dari @socio/core/routing-policy (sumber tunggal).
 const NEWS_CAP_PER_SYNC = 20;
 const NEWS_DEDUPE_HOURS = 24;
 // Ambang berita harga: perubahan lebih kecil dari INI = noise kurs/pembulatan →
@@ -127,6 +129,17 @@ export async function runServiceSync(providerId: number): Promise<void> {
     const mm = rules.Member?.markupPercent ?? 200; // default legacy: Member +200%
     const mr = rules.Reseller?.markupPercent ?? 150;
     const ma = rules.Agen?.markupPercent ?? 30;
+
+    // ── Multi-provider: gerbang enable per-kategori ──
+    // Sebuah layanan BOLEH aktif (status=1) hanya bila:
+    //   (a) provider ini = provider aktif global (satu-aktif), ATAU
+    //   (b) kategori tsb di-route ke provider ini (category_provider_routing).
+    // Tanpa gerbang ini, menambah provider kedua akan menyalakan katalog DUA
+    // provider sekaligus → layanan dobel di /pesan (jebakan .my §6).
+    const activeId = await getActiveProviderId();
+    const routingMap = await getCategoryRoutingMap();
+    const providerAllowed = (catId: number): boolean =>
+      providerId === activeId || routingMap.get(catId) === providerId;
 
     // Kategori: build display (whitelabel) + raw per display, lalu resolve/create.
     const catDisplayToRaw = new Map<string, string>();
@@ -200,6 +213,7 @@ export async function runServiceSync(providerId: number): Promise<void> {
     let created = 0;
     let updated = 0;
     let enabled = 0;
+    let routeOff = 0;
     const priceChanges = { up: 0, down: 0 };
     const changelogRows: ChangelogRow[] = [];
     const newsCandidates: NewsCandidate[] = [];
@@ -257,7 +271,10 @@ export async function runServiceSync(providerId: number): Promise<void> {
           profitAgen: priceAgen - rateIdr,
           min,
           max,
-          status: 1,
+          // CREATE: hanya aktif bila provider ini boleh melayani kategorinya
+          // (aktif global ATAU kategori di-route ke provider ini). Selain itu
+          // tetap tersimpan (inert) supaya bisa diaktifkan owner via /admin/routing.
+          status: providerAllowed(catId) ? 1 : 0,
           providerId,
           providerServiceId: Number(pid) || 0,
           waktu: nowStr,
@@ -388,15 +405,36 @@ export async function runServiceSync(providerId: number): Promise<void> {
         // Set updatedAt HANYA kalau benar-benar ada diff (bukan sekadar sync-time).
         if (diffs.length > 0 || isBaseline) patch.updatedAt = now;
 
+        // Gerbang multi-provider: boleh aktif hanya bila provider ini boleh
+        // melayani kategorinya (aktif global ATAU kategori di-route ke provider ini).
+        const allowed = providerAllowed(catId);
+
         if (svc.status === 1) {
-          try {
-            await db.update(services).set(patch).where(eq(services.id, svc.id));
-            updated++;
-          } catch (e) {
-            console.error(`[cron] service-sync update service ${pid} gagal:`, e);
-            continue; // jangan abort loop; lewati changelog/news untuk baris ini
+          if (!allowed) {
+            // Route-off: kategori ini dilayani provider lain → matikan layanan
+            // provider ini. TANPA tag [manual-off] (itu kontrak "dimatikan manual
+            // oleh owner") → lepas routing otomatis hidup lagi. Tidak emits
+            // news "dihentikan": layanannya masih ada di katalog provider, cuma
+            // bukan provider yang melayani kategori ini.
+            try {
+              await db
+                .update(services)
+                .set({ ...patch, status: 0 })
+                .where(eq(services.id, svc.id));
+              routeOff++;
+            } catch (e) {
+              console.error(`[cron] service-sync route-off service ${pid} gagal:`, e);
+            }
+          } else {
+            try {
+              await db.update(services).set(patch).where(eq(services.id, svc.id));
+              updated++;
+            } catch (e) {
+              console.error(`[cron] service-sync update service ${pid} gagal:`, e);
+              continue; // jangan abort loop; lewati changelog/news untuk baris ini
+            }
           }
-        } else if (!isManualOff) {
+        } else if (!isManualOff && allowed) {
           try {
             await db
               .update(services)
@@ -528,7 +566,7 @@ export async function runServiceSync(providerId: number): Promise<void> {
       Date.now() - start,
       psRows.length,
       created,
-      `updated=${updated} enabled=${enabled} disabled=${toDisable.length} priceUp=${priceChanges.up} priceDown=${priceChanges.down}`,
+      `updated=${updated} enabled=${enabled} disabled=${toDisable.length} routeOff=${routeOff} priceUp=${priceChanges.up} priceDown=${priceChanges.down}`,
     );
 
     // Notif admin agregat per sync (PRD §8).
@@ -566,7 +604,7 @@ export async function runServiceSync(providerId: number): Promise<void> {
     }
 
     console.log(
-      `[cron] service-sync: fetched=${psRows.length} created=${created} updated=${updated} enabled=${enabled} disabled=${toDisable.length} priceUp=${priceChanges.up} priceDown=${priceChanges.down} changelog=${changelogRows.length} newsIns=${newsInserted}`,
+      `[cron] service-sync: fetched=${psRows.length} created=${created} updated=${updated} enabled=${enabled} disabled=${toDisable.length} routeOff=${routeOff} priceUp=${priceChanges.up} priceDown=${priceChanges.down} changelog=${changelogRows.length} newsIns=${newsInserted}`,
     );
   } catch (e: any) {
     await logSync(

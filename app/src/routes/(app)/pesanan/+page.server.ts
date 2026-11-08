@@ -148,18 +148,29 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   // JOIN dulu ke katalog aktif: top mentah dikuasai ID legacy yang tidak ada
   // di katalog (390099 dkk) sehingga tanpa join hasilnya selalu kosong.
   // Query ringan: aggregate + join 3 services. Hanya saat filter=all & kosong.
+  //
+  // Multi-provider: TIDAK lagi hardcode provider_id=2. Order membawa provider_id
+  // sendiri (lama & baru), jadi popular ikut provider mana pun yang melayani.
+  // Kunci join tetap provider_service_id (generasi order lama PHP), tapi dicocokkan
+  // BERSAMA provider-nya supaya id yang sama di provider berbeda tak tertukar.
   let popular: { id: number; serviceName: string; price: number }[] = [];
   if (filter === "all" && rows.length === 0) {
     try {
       const top = (await db.execute(sql`
-        SELECT o.service_id AS sid, COUNT(*) AS c FROM orders o
-        JOIN services s ON s.provider_id = 2 AND s.provider_service_id = o.service_id AND s.status = 1
-        WHERE o.provider_id = 2 AND o.service_id > 0
-        GROUP BY o.service_id ORDER BY c DESC LIMIT 3
+        SELECT o.service_id AS sid, o.provider_id AS pid, COUNT(*) AS c FROM orders o
+        JOIN services s ON s.provider_service_id = o.service_id AND s.provider_id = o.provider_id AND s.status = 1
+        WHERE o.service_id > 0
+        GROUP BY o.service_id, o.provider_id ORDER BY c DESC LIMIT 3
       `)) as any;
       const topRows: any[] = Array.isArray(top?.[0]) ? top[0] : Array.isArray(top) ? top : [];
-      const pids = topRows.map((r: any) => Number(r.sid)).filter((n) => n > 0);
-      if (pids.length) {
+      const pairs = topRows
+        .map((r: any) => ({
+          sid: Number(r.sid),
+          pid: Number(r.pid) || 0,
+          c: Number(r.c) || 0,
+        }))
+        .filter((r: any) => r.sid > 0);
+      if (pairs.length) {
         const svc = await db
           .select({
             id: services.id,
@@ -168,25 +179,30 @@ export const load: PageServerLoad = async ({ url, locals }) => {
             priceApi: services.priceApi,
             priceReseller: services.priceReseller,
             providerServiceId: services.providerServiceId,
+            providerId: services.providerId,
           })
           .from(services)
           .where(
             and(
-              eq(services.providerId, 2),
               eq(services.status, 1),
-              inArray(services.providerServiceId, pids),
+              inArray(
+                services.providerServiceId,
+                pairs.map((r: any) => r.sid),
+              ),
             ),
           );
-        const order: Record<number, number> = {};
-        pids.forEach((id, i) => (order[id] = i));
-        const byPid = new Map(svc.map((s) => [Number((s as any).providerServiceId ?? 0), s]));
+        // Kunci (providerId, providerServiceId) — id yang sama di provider
+        // berbeda tidak boleh tertukar (multi-provider).
+        const byKey = new Map(
+          svc.map((s) => [`${s.providerId}|${s.providerServiceId}`, s]),
+        );
         // Harga populer = harga JUAL efektif per level user (bukan modal mentah),
         // supaya widget konsisten dgn apa yang dibayar saat order.
         const lvl = ((locals.user?.level as UserLevel) ?? "Member") as UserLevel;
         const rules = await getPricingRules();
         const rule = rules[lvl];
-        popular = pids
-          .map((pid) => byPid.get(pid))
+        popular = pairs
+          .map((r: any) => byKey.get(`${r.pid}|${r.sid}`))
           .filter((s): s is NonNullable<typeof s> => !!s)
           .slice(0, 3)
           .map((s) => {
