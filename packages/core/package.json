@@ -14,10 +14,12 @@
     "./refund-state": "./src/refund-state.ts",
     "./refill-window": "./src/refill-window.ts",
     "./service-popularity": "./src/service-popularity.ts",
-    "./email-guard": "./src/email-guard.ts"
+    "./email-guard": "./src/email-guard.ts",
+    "./routing-policy": "./src/routing-policy.ts",
+    "./kind-signature": "./src/kind-signature.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types test/order-status.test.ts && node --experimental-strip-types test/pricing-package.test.ts && node --experimental-strip-types test/cancel-gate.test.ts && node --experimental-strip-types test/order-guard.test.ts && node --experimental-strip-types test/refund-state.test.ts && node --experimental-strip-types test/refill-window.test.ts && node --experimental-strip-types test/service-popularity.test.ts && node --experimental-strip-types test/format-entities.test.ts && node --experimental-strip-types test/order-field-spec.test.ts && node --experimental-strip-types --import ./test/register.mjs test/email-guard.test.ts"
+    "test": "node --experimental-strip-types test/order-status.test.ts && node --experimental-strip-types test/pricing-package.test.ts && node --experimental-strip-types test/cancel-gate.test.ts && node --experimental-strip-types test/order-guard.test.ts && node --experimental-strip-types test/refund-state.test.ts && node --experimental-strip-types test/refill-window.test.ts && node --experimental-strip-types test/service-popularity.test.ts && node --experimental-strip-types test/format-entities.test.ts && node --experimental-strip-types test/order-field-spec.test.ts && node --experimental-strip-types test/routing-policy.test.ts && node --experimental-strip-types --import ./test/register.mjs test/email-guard.test.ts"
   }
 }

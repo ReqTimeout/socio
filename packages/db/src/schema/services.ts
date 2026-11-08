@@ -20,7 +20,7 @@ export const categories = mysqlTable("categories", {
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 
-/** SMM providers (SMMturk, JAP, IRVAN, SMC, ...) */
+/** SMM providers (SMMturk, SMMfollows, JAP, IRVAN, SMC, ...) */
 export const provider = mysqlTable("provider", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 128 }).notNull(),
@@ -28,6 +28,12 @@ export const provider = mysqlTable("provider", {
   apiUrlStatus: varchar("api_url_status", { length: 128 }).notNull(),
   apiKey: varchar("api_key", { length: 128 }).notNull(),
   balanceProvider: double("balance_provider").notNull().default(0),
+  /**
+   * Switcher satu-aktif: 1 = provider aktif global (satu-satunya yang melayani
+   * kategori tanpa routing), 0 = non-aktif. Kategori yang punya baris routing
+   * (category_provider_routing) tetap dilayani provider itu walau status=0.
+   */
+  status: tinyint("status").notNull().default(0),
 });
 
 export type Provider = typeof provider.$inferSelect;
@@ -43,7 +49,8 @@ export const services = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     categoryId: int("category_id").notNull(),
     type: varchar("type", { length: 128 }).notNull(),
-    serviceName: varchar("service_name", { length: 255 }).notNull(),
+    /** Panjang 1024 — nama layanan SMMfollows bisa >255 char (jebakan .my). */
+    serviceName: varchar("service_name", { length: 1024 }).notNull(),
     note: text("note").notNull(),
     price: double("price").notNull().default(0),
     priceApi: double("price_api").notNull().default(0),
@@ -59,7 +66,8 @@ export const services = mysqlTable(
     waktu: text("waktu").notNull(),
     isRefill: tinyint("is_refill").notNull().default(0),
     /** PRD Service Sync v2 — kolom audit + raw + flag API provider. */
-    serviceNameRaw: varchar("service_name_raw", { length: 255 })
+    /** Panjang 1024 — nama mentah provider bisa >255 char (SMMfollows max 326). */
+    serviceNameRaw: varchar("service_name_raw", { length: 1024 })
       .notNull()
       .default(""),
     description: text("description"),

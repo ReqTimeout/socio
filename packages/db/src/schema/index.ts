@@ -2,6 +2,7 @@ export * from "./users.js";
 export * from "./rebuild.js";
 export * from "./security.js";
 export * from "./services.js";
+export * from "./routing.js";
 export * from "./orders.js";
 export * from "./deposits.js";
 export * from "./balanceLogs.js";

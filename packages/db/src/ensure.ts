@@ -395,6 +395,43 @@ export async function ensureAdminSchema() {
     sql`ALTER TABLE users ADD COLUMN reseller_activated TINYINT NOT NULL DEFAULT 0`,
   );
 
+  // ── Multi-provider (item I) — switcher satu-aktif + routing per-kategori.
+  // `provider.status` = 1 → provider aktif global (satu-satunya yang melayani
+  // kategori TANPA routing). Backfill: aktifkan provider utama (SMMturk) HANYA
+  // kalau belum ada provider aktif — menjaga invariant "tepat satu aktif".
+  await tryExec(
+    sql`ALTER TABLE provider ADD COLUMN status TINYINT NOT NULL DEFAULT 0`,
+  );
+  await db.execute(sql`
+    UPDATE provider SET status = 1
+    WHERE api_url_order LIKE ${"https://smmturk.org%"}
+      AND NOT EXISTS (
+        SELECT 1 FROM (SELECT id FROM provider WHERE status = 1) AS already_active
+      )
+  `);
+  // Routing per-kategori (TikTok → provider kedua). Tabel baru.
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS category_provider_routing (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      category_id INT NOT NULL,
+      provider_id INT NOT NULL,
+      is_active TINYINT NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT NULL,
+      updated_at DATETIME DEFAULT NULL,
+      UNIQUE KEY uq_routing_category (category_id),
+      INDEX idx_routing_provider (provider_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+  // Pelebaran kolom nama layanan: SMMfollows punya nama sampai 326 char →
+  // varchar(255) memicu ER_DATA_TOO_LONG saat sync (jebakan .my §11).
+  // MODIFY COLUMN idempotent — aman dijalankan ulang tiap boot.
+  await db.execute(
+    sql`ALTER TABLE services MODIFY COLUMN service_name VARCHAR(1024) NOT NULL`,
+  );
+  await db.execute(
+    sql`ALTER TABLE services MODIFY COLUMN service_name_raw VARCHAR(1024) NOT NULL DEFAULT ''`,
+  );
+
   // ── Charset: tabel penampung teks MENTAH provider (bisa ada emoji 4-byte,
   // mis. kategori "IMPOSSIBLE SERVICES ❤️"). ADD COLUMN service-sync v2 mewarisi
   // charset tabel lama (latin1/utf8mb3) → INSERT/UPDATE "Incorrect string value"

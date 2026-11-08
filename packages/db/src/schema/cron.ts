@@ -22,7 +22,8 @@ export const providerServices = mysqlTable(
     providerId: int("provider_id").notNull(),
     providerServiceId: varchar("provider_service_id", { length: 64 }).notNull(),
     name: text("name").notNull(),
-    category: varchar("category", { length: 128 }).notNull().default(""),
+    /** 512 — nama kategori provider bisa panjang (SMMfollows max 136, SMMturk 131). */
+    category: varchar("category", { length: 512 }).notNull().default(""),
     rate: double("rate").notNull().default(0),
     min: int("min").notNull().default(0),
     max: int("max").notNull().default(0),
