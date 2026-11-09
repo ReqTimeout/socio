@@ -699,8 +699,10 @@
      buat jadi dropdown aja pake warna yang agak terang" → SATU field ringan
      berisi SEMUA rekomendasi (maks 8), bukan barisan kartu. Warna mango-50
      (krem terang, DNA Sparko) — bukan container indigo + shadow yang ditolak
-     v1. Dirender di DUA tempat: (a) sebelum kategori dipilih, (b) di atas
-     daftar layanan sesudahnya (Susulan 2: cuma (a) = fitur tak terlihat). -->
+     v1. Dirender di DUA tempat, TAPI SALING LEPAS: (a) sebelum kategori dipilih,
+     (b) di atas daftar layanan sesudahnya (Susulan 2: cuma (a) = fitur tak
+     terlihat). Penemaleannya di call-site masing-masing: (a) `!selectedCat`,
+     (b) `selectedCat` → tepat satu band yang tampil, tidak pernah dobel. -->
 {#snippet popularBand()}
   <div class="mb-2.5 rounded-xl bg-mango-50 px-2.5 py-2">
     <p
@@ -1062,8 +1064,11 @@
               {/if}
               <!-- (a) State discovery: band DI ATAS dropdown kategori — owner
                    selalu masuk lewat pilih kategori; tanpa ini fitur tak pernah
-                   terlihat (Susulan 2 .my). -->
-              {#if popularItems.length > 0}{@render popularBand()}{/if}
+                   terlihat (Susulan 2 .my).
+                   Hanya SEBELUM kategori dipilih: begitu kategori aktif, band
+                   pindah ke atas daftar layanan (b) — tanpa guard ini keduanya
+                   muncul bareng (duplikat "Paling laris" dobel). -->
+              {#if !selectedCat && popularItems.length > 0}{@render popularBand()}{/if}
             </div>
 
             <!-- Kind chip filter — port B3 .my FINAL (Susulan 3+5): JENIS di
