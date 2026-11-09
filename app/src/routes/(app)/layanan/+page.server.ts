@@ -5,6 +5,7 @@ import { fail } from "@sveltejs/kit";
 import { baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
 import { getPricingRules } from "$lib/server/pricing";
 import { whitelabel } from "$lib/format";
+import { orderableServiceSql, pickBuyableCategories } from "$lib/server/category-visibility";
 import type { PageServerLoad, Actions } from "./$types";
 
 const PAGE_SIZE = 20;
@@ -111,10 +112,34 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     .from(services)
     .where(and(...filters));
 
-  const cats = await db
-    .select({ id: categories.id, name: categories.name })
+  // Dropdown filter kategori: HANYA yang masih bisa dibeli (>=1 layanan layak order).
+  // Sebelumnya query ini mengirim SELURUH tabel categories (1.836 baris di produksi)
+  // tanpa filter, jadi kategori yang layanannya dimatikan provider tetap muncul di
+  // filter user dan berujung daftar kosong. Predikatnya pakai orderableServiceSql()
+  // yang SAMA dengan `filters` di atas (satu sumber kebenaran), dan sort kesegaran
+  // sama seperti dropdown /pesan: layanan terakhir yg di-update naik dulu.
+  // Tidak ada baris kategori yang dihapus — begitu provider aktifkan lagi, pilihannya
+  // muncul sendiri tanpa perubahan kode.
+  const catRows = await db
+    .select({
+      id: categories.id,
+      name: categories.name,
+      active: sql<number>`COUNT(${services.id})`,
+      latestAt: sql<
+        string | null
+      >`MAX(GREATEST(COALESCE(${services.createdAt}, '1970-01-01'), COALESCE(${services.updatedAt}, '1970-01-01')))`,
+    })
     .from(categories)
-    .orderBy(asc(categories.name));
+    .innerJoin(
+      services,
+      sql`${services.categoryId} = ${categories.id} AND ${orderableServiceSql()}`,
+    )
+    .groupBy(categories.id, categories.name)
+    .orderBy(
+      sql`COALESCE(MAX(GREATEST(COALESCE(${services.createdAt}, '1970-01-01'), COALESCE(${services.updatedAt}, '1970-01-01'))), '1970-01-01') DESC`,
+      asc(categories.name),
+    );
+  const cats = pickBuyableCategories(catRows);
 
   return {
     services: withLevelPrice,

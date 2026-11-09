@@ -304,6 +304,25 @@ Owner instruction 9 Nov 2026: *"ko admin fitur ga ada di app.socio.id? coba ceck
 
 **Catatan encoding (bukan bug kode):** DB dev lokal punya 992/1.132 nama kategori **double-encoded** (`"Instagram 🇺🇸 AI"` → `"Instagram ðºð¸ AI"`; byte UTF-8 dibaca Latin-1 lalu di-encode ulang). Terbukti byte DB ada **persis** di HTML → server tidak mengubah apa pun. **Produksi `.id` 0/1.836 dan `.my` 0/1.534 → bersih.** Yang dipulihkan 6.782 baris di DB dev lokal (2 backup di `/tmp/dev-db-encoding-backup*.json`); 4 baris tak terpulihkan (emoji terpotong).
 
+## P6 — Category visibility: kategori mati hilang dari filter user, TIDAK dihapus dari data
+
+Owner instruction 9 Nov 2026: port `updatememory/2026-11-09-category-visibility-dropdown-fix.md` dari socio.my ke socio.id.
+
+**Ekuivalensi repo (nama rute beda):** `.my` `/services` → `.id` `/layanan`; `.my` `/order` → `.id` `/pesan`; dashboard nama sama.
+
+**Perubahan (3 file):**
+1. **`app/src/lib/server/category-visibility.ts` (baru)** — satu sumber kebenaran: `orderableServiceSql()` (factory, bukan konstanta module-level), `decorateCategoryRows()` (label `disabled`, tidak ada baris dibuang), `pickBuyableCategories()` (filter dropdown).
+2. **`app/src/routes/(app)/layanan/+page.server.ts`** — dropdown kategori: `SELECT id, name FROM categories` (1.836 baris, tanpa filter) → INNER JOIN predikat orderable + hitungan `active` + sort kesegaran (`MAX(GREATEST(created_at, updated_at)) DESC, name ASC`, sama seperti `/pesan`). Predikatnya identik dengan 4 syarat filter daftar di file yang sama → satu sumber kebenaran, tak ada drift.
+3. **`app/src/routes/(app)/+page.server.ts` (dashboard)** — `LIMIT 12` tanpa ORDER BY (urutan acak tiap eksekusi) → LEFT JOIN + `active` + `latestAt` + urutan deterministik (yang bisa dibeli dulu, mati di bawah) + label `disabled` + `whitelabel()`. Shape payload jadi `{id, name, active, latestAt, disabled}`.
+
+**Sengaja tidak diubah:** dropdown `/pesan` sudah terfilter (`LEFT JOIN … status=1` + `HAVING COUNT(services.id) > 0`) — padanan `/order` di `.my`, jadi tak perlu disentuh. Permukaan admin tetap harus melihat kategori mati. Tidak ada satu baris DB pun yang ditulis. Tidak ada label UI "nonaktif" di dashboard — payload-nya belum dirender komponen mana pun di `.id` (sama seperti `.my`; butuh kunci katalog id/ms/en baru = keputusan desain, bukan bug).
+
+**Verifikasi:**
+- **SQL produksi (read-only):** total kategori 1.836 → dropdown **774** (750 kategori punya layanan tapi semua `status=0` + 312 tanpa layanan = 1.062 entri tercabut dari filter user). Kategori mati 36407 "TikTok Likes": **tidak ada** di dropdown, **tetap ada** di payload dashboard dengan `active=0` → `disabled=true`.
+- **Uji kontrak 11 asersi** (fungsi murni + SQL nyata): `decorateCategoryRows` (label benar, tak ada baris dibuang, coercion string→number), `pickBuyableCategories` (filter + urutan asli terjaga), dropdown SQL == hitungan `EXISTS` independen, kategori mati absen dari dropdown tapi hadir di payload. **Catatan: `.id` belum punya infra test (tidak ada vitest di repo), jadi suite `.my` (`app/test/category-visibility.test.ts`) tidak ikut dipindah** — verifikasi dilakukan lewat skrip mandiri, SQL produksi, dan SSR. Penambahan vitest = dependency + lockfile baru, butuh persetujuan owner.
+- `pnpm --filter app check` → **0 errors, 54 warnings** (baseline tak berubah) · `pnpm --filter app build` ✓ · ESLint file disentuh → 0 error (5 warning `no-explicit-any` pre-existing) · Prettier bersih.
+- **SSR:** `/layanan` payload = **907** kategori (dev DB; 1.132 total), nama terbaca + tanpa brand hulu bocor; dashboard payload = 12 baris shape `{id, name, active, latestAt, disabled}`.
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
@@ -348,6 +367,7 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | I | Multi-provider (+ TikTok → SMMfollows) | ✅ LIVE | **4572fee (sesi ini)** — switcher 1-aktif + routing per-kategori; TikTok dilayani SMMfollows (828 svc/77 kategori), duplikat=0, route violation=0 |
 | P4 | SEO subsystem port | ✅ LIVE | **runner `83a375f`→`4899977` (sesi ini)** — loop pengukuran: `reconcile-published` (state.published 340→1.006), `gsc-analytics`, `seo-status`, `gsc-inspect` save parsial, fix token GSC + self-test (401 setelah 1 jam), siklus `seo-index-coid` + `seo-measure-coid`; index_rate 92,6%, ramp-gate hidup (daily_count 15→19) |
 | P5 | Admin dashboard: halaman & rail kategori | ✅ LIVE | **9 Nov 2026** — `lib/server/category-admin.ts` (sumber tunggal SQL kategori) + `/admin/categories` (cari, filter status/routing, badge provider, switch per baris) + rail kategori di `/admin/services`; kontrak `[manual-off]` 6/6 uji lulus |
+| P6 | Category visibility (kategori mati tak muncul di filter user) | ✅ LIVE | **9 Nov 2026** — `lib/server/category-visibility.ts` + dropdown `/layanan` 1.836→774 (produksi) + payload dashboard berlabel `disabled`; tak ada baris DB yang dihapus |
 
 **Deploy batch sesi ini:** 3 commit (4988b5a E3/E4 · a3a3a09 E6 · 0010967 docs) → push `da0a106..0010967 → main` → L3 0 findings → Coolify finished → container tag 0010967fbab1 (Up).
 

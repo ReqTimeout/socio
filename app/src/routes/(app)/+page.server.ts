@@ -11,6 +11,8 @@ import {
 import { eq, desc, and, gte, sql, lte, or, isNull, asc, inArray } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import { getSetting } from "$lib/server/admin";
+import { whitelabel } from "$lib/format";
+import { orderableServiceSql, decorateCategoryRows } from "$lib/server/category-visibility";
 import type { PageServerLoad, Actions } from "./$types";
 
 // Banner promo dashboard. Admin bisa set JSON via adminSettings key `dashboard_banners`
@@ -278,10 +280,36 @@ export const load: PageServerLoad = async ({ locals }) => {
   const curDeposit = deposit14.slice(7);
   const prevDeposit = deposit14.slice(0, 7);
 
-  const catRows = await db
-    .select({ id: categories.id, name: categories.name })
-    .from(categories)
-    .limit(12);
+  // Kategori utk dashboard: TIDAK ADA yang dihapus/difilter habis (kontrak owner 9 Nov
+  // 2026: yang mati cukup diLABELI `disabled`, karena provider bisa mengaktifkan ulang
+  // produknya kapan saja). Predikat "layak order" dipakai di ON-clause LEFT JOIN, jadi
+  // kategori kosong tetap ikut dengan active=0, dan COALESCE(...,'1970-01-01') DESC
+  // menaruh yang mati di bawah secara deterministik (query lama `LIMIT 12` tanpa
+  // ORDER BY = urutan acak tiap eksekusi).
+  // Nama whitelabel: nama mentah categories berisi brand hulu ("SMMTURK ...") — dulu
+  // payload ini bocor mentah walau tak dipakai UI; sekarang dirapikan sekaligus.
+  const catRows = decorateCategoryRows(
+    await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        active: sql<number>`COUNT(${services.id})`,
+        latestAt: sql<
+          string | null
+        >`MAX(GREATEST(COALESCE(${services.createdAt}, '1970-01-01'), COALESCE(${services.updatedAt}, '1970-01-01')))`,
+      })
+      .from(categories)
+      .leftJoin(
+        services,
+        sql`${services.categoryId} = ${categories.id} AND ${orderableServiceSql()}`,
+      )
+      .groupBy(categories.id, categories.name)
+      .orderBy(
+        sql`COALESCE(MAX(GREATEST(COALESCE(${services.createdAt}, '1970-01-01'), COALESCE(${services.updatedAt}, '1970-01-01'))), '1970-01-01') DESC`,
+        asc(categories.name),
+      )
+      .limit(12),
+  ).map((c) => ({ ...c, name: whitelabel(c.name) }));
 
   // Pesan Cepat — layanan yang paling sering di-order user (repeat flow).
   // Legacy orders.service_id menyimpan provider service id lama (repo services
