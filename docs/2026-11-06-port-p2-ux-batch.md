@@ -340,6 +340,28 @@ Owner 9 Nov 2026: *"gini semuanya ke smmturk tapi khusus layanan tiktok ke smmfo
 
 **Kontrak manual-disable (terverifikasi):** tag `[manual-off]` ada di 124 baris, **0 yang masih status=1**, 0 tag dobel. Mekanisme: `service-sync.ts` tidak pernah menulis `note` (patch object tidak punya key `note`), cabang hidupkan dijaga `else if (!isManualOff && allowed)`, `provider-sync.ts` juga tidak menulis `note`. Bug yang ditemukan: path ON di `category-admin.ts` cuma membuang `" [manual-off]"` (dengan spasi) padahal path OFF menghasilkan note persis `"[manual-off]"` → tag nyangkut → sudah diperbaiki (REPLACE ganda, sama seperti `.my`) di commit `be12f1c`.
 
+## P8 — Revert penuh ke SMMturk (9 Nov 2026, perubahan DATA produksi, tanpa perubahan kode)
+
+Owner 9 Nov 2026: *"bisa revert semua layanan ke smmturk? tolong clean jangan ada bug smmfollow yang nyangkut, tapi konsumen yang sudah terlanjur tetap dapat status update dari orderannya"* → routing TikTok ke SMMfollows DIMATIKAN total, semua lalu-lintas order kembali ke SMMturk (provider id 2).
+
+**Kenapa tanpa perubahan kode:** seluruh mekanisme sudah ada di app (`category_provider_routing` + `reconcileAllServices` + gerbang `allowedForRouting`). Yang berubah hanya isi tabel routing. Provider id 10 TETAP ADA di `provider` (status=0) dengan api_key-nya — ini syarat order lama tetap ter-tagih statusnya.
+
+**Yang dieksekusi (read-write, produksi):**
+1. Snapshot sebelum sentuh: `routing_snapshot_20261109` (233 baris `category_provider_routing` utuh + kolom `snap_at`) dan `smmfollow_active_snapshot_20261109` (704 id `services` yang sedang status=1 di provider 10). KEDUANYA adalah tabel rollback — pasang kembali routing dari snapshot + jalankan rekonsiliasi = keadaan lama balik persis.
+2. `UPDATE services SET status=0 WHERE provider_id=10 AND status=1` → 704 layanan SMMfollows non-orderable.
+3. `DELETE FROM category_provider_routing` → 233 baris hilang; tidak ada kategori yang diroute lagi.
+4. Enable ulang layanan SMMturk di 233 kategori eks-routing: 1.163 baris (0 di antaranya bertag `[manual-off]`, jadi tidak ada kontrak F2 yang dilanggar).
+
+**State sesudah revert:** routing aktif 0 · layanan SMMfollows orderable **0** · orderable total 7.722 (semua provider 2; provider 0 tinggal 4 placeholder legacy) · order live: 4 `In progress` (provider 2) + 1 `Pending` (provider 1 MANUAL) — **0 order menggantung di provider 10**.
+
+**Konsumen yang sudah terlanjur order (kontrak terpenuhi):** `status-polling.ts` mengelompokkan order lewat `orders.provider_id` SIMPANAN order, lalu mengambil endpoint+key dari baris `provider` id 10 — tidak pernah membaca tabel routing. Selama baris provider 10 tidak dihapus, order lama (satu-satunya: #37978, sudah `Success`) terus dapat update, termasuk refill (`refill-request.ts`) dan `refill-polling`. DILARANG hapus provider id 10 / kosongkan api_key-nya.
+
+**Efek samping yang harus diketahui owner:** dari 233 kategori eks-routing, hanya **160** yang punya layanan SMMturk orderable; **73 kategori TikTok tidak punya padanan di SMMturk** (mis. semua "TikTok Live Stream Views - <negara>", "TikTok Likes/Views - Targeted", "- Guaranteed", "- No Refill", "TikTok Saves/Shares", "TikTok Story Services"). Kategori itu hilang dari filter user (kontrak P6 bekerja benar, BUKAN bug) dan memang produknya tidak dijual SMMturk.
+
+**Yang terjadi otomatis berikutnya:** cron `provider-sync` (tiap jam menit 0) hanya sync provider aktif ∪ provider ter-route → provider 10 jadi **dorman** (mirror 7.554 membeku, sengaja; nanti kalau routing dipasang lagi sync menyusul). Provider 2 ter-sync dan menyegarkan harga 1.163 layanan yang barusan di-enable — harga kolom MODAL (belum markup), dan ada 465 layanan TikTok "[Organic Growth Package]" yang sejak awal memang SMMturk.
+
+**Verifikasi:** `category_provider_routing`=0 · `services` provider 10 status=1 = 0 · gerbang order (`isProviderAllowedForCategory`) turun ke jalur default satu-aktif = provider 2 · cache routing/aktif app ber-TTL 30 detik jadi segarnya paling telat 30 detik setelah perubahan tanpa restart. Belum ada order baru pasca-revert sebagai bukti end-to-end (tidak ada test order, sesuai instruksi owner 8 Nov).
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
@@ -385,6 +407,8 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | P4 | SEO subsystem port | ✅ LIVE | **runner `83a375f`→`4899977` (sesi ini)** — loop pengukuran: `reconcile-published` (state.published 340→1.006), `gsc-analytics`, `seo-status`, `gsc-inspect` save parsial, fix token GSC + self-test (401 setelah 1 jam), siklus `seo-index-coid` + `seo-measure-coid`; index_rate 92,6%, ramp-gate hidup (daily_count 15→19) |
 | P5 | Admin dashboard: halaman & rail kategori | ✅ LIVE | **9 Nov 2026** — `lib/server/category-admin.ts` (sumber tunggal SQL kategori) + `/admin/categories` (cari, filter status/routing, badge provider, switch per baris) + rail kategori di `/admin/services`; kontrak `[manual-off]` 6/6 uji lulus |
 | P6 | Category visibility (kategori mati tak muncul di filter user) | ✅ LIVE | **9 Nov 2026** — `lib/server/category-visibility.ts` + dropdown `/layanan` 1.836→774 (produksi) + payload dashboard berlabel `disabled`; tak ada baris DB yang dihapus |
+| P7 | Konfirmasi routing TikTok | 🔍 verify-only | read-only; deviasi 465 svc TikTok "[Organic Growth Package]" di SMMturk → owner: biarkan |
+| P8 | **Revert semua layanan ke SMMturk** | ✅ LIVE | **9 Nov 2026** — data-only, tanpa commit kode: routing 233→0, SMMfollows orderable 704→0, SMMturk 6.559→7.722; snapshot rollback `routing_snapshot_20261109` + `smmfollow_active_snapshot_20261109`; provider id 10 DIPERTAHANKAN supaya order lama tetap ter-poll |
 
 **Deploy batch sesi ini:** 3 commit (4988b5a E3/E4 · a3a3a09 E6 · 0010967 docs) → push `da0a106..0010967 → main` → L3 0 findings → Coolify finished → container tag 0010967fbab1 (Up).
 
