@@ -323,6 +323,23 @@ Owner instruction 9 Nov 2026: port `updatememory/2026-11-09-category-visibility-
 - `pnpm --filter app check` → **0 errors, 54 warnings** (baseline tak berubah) · `pnpm --filter app build` ✓ · ESLint file disentuh → 0 error (5 warning `no-explicit-any` pre-existing) · Prettier bersih.
 - **SSR:** `/layanan` payload = **907** kategori (dev DB; 1.132 total), nama terbaca + tanpa brand hulu bocor; dashboard payload = 12 baris shape `{id, name, active, latestAt, disabled}`.
 
+## P7 — Konfirmasi routing TikTok (verifikasi read-only, tanpa perubahan kode)
+
+Owner 9 Nov 2026: *"gini semuanya ke smmturk tapi khusus layanan tiktok ke smmfollow paham ga?"* → verifikasi read-only di produksi, lalu keputusan owner: **biarkan** (tidak ada perubahan kode).
+
+**Aturan yang dikonfirmasi:** default semua layanan → SMMturk (provider id 2, status=1); khusus layanan TikTok → SMMfollows (provider id 10, status=0, aktif lewat routing per kategori).
+
+**Bukti produksi (read-only):**
+- `services`: provider 2 = 8.868 · provider 10 = 7.554 · provider 0 = 4 (placeholder legacy: nama kosong, price/min/max=0, tersaring dari katalog).
+- `category_provider_routing`: 233 baris aktif → SMMfollows, **233/233 kategorinya bernama TikTok, 0 non-TikTok**.
+- Isi 233 kategori itu: 7.554 layanan, **704 bernama TikTok dan 0 non-TikTok** → sesuai aturan, tidak ada produk non-TikTok yang bocor ke SMMfollows.
+- SMMfollows punya 636 kategori di mirror, tapi hanya 77 yang TikTok; sisanya (YouTube Ads, Telegram, Spotify) sengaja tidak di-route → tetap SMMturk.
+- Tiga gerbang routing = **0 pelanggaran**: kategori AKTIF dilayani >1 provider; kategori ter-route tapi dilayani provider lain; nama layanan dobel dalam 1 kategori lintas provider.
+
+**Temuan yang tidak berubah (keputusan owner: biarkan):** ada **465 layanan bernama TikTok yang tetap dilayani SMMturk** — semuanya lini `"[Organic Growth Package]"` milik SMMturk sendiri, di 13 kategori bernama TikTok ("TikTok 1/3/5 Minute Premium Packages", "TikTok Comment Packages", dll.) + 18 kategori bernama umum ("new", "Server", "Campaign", "TikTok Update [Emergency Server]"). **Tumpang tindih dengan katalog SMMfollows = 0**, jadi memindahkannya ke SMMfollows = produk hilang dari katalog (SMMfollows tidak menjualnya), bukan sekadar pindah provider. Owner memutuskan: biarkan.
+
+**Kontrak manual-disable (terverifikasi):** tag `[manual-off]` ada di 124 baris, **0 yang masih status=1**, 0 tag dobel. Mekanisme: `service-sync.ts` tidak pernah menulis `note` (patch object tidak punya key `note`), cabang hidupkan dijaga `else if (!isManualOff && allowed)`, `provider-sync.ts` juga tidak menulis `note`. Bug yang ditemukan: path ON di `category-admin.ts` cuma membuang `" [manual-off]"` (dengan spasi) padahal path OFF menghasilkan note persis `"[manual-off]"` → tag nyangkut → sudah diperbaiki (REPLACE ganda, sama seperti `.my`) di commit `be12f1c`.
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
