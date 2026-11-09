@@ -362,6 +362,13 @@ Owner 9 Nov 2026: *"bisa revert semua layanan ke smmturk? tolong clean jangan ad
 
 **Verifikasi:** `category_provider_routing`=0 · `services` provider 10 status=1 = 0 · gerbang order (`isProviderAllowedForCategory`) turun ke jalur default satu-aktif = provider 2 · cache routing/aktif app ber-TTL 30 detik jadi segarnya paling telat 30 detik setelah perubahan tanpa restart. Belum ada order baru pasca-revert sebagai bukti end-to-end (tidak ada test order, sesuai instruksi owner 8 Nov).
 
+**Verifikasi siklus cron berikutnya (provider-sync `139045` + service-catalog `139052`, 11:00 UTC, status ok, 144 detik):**
+- SMMfollows TIDAK disentuh lagi — `provider_services.last_seen_at` terbaru provider 10 membeku di 09:02:21 (sinkron terakhir sebelum revert) → dorman sesuai design `runAllProviderSync` (aktif ∪ ter-route).
+- Routing tetap 0 dan SMMfollows tetap 0 orderable → cron tidak membangunkan apapun.
+- SMMturk active 7.722 → **7.694** (28 layanan di kategori eks-routing ternyata sudah mati di katalog SMMturk dan baru ditandai mati oleh sync) · orderable TikTok di 233 kategori eks-routing = **1.135** · selisih harga `services.price` vs `provider_services.rate` = **0** (semua modal sudah sesuai mirror).
+- Order live: 3 `In progress` provider 2 + 1 `Pending` provider 1 MANUAL · **0** di provider 10 · 0 order baru sejak revert (kebetulan window-nya 57 menit sepi, bukan bukti volume).
+- Baris `provider` id 10 utuh (`smmfollows.com/api/v2`, key 84 char ter-encrypt, status=0) → order historis provider 10 (1 baris: #37978 `Success`) kalau butuh status/refill tetap bisa ditagih.
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
