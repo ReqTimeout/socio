@@ -59,12 +59,10 @@
   let editSvc = $state<SvcRow | null>(null);
   let viewSvc = $state<SvcRow | null>(null);
   let addSvcOpen = $state(false);
-  let addCatOpen = $state(false);
   let bulkPriceOpen = $state(false);
   let bp_categoryId = $state(0);
   let bp_mode = $state<"adjust" | "set_base">("adjust");
   let bp_value = $state(0);
-  let editCat = $state<{ id: number; name: string } | null>(null);
   let confirm = $state<{
     open: boolean;
     title: string;
@@ -129,8 +127,6 @@
     addSvcOpen = false;
     editSvc = null;
     viewSvc = null;
-    addCatOpen = false;
-    editCat = null;
   }
 
   function toggleSel(id: number) {
@@ -165,6 +161,47 @@
     } else {
       toast(j?.data?.error ?? "Gagal mengubah status kategori", "error");
     }
+  }
+
+  // RAIL KATEGORI (kiri) — satu pintu untuk status kategori: pencarian, filter
+  // status, dan switch "matikan semua" per kategori. Jalur SQL-nya sama dengan
+  // /admin/categories lewat $lib/server/category-admin, jadi kontrak
+  // [manual-off] tidak bisa drift antar dua halaman.
+  let railQ = $state("");
+  let railSt = $state<"" | "on" | "off">("");
+  let railLimit = $state(150);
+  // Mobile: rail jadi blok collapsible di atas toolbar supaya layar tetap lega.
+  let railOpen = $state(false);
+  $effect(() => {
+    void railQ;
+    void railSt;
+    railLimit = 150;
+  });
+
+  const railAll = $derived.by(() => {
+    const needle = railQ.trim().toLowerCase();
+    return data.categories.filter((c) => {
+      if (needle && !c.name.toLowerCase().includes(needle)) return false;
+      if (railSt === "on" && c.active === 0) return false;
+      if (railSt === "off" && !(c.total > 0 && c.active === 0)) return false;
+      return true;
+    });
+  });
+  const railShown = $derived(railAll.slice(0, railLimit));
+  const selCat = $derived(data.categories.find((c) => Number(data.cat) === c.id) ?? null);
+
+  function toggleCat(c: { id: number; name: string; total: number; active: number }) {
+    const off = c.active > 0;
+    confirm = {
+      open: true,
+      title: off ? `Matikan SEMUA layanan di "${c.name}"?` : `Nyalakan kembali "${c.name}"?`,
+      message: off
+        ? `Semua ${c.total} layanan aktif pada kategori ini dinonaktifkan sekaligus (tag manual-off, tahan dari auto-reaktivasi sync). Pesanan berjalan TIDAK dibatalkan — batalkan terpisah bila perlu.`
+        : "Hanya layanan yang DIMATIKAN MANUAL oleh aksi ini yang dinyalakan balik. Layanan yang hilang dari provider (dimatikan sync) tetap nonaktif.",
+      label: off ? "Ya, Matikan Semua" : "Ya, Nyalakan Semua",
+      danger: off,
+      action: () => runCategoryToggle(c.id, c.name, off ? "off" : "on"),
+    };
   }
 
   const hasFilter = $derived(!!(data.q || data.cat || data.status));
@@ -287,14 +324,13 @@
         <Icon name="plus" size={14} stroke={2.75} />
         Tambah Layanan
       </button>
-      <button
-        type="button"
-        onclick={() => (addCatOpen = true)}
+      <a
+        href="/admin/categories"
         class="inline-flex h-10 items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-3 text-sm font-bold text-ink-700 transition-all hover:border-ink-300 hover:bg-ink-50 active:scale-95"
       >
-        <Icon name="grid" size={13} stroke={2.5} />
-        Kategori
-      </button>
+        <Icon name="layers" size={13} stroke={2.5} />
+        Kelola Kategori
+      </a>
       {#if data.cat}
         <button
           type="button"
@@ -362,466 +398,533 @@
     </div>
   </div>
 
-  <!-- Category chips (filter navigation, pakai aria-current — bukan tab role
-       karena tidak ada tabpanel dan link ini stand-alone navigation). -->
-  <nav
-    class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
-    aria-label="Filter kategori"
-  >
-    <a
-      href={chipHref(null)}
-      aria-current={!data.cat ? "page" : undefined}
-      class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
-          {!data.cat
-        ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
-    >
-      <Icon name="layers" size={12} stroke={2.25} />
-      Semua
-    </a>
-    {#each data.categories as c (c.id)}
-      <a
-        href={chipHref(c.id)}
-        aria-current={Number(data.cat) === c.id ? "page" : undefined}
-        class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
-          {Number(data.cat) === c.id
-          ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
-          : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
+  <!-- DUA PANEL: rail kategori (kiri, selalu tampil) + chips/toolbar/tabel (kanan).
+       Rail = satu pintu untuk status kategori (cari, filter status, switch
+       matikan-semua per kategori). CRUD kategori pindah ke /admin/categories. -->
+  <div class="lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-5">
+    <aside class="mb-4 lg:sticky lg:top-4 lg:mb-0 lg:self-start" aria-label="Daftar kategori">
+      <button
+        type="button"
+        onclick={() => (railOpen = !railOpen)}
+        aria-expanded={railOpen}
+        class="flex w-full items-center gap-2 rounded-2xl border border-ink-200 bg-surface px-3.5 py-2.5 text-left transition-colors hover:border-ink-300 lg:hidden"
       >
-        {c.name}
-      </a>
-    {/each}
-  </nav>
+        <Icon name="layers" size={15} stroke={2.5} class="shrink-0 text-primary-ink" />
+        <span class="min-w-0 flex-1">
+          <span class="line-clamp-2 break-words text-sm font-bold leading-snug text-ink-900">
+            {selCat ? selCat.name : "Semua kategori"}
+          </span>
+          <span class="mt-0.5 block text-[10px] tabular-nums text-ink-500">
+            {selCat
+              ? `${selCat.active}/${selCat.total}`
+              : `${fmt(data.categories.length)} kategori`}
+          </span>
+        </span>
+        <Icon name="chevron_down" size={13} stroke={2.5} class={railOpen ? "rotate-180" : ""} />
+      </button>
 
-  <!-- Status chips (filter navigation, aria-current bukan tab role). -->
-  <nav
-    class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
-    aria-label="Filter status"
-  >
-    <a
-      href={statusChipHref("")}
-      aria-current={!data.status ? "page" : undefined}
-      class="inline-flex min-h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+      <div
+        class="mt-2 rounded-2xl border border-ink-100 bg-surface shadow-sm lg:mt-0 {railOpen
+          ? ''
+          : 'hidden lg:block'}"
+      >
+        <div class="space-y-2 border-b border-ink-100 p-2">
+          <div class="relative">
+            <span
+              class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-400"
+            >
+              <Icon name="search" size={14} stroke={2} />
+            </span>
+            <input
+              type="search"
+              bind:value={railQ}
+              placeholder="Cari kategori…"
+              class="h-9 w-full rounded-xl border border-ink-200 bg-ink-50 pl-9 pr-3 text-xs focus:border-primary-500 focus:bg-surface focus:outline-none"
+            />
+          </div>
+          <div class="flex gap-1">
+            <button
+              type="button"
+              onclick={() => (railSt = "")}
+              class="inline-flex h-7 flex-1 items-center justify-center rounded-full border px-2 text-[10px] font-bold transition-colors {railSt ===
+              ''
+                ? 'border-transparent bg-ink-900 text-ink-50'
+                : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}">Semua</button
+            >
+            <button
+              type="button"
+              onclick={() => (railSt = "on")}
+              class="inline-flex h-7 flex-1 items-center justify-center rounded-full border px-2 text-[10px] font-bold transition-colors {railSt ===
+              'on'
+                ? 'border-transparent bg-success text-white'
+                : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}">Aktif</button
+            >
+            <button
+              type="button"
+              onclick={() => (railSt = "off")}
+              class="inline-flex h-7 flex-1 items-center justify-center rounded-full border px-2 text-[10px] font-bold transition-colors {railSt ===
+              'off'
+                ? 'border-transparent bg-ink-700 text-white'
+                : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}">Mati</button
+            >
+          </div>
+        </div>
+
+        <div class="max-h-[min(56vh,480px)] overflow-y-auto p-1.5 lg:max-h-[min(64vh,600px)]">
+          <a
+            href={chipHref(null)}
+            class="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold transition-colors hover:bg-ink-50 {!data.cat
+              ? 'bg-ink-900 text-ink-50'
+              : 'text-ink-600'}"
+          >
+            <Icon name="layers" size={12} stroke={2.25} />
+            Semua kategori
+          </a>
+          {#each railShown as c (c.id)}
+            <div
+              class="flex items-center gap-1 rounded-xl transition-colors hover:bg-ink-50 {Number(
+                data.cat,
+              ) === c.id
+                ? 'bg-primary-50'
+                : ''}"
+            >
+              <a
+                href={chipHref(c.id)}
+                class="flex min-w-0 flex-1 items-start gap-2 rounded-xl px-2.5 py-2 text-left"
+                title={c.name}
+              >
+                <!-- Nama kategori panjang (emoji + bracket) — jangan truncate:
+                   wrap maks 2 baris biar kebaca di rail maupun view mobile. -->
+                <span
+                  class="line-clamp-2 break-words text-xs font-bold leading-snug {c.active === 0
+                    ? 'text-ink-300'
+                    : 'text-ink-700'}">{c.name}</span
+                >
+                <span
+                  class="mt-0.5 ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums {c.active ===
+                  0
+                    ? 'bg-ink-50 text-ink-300'
+                    : 'bg-ink-100 text-ink-600'}">{c.active}/{c.total}</span
+                >
+              </a>
+              {#if c.total > 0}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={c.active > 0}
+                  onclick={() => toggleCat(c)}
+                  class="relative mr-1 mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors {c.active >
+                  0
+                    ? 'bg-success'
+                    : 'bg-ink-300'}"
+                  aria-label={c.active > 0
+                    ? `Matikan semua layanan di ${c.name}`
+                    : `Nyalakan kembali ${c.name}`}
+                  title={c.active > 0 ? "Matikan semua" : "Nyalakan semua"}
+                >
+                  <span
+                    class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform {c.active >
+                    0
+                      ? 'translate-x-[18px]'
+                      : 'translate-x-[2px]'}"
+                  ></span>
+                </button>
+              {/if}
+            </div>
+          {/each}
+          {#if railAll.length === 0}
+            <p class="p-4 text-center text-xs text-ink-400">Tidak ada kategori yang cocok.</p>
+          {/if}
+        </div>
+
+        <div class="border-t border-ink-100 p-1.5">
+          {#if railAll.length > railShown.length}
+            <button
+              type="button"
+              onclick={() => (railLimit += 200)}
+              class="mb-1 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-xl border border-ink-200 bg-surface text-[11px] font-bold text-ink-700 transition-all hover:bg-ink-50 active:scale-95"
+            >
+              <Icon name="chevron_down" size={11} stroke={2.5} />
+              Muat {railAll.length - railShown.length} lagi
+            </button>
+          {/if}
+          <p class="px-1.5 pb-1 text-[10px] tabular-nums text-ink-400">
+            {railAll.length} dari {data.categories.length} kategori
+          </p>
+          <a
+            href="/admin/categories"
+            class="flex items-center justify-between rounded-xl bg-ink-50 px-2.5 py-2 text-[11px] font-bold text-ink-600 transition-colors hover:bg-ink-100"
+          >
+            Kelola Kategori
+            <Icon name="chevron_down" size={11} stroke={2.5} class="-rotate-90" />
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <div class="min-w-0 space-y-5">
+      <!-- Category chips (filter navigation, pakai aria-current — bukan tab role
+       karena tidak ada tabpanel dan link ini stand-alone navigation). -->
+      <nav
+        class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+        aria-label="Filter kategori"
+      >
+        <a
+          href={chipHref(null)}
+          aria-current={!data.cat ? "page" : undefined}
+          class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+          {!data.cat
+            ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
+            : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
+        >
+          <Icon name="layers" size={12} stroke={2.25} />
+          Semua
+        </a>
+        {#each data.categories as c (c.id)}
+          <a
+            href={chipHref(c.id)}
+            aria-current={Number(data.cat) === c.id ? "page" : undefined}
+            class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+          {Number(data.cat) === c.id
+              ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
+              : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
+          >
+            {c.name}
+          </a>
+        {/each}
+      </nav>
+
+      <!-- Status chips (filter navigation, aria-current bukan tab role). -->
+      <nav
+        class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+        aria-label="Filter status"
+      >
+        <a
+          href={statusChipHref("")}
+          aria-current={!data.status ? "page" : undefined}
+          class="inline-flex min-h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {!data.status
-        ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
-    >
-      Semua status
-    </a>
-    <a
-      href={statusChipHref("1")}
-      aria-current={data.status === "1" ? "page" : undefined}
-      class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+            ? 'border-transparent bg-ink-900 text-ink-50 shadow-sm'
+            : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700'}"
+        >
+          Semua status
+        </a>
+        <a
+          href={statusChipHref("1")}
+          aria-current={data.status === "1" ? "page" : undefined}
+          class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {data.status === '1'
-        ? 'border-transparent bg-success text-ink-50 shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
-    >
-      <span class="h-1.5 w-1.5 rounded-full {data.status === '1' ? 'bg-white' : 'bg-success'}"
-      ></span>
-      Aktif
-    </a>
-    <a
-      href={statusChipHref("0")}
-      aria-current={data.status === "0" ? "page" : undefined}
-      class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
+            ? 'border-transparent bg-success text-ink-50 shadow-sm'
+            : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
+        >
+          <span class="h-1.5 w-1.5 rounded-full {data.status === '1' ? 'bg-white' : 'bg-success'}"
+          ></span>
+          Aktif
+        </a>
+        <a
+          href={statusChipHref("0")}
+          aria-current={data.status === "0" ? "page" : undefined}
+          class="inline-flex min-h-[34px] shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95
         {data.status === '0'
-        ? 'border-transparent bg-ink-700 text-ink-50 shadow-sm'
-        : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
-    >
-      <span class="h-1.5 w-1.5 rounded-full {data.status === '0' ? 'bg-white' : 'bg-ink-400'}"
-      ></span>
-      Nonaktif
-    </a>
-  </nav>
+            ? 'border-transparent bg-ink-700 text-ink-50 shadow-sm'
+            : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}"
+        >
+          <span class="h-1.5 w-1.5 rounded-full {data.status === '0' ? 'bg-white' : 'bg-ink-400'}"
+          ></span>
+          Nonaktif
+        </a>
+      </nav>
 
-  {#if form?.error}
-    <div class="rounded-xl bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
-      {form.error}
-    </div>
-  {/if}
-  {#if form?.success}
-    <div class="rounded-xl bg-success/10 px-3 py-2 text-sm font-medium text-success">
-      {form.success}
-    </div>
-  {/if}
+      {#if form?.error}
+        <div class="rounded-xl bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
+          {form.error}
+        </div>
+      {/if}
+      {#if form?.success}
+        <div class="rounded-xl bg-success/10 px-3 py-2 text-sm font-medium text-success">
+          {form.success}
+        </div>
+      {/if}
 
-  {#if data.services.length === 0}
-    <EmptyState
-      art="services"
-      title="Belum ada layanan"
-      description={hasFilter ? "Coba ubah filter atau kata kunci." : "Tambah layanan untuk mulai."}
-    />
-  {:else}
-    <!-- Desktop table — clean ledger, no card chrome.
+      {#if data.services.length === 0}
+        <EmptyState
+          art="services"
+          title="Belum ada layanan"
+          description={hasFilter
+            ? "Coba ubah filter atau kata kunci."
+            : "Tambah layanan untuk mulai."}
+        />
+      {:else}
+        <!-- Desktop table — clean ledger, no card chrome.
          table-fixed: max-w/truncate di td TIDAK efektif di auto-layout table —
          tanpa ini kategori/layanan mengembang ke max-content (>22.000px). -->
-    <div class="hidden overflow-x-auto lg:block">
-      <table class="w-full table-fixed text-sm">
-        <thead
-          class="sticky top-0 z-10 border-b border-ink-100 bg-ink-50/90 text-left text-xs uppercase tracking-wide text-ink-500 backdrop-blur"
-        >
-          <tr>
-            <th class="w-10 p-3"
-              ><input
-                type="checkbox"
-                checked={allOnPage}
-                onchange={toggleAll}
-                aria-label="Pilih semua"
-              /></th
+        <div class="hidden overflow-x-auto lg:block">
+          <table class="w-full table-fixed text-sm">
+            <thead
+              class="sticky top-0 z-10 border-b border-ink-100 bg-ink-50/90 text-left text-xs uppercase tracking-wide text-ink-500 backdrop-blur"
             >
-            <th class="w-12 p-3 font-semibold">ID</th><th class="w-32 p-3 font-semibold"
-              >Kategori</th
-            ><th class="p-3 font-semibold">Layanan</th>
-            <th
-              class="w-36 p-3 text-right font-semibold"
-              title="Modal (rate provider) + preview harga jual per level"
-            >
-              Modal / Jual</th
-            ><th class="w-20 p-3 font-semibold">Provider</th>
-            <th class="w-20 p-3 font-semibold">Status</th><th
-              class="w-24 p-3 text-right font-semibold">Aksi</th
-            >
-          </tr>
-        </thead>
-        <tbody>
-          {#each data.services as s, i (s.id)}
-            {@const pav = provAvatar(s.providerName ?? "")}
-            <tr
-              class="reveal border-b border-ink-50 transition-colors hover:bg-ink-50/50 last:border-0"
-              style="--d:{240 + i * 30}ms"
-            >
-              <td class="p-3"
-                ><input
-                  type="checkbox"
-                  checked={selected.has(s.id)}
-                  onchange={() => toggleSel(s.id)}
-                  aria-label={`Pilih ${s.serviceName}`}
-                /></td
-              >
-              <td class="p-3 text-xs font-semibold tabular-nums text-ink-500">#{s.id}</td>
-              <td class="truncate p-3 text-ink-700">
-                <span
-                  class="inline-flex items-center rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold text-ink-700"
+              <tr>
+                <th class="w-10 p-3"
+                  ><input
+                    type="checkbox"
+                    checked={allOnPage}
+                    onchange={toggleAll}
+                    aria-label="Pilih semua"
+                  /></th
                 >
-                  {s.categoryName ?? "—"}
-                </span>
-              </td>
-              <td class="overflow-hidden p-3">
-                <div class="truncate font-medium text-ink-900">{s.serviceName}</div>
-                {#if s.note}
-                  <div class="truncate text-xs text-ink-400">{s.note}</div>
-                {/if}
-              </td>
-              <td class="p-3 text-right tabular-nums">
-                <div class="font-bold text-ink-900">{formatRupiah(s.price)}</div>
-                <div class="whitespace-nowrap text-[11px] text-ink-400">
-                  M {formatRupiah(s.price * (1 + pct("Member") / 100))} · R
-                  {formatRupiah(s.price * (1 + pct("Reseller") / 100))} · A
-                  {formatRupiah(s.price * (1 + pct("Agen") / 100))}
-                </div>
-              </td>
-              <td class="p-3">
-                {#if s.providerName}
-                  <span
-                    class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold {provClass(
-                      s.providerName,
-                    )}"
-                  >
-                    <Icon name={pav.icon} size={10} stroke={2.75} />
-                    {s.providerName}
-                  </span>
-                {:else}
-                  <span class="text-xs text-ink-400">—</span>
-                {/if}
-              </td>
-              <td class="p-3">
-                {#if s.status === 1}
-                  <span
-                    class="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success"
-                    ><span class="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-success"
-                    ></span>Aktif</span
-                  >
-                {:else}
-                  <span
-                    class="inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold text-ink-500"
-                    ><Icon name="lock" size={10} stroke={2.75} />Nonaktif</span
-                  >
-                {/if}
-              </td>
-              <td class="p-3 text-right">
-                <div class="inline-flex gap-1">
-                  <button
-                    type="button"
-                    onclick={() => (viewSvc = s)}
-                    class="grid h-9 w-9 place-items-center rounded-full text-ink-500 transition-all hover:bg-ink-100 hover:text-ink-700 active:scale-95"
-                    aria-label="Lihat detail {s.serviceName}"
-                  >
-                    <Icon name="eye" size={15} stroke={2.5} />
-                  </button>
-                  <button
-                    type="button"
-                    onclick={() => openEdit(s)}
-                    class="grid h-9 w-9 place-items-center rounded-full bg-ink-900 text-ink-50 shadow-sm transition-all hover:bg-ink-800 active:scale-95"
-                    aria-label="Edit {s.serviceName}"
-                  >
-                    <Icon name="edit" size={14} stroke={2.5} />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Mobile ledger (hairline rows, accent bar per status, provider avatar) -->
-    <ul class="lg:hidden">
-      {#each data.services as s, i (s.id)}
-        {@const pav = provAvatar(s.providerName ?? "")}
-        <li
-          class="reveal relative border-b border-ink-100 py-3 last:border-b-0 transition-colors hover:bg-ink-50/40 before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full {statusAccent[
-            String(s.status)
-          ] ?? 'before:bg-ink-200'}"
-          style="--d:{240 + i * 30}ms"
-        >
-          <div class="flex items-start justify-between gap-3 pl-2">
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2.5">
-                <span
-                  class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-sm {pav.tone}"
+                <th class="w-12 p-3 font-semibold">ID</th><th class="w-32 p-3 font-semibold"
+                  >Kategori</th
+                ><th class="p-3 font-semibold">Layanan</th>
+                <th
+                  class="w-36 p-3 text-right font-semibold"
+                  title="Modal (rate provider) + preview harga jual per level"
                 >
-                  <Icon name={pav.icon} size={15} stroke={2.5} />
-                </span>
-                <div class="min-w-0">
-                  <div class="truncate font-semibold text-ink-900">{s.serviceName}</div>
-                  <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-500">
-                    <span class="tabular-nums text-ink-400">#{s.id}</span>
-                    <span class="text-ink-300">·</span>
-                    <span class="truncate">{s.categoryName ?? "Tanpa kategori"}</span>
+                  Modal / Jual</th
+                ><th class="w-20 p-3 font-semibold">Provider</th>
+                <th class="w-20 p-3 font-semibold">Status</th><th
+                  class="w-24 p-3 text-right font-semibold">Aksi</th
+                >
+              </tr>
+            </thead>
+            <tbody>
+              {#each data.services as s, i (s.id)}
+                {@const pav = provAvatar(s.providerName ?? "")}
+                <tr
+                  class="reveal border-b border-ink-50 transition-colors hover:bg-ink-50/50 last:border-0"
+                  style="--d:{240 + i * 30}ms"
+                >
+                  <td class="p-3"
+                    ><input
+                      type="checkbox"
+                      checked={selected.has(s.id)}
+                      onchange={() => toggleSel(s.id)}
+                      aria-label={`Pilih ${s.serviceName}`}
+                    /></td
+                  >
+                  <td class="p-3 text-xs font-semibold tabular-nums text-ink-500">#{s.id}</td>
+                  <td class="truncate p-3 text-ink-700">
+                    <span
+                      class="inline-flex items-center rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold text-ink-700"
+                    >
+                      {s.categoryName ?? "—"}
+                    </span>
+                  </td>
+                  <td class="overflow-hidden p-3">
+                    <div class="truncate font-medium text-ink-900">{s.serviceName}</div>
+                    {#if s.note}
+                      <div class="truncate text-xs text-ink-400">{s.note}</div>
+                    {/if}
+                  </td>
+                  <td class="p-3 text-right tabular-nums">
+                    <div class="font-bold text-ink-900">{formatRupiah(s.price)}</div>
+                    <div class="whitespace-nowrap text-[11px] text-ink-400">
+                      M {formatRupiah(s.price * (1 + pct("Member") / 100))} · R
+                      {formatRupiah(s.price * (1 + pct("Reseller") / 100))} · A
+                      {formatRupiah(s.price * (1 + pct("Agen") / 100))}
+                    </div>
+                  </td>
+                  <td class="p-3">
                     {#if s.providerName}
                       <span
-                        class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold {provClass(
+                        class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold {provClass(
                           s.providerName,
                         )}"
                       >
+                        <Icon name={pav.icon} size={10} stroke={2.75} />
                         {s.providerName}
+                      </span>
+                    {:else}
+                      <span class="text-xs text-ink-400">—</span>
+                    {/if}
+                  </td>
+                  <td class="p-3">
+                    {#if s.status === 1}
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success"
+                        ><span class="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-success"
+                        ></span>Aktif</span
+                      >
+                    {:else}
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold text-ink-500"
+                        ><Icon name="lock" size={10} stroke={2.75} />Nonaktif</span
+                      >
+                    {/if}
+                  </td>
+                  <td class="p-3 text-right">
+                    <div class="inline-flex gap-1">
+                      <button
+                        type="button"
+                        onclick={() => (viewSvc = s)}
+                        class="grid h-9 w-9 place-items-center rounded-full text-ink-500 transition-all hover:bg-ink-100 hover:text-ink-700 active:scale-95"
+                        aria-label="Lihat detail {s.serviceName}"
+                      >
+                        <Icon name="eye" size={15} stroke={2.5} />
+                      </button>
+                      <button
+                        type="button"
+                        onclick={() => openEdit(s)}
+                        class="grid h-9 w-9 place-items-center rounded-full bg-ink-900 text-ink-50 shadow-sm transition-all hover:bg-ink-800 active:scale-95"
+                        aria-label="Edit {s.serviceName}"
+                      >
+                        <Icon name="edit" size={14} stroke={2.5} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile ledger (hairline rows, accent bar per status, provider avatar) -->
+        <ul class="lg:hidden">
+          {#each data.services as s, i (s.id)}
+            {@const pav = provAvatar(s.providerName ?? "")}
+            <li
+              class="reveal relative border-b border-ink-100 py-3 last:border-b-0 transition-colors hover:bg-ink-50/40 before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full {statusAccent[
+                String(s.status)
+              ] ?? 'before:bg-ink-200'}"
+              style="--d:{240 + i * 30}ms"
+            >
+              <div class="flex items-start justify-between gap-3 pl-2">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2.5">
+                    <span
+                      class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-sm {pav.tone}"
+                    >
+                      <Icon name={pav.icon} size={15} stroke={2.5} />
+                    </span>
+                    <div class="min-w-0">
+                      <div class="truncate font-semibold text-ink-900">{s.serviceName}</div>
+                      <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-500">
+                        <span class="tabular-nums text-ink-400">#{s.id}</span>
+                        <span class="text-ink-300">·</span>
+                        <span class="truncate">{s.categoryName ?? "Tanpa kategori"}</span>
+                        {#if s.providerName}
+                          <span
+                            class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold {provClass(
+                              s.providerName,
+                            )}"
+                          >
+                            {s.providerName}
+                          </span>
+                        {/if}
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Modal (rate provider) + preview harga jual per level dari pricing_rules -->
+                  <dl class="mt-2.5 grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <dt class="text-ink-400">Modal</dt>
+                      <dd class="tabular-nums font-bold text-ink-900">{formatRupiah(s.price)}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-ink-400">Jual Member</dt>
+                      <dd class="tabular-nums font-bold text-ink-700">
+                        {formatRupiah(s.price * (1 + pct("Member") / 100))}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="text-ink-400">Jual Reseller</dt>
+                      <dd class="tabular-nums font-bold text-ink-700">
+                        {formatRupiah(s.price * (1 + pct("Reseller") / 100))}
+                      </dd>
+                    </div>
+                  </dl>
+                  <div
+                    class="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-500 tabular-nums"
+                  >
+                    <span class="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2 py-0.5">
+                      min {fmt(s.min)}
+                    </span>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2 py-0.5">
+                      max {fmt(s.max)}
+                    </span>
+                    {#if s.type && s.type !== "Default"}
+                      <span
+                        class="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-bold text-warning"
+                      >
+                        {s.type}
                       </span>
                     {/if}
                   </div>
                 </div>
+                <div class="flex shrink-0 flex-col items-end gap-1.5">
+                  {#if s.status === 1}
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-bold text-success"
+                      ><span class="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-success"
+                      ></span>Aktif</span
+                    >
+                  {:else}
+                    <span
+                      class="rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-bold text-ink-500"
+                      >Nonaktif</span
+                    >
+                  {/if}
+                </div>
               </div>
-              <!-- Modal (rate provider) + preview harga jual per level dari pricing_rules -->
-              <dl class="mt-2.5 grid grid-cols-3 gap-2 text-xs">
-                <div>
-                  <dt class="text-ink-400">Modal</dt>
-                  <dd class="tabular-nums font-bold text-ink-900">{formatRupiah(s.price)}</dd>
-                </div>
-                <div>
-                  <dt class="text-ink-400">Jual Member</dt>
-                  <dd class="tabular-nums font-bold text-ink-700">
-                    {formatRupiah(s.price * (1 + pct("Member") / 100))}
-                  </dd>
-                </div>
-                <div>
-                  <dt class="text-ink-400">Jual Reseller</dt>
-                  <dd class="tabular-nums font-bold text-ink-700">
-                    {formatRupiah(s.price * (1 + pct("Reseller") / 100))}
-                  </dd>
-                </div>
-              </dl>
-              <div
-                class="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-500 tabular-nums"
-              >
-                <span class="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2 py-0.5">
-                  min {fmt(s.min)}
-                </span>
-                <span class="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2 py-0.5">
-                  max {fmt(s.max)}
-                </span>
-                {#if s.type && s.type !== "Default"}
-                  <span
-                    class="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-bold text-warning"
-                  >
-                    {s.type}
-                  </span>
-                {/if}
+              <div class="mt-3 flex gap-2 pl-2">
+                <button
+                  type="button"
+                  onclick={() => (viewSvc = s)}
+                  class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-ink-200 bg-surface text-xs font-bold text-ink-700 transition-all hover:bg-ink-50 active:scale-95"
+                >
+                  <Icon name="eye" size={12} stroke={2.5} />
+                  Lihat
+                </button>
+                <button
+                  type="button"
+                  onclick={() => openEdit(s)}
+                  class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 text-xs font-bold text-ink-50 shadow-sm transition-all hover:bg-ink-800 active:scale-95"
+                >
+                  <Icon name="edit" size={12} stroke={2.5} />
+                  Edit
+                </button>
               </div>
-            </div>
-            <div class="flex shrink-0 flex-col items-end gap-1.5">
-              {#if s.status === 1}
-                <span
-                  class="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-bold text-success"
-                  ><span class="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-success"
-                  ></span>Aktif</span
-                >
-              {:else}
-                <span class="rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-bold text-ink-500"
-                  >Nonaktif</span
-                >
-              {/if}
-            </div>
-          </div>
-          <div class="mt-3 flex gap-2 pl-2">
-            <button
-              type="button"
-              onclick={() => (viewSvc = s)}
-              class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-ink-200 bg-surface text-xs font-bold text-ink-700 transition-all hover:bg-ink-50 active:scale-95"
-            >
-              <Icon name="eye" size={12} stroke={2.5} />
-              Lihat
-            </button>
-            <button
-              type="button"
-              onclick={() => openEdit(s)}
-              class="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-ink-900 text-xs font-bold text-ink-50 shadow-sm transition-all hover:bg-ink-800 active:scale-95"
-            >
-              <Icon name="edit" size={12} stroke={2.5} />
-              Edit
-            </button>
-          </div>
-        </li>
-      {/each}
-    </ul>
-  {/if}
-
-  <!-- Pagination -->
-  {#if data.pages > 1}
-    <nav class="flex flex-wrap items-center justify-center gap-1 pt-2" aria-label="Pagination">
-      <a
-        href={pageHref(Math.max(1, data.page - 1))}
-        class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 {data.page ===
-        1
-          ? 'pointer-events-none text-ink-300'
-          : ''}"
-        aria-label="Previous page">← Prev</a
-      >
-      {#each pageList as p}
-        {#if p === "…"}
-          <span class="px-1 text-ink-400">…</span>
-        {:else}
-          <a
-            href={pageHref(p)}
-            class="inline-flex h-9 min-w-9 items-center justify-center rounded-full px-3 text-xs font-semibold tabular-nums transition-colors
-              {p === data.page
-              ? 'bg-ink-900 text-ink-50 shadow-sm'
-              : 'border border-ink-200 bg-surface text-ink-600 hover:border-ink-300 hover:bg-ink-50'}"
-            aria-current={p === data.page ? "page" : undefined}>{p}</a
-          >
-        {/if}
-      {/each}
-      <a
-        href={pageHref(Math.min(data.pages, data.page + 1))}
-        class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 {data.page ===
-        data.pages
-          ? 'pointer-events-none text-ink-300'
-          : ''}"
-        aria-label="Next page">Next →</a
-      >
-    </nav>
-  {/if}
-
-  <!-- Categories sub-section — hairline-top ledger, no card chrome -->
-  <details class="group mt-8 border-t border-ink-200 pt-4">
-    <summary
-      class="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-ink-500 transition-colors hover:text-ink-700"
-    >
-      <span>Kategori ({data.categories.length})</span>
-      <span class="transition-transform group-open:rotate-180" aria-hidden="true">▾</span>
-    </summary>
-    <div class="overflow-x-auto border-t border-ink-100">
-      <table class="w-full text-sm">
-        <thead
-          class="border-b border-ink-100 bg-ink-50/50 text-left text-xs uppercase tracking-wide text-ink-500"
-        >
-          <tr>
-            <th class="p-3 font-semibold">ID</th><th class="p-3 font-semibold">Nama</th>
-            <th class="p-3 font-semibold text-right">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each data.categories as c, i (c.id)}
-            <tr
-              class="reveal border-b border-ink-50 transition-colors hover:bg-ink-50/50 last:border-0"
-              style="--d:{i * 25}ms"
-            >
-              <td class="p-3 font-semibold tabular-nums text-ink-900">#{c.id}</td>
-              <td class="p-3 text-ink-700">{c.name}</td>
-              <td class="p-3 text-right">
-                <div class="inline-flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onclick={() =>
-                      (confirm = {
-                        open: true,
-                        title: `Matikan SEMUA layanan di "${c.name}"?`,
-                        message:
-                          "Semua layanan aktif pada kategori ini dinonaktifkan sekaligus (tag manual-off, tahan dari auto-reaktivasi sync). Pesanan berjalan TIDAK dibatalkan — batalkan terpisah bila perlu.",
-                        label: "Ya, Matikan Semua",
-                        danger: true,
-                        action: () => runCategoryToggle(c.id, c.name, "off"),
-                      })}>Matikan semua</Button
-                  >
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onclick={() =>
-                      (confirm = {
-                        open: true,
-                        title: `Nyalakan kembali layanan "${c.name}"?`,
-                        message:
-                          "Hanya layanan yang DIMATIKAN MANUAL oleh aksi ini yang dinyalakan balik. Layanan yang hilang dari provider (dimatikan sync) tetap nonaktif.",
-                        label: "Ya, Nyalakan Semua",
-                        danger: false,
-                        action: () => runCategoryToggle(c.id, c.name, "on"),
-                      })}>Nyalakan semua</Button
-                  >
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onclick={() => (editCat = { id: c.id, name: c.name })}>Edit</Button
-                  >
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onclick={() => {
-                      const cat = { id: c.id, name: c.name };
-                      const used = data.services.filter((s) => s.categoryId === cat.id).length;
-                      confirm = {
-                        open: true,
-                        title: "Hapus Kategori?",
-                        message:
-                          used > 0
-                            ? `Kategori "${cat.name}" tidak bisa dihapus: ${used} layanan masih pakai kategori ini.`
-                            : `Kategori "${cat.name}" akan dihapus permanen.`,
-                        action:
-                          used > 0
-                            ? async () => {}
-                            : async () => {
-                                const fd = new FormData();
-                                fd.set("id", String(cat.id));
-                                const r = await fetch("?/deleteCategory", {
-                                  method: "POST",
-                                  body: fd,
-                                });
-                                if (r.ok) {
-                                  toast("Kategori dihapus", "success");
-                                  location.reload();
-                                } else {
-                                  toast("Gagal menghapus", "error");
-                                }
-                              },
-                      };
-                    }}>Hapus</Button
-                  >
-                </div>
-              </td>
-            </tr>
+            </li>
           {/each}
-        </tbody>
-      </table>
+        </ul>
+      {/if}
+
+      <!-- Pagination -->
+      {#if data.pages > 1}
+        <nav class="flex flex-wrap items-center justify-center gap-1 pt-2" aria-label="Pagination">
+          <a
+            href={pageHref(Math.max(1, data.page - 1))}
+            class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 {data.page ===
+            1
+              ? 'pointer-events-none text-ink-300'
+              : ''}"
+            aria-label="Previous page">← Prev</a
+          >
+          {#each pageList as p}
+            {#if p === "…"}
+              <span class="px-1 text-ink-400">…</span>
+            {:else}
+              <a
+                href={pageHref(p)}
+                class="inline-flex h-9 min-w-9 items-center justify-center rounded-full px-3 text-xs font-semibold tabular-nums transition-colors
+              {p === data.page
+                  ? 'bg-ink-900 text-ink-50 shadow-sm'
+                  : 'border border-ink-200 bg-surface text-ink-600 hover:border-ink-300 hover:bg-ink-50'}"
+                aria-current={p === data.page ? "page" : undefined}>{p}</a
+              >
+            {/if}
+          {/each}
+          <a
+            href={pageHref(Math.min(data.pages, data.page + 1))}
+            class="inline-flex h-9 items-center justify-center rounded-full border border-ink-200 bg-surface px-3 text-xs font-semibold text-ink-600 transition-colors hover:border-ink-300 hover:bg-ink-50 {data.page ===
+            data.pages
+              ? 'pointer-events-none text-ink-300'
+              : ''}"
+            aria-label="Next page">Next →</a
+          >
+        </nav>
+      {/if}
     </div>
-  </details>
+  </div>
 </section>
 
 <!-- Bulk action bar -->
@@ -1450,89 +1553,6 @@
           </Button>
         </div>
       </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Add Category modal -->
-{#if addCatOpen}
-  <div
-    class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
-    role="presentation"
-    onclick={(e) => {
-      if (e.target === e.currentTarget) addCatOpen = false;
-    }}
-  >
-    <div class="w-full max-w-sm space-y-3 rounded-t-2xl bg-surface p-5 sm:rounded-2xl">
-      <div class="flex items-center gap-2.5">
-        <span
-          class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-md"
-        >
-          <Icon name="grid" size={18} stroke={2.5} />
-        </span>
-        <h3 class="font-display text-lg font-extrabold">Tambah Kategori</h3>
-      </div>
-      <form method="POST" action="?/addCategory" use:enhance={onResult} class="space-y-3">
-        <div>
-          <label class="mb-1 block text-xs font-semibold text-ink-500" for="add-catname">Nama</label
-          >
-          <input
-            id="add-catname"
-            name="name"
-            required
-            class="h-10 w-full rounded-xl border border-ink-200 bg-surface px-3 text-sm"
-          />
-        </div>
-        <div class="flex gap-2">
-          <Button type="button" size="md" variant="ghost" full onclick={() => (addCatOpen = false)}
-            >Batal</Button
-          >
-          <Button type="submit" size="md" full>Tambah</Button>
-        </div>
-      </form>
-    </div>
-  </div>
-{/if}
-
-<!-- Edit Category modal -->
-{#if editCat}
-  <div
-    class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
-    role="presentation"
-    onclick={(e) => {
-      if (e.target === e.currentTarget) editCat = null;
-    }}
-  >
-    <div class="w-full max-w-sm space-y-3 rounded-t-2xl bg-surface p-5 sm:rounded-2xl">
-      <div class="flex items-center gap-2.5">
-        <span
-          class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-warning to-amber-500 text-white shadow-md"
-        >
-          <Icon name="grid" size={18} stroke={2.5} />
-        </span>
-        <h3 class="font-display text-lg font-extrabold">Edit Kategori #{editCat.id}</h3>
-      </div>
-      <form method="POST" action="?/editCategory" use:enhance={onResult} class="space-y-3">
-        <input type="hidden" name="id" value={editCat.id} />
-        <div>
-          <label class="mb-1 block text-xs font-semibold text-ink-500" for="edit-catname"
-            >Nama</label
-          >
-          <input
-            id="edit-catname"
-            name="name"
-            bind:value={editCat.name}
-            required
-            class="h-10 w-full rounded-xl border border-ink-200 bg-surface px-3 text-sm"
-          />
-        </div>
-        <div class="flex gap-2">
-          <Button type="button" size="md" variant="ghost" full onclick={() => (editCat = null)}
-            >Batal</Button
-          >
-          <Button type="submit" size="md" full>Simpan</Button>
-        </div>
-      </form>
     </div>
   </div>
 {/if}

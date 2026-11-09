@@ -285,6 +285,25 @@ Owner instruction 8 Nov 2026: *"P4 SEO subsystem"* (porting `.my` → `.id`). Pl
 - **`.my` utuh**: `git -C /opt/seo-my/repo status` kosong, siklus `.my` tetap normal.
 - `indexer.mjs --dry-run --days 7` → 4 tahap ter-plan (indexnow/bing/gsc/remedy), nol request keluar.
 
+## P5 — Admin dashboard: port halaman & rail kategori socio.my → socio.id
+
+Owner instruction 9 Nov 2026: *"ko admin fitur ga ada di app.socio.id? coba ceck semua commit app.socio.my khusus admin dashboard fiturnya double check harus terimplement di .id ini read only dulu"*. Audit READ-ONLY dulu, lalu implementasi G1+G2 (dipilih owner).
+
+**Audit (read-only, 9 Nov 2026):** `.my` dibuat sebagai duplikat `.id` (commit `a331ff03`, 8 Okt) → **histori terpisah, tanpa merge-base** (merge-base kosong). Parity point terakhir = **24 Okt (`b6ff2a8`)**; setelah itu `.my` mengerjakan **37 commit admin** (26 Okt – 9 Nov) yang tak pernah masuk `.id`. Bukti: file route admin 66 (`.my`) vs 64 (`.id`), menu 26 vs 25, schema 32 vs 31. Konten **semua** 64 file admin bersama berbeda (bukan cuma yang hilang) — `.id` punya adaptasi sendiri (IDR, copy Indonesia, multi-provider item I).
+
+**Yang SUDAH ada di `.id` (bukan gap):** kontrak `[manual-off]`, bulk toggle per kategori, KPI revenue = deposit terverifikasi, pemisahan pengumuman/berita, deposit bell + badge Kedaluwarsa, label Refunded + guard, Reseller Member→Reseller, provider switcher + `/admin/routing`, Refill Center, cron `email-lifecycle`, tabel `email_suppressions`, "Paling laris", RBAC + rate-limit + audit log.
+
+**Implementasi (G1+G2):**
+1. **`app/src/lib/server/category-admin.ts` (baru)** — sumber tunggal SQL kategori: `MANUAL_OFF_TAG`, `withManualOff`, `listCategoryRowsLite()` (id+nama+total/aktif, GROUP BY di tabel `services` saja — hindari filesort), `listCategoryRows()` (+ routing + nama provider), `setCategoryStatus(id, mode)`, `toggleCategoryStatus(id)`, `countCategoryServices(id)`. Kontrak: **tidak boleh ada dua jalur SQL** untuk disable kategori — drift = tag `[manual-off]` hilang = service-sync hidupkan lagi tiap jam.
+2. **`/admin/categories` (baru)** — halaman khusus: cari, filter status (Semua/Aktif/Mati), filter routing (Dirutekan/Provider Aktif), kolom ID/Nama/Layanan/Status/Aksi, badge "Dilayani {provider}", switch per baris, pagination (100 + "Muat N lagi"), form tambah/edit/hapus. Copy Indonesia hardcoded (tanpa katalog i18n — `.id` memang tidak punya).
+3. **Rail kategori di `/admin/services`** — dua panel: rail kiri (cari + chip status + count `aktif/total` + switch matikan-semua per kategori + link "Kelola Kategori"), tabel di kanan. Blok "Kelola Kategori" lama (accordion 1.836 baris tanpa filter) + form tambah/edit dihapus — CRUD pindah ke halaman baru. Tombol header "Kategori" → link "Kelola Kategori".
+4. **Refactor `services/+page.server.ts`** — `toggleCategoryServices` sekarang memanggil helper (SQL identik, pesan & audit tak berubah); aksi `addCategory`/`editCategory`/`deleteCategory` **dipindah** ke `/admin/categories`.
+5. **Menu admin** — item "Kategori" (`/admin/categories`) di grup Operasional.
+
+**Verifikasi:** `pnpm --filter app check` → 0 error (54 warning, pre-existing pola `state_referenced_locally`); `pnpm --filter app build` ✓; ESLint file yang disentuh → 0 error; SQL helper divalidasi ke DB produksi (read-only): 1.836 kategori, 312 tanpa layanan, 735 semua mati, 233 baris routing. SSR `/admin/categories` & `/admin/services` → HTTP 200, 101 baris tabel, 74 switch, chip + rail + badge provider tampil. **Uji kontrak `[manual-off]` end-to-end di DB dev (6/6 lulus)**: OFF → status=0 + tag, ON → status=1 + tag hilang, kedua jalur (`/admin/categories` deteksi & `/admin/services` mode eksplisit) identik, OFF 2× tidak menumpuk tag, state awal pulih.
+
+**Catatan encoding (bukan bug kode):** DB dev lokal punya 992/1.132 nama kategori **double-encoded** (`"Instagram 🇺🇸 AI"` → `"Instagram ðºð¸ AI"`; byte UTF-8 dibaca Latin-1 lalu di-encode ulang). Terbukti byte DB ada **persis** di HTML → server tidak mengubah apa pun. **Produksi `.id` 0/1.836 dan `.my` 0/1.534 → bersih.** Yang dipulihkan 6.782 baris di DB dev lokal (2 backup di `/tmp/dev-db-encoding-backup*.json`); 4 baris tak terpulihkan (emoji terpotong).
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).
@@ -328,6 +347,7 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | H2/H3 | Reseller dashboard / coupon loop | ⏸️ CONFIRM | belum disentuh |
 | I | Multi-provider (+ TikTok → SMMfollows) | ✅ LIVE | **4572fee (sesi ini)** — switcher 1-aktif + routing per-kategori; TikTok dilayani SMMfollows (828 svc/77 kategori), duplikat=0, route violation=0 |
 | P4 | SEO subsystem port | ✅ LIVE | **runner `83a375f`→`4899977` (sesi ini)** — loop pengukuran: `reconcile-published` (state.published 340→1.006), `gsc-analytics`, `seo-status`, `gsc-inspect` save parsial, fix token GSC + self-test (401 setelah 1 jam), siklus `seo-index-coid` + `seo-measure-coid`; index_rate 92,6%, ramp-gate hidup (daily_count 15→19) |
+| P5 | Admin dashboard: halaman & rail kategori | ✅ LIVE | **9 Nov 2026** — `lib/server/category-admin.ts` (sumber tunggal SQL kategori) + `/admin/categories` (cari, filter status/routing, badge provider, switch per baris) + rail kategori di `/admin/services`; kontrak `[manual-off]` 6/6 uji lulus |
 
 **Deploy batch sesi ini:** 3 commit (4988b5a E3/E4 · a3a3a09 E6 · 0010967 docs) → push `da0a106..0010967 → main` → L3 0 findings → Coolify finished → container tag 0010967fbab1 (Up).
 

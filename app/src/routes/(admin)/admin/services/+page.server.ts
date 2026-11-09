@@ -1,11 +1,19 @@
 import { db } from "@socio/db";
 import { services, categories, provider, pricingRules } from "@socio/db/schema";
-import { sql, eq, and, or, like, desc, asc } from "drizzle-orm";
+import { sql, eq, and, or, desc, asc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
+import { listCategoryRowsLite, setCategoryStatus } from "$lib/server/category-admin";
 import type { Actions, PageServerLoad } from "./$types";
 
 const PAGE_SIZE = 25;
+
+/**
+ * Tag [manual-off] = kontrak dengan cron/service-sync: layanan status=0 yang
+ * note-nya memuat tag ini TIDAK akan di-enable ulang saat sync per jam.
+ * Konstanta + helper-nya tinggal di $lib/server/category-admin supaya jalur
+ * layanan DI SINI dan jalur kategori (/admin/categories) tidak bisa drift.
+ */
 
 /**
  * Hitung preview harga jual per level dari `pricing_rules` utk display admin.
@@ -105,10 +113,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         categories: sql<number>`(SELECT COUNT(*) FROM categories)`,
       })
       .from(services),
-    db
-      .select({ id: categories.id, name: categories.name })
-      .from(categories)
-      .orderBy(asc(categories.name)),
+    // Daftar kategori + hitungan total/aktif (rail kiri). Query-nya di helper
+    // category-admin supaya rail di halaman ini dan /admin/categories pakai
+    // sumber yang sama.
+    listCategoryRowsLite(),
     db.select({ id: provider.id, name: provider.name }).from(provider).orderBy(asc(provider.name)),
     // E1 (.my 2026-11-01): pricing_rules ikut batch paralel — buang 1 trip sekuensial.
     db.select().from(pricingRules),
@@ -494,12 +502,15 @@ export const actions: Actions = {
 
   /**
    * E3/E4 (.my category disable-band) — bulk nonaktif/aktif SEMUA layanan dalam
-   * satu kategori lewat list "Kelola Kategori". TULIS tag `[manual-off]` (kontrak
+   * satu kategori lewat rail "Kelola Kategori". TULIS tag `[manual-off]` (kontrak
    * F2) saat OFF supaya service-sync TIDAK meng-reaktivasi-nya tiap jam; saat ON
    * hanya layanan yang KITA matikan manual (status=0 + bertag) yang dinyalakan
    * balik — layanan yang dimatikan sync (provider hilang, tanpa tag) tetap off.
    * Disengaja TIDAK membatalkan order aktif (konsisten dgn toggleStatus per
    * layanan) — admin membatalkan order terpisah kalau perlu.
+   *
+   * SQL-nya di $lib/server/category-admin — dipakai juga oleh /admin/categories
+   * supaya dua jalur disable tidak bisa drift.
    */
   toggleCategoryServices: async ({ request, locals }) => {
     assertAdmin(locals);
@@ -517,152 +528,32 @@ export const actions: Actions = {
     const mode = String(form.get("mode"));
     if (!Number.isFinite(cid) || cid <= 0) return fail(400, { error: "Kategori tidak valid." });
     if (mode !== "off" && mode !== "on") return fail(400, { error: "Mode tidak valid." });
-    const [cat] = await db
-      .select({ id: categories.id, name: categories.name })
-      .from(categories)
-      .where(eq(categories.id, cid))
-      .limit(1);
-    if (!cat) return fail(404, { error: "Kategori tidak ditemukan." });
-
-    const TAG = "[manual-off]";
-    const likeTag = `%${TAG}%`;
-    if (mode === "off") {
-      const [cnt] = await db
-        .select({ n: sql<number>`COUNT(*)` })
-        .from(services)
-        .where(and(eq(services.categoryId, cid), eq(services.status, 1)));
-      const changed = Number(cnt?.n ?? 0);
-      if (changed > 0) {
-        // CASE menjaga supaya baris yang (langka) sudah bertag tidak dobel tag.
-        await db
-          .update(services)
-          .set({
-            status: 0,
-            note: sql`CASE WHEN note IS NULL OR note NOT LIKE ${likeTag}
-              THEN TRIM(CONCAT(COALESCE(note, ''), ' ', ${TAG})) ELSE note END`,
-          })
-          .where(and(eq(services.categoryId, cid), eq(services.status, 1)));
-      }
-      await logAudit({
-        adminId: Number(locals.user!.id),
-        action: "bulk_disable_category",
-        entity: "category",
-        entityId: cid,
-        detail: { name: cat.name, changed, mode: "off" },
-        ip: (locals as any).ip,
-      });
-      return {
-        success:
-          changed === 0
-            ? `Tidak ada layanan aktif di "${cat.name}".`
-            : `${changed} layanan di "${cat.name}" → Nonaktif (tahan-sync).`,
-      };
-    }
-    // ON: hanya yang manual-off (status=0 + bertag) — buang tag, jadi aktif.
-    const [cnt] = await db
-      .select({ n: sql<number>`COUNT(*)` })
-      .from(services)
-      .where(and(eq(services.categoryId, cid), eq(services.status, 0), like(services.note, likeTag)));
-    const changed = Number(cnt?.n ?? 0);
-    if (changed > 0) {
-      await db
-        .update(services)
-        .set({
-          status: 1,
-          note: sql`TRIM(REPLACE(COALESCE(note, ''), ${" " + TAG}, ''))`,
-        })
-        .where(and(eq(services.categoryId, cid), eq(services.status, 0), like(services.note, likeTag)));
+    const res = await setCategoryStatus(cid, mode);
+    if (!res.ok) {
+      if (res.reason === "not_found") return fail(404, { error: "Kategori tidak ditemukan." });
+      return fail(400, { error: "Kategori tidak valid." });
     }
     await logAudit({
       adminId: Number(locals.user!.id),
-      action: "bulk_enable_category",
+      action: mode === "off" ? "bulk_disable_category" : "bulk_enable_category",
       entity: "category",
       entityId: cid,
-      detail: { name: cat.name, changed, mode: "on" },
+      detail: { name: res.name, changed: res.affected, mode },
       ip: (locals as any).ip,
     });
+    if (mode === "off") {
+      return {
+        success:
+          res.affected === 0
+            ? `Tidak ada layanan aktif di "${res.name}".`
+            : `${res.affected} layanan di "${res.name}" → Nonaktif (tahan-sync).`,
+      };
+    }
     return {
       success:
-        changed === 0
-          ? `Tidak ada layanan yang dimatikan manual di "${cat.name}".`
-          : `${changed} layanan di "${cat.name}" → Aktif.`,
+        res.affected === 0
+          ? `Tidak ada layanan yang dimatikan manual di "${res.name}".`
+          : `${res.affected} layanan di "${res.name}" → Aktif.`,
     };
-  },
-
-  addCategory: async ({ request, locals }) => {
-    assertAdmin(locals);
-    const _g = await assertAdminCan(locals, "services:edit");
-    if (_g) return _g;
-    const _rate = await assertAdminRate("category-add", (locals as any).ip ?? "0.0.0.0", 30, 60);
-    if (_rate) return _rate;
-    const form = await request.formData();
-    const name = String(form.get("name") ?? "").trim();
-    if (!name) return fail(400, { error: "Nama kategori wajib." });
-    const [row] = await db.insert(categories).values({ name }).$returningId();
-    await logAudit({
-      adminId: Number(locals.user.id),
-      action: "add_category",
-      entity: "category",
-      entityId: row?.id,
-      detail: { name },
-      ip: (locals as any).ip,
-    });
-    return { success: `Kategori ${name} ditambah.` };
-  },
-
-  editCategory: async ({ request, locals }) => {
-    assertAdmin(locals);
-    const _g = await assertAdminCan(locals, "services:edit");
-    if (_g) return _g;
-    const _rate = await assertAdminRate("category-edit", (locals as any).ip ?? "0.0.0.0", 30, 60);
-    if (_rate) return _rate;
-    const form = await request.formData();
-    const id = Number(form.get("id"));
-    const name = String(form.get("name") ?? "").trim();
-    if (!Number.isFinite(id) || id <= 0 || !name) return fail(400, { error: "Field wajib diisi." });
-    await db.update(categories).set({ name }).where(eq(categories.id, id));
-    await logAudit({
-      adminId: Number(locals.user.id),
-      action: "edit_category",
-      entity: "category",
-      entityId: id,
-      detail: { name },
-      ip: (locals as any).ip,
-    });
-    return { success: `Kategori diupdate.` };
-  },
-
-  deleteCategory: async ({ request, locals }) => {
-    assertAdmin(locals);
-    const _g = await assertAdminCan(locals, "services:edit");
-    if (_g) return _g;
-    const _rate = await assertAdminRate("category-delete", (locals as any).ip ?? "0.0.0.0", 20, 60);
-    if (_rate) return _rate;
-    const form = await request.formData();
-    const id = Number(form.get("id"));
-    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });
-    const [used] = await db
-      .select({ c: sql<number>`count(*)` })
-      .from(services)
-      .where(eq(services.categoryId, id));
-    if (Number(used?.c ?? 0) > 0)
-      return fail(400, {
-        error: `Tidak bisa hapus: ${used?.c} layanan masih pakai kategori ini.`,
-      });
-    const [cat] = await db
-      .select({ name: categories.name })
-      .from(categories)
-      .where(eq(categories.id, id))
-      .limit(1);
-    await db.delete(categories).where(eq(categories.id, id));
-    await logAudit({
-      adminId: Number(locals.user.id),
-      action: "delete_category",
-      entity: "category",
-      entityId: id,
-      detail: { name: cat?.name },
-      ip: (locals as any).ip,
-    });
-    return { success: `Kategori dihapus.` };
   },
 };

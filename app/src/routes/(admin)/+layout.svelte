@@ -82,6 +82,13 @@
       group: "Operasional",
     },
     {
+      href: "/admin/categories",
+      keywords: ["kategori", "category", "group"],
+      label: "Kategori",
+      icon: "layers",
+      group: "Operasional",
+    },
+    {
       href: "/admin/pricing",
       keywords: ["harga", "pricing", "markup"],
       label: "Harga",
