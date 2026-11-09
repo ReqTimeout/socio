@@ -180,7 +180,13 @@ export async function setCategoryStatus(
       .update(services)
       .set({
         status: 1,
-        note: sql`TRIM(REPLACE(COALESCE(${services.note}, ''), ${" " + MANUAL_OFF_TAG}, ''))`,
+        // Buang tag di POSISI APAPUN: REPLACE pertama untuk " [manual-off]"
+        // (dengan spasi), REPLACE kedua untuk "[manual-off]" persis di awal
+        // string. Path OFF men-TRIM hasil concat, jadi baris yang catatannya
+        // kosong menghasilkan note = "[manual-off]" tanpa spasi — kalau hanya
+        // REPLACE pertama, tag itu NYTAR dan baris ini tetap terblokir sync
+        // (isManualOff) padahal sudah dinyalakan manual.
+        note: sql`TRIM(REPLACE(REPLACE(COALESCE(${services.note}, ''), ${" " + MANUAL_OFF_TAG}, ''), ${MANUAL_OFF_TAG}, ''))`,
       })
       .where(
         and(
