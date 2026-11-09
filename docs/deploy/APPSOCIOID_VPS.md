@@ -378,6 +378,12 @@ ssh root@130.254.47.93 'docker exec $(docker ps --format "{{.Names}}" | grep sso
 
 > Laporan (`SEO-DAILY.md`, `SEO-QUERIES.md`) ditulis ke `/app/data/reports` — **di luar repo git**. Laporan yang ditulis ke path tracked membuat `git pull --rebase` di siklus publish gagal (insiden .my 3-8 Nov 2026).
 
+**Troubleshooting `gsc-inspect`:**
+- `HTTP 401: Request had invalid authentication credential` → **bukan kredensial rusak**. Token akses Google hanya valid 1 jam; proses yang jalan >1 jam akan memakai token expired. `seo/lib/gsc.mjs` sudah menghormati `expires_in` (skew 60 detik) + retry 401 dengan token baru. Kalau masih muncul: cek jam proses (`docker top`) dan quota inspeksi (2.000/hari).
+- `gsc-inspect: tidak ada URL baru untuk dicek` → normal kalau semua URL dalam window sudah dicek <24 jam lalu (pakai `--force` untuk memaksa).
+- `discovery gap ≥50%` di ramp-gate → Google belum menemukan URL; perbaiki discovery (sitemap GSC + internal link money→blog), **jangan** turunkan volume publish.
+- PENTING: `socio.my` (`/opt/seo-my/repo`) punya **bug token yang sama** (belum diperbaiki per 8 Nov 2026) → inspeksi .my yang jalan >1 jam akan 401 setelah 1 jam.
+
 ---
 
 ## 8. Backup & restore

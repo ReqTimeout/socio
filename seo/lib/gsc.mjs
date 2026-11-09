@@ -17,7 +17,7 @@
 
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
-import { createSign } from 'node:crypto';
+import { createSign, generateKeyPairSync } from 'node:crypto';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const SC_API = 'https://searchconsole.googleapis.com';
@@ -62,8 +62,18 @@ export function loadCreds() {
   );
 }
 
-/** Cache token per proses — valid 1 jam, jadi batch 50 URL cukup 1 sign. */
+/**
+ * Cache token per proses — token access Google valid 1 jam, jadi batch 50 URL
+ * cukup 1 sign.
+ *
+ * WAJIB cek masa berlaku: kalau token dipakai tanpa cek `expires_in`, proses
+ * yang jalan >1 jam (batch URL Inspection 1.000 URL ≈ 1-2 jam) mulai HTTP 401
+ * "Request had invalid authentication credential" di URL terakhir — symptomnya
+ * inspeksi gagal total padahal kredensialnya valid.
+ */
 let tokenCache = null;
+/** Segarkan 60 detik sebelum token benar-benar expired. */
+const TOKEN_EXPIRY_SKEW_MS = 60_000;
 
 function signJwt(creds, scopes) {
   const now = Math.floor(Date.now() / 1000);
@@ -83,7 +93,10 @@ function signJwt(creds, scopes) {
  */
 export async function getToken(opts = {}) {
   const scopes = opts.scopes?.length ? opts.scopes : SCOPES;
-  if (tokenCache && !opts.force && tokenCache.scopes === scopes.join(' ')) {
+  const scopeKey = scopes.join(' ');
+  const masihValid =
+    tokenCache && tokenCache.scopes === scopeKey && Date.now() < tokenCache.expiresAt - TOKEN_EXPIRY_SKEW_MS;
+  if (masihValid && !opts.force) {
     return tokenCache.token;
   }
   const creds = loadCreds();
@@ -99,27 +112,40 @@ export async function getToken(opts = {}) {
   if (!data.access_token) {
     throw new Error(`token exchange failed (HTTP ${res.status}): ${data.error_description || data.error}`);
   }
-  tokenCache = { token: data.access_token, scopes: scopes.join(' ') };
+  tokenCache = {
+    token: data.access_token,
+    scopes: scopeKey,
+    expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000,
+  };
   return data.access_token;
 }
 
 async function gscFetch(path, { method = 'GET', body, base = SC_API, token } = {}) {
-  const res = await fetch(`${base}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token || (await getToken())}`,
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    json = { raw: text.slice(0, 200) };
+  const send = async (bearer) => {
+    const res = await fetch(`${base}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${bearer}`,
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const text = await res.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      json = { raw: text.slice(0, 200) };
+    }
+    return { status: res.status, json };
+  };
+
+  let res = await send(token || (await getToken()));
+  if (res.status === 401 && !token) {
+    // Token kedaluwarsa / dicabut → tukar token baru lalu coba lagi SATU KALI.
+    res = await send(await getToken({ force: true }));
   }
-  return { status: res.status, json };
+  return res;
 }
 
 /** Property GSC yang bisa diakses SA ini. */
@@ -257,4 +283,91 @@ export async function publishIndexing(url, type = 'URL_UPDATED') {
 /** Rate-limit helper: 1 request / 200ms (anti quota-exceeded). */
 export function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+// ── self-test: masa berlaku token + retry 401 ───────────────────────────────
+// Regresi produksi (8 Nov 2026): cache token tidak pernah cek masa berlaku →
+// proses >1 jam memakai token expired → 447 URL gagal "invalid authentication
+// credential". Semua diuji di sini tanpa memanggil API sungguhan.
+//
+//   node seo/lib/gsc.mjs --self-test
+if (process.argv.includes('--self-test')) {
+  const { privateKey } = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+  });
+
+  const fetchAsli = globalThis.fetch;
+  const kredensial = { client_email: 'selftest@example.com', private_key: privateKey };
+  let tukar = 0; // jumlah pertukaran token
+  let ttl = 3600; // expires_in untuk pertukaran berikutnya
+  let sisa401 = 0; // jumlah respons 401 yang harus memicu retry
+
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes('oauth2.googleapis.com/token')) {
+      tukar += 1;
+      return new Response(JSON.stringify({ access_token: `tok-${tukar}`, expires_in: ttl }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (sisa401 > 0) {
+      sisa401 -= 1;
+      return new Response(
+        JSON.stringify({ error: { message: 'Request had invalid authentication credential' } }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    return new Response(JSON.stringify({ inspectionResult: { indexStatusResult: { verdict: 'PASS' } } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  process.env.GSC_SERVICE_ACCOUNT_JSON_B64 = Buffer.from(JSON.stringify(kredensial)).toString('base64');
+
+  let lulus = 0;
+  let gagal = 0;
+  const cek = (nama, ok, detail = '') => {
+    if (ok) {
+      lulus++;
+      console.log(`  ✓ ${nama}${detail ? ` → ${detail}` : ''}`);
+    } else {
+      gagal++;
+      console.log(`  ✗ ${nama}${detail ? ` → ${detail}` : ''}`);
+    }
+  };
+
+  try {
+    const t1 = await getToken();
+    const t2 = await getToken();
+    cek('cache hit tidak menukar token ulang', t1 === t2 && tukar === 1, `tukar=${tukar}`);
+
+    const t3 = await getToken({ force: true });
+    cek('force refresh menukar token baru', t3 !== t1 && tukar === 2, `tukar=${tukar}`);
+
+    // Token berumur pendek → panggilan berikutnya WAJIB menukar baru.
+    // Inilah regresi yang bikin 447 URL gagal 401 di produksi.
+    ttl = 1;
+    const t4 = await getToken({ force: true });
+    const t5 = await getToken();
+    cek('token kedaluwarsa langsung ditukar lagi', t5 !== t4 && tukar === 4, `tukar=${tukar}`);
+
+    // 401 dari API → retry satu kali dengan token baru.
+    ttl = 3600;
+    await getToken({ force: true });
+    const sebelum = tukar;
+    sisa401 = 1;
+    const status = await inspectUrl('https://socio.id/blog/selftest/');
+    cek('401 di-retri dengan token baru', status?.verdict === 'PASS' && tukar === sebelum + 1, `tukar=${tukar}`);
+  } catch (err) {
+    cek('self-test tidak melempar error', false, String(err?.message || err));
+  } finally {
+    globalThis.fetch = fetchAsli;
+    delete process.env.GSC_SERVICE_ACCOUNT_JSON_B64;
+  }
+
+  console.log(`\n  self-test: ${lulus} lulus, ${gagal} gagal`);
+  process.exitCode = gagal ? 1 : 0;
 }

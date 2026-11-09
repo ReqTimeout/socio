@@ -270,9 +270,20 @@ Owner instruction 8 Nov 2026: *"P4 SEO subsystem"* (porting `.my` → `.id`). Pl
 5. **Output UNTRACKED** — laporan ditulis ke `SEO_REPORT_DIR` (default `/app/data/reports` di container), BUKAN `docs/`. Di .my laporan `docs/SEO-QUERIES.md` yang tracked ditulis harian → tree dirty → `git pull --rebase` siklus publish gagal (insiden 3-8 Nov 2026).
 6. **Siklus host baru** (tanpa menyentuh siklus .my): `/etc/cron.d/seo-index-coid` (05:40 + 11:40 UTC → `seo-index-coid-cycle`: reconcile → `gsc-inspect --days 3`) + `/etc/cron.d/seo-measure-coid` (06:40 UTC → `seo-measure-coid-cycle`: gsc-analytics → seo-status). Load guard + flock, sama seperti siklus existing.
 
-**Deploy:** 3 skrip + patch `gsc-inspect` di-commit & push ke repo produksi `ReqTimeout/socio-seo-runner` (commit `d611e51` → `6e5ee42` → `479665d`), lewat `GITHUB_TOKEN` extraHeader (tanpa token di argv). Backup `state.json` sebelum rekonsiliasi: `/app/data/state.json.bak-20261108T161128`.
+7. **`seo/lib/gsc.mjs` (patch — akar masalah HTTP 401)** — cache token akses GSC **tidak pernah mengecek masa berlaku**. Token Google valid 1 jam, jadi proses yang jalan >1 jam (inspeksi 1.006 URL ≈ 1 jam 3 menit) memakai token expired → **447 URL terakhir gagal `HTTP 401: Request had invalid authentication credential`** (bukan kredensial rusak). Fix: patuhi `expires_in` (skew 60 detik) + **retry satu kali** dengan token baru saat 401. Deploy ke runner repo commit `83a375f`; monorepo = cermin byte-identical.
 
-**Verifikasi:** `state.published` 340 → 1.006 tanpa duplikat URL; `gsc.inspections`/`indexnow.submitted` (1.055)/`bing.submitted` (1.052)/`rampGate`/`indexer` utuh; target inspeksi naik 671 → **1.006 URL**; repo .my tetap bersih (`git status` kosong). Backlog inspeksi 1.006 URL dijalankan 8 Nov 2026 (hasil di tracker §P4 pada commit docs).
+**Deploy:** 3 skrip + patch `gsc-inspect` + patch `lib/gsc.mjs` di-commit & push ke repo produksi `ReqTimeout/socio-seo-runner` (commit `d611e51` → `6e5ee42` → `479665d` → `83a375f`), lewat `GITHUB_TOKEN` extraHeader (tanpa token di argv). Backup `state.json` sebelum rekonsiliasi: `/app/data/state.json.bak-20261108T161128`.
+
+**Verifikasi akhir (9 Nov 2026, setelah perbaikan token + inspeksi ulang):**
+- `state.published` 340 → **1.006** tanpa duplikat URL; `indexnow.submitted` (1.055)/`bing.submitted` (1.052) utuh; repo runner tetap bersih (`git status` kosong).
+- Inspeksi GSC **1.006/1.006 URL** (0 `unknown` tersisa; `gsc.inspections` 1.011 entri): **914 indexed / 73 not_indexed / 19 not_discovered**.
+- **index_rate 92,6%** (914/987 discovered) — metrik SEJATI, bukan artefak cakupan inspeksi minuscule. `discovery gap 1,9%` (sebelumnya 100%).
+- **Ramp-gate BUTA → hidup**: `daily_count` **15 → 17 → 19** (bukan lagi beku; alasan *"naik — index_rate 92,6% >= 85%"*), `alerts: []`. Efektif publish = `min(--count=20, daily_count=19)` = 19 artikel/hari.
+- `seo-status` → **0 alert**; `bing` kuota sehat (`quotaAfter=85`, `overQuota=0`); kuota GSC terpakai ~1.000 dari 2.000/hari.
+- **Idempoten**: inspeksi ulang otomatis **skip 559 URL** yang sudah dicek <24 jam lalu → hanya 447 sisanya yang ditinjau; `published[].indexed` tidak berubah ganda.
+- **Load guard** diuji di 3 cabang: load tinggi → SKIP, RAM <700MB → SKIP, `flock` dipegang instance lain → SKIP; semuanya exit 0 tanpa `docker exec`.
+- **`.my` utuh**: `git -C /opt/seo-my/repo status` kosong, siklus `.my` tetap normal.
+- `indexer.mjs --dry-run --days 7` → 4 tahap ter-plan (indexnow/bing/gsc/remedy), nol request keluar.
 
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
@@ -316,7 +327,7 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | H1 | Upgrade mandiri Member→Reseller | ✅ LIVE | **d02a142 (sesi ini)** — flip level CASE + `/reseller` (chart jujur dr pricing_rules, anti-leak) + action invoice + nav dot |
 | H2/H3 | Reseller dashboard / coupon loop | ⏸️ CONFIRM | belum disentuh |
 | I | Multi-provider (+ TikTok → SMMfollows) | ✅ LIVE | **4572fee (sesi ini)** — switcher 1-aktif + routing per-kategori; TikTok dilayani SMMfollows (828 svc/77 kategori), duplikat=0, route violation=0 |
-| P4 | SEO subsystem port | ✅ LIVE | **d611e51+ (sesi ini)** — loop pengukuran: `reconcile-published` (state.published 340→1.006), `gsc-analytics`, `seo-status`, `gsc-inspect` save parsial, siklus `seo-index-coid` + `seo-measure-coid` |
+| P4 | SEO subsystem port | ✅ LIVE | **runner `83a375f`→`4899977` (sesi ini)** — loop pengukuran: `reconcile-published` (state.published 340→1.006), `gsc-analytics`, `seo-status`, `gsc-inspect` save parsial, fix token GSC + self-test (401 setelah 1 jam), siklus `seo-index-coid` + `seo-measure-coid`; index_rate 92,6%, ramp-gate hidup (daily_count 15→19) |
 
 **Deploy batch sesi ini:** 3 commit (4988b5a E3/E4 · a3a3a09 E6 · 0010967 docs) → push `da0a106..0010967 → main` → L3 0 findings → Coolify finished → container tag 0010967fbab1 (Up).
 
