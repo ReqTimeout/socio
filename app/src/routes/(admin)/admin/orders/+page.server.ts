@@ -8,7 +8,6 @@ import { modalAmountFor } from "@socio/core/pricing";
 import {
   ledgerRefundAmount,
   ledgerRefundAt,
-  ledgerRefundExists,
   refundStateOf,
   charged,
 } from "$lib/server/refund";
@@ -105,13 +104,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         processingTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Processing','In progress','Refilling') THEN ${orders.price} ELSE 0 END),0)`,
         errorCount: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Canceled','Error','Partial') THEN 1 ELSE 0 END),0)`,
         errorTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Canceled','Error','Partial') THEN ${orders.price} ELSE 0 END),0)`,
-        // Refund terbukti dari ledger, bukan flag — jawaban "order batal/gagal sudah
-        // kembali uang customer belum?".
-        refundedCount: sql<number>`COALESCE(SUM(CASE WHEN ${ledgerRefundExists} THEN 1 ELSE 0 END),0)`,
-        refundedTotal: sql<number>`COALESCE((SELECT SUM(bl.amount) FROM balance_logs bl WHERE bl.type = 'ref' AND bl.user_id NOT IN (SELECT u2.id FROM users u2 WHERE u2.level = 'Admin')),0)`,
+        // Refund stats: pakai flag is_refund (indexed, O(1) per baris) untuk
+        // AGGREGATE — correlated REGEXP subquery (ledgerRefundExists) di sini
+        // bikin query macet 30+ menit karena scan balance_logs × 38k orders.
+        // Per-row ledger check tetap dipakai di 25 baris paginated (presisi).
+        refundedCount: sql<number>`COALESCE(SUM(CASE WHEN ${orders.isRefund} = 1 THEN 1 ELSE 0 END),0)`,
+        refundedTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.isRefund} = 1 THEN ${orders.price} ELSE 0 END),0)`,
         // WAJIB 0. Kalau >0: ada order batal/gagal yang saldonya belum kembali
         // → cron auto-refund (*/15 menit) macet atau order di-escape manual.
-        refundPending: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Canceled','Error','Partial') AND ${orders.isRefund} = 0 AND NOT ${ledgerRefundExists} THEN 1 ELSE 0 END),0)`,
+        refundPending: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Canceled','Error','Partial') AND ${orders.isRefund} = 0 THEN 1 ELSE 0 END),0)`,
       })
       .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
