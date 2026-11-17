@@ -37,6 +37,53 @@ async function tryExec(stmt: ReturnType<typeof sql>) {
 }
 
 /**
+ * Guard DDL boot (insiden 17 Nov 2026): ALTER yang "idempotent" pun tetap
+ * meminta metadata lock (MDL) eksklusif di tabelnya. Kalau ada query lama
+ * menahan MDL shared, ALTER antre — dan SEMUA query baru ke tabel itu ikut
+ * terblokir di belakangnya (convoy). Boot deploy saat itu macet ±8 menit:
+ * 4 query populer /pesanan jalan 20+ menit → ALTER services antre → /layanan
+ * ikut mati. Solusi: cek information_schema DULU (tanpa MDL tabel user),
+ * ALTER hanya jalan kalau definisi memang belum sesuai.
+ */
+async function metaRows(stmt: ReturnType<typeof sql>): Promise<any[]> {
+  // any: hasil mentah db.execute (mysql2 RowDataPacket[]) — pola sama dgn ensureTableUtf8mb4.
+  const res: any = await db.execute(stmt);
+  return Array.isArray(res?.[0]) ? res[0] : Array.isArray(res) ? res : [];
+}
+
+/** Definisi kolom dari information_schema (undefined kalau kolom tidak ada). */
+async function columnInfo(table: string, column: string) {
+  const rows = await metaRows(
+    sql`SELECT COLUMN_TYPE ct, CHARACTER_MAXIMUM_LENGTH len, IS_NULLABLE nullable
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${table} AND COLUMN_NAME = ${column}`,
+  );
+  return rows[0] as { ct?: string; len?: number | null; nullable?: string } | undefined;
+}
+
+/** ADD COLUMN hanya kalau kolom belum ada (tryExec tetap menjaga race). */
+async function addColumn(table: string, column: string, ddl: string) {
+  if (await columnInfo(table, column)) return;
+  await tryExec(sql.raw(ddl));
+}
+
+async function indexExists(table: string, index: string): Promise<boolean> {
+  const rows = await metaRows(
+    sql`SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${table} AND INDEX_NAME = ${index} LIMIT 1`,
+  );
+  return rows.length > 0;
+}
+
+async function tableEngine(table: string): Promise<string | undefined> {
+  const rows = await metaRows(
+    sql`SELECT ENGINE eng FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${table}`,
+  );
+  return (rows[0] as { eng?: string } | undefined)?.eng;
+}
+
+/**
  * Lebarkan charset satu TABEL ke utf8mb4 bila kolom teks mentah-nya masih
  * latin1/utf8mb3. Guard via information_schema → ALTER jalan sekali; boot
  * berikutnya kolom sudah utf8mb4 → skip (tidak rebuild tiap restart).
@@ -155,22 +202,20 @@ export async function ensureAdminSchema() {
       INDEX psl_provider_idx (provider_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
-  // Add polling columns to orders if missing (idempotent).
-  await tryExec(
-    sql`ALTER TABLE orders ADD COLUMN next_poll_at DATETIME DEFAULT NULL`,
-  );
-  await tryExec(
-    sql`ALTER TABLE orders ADD COLUMN poll_priority INT NOT NULL DEFAULT 5`,
-  );
+  // Add polling columns to orders if missing (guard information_schema —
+  // bukan ALTER buta tiap boot, lihat catatan MDL convoy di atas).
+  await addColumn("orders", "next_poll_at", "ALTER TABLE orders ADD COLUMN next_poll_at DATETIME DEFAULT NULL");
+  await addColumn("orders", "poll_priority", "ALTER TABLE orders ADD COLUMN poll_priority INT NOT NULL DEFAULT 5");
   // Provider balance column (used by sync)
-  await tryExec(
-    sql`ALTER TABLE provider ADD COLUMN balance_provider DOUBLE NOT NULL DEFAULT 0`,
-  );
+  await addColumn("provider", "balance_provider", "ALTER TABLE provider ADD COLUMN balance_provider DOUBLE NOT NULL DEFAULT 0");
   // Widen provider_services.category — SMMturk category names can exceed 128 chars
   // (cron provider-sync threw ER_DATA_TOO_LONG on long Instagram category labels).
-  await tryExec(
-    sql`ALTER TABLE provider_services MODIFY COLUMN category VARCHAR(512) NOT NULL DEFAULT ''`,
-  );
+  const psCat = await columnInfo("provider_services", "category");
+  if (!psCat || Number(psCat.len) < 512) {
+    await tryExec(
+      sql`ALTER TABLE provider_services MODIFY COLUMN category VARCHAR(512) NOT NULL DEFAULT ''`,
+    );
+  }
   // job_queue (defined in rebuild.ts but not yet created in DB)
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS job_queue (
@@ -238,23 +283,24 @@ export async function ensureAdminSchema() {
       WHERE NOT EXISTS (SELECT 1 FROM coupons)
   `);
   // Record coupon on order (I-U1)
-  await tryExec(
-    sql`ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(40) DEFAULT NULL`,
-  );
-  await tryExec(
-    sql`ALTER TABLE orders ADD COLUMN discount DOUBLE NOT NULL DEFAULT 0`,
-  );
+  await addColumn("orders", "coupon_code", "ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(40) DEFAULT NULL");
+  await addColumn("orders", "discount", "ALTER TABLE orders ADD COLUMN discount DOUBLE NOT NULL DEFAULT 0");
   // Affiliate withdrawal approval queue (M3 Task #3). Extend status enum
   // non-destruktif — 'Withdraw' legacy (auto-credit lama) tetap valid.
-  // MODIFY COLUMN itu idempotent, jadi tidak perlu tryExec.
-  await db.execute(sql`
-    ALTER TABLE affiliate
-      MODIFY COLUMN status ENUM('Pending','Withdraw','Requested','Paid','Rejected') NOT NULL DEFAULT 'Pending'
-  `);
+  // Guard: MODIFY hanya kalau enum belum memuat 'Requested' (MDL convoy).
+  const affStatus = await columnInfo("affiliate", "status");
+  if (!affStatus || !String(affStatus.ct ?? "").includes("'Requested'")) {
+    await db.execute(sql`
+      ALTER TABLE affiliate
+        MODIFY COLUMN status ENUM('Pending','Withdraw','Requested','Paid','Rejected') NOT NULL DEFAULT 'Pending'
+    `);
+  }
   // Legacy tables pakai MyISAM → tidak bisa ikut transaction + violate GTID
   // saat mixed dengan InnoDB (approve withdrawal gagal). Convert ke InnoDB
-  // (idempotent; no-op kalau sudah InnoDB).
-  await db.execute(sql`ALTER TABLE affiliate ENGINE=InnoDB`);
+  // HANYA kalau engine belum InnoDB — ALTER no-op pun tetap minta MDL.
+  if ((await tableEngine("affiliate")) !== "InnoDB") {
+    await db.execute(sql`ALTER TABLE affiliate ENGINE=InnoDB`);
+  }
   // promotion_banners (Banner CMS — tabel baru, PHP lama tidak pernah membuatnya)
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS promotion_banners (
@@ -274,41 +320,21 @@ export async function ensureAdminSchema() {
   `);
 
   // ─── PRD Service Sync v2 — kolom audit + raw + flag API provider ───
-  await tryExec(
-    sql`ALTER TABLE categories ADD COLUMN name_raw VARCHAR(512) NOT NULL DEFAULT ''`,
-  );
-  await tryExec(
-    sql`ALTER TABLE services ADD COLUMN service_name_raw VARCHAR(255) NOT NULL DEFAULT ''`,
-  );
-  await tryExec(sql`ALTER TABLE services ADD COLUMN description TEXT NULL`);
-  await tryExec(
-    sql`ALTER TABLE services ADD COLUMN description_locked TINYINT NOT NULL DEFAULT 0`,
-  );
-  await tryExec(
-    sql`ALTER TABLE services ADD COLUMN allow_cancel TINYINT NOT NULL DEFAULT 0`,
-  );
-  await tryExec(
-    sql`ALTER TABLE services ADD COLUMN is_dripfeed TINYINT NOT NULL DEFAULT 0`,
-  );
-  await tryExec(sql`ALTER TABLE services ADD COLUMN created_at DATETIME NULL`);
-  await tryExec(sql`ALTER TABLE services ADD COLUMN updated_at DATETIME NULL`);
-  await tryExec(
-    sql`ALTER TABLE services ADD COLUMN price_changed_at DATETIME NULL`,
-  );
+  await addColumn("categories", "name_raw", "ALTER TABLE categories ADD COLUMN name_raw VARCHAR(512) NOT NULL DEFAULT ''");
+  await addColumn("services", "service_name_raw", "ALTER TABLE services ADD COLUMN service_name_raw VARCHAR(255) NOT NULL DEFAULT ''");
+  await addColumn("services", "description", "ALTER TABLE services ADD COLUMN description TEXT NULL");
+  await addColumn("services", "description_locked", "ALTER TABLE services ADD COLUMN description_locked TINYINT NOT NULL DEFAULT 0");
+  await addColumn("services", "allow_cancel", "ALTER TABLE services ADD COLUMN allow_cancel TINYINT NOT NULL DEFAULT 0");
+  await addColumn("services", "is_dripfeed", "ALTER TABLE services ADD COLUMN is_dripfeed TINYINT NOT NULL DEFAULT 0");
+  await addColumn("services", "created_at", "ALTER TABLE services ADD COLUMN created_at DATETIME NULL");
+  await addColumn("services", "updated_at", "ALTER TABLE services ADD COLUMN updated_at DATETIME NULL");
+  await addColumn("services", "price_changed_at", "ALTER TABLE services ADD COLUMN price_changed_at DATETIME NULL");
 
   // news integrasi sync (PRD §10)
-  await tryExec(
-    sql`ALTER TABLE news ADD COLUMN event_type VARCHAR(32) NOT NULL DEFAULT 'manual'`,
-  );
-  await tryExec(
-    sql`ALTER TABLE news ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT 'manual'`,
-  );
-  await tryExec(
-    sql`ALTER TABLE news ADD COLUMN service_id INT NOT NULL DEFAULT 0`,
-  );
-  await tryExec(
-    sql`ALTER TABLE news ADD COLUMN is_hidden TINYINT NOT NULL DEFAULT 0`,
-  );
+  await addColumn("news", "event_type", "ALTER TABLE news ADD COLUMN event_type VARCHAR(32) NOT NULL DEFAULT 'manual'");
+  await addColumn("news", "source", "ALTER TABLE news ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT 'manual'");
+  await addColumn("news", "service_id", "ALTER TABLE news ADD COLUMN service_id INT NOT NULL DEFAULT 0");
+  await addColumn("news", "is_hidden", "ALTER TABLE news ADD COLUMN is_hidden TINYINT NOT NULL DEFAULT 0");
 
   // service_changelog (PRD §6.3) — tabel baru
   await db.execute(sql`
@@ -391,17 +417,13 @@ export async function ensureAdminSchema() {
   // ── G2 retire-verify — pemisahan status aktivasi reseller dari kolom
   // `verify` (overload). Prod sudah di-backfill manual (56 reseller aktif);
   // tryExec ini cuma menjamin env lain (dev/lokal) ikut punya kolomnya.
-  await tryExec(
-    sql`ALTER TABLE users ADD COLUMN reseller_activated TINYINT NOT NULL DEFAULT 0`,
-  );
+  await addColumn("users", "reseller_activated", "ALTER TABLE users ADD COLUMN reseller_activated TINYINT NOT NULL DEFAULT 0");
 
   // ── Multi-provider (item I) — switcher satu-aktif + routing per-kategori.
   // `provider.status` = 1 → provider aktif global (satu-satunya yang melayani
   // kategori TANPA routing). Backfill: aktifkan provider utama (SMMturk) HANYA
   // kalau belum ada provider aktif — menjaga invariant "tepat satu aktif".
-  await tryExec(
-    sql`ALTER TABLE provider ADD COLUMN status TINYINT NOT NULL DEFAULT 0`,
-  );
+  await addColumn("provider", "status", "ALTER TABLE provider ADD COLUMN status TINYINT NOT NULL DEFAULT 0");
   await db.execute(sql`
     UPDATE provider SET status = 1
     WHERE api_url_order LIKE ${"https://smmturk.org%"}
@@ -424,13 +446,30 @@ export async function ensureAdminSchema() {
   `);
   // Pelebaran kolom nama layanan: SMMfollows punya nama sampai 326 char →
   // varchar(255) memicu ER_DATA_TOO_LONG saat sync (jebakan .my §11).
-  // MODIFY COLUMN idempotent — aman dijalankan ulang tiap boot.
-  await db.execute(
-    sql`ALTER TABLE services MODIFY COLUMN service_name VARCHAR(1024) NOT NULL`,
-  );
-  await db.execute(
-    sql`ALTER TABLE services MODIFY COLUMN service_name_raw VARCHAR(1024) NOT NULL DEFAULT ''`,
-  );
+  // Guard information_schema: MODIFY yang "sudah sesuai" tetap minta MDL
+  // eksklusif tiap boot → convoy kalau ada query lama (insiden 17 Nov 2026).
+  const svcName = await columnInfo("services", "service_name");
+  if (!svcName || Number(svcName.len) < 1024 || svcName.nullable === "YES") {
+    await db.execute(
+      sql`ALTER TABLE services MODIFY COLUMN service_name VARCHAR(1024) NOT NULL`,
+    );
+  }
+  const svcNameRaw = await columnInfo("services", "service_name_raw");
+  if (!svcNameRaw || Number(svcNameRaw.len) < 1024 || svcNameRaw.nullable === "YES") {
+    await db.execute(
+      sql`ALTER TABLE services MODIFY COLUMN service_name_raw VARCHAR(1024) NOT NULL DEFAULT ''`,
+    );
+  }
+
+  // Index join katalog↔order untuk widget "layanan populer" /pesanan.
+  // Tanpa index ini, JOIN orders×services di provider_service_id jadi
+  // nested-loop ratusan juta baris (20+ menit/query — pemicu convoy MDL).
+  // Sudah dibuat manual di prod 17 Nov 2026; guard ini menjamin env lain.
+  if (!(await indexExists("services", "idx_provider_service"))) {
+    await db.execute(
+      sql`ALTER TABLE services ADD INDEX idx_provider_service (provider_service_id, provider_id)`,
+    );
+  }
 
   // ── Charset: tabel penampung teks MENTAH provider (bisa ada emoji 4-byte,
   // mis. kategori "IMPOSSIBLE SERVICES ❤️"). ADD COLUMN service-sync v2 mewarisi

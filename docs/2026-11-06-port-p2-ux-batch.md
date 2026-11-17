@@ -390,7 +390,26 @@ Owner 13 Nov 2026: *"/admin/categories ini masih berantakan smmfollow masih ada,
 - `category-admin.ts`: helper `dormantProviderIds()` (provider.status=0 DAN tidak ter-route di `category_provider_routing`). `listCategoryRowsLite()` menyembunyikan kategori yang SELURUH layanannya dari provider dorman (kategori 37678 hanya punya service p10 → hilang dari daftar); kategori tanpa layanan tetap tampil (placeholder buatan admin); provider_id=0 legacy tidak dianggap dorman. `listCategoryRows()` membuang provider dorman dari chip `providerNames` → label "SMMfollows" tidak muncul lagi.
 - `/admin/categories +page.server.ts`: `totalCats = rows.length` (bukan COUNT mentah) → header "{n} kategori" konsisten dengan daftar terfilter.
 - Berlaku untuk kedua pemakai helper: rail kiri `/admin/services` (lite) + halaman `/admin/categories` (full). Data kategori 37678 + service 794435 TETAP di DB — hanya disembunyikan dari UI admin, riwayat order aman. Kalau owner suatu saat meroute ulang provider 10, kategori otomatis muncul lagi (filter dihitung per-request, bukan cache permanen).
-- Verifikasi: svelte-check 0 error · `pnpm --filter app build` sukses · deploy Coolify + verifikasi live tercatat di commit docs menyusul.
+- Verifikasi: svelte-check 0 error · `pnpm --filter app build` sukses · push `4bda2e1..1a2f742 → main` (L3 0 findings) · deploy Coolify `fhnnlheyuf1asjoxwvyr9qg3` finished 22:29 WIB → container `nqsjafrei6k8dkup1pxkcuwf-20261117T151717` image tag `1a2f7429…` · marker `dormantProviderIds` terkonfirmasi di chunk live `category-admin.js` · route admin 303/200/303 · cron boot 12 job bersih · state DB pasca-deploy: 911 kategori (910 + 1 baru dari sync SMMturk normal), 0 duplikat/0 kosong, order #37978 utuh.
+
+## P10 — Insiden MDL convoy boot + query populer `/pesanan` (17 Nov 2026, HOTFIX perf)
+
+**Gejala:** malam ini, sesaat pasca-deploy P9 (container baru boot), verifikasi DB macet total. `SHOW FULL PROCESSLIST` dari koneksi segar: 4 query populer `/pesanan` sudah jalan 19–23 menit, DAN `ALTER TABLE services MODIFY service_name` dari boot `ensure.ts` antre ±500 detik menunggu metadata lock (MDL) → semua query baru ke tabel `services` ikut terblokir di belakang ALTER, termasuk `/layanan` live (±8 menit).
+
+**Akar masalah (2 bug independen, saling memperparah):**
+1. **Query populer join-before-aggregate** (`pesanan/+page.server.ts`): `orders JOIN services ON provider_service_id` dulu, baru GROUP BY — tanpa index di `services.provider_service_id` maupun `orders.service_id` → nested-loop ratusan juta baris, 20+ menit/query. Dipicu tiap user membuka `/pesanan` filter "all" dengan 0 hasil (empty state cross-sell).
+2. **25 ALTER boot tanpa guard** (`packages/db/src/ensure.ts`): MODIFY yang sebenarnya no-op (definisi kolom sudah sesuai) TETAP meminta MDL eksklusif. Begitu antre di belakang query lama, terjadilah convoy — query cepat pun ikut mati.
+
+**Mitigasi produksi (langsung, sebelum fix kode):**
+- `KILL` 4 query populer (id 198140/198213/198526/198653) → rantai MDL lepas, `/layanan` pulih seketika.
+- `ALTER TABLE services ADD INDEX idx_provider_service (provider_service_id, provider_id)` — online, tanpa downtime; query bentuk lama langsung instan (EXPLAIN: ref 1 baris).
+- Verifikasi ulang state P9 pasca-insiden: 911 kategori (910 + 1 kategori baru dari sync SMMturk yang jalan normal; id terbaru 38148–38150 semuanya provider 2) · 0 nama duplikat · 0 kategori kosong · services p10 tinggal 1 (794435) · join order #37978 utuh · provider 2 aktif + provider 10 dorman (key ter-encrypt utuh) · routing = 0.
+
+**Fix kode (commit ini):**
+- `ensure.ts`: helper `metaRows`/`columnInfo`/`addColumn`/`indexExists`/`tableEngine` — cek information_schema DULU (read tanpa MDL tabel user), ALTER hanya jalan kalau definisi memang belum sesuai. Semua 20 ADD COLUMN → `addColumn`; 5 MODIFY/ENGINE diberi guard definisi (`provider_services.category` len<512 · ENUM affiliate belum ada 'Requested' · engine affiliate ≠ InnoDB · `service_name`/`service_name_raw` len<1024 atau nullable); plus ensure index `idx_provider_service` guarded. Boot di DB yang sudah sesuai = 0 ALTER = 0 risiko convoy.
+- `pesanan/+page.server.ts`: query populer aggregate-first — derived table GROUP BY `orders` dulu (EXPLAIN: 8.578 grup), baru JOIN `services` lewat `idx_provider_service` (ref 1 baris/grup). Hasil identik terverifikasi di produksi: top-3 = 4557/p2/165 · 7137/p2/87 · 4509/p2/33.
+
+**Verifikasi:** svelte-check 0 error · `pnpm --filter app build` sukses · `tsc --noEmit` packages/db exit 0 · EXPLAIN + uji `MAX_EXECUTION_TIME(8000)` query baru di produksi: hasil identik · processlist pasca-KILL bersih. Deploy + verifikasi boot tanpa convoy tercatat menyusul.
 
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
@@ -439,6 +458,7 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | P6 | Category visibility (kategori mati tak muncul di filter user) | ✅ LIVE | **9 Nov 2026** — `lib/server/category-visibility.ts` + dropdown `/layanan` 1.836→774 (produksi) + payload dashboard berlabel `disabled`; tak ada baris DB yang dihapus |
 | P7 | Konfirmasi routing TikTok | 🔍 verify-only | read-only; deviasi 465 svc TikTok "[Organic Growth Package]" di SMMturk → owner: biarkan |
 | P8 | **Revert semua layanan ke SMMturk** | ✅ LIVE | **9 Nov 2026** — data-only, tanpa commit kode: routing 233→0, SMMfollows orderable 704→0, SMMturk 6.559→7.722; snapshot rollback `routing_snapshot_20261109` + `smmfollow_active_snapshot_20261109`; provider id 10 DIPERTAHANKAN supaya order lama tetap ter-poll |
+| P9 | Bersih-bersih kategori SMMfollows (data + UI admin) | ✅ LIVE | **1a2f742 (17 Nov)** — 7.553 svc p10 + 947 kategori dihapus (snapshot `*_20261117`), 19 shared ter-restore; helper filter provider dorman; 911 kategori, 0 duplikat/0 kosong |
 
 **Deploy batch sesi ini:** 3 commit (4988b5a E3/E4 · a3a3a09 E6 · 0010967 docs) → push `da0a106..0010967 → main` → L3 0 findings → Coolify finished → container tag 0010967fbab1 (Up).
 

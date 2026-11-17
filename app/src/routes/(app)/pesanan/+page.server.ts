@@ -145,9 +145,15 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   };
 
   // Layanan populer global (top 3 by order, untuk cross-sell di empty state).
-  // JOIN dulu ke katalog aktif: top mentah dikuasai ID legacy yang tidak ada
+  // JOIN ke katalog aktif: top mentah dikuasai ID legacy yang tidak ada
   // di katalog (390099 dkk) sehingga tanpa join hasilnya selalu kosong.
-  // Query ringan: aggregate + join 3 services. Hanya saat filter=all & kosong.
+  // Hanya saat filter=all & kosong.
+  //
+  // PERF (insiden 17 Nov 2026): JANGAN join orders×services SEBELUM aggregate —
+  // tanpa index di provider_service_id itu nested-loop ratusan juta baris
+  // (4 query jalan 20+ menit → MDL convoy yang memblokir /layanan saat boot).
+  // Aggregate orders DULU (sekali scan + GROUP BY), baru join grup hasilnya
+  // ke katalog lewat index idx_provider_service (provider_service_id, provider_id).
   //
   // Multi-provider: TIDAK lagi hardcode provider_id=2. Order membawa provider_id
   // sendiri (lama & baru), jadi popular ikut provider mana pun yang melayani.
@@ -157,10 +163,13 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   if (filter === "all" && rows.length === 0) {
     try {
       const top = (await db.execute(sql`
-        SELECT o.service_id AS sid, o.provider_id AS pid, COUNT(*) AS c FROM orders o
-        JOIN services s ON s.provider_service_id = o.service_id AND s.provider_id = o.provider_id AND s.status = 1
-        WHERE o.service_id > 0
-        GROUP BY o.service_id, o.provider_id ORDER BY c DESC LIMIT 3
+        SELECT t.sid AS sid, t.pid AS pid, t.c AS c FROM (
+          SELECT o.service_id AS sid, o.provider_id AS pid, COUNT(*) AS c
+          FROM orders o WHERE o.service_id > 0
+          GROUP BY o.service_id, o.provider_id
+        ) t JOIN services s
+          ON s.provider_service_id = t.sid AND s.provider_id = t.pid AND s.status = 1
+        ORDER BY t.c DESC LIMIT 3
       `)) as any;
       const topRows: any[] = Array.isArray(top?.[0]) ? top[0] : Array.isArray(top) ? top : [];
       const pairs = topRows
