@@ -22,14 +22,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   const q = String(url.searchParams.get("q") ?? "").trim();
   const st = String(url.searchParams.get("st") ?? "").trim();
-  const [rows, all] = await Promise.all([
-    listCategoryRows(),
-    db.select({ id: categories.id }).from(categories),
-  ]);
+  const rows = await listCategoryRows();
 
   return {
     categories: rows,
-    totalCats: all.length,
+    // Ikuti daftar terfilter (kategori provider dorman disembunyikan helper),
+    // bukan COUNT(*) mentah — supaya header "{n} kategori" konsisten dgn tabel.
+    totalCats: rows.length,
     q,
     st: st === "on" || st === "off" ? st : "",
   };

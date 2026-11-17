@@ -369,6 +369,29 @@ Owner 9 Nov 2026: *"bisa revert semua layanan ke smmturk? tolong clean jangan ad
 - Order live: 3 `In progress` provider 2 + 1 `Pending` provider 1 MANUAL · **0** di provider 10 · 0 order baru sejak revert (kebetulan window-nya 57 menit sepi, bukan bukti volume).
 - Baris `provider` id 10 utuh (`smmfollows.com/api/v2`, key 84 char ter-encrypt, status=0) → order historis provider 10 (1 baris: #37978 `Success`) kalau butuh status/refill tetap bisa ditagih.
 
+## P9 — Bersih-bersih kategori SMMfollows (17 Nov 2026, DATA produksi + fix kode admin)
+
+Owner 13 Nov 2026: *"/admin/categories ini masih berantakan smmfollow masih ada, dan seharusnya bersih kan pake smmturk?"* → katalog sisa SMMfollows (provider 10, dorman sejak revert P8) dibersihkan dari data produksi, lalu UI admin difilter terhadap provider dorman supaya sisa yang sengaja dipertahankan tidak bocor ke layar.
+
+**State pra-cleanup (terukur):** 1.838 kategori · provider 2 = 909 kategori / 8.878 layanan (7.656 aktif) · provider 10 = 636 kategori / 7.554 layanan (0 aktif; 617 kategori hanya-p10 + 19 shared dengan p2) · 312 kategori kosong yatim (semua id ≥ 36000 — orphan dari insert sync SMMfollows yang gagal) · 50 nama kategori duplikat (48 di antaranya pasangan "lama berisi layanan + baru kosong" dengan nama sama).
+
+**Referensi sebelum hapus (read-only):** order #37978 → service 794435 → kategori 37678 (satu-satunya order historis p10) · `saved_links` p10 = 0 · `favorites` p10 = 0 · `news` p10 = 30 (sudah di-hide 12 Nov) · `changelog` p10 = 8.631 (riwayat audit, DIPERTAHANKAN) · tabel `orders` TIDAK punya kolom category_id → hapus kategori aman untuk riwayat order.
+
+**Yang dieksekusi (produksi, snapshot dulu):**
+1. Snapshot rollback: `smmfollow_svc_snapshot_20261117` (7.553 baris services p10) + `smmfollow_cat_snapshot_20261117` (947 baris categories).
+2. `DELETE FROM services WHERE provider_id=10 AND id<>794435` → 7.553 baris; service 794435 DIPERTAHANKAN supaya join order #37978 tetap utuh.
+3. `DELETE FROM categories WHERE id IN (SELECT category_id FROM smmfollow_cat_snapshot_20261117)` → 947 kategori (kategori p10 + kategori kosong yatim).
+
+**Insiden (dicatat jujur) + recovery:** subquery snapshot memakai `WHERE provider_id=10 ... HAVING SUM(provider_id=2)=0` — karena WHERE sudah memfilter hanya p10, HAVING itu SELALU benar → 19 kategori shared (yang punya layanan SMMturk hidup) ikut terhapus → 126 layanan p2 yatim. Recovery langsung dari snapshot: `INSERT INTO categories (id,name,name_raw) SELECT ... FROM smmfollow_cat_snapshot_20261117 WHERE id IN (SELECT DISTINCT category_id FROM services)` → yatim 126 → 4. Sisa 4 = layanan manual legacy pra-rebuild (id 776853-56, provider 0, category_id=0, nama kosong) yang memang sudah yatim sejak dulu — TIDAK disentuh. Pelajaran: jangan pakai HAVING agregat di subquery yang sudah difilter WHERE pada kolom yang sama.
+
+**State pasca-cleanup (terverifikasi di produksi):** 910 kategori (909 SMMturk + 37678 riwayat) · 0 nama duplikat · 0 kategori kosong · layanan p10 tinggal 1 (794435) · join order #37978 utuh · layanan SMMturk tidak tersentuh. Baris `provider` id 10 + api_key TETAP ADA (syarat polling order historis, kontrak P8) · mirror `provider_services` p10 membeku (dorman) · changelog p10 dipertahankan.
+
+**Fix kode (commit ini) — supaya sisa dorman tidak bocor ke UI admin:**
+- `category-admin.ts`: helper `dormantProviderIds()` (provider.status=0 DAN tidak ter-route di `category_provider_routing`). `listCategoryRowsLite()` menyembunyikan kategori yang SELURUH layanannya dari provider dorman (kategori 37678 hanya punya service p10 → hilang dari daftar); kategori tanpa layanan tetap tampil (placeholder buatan admin); provider_id=0 legacy tidak dianggap dorman. `listCategoryRows()` membuang provider dorman dari chip `providerNames` → label "SMMfollows" tidak muncul lagi.
+- `/admin/categories +page.server.ts`: `totalCats = rows.length` (bukan COUNT mentah) → header "{n} kategori" konsisten dengan daftar terfilter.
+- Berlaku untuk kedua pemakai helper: rail kiri `/admin/services` (lite) + halaman `/admin/categories` (full). Data kategori 37678 + service 794435 TETAP di DB — hanya disembunyikan dari UI admin, riwayat order aman. Kalau owner suatu saat meroute ulang provider 10, kategori otomatis muncul lagi (filter dihitung per-request, bukan cache permanen).
+- Verifikasi: svelte-check 0 error · `pnpm --filter app build` sukses · deploy Coolify + verifikasi live tercatat di commit docs menyusul.
+
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
 - E7 `title` column tidak ada di .id schema (tidak di-invent; .my punya, .id tidak butuh).

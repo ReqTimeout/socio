@@ -36,15 +36,47 @@ export type CategoryLiteRow = {
 };
 
 /**
+ * Provider dorman = status=0 DAN tidak ter-route di category_provider_routing.
+ * Katalog provider seperti ini (mis. sisa eksperimen SMMfollows) tidak boleh
+ * memenuhi daftar kategori admin: layanannya sudah mati semua dan tidak akan
+ * di-sync lagi. Baris provider + api_key-nya sendiri TETAP disimpan di DB
+ * supaya order lama pelanggan tetap ter-poll (lihat status-polling.ts).
+ */
+async function dormantProviderIds(): Promise<Set<number>> {
+  const [provRows, routingMap] = await Promise.all([
+    db.select({ id: provider.id, status: provider.status }).from(provider),
+    getCategoryRoutingMap(),
+  ]);
+  const routed = new Set(routingMap.values());
+  return new Set(
+    provRows
+      .filter((p) => Number(p.status) === 0 && !routed.has(Number(p.id)))
+      .map((p) => Number(p.id)),
+  );
+}
+
+/** Parse GROUP_CONCAT provider_id per kategori jadi array number. */
+function parseProviderIds(raw: string): number[] {
+  return String(raw)
+    .split(",")
+    .map((x) => Number(x.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+}
+
+/**
  * Daftar kategori + hitungan total/aktif.
  *
  * PENTING (perf): jangan LEFT JOIN services lalu GROUP BY categories — dengan
  * ±1.800 kategori itu jadi "Using temporary; Using filesort" dan dipicu ulang
  * tiap load/toggle. Hitungan diambil dari GROUP BY di tabel `services` SAJA
  * (pakai index category_id_idx), lalu digabung ke daftar kategori di memori.
+ *
+ * Kategori yang SELURUH layanannya berasal dari provider dorman disembunyikan
+ * (sisa provider lama, bukan katalog aktif). Kategori tanpa layanan tetap
+ * tampil karena bisa jadi placeholder buatan admin.
  */
 export async function listCategoryRowsLite(): Promise<CategoryLiteRow[]> {
-  const [catBase, svcCounts] = await Promise.all([
+  const [catBase, svcCounts, provIds, dormant] = await Promise.all([
     db
       .select({ id: categories.id, name: categories.name })
       .from(categories)
@@ -57,16 +89,33 @@ export async function listCategoryRowsLite(): Promise<CategoryLiteRow[]> {
       })
       .from(services)
       .groupBy(services.categoryId),
+    db
+      .select({
+        categoryId: services.categoryId,
+        providerIds: sql<string>`COALESCE(GROUP_CONCAT(DISTINCT ${services.providerId}), '')`,
+      })
+      .from(services)
+      .groupBy(services.categoryId),
+    dormantProviderIds(),
   ]);
 
   const cntMap = new Map<number, { total: number; active: number }>();
   for (const sc of svcCounts) {
     cntMap.set(Number(sc.categoryId), { total: Number(sc.total), active: Number(sc.active) });
   }
-  return catBase.map((c) => {
-    const m = cntMap.get(Number(c.id));
-    return { id: Number(c.id), name: c.name, total: m?.total ?? 0, active: m?.active ?? 0 };
-  });
+  const idsByCat = new Map<number, number[]>();
+  for (const row of provIds) {
+    idsByCat.set(Number(row.categoryId), parseProviderIds(row.providerIds));
+  }
+  return catBase
+    .filter((c) => {
+      const ids = idsByCat.get(Number(c.id)) ?? [];
+      return ids.length === 0 || ids.some((pid) => !dormant.has(pid));
+    })
+    .map((c) => {
+      const m = cntMap.get(Number(c.id));
+      return { id: Number(c.id), name: c.name, total: m?.total ?? 0, active: m?.active ?? 0 };
+    });
 }
 
 /** Baris kategori lengkap — dipakai halaman /admin/categories. */
@@ -80,7 +129,7 @@ export type CategoryRow = CategoryLiteRow & {
 
 /** Semua kategori + jumlah layanan (total/aktif) + kondisi routing, terurut nama. */
 export async function listCategoryRows(): Promise<CategoryRow[]> {
-  const [lite, provRows, provIds, routingMap] = await Promise.all([
+  const [lite, provRows, provIds, routingMap, dormant] = await Promise.all([
     listCategoryRowsLite(),
     db.select({ id: provider.id, name: provider.name }).from(provider),
     db
@@ -91,21 +140,21 @@ export async function listCategoryRows(): Promise<CategoryRow[]> {
       .from(services)
       .groupBy(services.categoryId),
     getCategoryRoutingMap(),
+    dormantProviderIds(),
   ]);
 
   const provById = new Map<number, string>(provRows.map((p) => [Number(p.id), String(p.name)]));
   const idsByCat = new Map<number, number[]>();
   for (const row of provIds) {
-    const ids = String(row.providerIds)
-      .split(",")
-      .map((x) => Number(x.trim()))
-      .filter((n) => Number.isFinite(n) && n > 0);
-    idsByCat.set(Number(row.categoryId), ids);
+    idsByCat.set(Number(row.categoryId), parseProviderIds(row.providerIds));
   }
 
   return lite.map((c) => {
     const routingProviderId = routingMap.get(c.id) ?? null;
+    // Label "siapa punya" hanya provider yang masih melayani — provider dorman
+    // jangan bocor ke UI admin walau baris layanannya masih ada di DB.
     const names = (idsByCat.get(c.id) ?? [])
+      .filter((pid) => !dormant.has(pid))
       .map((pid) => provById.get(pid))
       .filter((x): x is string => !!x);
     return {
