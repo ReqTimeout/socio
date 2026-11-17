@@ -409,7 +409,7 @@ Owner 13 Nov 2026: *"/admin/categories ini masih berantakan smmfollow masih ada,
 - `ensure.ts`: helper `metaRows`/`columnInfo`/`addColumn`/`indexExists`/`tableEngine` — cek information_schema DULU (read tanpa MDL tabel user), ALTER hanya jalan kalau definisi memang belum sesuai. Semua 20 ADD COLUMN → `addColumn`; 5 MODIFY/ENGINE diberi guard definisi (`provider_services.category` len<512 · ENUM affiliate belum ada 'Requested' · engine affiliate ≠ InnoDB · `service_name`/`service_name_raw` len<1024 atau nullable); plus ensure index `idx_provider_service` guarded. Boot di DB yang sudah sesuai = 0 ALTER = 0 risiko convoy.
 - `pesanan/+page.server.ts`: query populer aggregate-first — derived table GROUP BY `orders` dulu (EXPLAIN: 8.578 grup), baru JOIN `services` lewat `idx_provider_service` (ref 1 baris/grup). Hasil identik terverifikasi di produksi: top-3 = 4557/p2/165 · 7137/p2/87 · 4509/p2/33.
 
-**Verifikasi:** svelte-check 0 error · `pnpm --filter app build` sukses · `tsc --noEmit` packages/db exit 0 · EXPLAIN + uji `MAX_EXECUTION_TIME(8000)` query baru di produksi: hasil identik · processlist pasca-KILL bersih. Deploy + verifikasi boot tanpa convoy tercatat menyusul.
+**Verifikasi:** svelte-check 0 error · `pnpm --filter app build` sukses · `tsc --noEmit` packages/db exit 0 · EXPLAIN + uji `MAX_EXECUTION_TIME(8000)` query baru di produksi: hasil identik · processlist pasca-KILL bersih. Deploy Coolify `lstirviszgftvlfahhbou5qv` finished 23:06 WIB → container `nqsjafrei6k8dkup1pxkcuwf-20261117T160132` image tag `dd507e4a…` · **boot log bersih** (cron 12 job, 0 ALTER / 0 MDL wait — guard information_schema terbukti) · processlist produksi bersih (0 query >5s) · route /layanan /pesanan /admin/categories 303, /login 200 · index `idx_provider_service` ada (cardinality 8.357) · query populer instan hasil identik (4557/165 · 7137/87 · 4509/33) · state P9 persist: 911 kategori, p10 svc=1, routing=0.
 
 ## Belum / Perlu Konfirmasi Owner
 - C1 banner copy: Midtrans nonaktif → BCA flow. Kalau Midtrans diaktifkan, query tetap valid, tapi CTA perlu berubah ke QR sheet.
@@ -459,6 +459,7 @@ Legenda: ✅ selesai+live · 🔍 verify-only (sudah sesuai, tanpa kode) · ⏸�
 | P7 | Konfirmasi routing TikTok | 🔍 verify-only | read-only; deviasi 465 svc TikTok "[Organic Growth Package]" di SMMturk → owner: biarkan |
 | P8 | **Revert semua layanan ke SMMturk** | ✅ LIVE | **9 Nov 2026** — data-only, tanpa commit kode: routing 233→0, SMMfollows orderable 704→0, SMMturk 6.559→7.722; snapshot rollback `routing_snapshot_20261109` + `smmfollow_active_snapshot_20261109`; provider id 10 DIPERTAHANKAN supaya order lama tetap ter-poll |
 | P9 | Bersih-bersih kategori SMMfollows (data + UI admin) | ✅ LIVE | **1a2f742 (17 Nov)** — 7.553 svc p10 + 947 kategori dihapus (snapshot `*_20261117`), 19 shared ter-restore; helper filter provider dorman; 911 kategori, 0 duplikat/0 kosong |
+| P10 | MDL convoy boot + query populer `/pesanan` | ✅ LIVE | **dd507e4 (17 Nov)** — guard information_schema 25 ALTER boot + aggregate-first + index `idx_provider_service`; mitigasi KILL 4 query macet; boot bersih 0 ALTER, processlist bersih, hasil query identik |
 
 **Deploy batch sesi ini:** 3 commit (4988b5a E3/E4 · a3a3a09 E6 · 0010967 docs) → push `da0a106..0010967 → main` → L3 0 findings → Coolify finished → container tag 0010967fbab1 (Up).
 
