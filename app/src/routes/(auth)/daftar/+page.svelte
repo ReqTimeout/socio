@@ -9,7 +9,8 @@
   let password = $state("");
   let showPassword = $state(false);
   let capsLockOn = $state(false);
-  let mode = $state<"member" | "reseller">("member");
+  // WP1: pra-pilih tab dari ?mode (load → data.initialMode); default member.
+  let mode = $state<"member" | "reseller">(data.initialMode ?? "member");
 
   function checkCapsLock(e: KeyboardEvent) {
     capsLockOn = e.getModifierState?.("CapsLock") ?? false;

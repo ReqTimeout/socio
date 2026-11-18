@@ -261,6 +261,21 @@
       transform: translateY(-6px) rotate(1deg);
     }
   }
+  /* Crown "hot" di eyebrow reseller — float + tilt kecil terus-menerus.
+     Hanya transform (GPU), mati di reduced-motion. */
+  .hot-crown {
+    display: inline-flex;
+    animation: hot-crown-float 2.4s ease-in-out infinite;
+  }
+  @keyframes hot-crown-float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-2px) rotate(6deg);
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .pop-in {
       opacity: 1;
@@ -269,6 +284,7 @@
     .pop-in.is-visible,
     .wiggle-once,
     .float-slow,
+    .hot-crown,
     .notif-dot,
     .notif-badge {
       animation: none;

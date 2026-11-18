@@ -29,6 +29,8 @@
     newsSplit,
   } from "$lib/news-meta";
   import NewsDetailSheet from "$lib/components/NewsDetailSheet.svelte";
+  import FirstDepositNudge from "$lib/components/FirstDepositNudge.svelte";
+  import CouponTicket from "$lib/components/CouponTicket.svelte";
 
   let { data, form } = $props();
 
@@ -379,6 +381,12 @@
     </div>
   </header>
 
+  <!-- WP6 L1: nudge deposit pertama (server decide: null bila sudah pernah
+       deposit / gate aktivasi aktif). Dismiss per browser di dalam komponen. -->
+  {#if data.firstDeposit}
+    <FirstDepositNudge nudge={data.firstDeposit} />
+  {/if}
+
   <!-- Desktop 2 kolom: banner berdampingan dgn box saldo (user: banner full-width kegedean).
        Mobile urutan tetap: banner → saldo → tiles. -->
   <div class="grid gap-3 lg:gap-4 lg:grid-cols-2 lg:items-stretch">
@@ -398,6 +406,13 @@
           deposit7: data.chart.deposits.reduce((a: number, b: number) => a + b, 0),
         }}
       />
+      <!-- Kupon publik aktif (kode global) → strip tiket compact tepat di bawah
+           hero saldo. Render null saat tidak ada kupon aktif → tidak makan ruang. -->
+      {#if data.promoCoupon}
+        <div class="mt-3">
+          <CouponTicket coupon={data.promoCoupon} />
+        </div>
+      {/if}
     </div>
   </div>
 

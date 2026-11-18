@@ -68,6 +68,7 @@ export { default as EmptyAffiliateArt } from "./art/EmptyAffiliate.svelte";
 export { default as SuccessOrderArt } from "./art/SuccessOrder.svelte";
 export { default as SuccessTopupArt } from "./art/SuccessTopup.svelte";
 export { default as SuccessArt } from "./art/SuccessArt.svelte";
+export { default as ResellerArt } from "./art/ResellerArt.svelte";
 
 export { haptic } from "./haptic.js";
 export {

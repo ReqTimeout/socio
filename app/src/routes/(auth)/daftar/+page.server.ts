@@ -15,6 +15,13 @@ const REF_COOKIE = "r_pr";
 export const load: PageServerLoad = async ({ locals, cookies, url }) => {
   if (locals.session) throw redirect(303, "/");
 
+  // WP1: ?mode=reseller (CTA halaman money/reseller) → pra-pilih tab Reseller.
+  // Default member; hanya nilai "reseller" yang dikenali (nilai lain → member).
+  const modeParam = String(url.searchParams.get("mode") ?? "")
+    .trim()
+    .toLowerCase();
+  const initialMode: "member" | "reseller" = modeParam === "reseller" ? "reseller" : "member";
+
   // ?r=username → catat sebagai referral cookie, lalu redirect tanpa query
   const ref = String(url.searchParams.get("r") ?? "").trim();
   if (ref) {
@@ -24,7 +31,8 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
       sameSite: "lax",
       secure: false,
     });
-    throw redirect(303, "/daftar");
+    // Jaga niat reseller tetap terbawa melewati redirect bersih referral.
+    throw redirect(303, initialMode === "reseller" ? "/daftar?mode=reseller" : "/daftar");
   }
 
   let referrer: { username: string } | null = null;
@@ -38,7 +46,7 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
     if (u) referrer = u;
   }
 
-  return { turnstileSitekey: dev ? "" : TURNSTILE_SITEKEY, referrer };
+  return { turnstileSitekey: dev ? "" : TURNSTILE_SITEKEY, referrer, initialMode };
 };
 
 export const actions: Actions = {

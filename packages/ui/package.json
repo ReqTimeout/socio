@@ -9,6 +9,7 @@
     "./theme.css": "./src/theme.css",
     "./app.css": "./src/app.css",
     "./components/*": "./src/components/*.svelte",
+    "./art/*": "./src/art/*.svelte",
     ".": {
       "types": "./src/index.ts",
       "svelte": "./src/index.ts",

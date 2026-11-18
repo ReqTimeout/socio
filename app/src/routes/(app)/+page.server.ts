@@ -7,11 +7,13 @@ import {
   services,
   news,
   users,
+  coupons,
 } from "@socio/db/schema";
-import { eq, desc, and, gte, sql, lte, or, isNull, asc, inArray } from "drizzle-orm";
+import { eq, desc, and, gte, gt, lt, sql, lte, or, isNull, asc, inArray } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
 import { getSetting } from "$lib/server/admin";
-import { whitelabel } from "$lib/format";
+import { whitelabel, getResellerBonus } from "$lib/format";
+import { getFirstDepositNudge } from "$lib/server/first-deposit";
 import { orderableServiceSql, decorateCategoryRows } from "$lib/server/category-visibility";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -115,8 +117,9 @@ export const load: PageServerLoad = async ({ locals }) => {
     leftText: string | null;
   } | null = null;
   if ((locals.user as any)?.level === "Reseller") {
-    const bonusEnv = Number(process.env.SOCIO_RESELLER_BONUS ?? 20000);
-    const bonus = Number.isFinite(bonusEnv) && bonusEnv >= 0 ? Math.round(bonusEnv) : 20000;
+    // Single-source getter (env SOCIO_RESELLER_BONUS) — angka sama dengan
+    // invoice aktivasi + email WP6.
+    const bonus = getResellerBonus();
     try {
       const [ru] = await db
         .select({ resellerActivated: users.resellerActivated })
@@ -514,10 +517,68 @@ export const load: PageServerLoad = async ({ locals }) => {
     banners = DUMMY_BANNERS;
   }
 
+  // Kupon PUBLIK (kode global, tabel `coupons`) → strip tiket compact di bawah
+  // SaldoHero. Ambil satu terbaik: aktif + belum tamat + kuota belum habis
+  // (max_usage=0 = tanpa batas), urut diskon terbesar. Read-only, hemat 1 query,
+  // dibungkus try/catch — kegagalan tidak boleh menjatuhkan dashboard.
+  type PromoCoupon = {
+    code: string;
+    type: "percent" | "fixed";
+    value: number;
+    minOrder: number;
+    hasExpiry: boolean;
+    daysLeft: number;
+  };
+  let promoCoupon: PromoCoupon | null = null;
+  try {
+    const now = new Date();
+    const rows = await db
+      .select({
+        code: coupons.code,
+        type: coupons.type,
+        value: coupons.value,
+        minOrder: coupons.minOrder,
+        expiresAt: coupons.expiresAt,
+      })
+      .from(coupons)
+      .where(
+        and(
+          eq(coupons.active, "1"),
+          or(isNull(coupons.expiresAt), gt(coupons.expiresAt, now)),
+          or(eq(coupons.maxUsage, 0), lt(coupons.used, coupons.maxUsage)),
+        ),
+      )
+      .orderBy(desc(coupons.value), asc(coupons.id))
+      .limit(1);
+    const r = rows[0];
+    if (r) {
+      promoCoupon = {
+        code: r.code,
+        type: r.type,
+        value: Number(r.value),
+        minOrder: Number(r.minOrder),
+        hasExpiry: r.expiresAt != null,
+        // Sisa hari (pembulatan ke atas, minimum 0) — countdown nyata dari expiresAt.
+        daysLeft: r.expiresAt
+          ? Math.max(0, Math.ceil((new Date(r.expiresAt).getTime() - now.getTime()) / 86_400_000))
+          : 0,
+      };
+    }
+  } catch {
+    promoCoupon = null;
+  }
+
   return {
     recent,
     banners,
     activation,
+    promoCoupon,
+    // WP6 L1: nudge deposit pertama — keputusan tampil di server (null bila
+    // sudah pernah deposit / gate aktivasi reseller aktif).
+    firstDeposit: await getFirstDepositNudge(userId, {
+      totalDeposit: Number(statDeposit[0]?.total ?? 0),
+      activationRequired: !!activation?.required,
+    }),
     categories: catRows,
     activeOrders: Number(statActive[0]?.count ?? 0),
     quickOrders,
