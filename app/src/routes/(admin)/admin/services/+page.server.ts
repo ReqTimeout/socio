@@ -3,7 +3,13 @@ import { services, categories, provider, pricingRules } from "@socio/db/schema";
 import { sql, eq, and, or, desc, asc } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
-import { listCategoryRowsLite, setCategoryStatus } from "$lib/server/category-admin";
+import {
+  listCategoryRows,
+  setCategoryStatus,
+  servingCatalogWhere,
+} from "$lib/server/category-admin";
+import { getActiveProviderId, getCategoryRoutingMap } from "$lib/server/active-provider";
+import type { ServingContext } from "$lib/catalog-counts";
 import type { Actions, PageServerLoad } from "./$types";
 
 const PAGE_SIZE = 25;
@@ -58,11 +64,28 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const q = String(url.searchParams.get("q") ?? "").trim();
   const cat = String(url.searchParams.get("cat") ?? "").trim();
   const status = String(url.searchParams.get("status") ?? "").trim();
+  const scopeParam = String(url.searchParams.get("scope") ?? "").trim();
   const rawP = Number(url.searchParams.get("p") ?? 1);
   const page = Number.isFinite(rawP) && rawP >= 1 && rawP <= 1000 ? rawP : 1; // A-15
 
+  // F13 — "siapa yang melayani" dibaca DULU karena filter katalog bergantung
+  // padanya. Kedua getter cache 30s, jadi kosnya satu trip kecil saat cache dingin.
+  const [routingMapP, activeProvId] = await Promise.all([
+    getCategoryRoutingMap(),
+    getActiveProviderId(),
+  ]);
+  const servingCtx: ServingContext = { activeProviderId: activeProvId, routing: routingMapP };
+  const servingWhere = servingCatalogWhere(servingCtx);
+  // Default = katalog yang benar-benar bisa di-order. `?scope=all` membuka arsip
+  // provider lain. servingWhere undefined = tidak ada provider sah → jangan
+  // tampilkan halaman kosong yang tidak bisa diperbaiki admin dari sini.
+  const scope: "serving" | "all" = scopeParam === "all" ? "all" : "serving";
+  const scopeActive = scope === "serving" && !!servingWhere;
+  const scopeWhere = scopeActive ? servingWhere : undefined;
+
   // filters
   const conds: any[] = [];
+  if (scopeWhere) conds.push(scopeWhere);
   if (q) {
     conds.push(
       or(
@@ -76,7 +99,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   if (status) conds.push(eq(services.status, status === "1" ? 1 : 0));
   const where = conds.length ? and(...conds) : undefined;
 
-  const [rows, totalRow, statsRow, catRows, provRows, ruleRows] = await Promise.all([
+  const [rows, totalRow, statsRow, allRow, catRows, provRows, ruleRows] = await Promise.all([
     db
       .select({
         id: services.id,
@@ -110,36 +133,60 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       .select({
         total: sql<number>`count(*)`,
         active: sql<number>`SUM(CASE WHEN ${services.status} = 1 THEN 1 ELSE 0 END)`,
-        categories: sql<number>`(SELECT COUNT(*) FROM categories)`,
+      })
+      .from(services)
+      .where(scopeWhere),
+    // Tanpa filter — untuk menghitung berapa baris arsip yang scope=serving sembunyikan.
+    db
+      .select({
+        total: sql<number>`count(*)`,
+        active: sql<number>`SUM(CASE WHEN ${services.status} = 1 THEN 1 ELSE 0 END)`,
       })
       .from(services),
-    // Daftar kategori + hitungan total/aktif (rail kiri). Query-nya di helper
-    // category-admin supaya rail di halaman ini dan /admin/categories pakai
-    // sumber yang sama.
-    listCategoryRowsLite(),
+    // F13 — SATU helper dengan /admin/categories: hitungan serving vs legacy +
+    // health dihitung di tempat yang sama, jadi rail kiri tidak bisa bicara
+    // lain dari tabel kategori (punca "ga relate").
+    listCategoryRows(),
     db.select({ id: provider.id, name: provider.name }).from(provider).orderBy(asc(provider.name)),
     // E1 (.my 2026-11-01): pricing_rules ikut batch paralel — buang 1 trip sekuensial.
     db.select().from(pricingRules),
   ]);
 
   const total = Number(totalRow[0]?.total ?? 0);
-  const s = statsRow[0] ?? { total: 0, active: 0, categories: 0 };
+  const s = statsRow[0] ?? { total: 0, active: 0 };
+  const a = allRow[0] ?? { total: 0, active: 0 };
+
+  const servingProviderName =
+    activeProvId !== null
+      ? (provRows.find((p) => Number(p.id) === activeProvId)?.name ?? null)
+      : null;
 
   return {
     services: rows,
     categories: catRows,
     providers: provRows,
     pricingRules: ruleRows,
+    activeProviderId: activeProvId ?? null,
+    servingProviderName,
     q,
     cat,
     status,
+    scope,
+    scopeActive,
     page,
     total,
     pages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
     stats: {
       total: Number(s.total ?? 0),
       active: Number(s.active ?? 0),
-      categories: Number(s.categories ?? 0),
+      allTotal: Number(a.total ?? 0),
+      allActive: Number(a.active ?? 0),
+      // Baris yang scope=serving sembunyikan (katalog provider tidak melayani).
+      archived: Math.max(0, Number(a.total ?? 0) - Number(s.total ?? 0)),
+      categories: catRows.length,
+      servingCategories: catRows.filter((c) => c.servingTotal > 0).length,
+      archivedCategories: catRows.filter((c) => c.health === "archived").length,
+      emptyCategories: catRows.filter((c) => c.total === 0).length,
     },
   };
 };
@@ -508,7 +555,9 @@ export const actions: Actions = {
    * satu kategori lewat rail "Kelola Kategori". TULIS tag `[manual-off]` (kontrak
    * F2) saat OFF supaya service-sync TIDAK meng-reaktivasi-nya tiap jam; saat ON
    * hanya layanan yang KITA matikan manual (status=0 + bertag) yang dinyalakan
-   * balik — layanan yang dimatikan sync (provider hilang, tanpa tag) tetap off.
+   * balik — dan HANYA dari provider yang sah (routing target, else provider
+   * aktif global — W1, lihat helper). Layanan yang dimatikan sync (provider
+   * hilang, tanpa tag) tetap off.
    * Disengaja TIDAK membatalkan order aktif (konsisten dgn toggleStatus per
    * layanan) — admin membatalkan order terpisah kalau perlu.
    *
@@ -529,6 +578,15 @@ export const actions: Actions = {
     const res = await setCategoryStatus(cid, mode);
     if (!res.ok) {
       if (res.reason === "not_found") return fail(404, { error: "Kategori tidak ditemukan." });
+      // W1: tidak ada provider sah / tidak ada baris memenuhi → helper tidak menulis DB.
+      if (res.reason === "no_active_provider")
+        return fail(409, {
+          error: "Tidak ada provider aktif — kategori tidak diubah. Aktifkan provider dulu.",
+        });
+      if (res.reason === "no_serving_services")
+        return fail(409, {
+          error: `Kategori ${res.name ? `"${res.name}"` : `#${cid}`} tidak punya layanan manual-off dari provider yang melayani — tidak ada yang dihidupkan.`,
+        });
       return fail(400, { error: "Kategori tidak valid." });
     }
     await logAudit({

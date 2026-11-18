@@ -3,9 +3,12 @@
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { formatRupiah } from "$lib/format";
+  import CategoryHealthBadge from "$lib/components/CategoryHealthBadge.svelte";
+  import { canToggleCategory, toggleAffected, toggleWillTurnOff } from "$lib/catalog-counts";
   import type { ActionData, PageData } from "./$types";
 
   type SvcRow = PageData["services"][number];
+  type CatRow = PageData["categories"][number];
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
   let q = $state("");
@@ -20,11 +23,7 @@
   function onSearch() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
-      const u = new URLSearchParams();
-      if (q) u.set("q", q);
-      if (data.cat) u.set("cat", data.cat);
-      if (data.status) u.set("status", data.status);
-      goto(`/admin/services?${u.toString()}`, { keepFocus: true, noScroll: true });
+      goto(href({ q }), { keepFocus: true, noScroll: true });
     }, 350);
   }
 
@@ -168,7 +167,11 @@
   // /admin/categories lewat $lib/server/category-admin, jadi kontrak
   // [manual-off] tidak bisa drift antar dua halaman.
   let railQ = $state("");
-  let railSt = $state<"" | "on" | "off">("");
+  // F13 — scope rail ikut HEALTH (provider yang melayani), bukan active/total
+  // mentah. Kategori arsip disembunyikan dari rail default supaya entri mati
+  // tidak menenggelamkan katalog yang bisa diurus; ia ada di chip "Arsip"
+  // sendiri dan di /admin/categories.
+  let railSt = $state<"" | "live" | "off" | "archived">("");
   let railLimit = $state(150);
   // Mobile: rail jadi blok collapsible di atas toolbar supaya layar tetap lega.
   let railOpen = $state(false);
@@ -180,55 +183,81 @@
 
   const railAll = $derived.by(() => {
     const needle = railQ.trim().toLowerCase();
+    const selId = Number(data.cat);
     return data.categories.filter((c) => {
       if (needle && !c.name.toLowerCase().includes(needle)) return false;
-      if (railSt === "on" && c.active === 0) return false;
-      if (railSt === "off" && !(c.total > 0 && c.active === 0)) return false;
+      if (railSt === "archived") return c.health === "archived";
+      // Kategori terpilih selalu tetap tampil supaya rail tidak kehilangan
+      // konteks walaupun ia arsip (owner sampai via link ?cat=).
+      if (c.health === "archived" && data.scope !== "all" && c.id !== selId) return false;
+      if (railSt === "live" && c.servingActive === 0) return false;
+      if (railSt === "off" && c.health !== "off") return false;
       return true;
     });
   });
   const railShown = $derived(railAll.slice(0, railLimit));
   const selCat = $derived(data.categories.find((c) => Number(data.cat) === c.id) ?? null);
+  // Chip rail — label pendek supaya empat chip muat di rail 320px tanpa pecah baris.
+  const railChip = (on: boolean, active: string) =>
+    `inline-flex h-7 flex-1 items-center justify-center rounded-full border px-1.5 text-[10px] font-bold transition-colors ${
+      on ? active : "border-ink-200 bg-surface text-ink-500 hover:border-ink-300"
+    }`;
 
-  function toggleCat(c: { id: number; name: string; total: number; active: number }) {
-    const off = c.active > 0;
+  function toggleCat(c: CatRow) {
+    // F13 — arah + jumlah dari helper yang SAMA dengan server (planCategoryToggle):
+    // OFF = baris aktif semua provider; ON = baris manual-off provider serving.
+    // Dulu UI janji c.total untuk enable, sedangkan server hanya menyentuh
+    // katalog serving yang bertag.
+    const off = toggleWillTurnOff(c);
+    const affected = toggleAffected(c);
+    const pname = c.servingProviderName ?? "tanpa provider sah";
     confirm = {
       open: true,
       title: off ? `Matikan SEMUA layanan di "${c.name}"?` : `Nyalakan kembali "${c.name}"?`,
       message: off
-        ? `Semua ${c.total} layanan aktif pada kategori ini dinonaktifkan sekaligus (tag manual-off, tahan dari auto-reaktivasi sync). Pesanan berjalan TIDAK dibatalkan — batalkan terpisah bila perlu.`
-        : "Hanya layanan yang DIMATIKAN MANUAL oleh aksi ini yang dinyalakan balik. Layanan yang hilang dari provider (dimatikan sync) tetap nonaktif.",
+        ? `Semua ${affected} layanan aktif pada kategori ini dinonaktifkan sekaligus (tag manual-off, tahan dari auto-reaktivasi sync). Pesanan berjalan TIDAK dibatalkan — batalkan terpisah bila perlu.`
+        : `${affected} layanan manual-off dari provider ${pname} akan dihidupkan lagi. Katalog provider lain tidak disentuh; layanan yang dimatikan sync (hilang dari provider) tetap nonaktif.`,
       label: off ? "Ya, Matikan Semua" : "Ya, Nyalakan Semua",
       danger: off,
       action: () => runCategoryToggle(c.id, c.name, off ? "off" : "on"),
     };
   }
 
-  const hasFilter = $derived(!!(data.q || data.cat || data.status));
+  const hasFilter = $derived(!!(data.q || data.cat || data.status || data.scope === "all"));
 
-  function chipHref(c: number | null) {
+  // F13 — SATU pembina URL untuk semua chip / pagination / search. Sebelumnya
+  // empat fungsi membina query sendiri dan masing-masing tertinggal parameter:
+  // chipHref lupa `status`, jadi klik kategori membuang filter status aktif.
+  // Semua lewat sini supaya tidak bisa drift lagi.
+  function href(
+    patch: {
+      q?: string;
+      cat?: number | null;
+      status?: "" | "1" | "0";
+      scope?: "serving" | "all";
+      p?: number;
+    } = {},
+  ) {
     const u = new URLSearchParams();
-    if (data.q) u.set("q", data.q);
-    if (c !== null) u.set("cat", String(c));
+    const qv = patch.q ?? data.q;
+    if (qv) u.set("q", qv);
+    const cat = patch.cat === undefined ? data.cat : patch.cat ? String(patch.cat) : "";
+    if (cat) u.set("cat", cat);
+    const st = patch.status ?? data.status;
+    if (st) u.set("status", st);
+    // scope=serving adalah default server → tidak ditulis (URL tetap bersih).
+    // "all" WAJIB dibawa tiap navigasi, kalau tidak owner balik ke serving
+    // secara senyap setelah klik chip / halaman.
+    if ((patch.scope ?? data.scope) === "all") u.set("scope", "all");
+    // p hanya bila diminta: ganti filter = balik halaman 1 (kelakuan lama).
+    if (patch.p !== undefined) u.set("p", String(patch.p));
     const qs = u.toString();
-    return qs ? `/admin/services?${qs}` : "/admin/services";
+    return qs ? `/admin/services?${qs}` : `/admin/services`;
   }
-  function statusChipHref(s: "" | "1" | "0") {
-    const u = new URLSearchParams();
-    if (data.q) u.set("q", data.q);
-    if (data.cat) u.set("cat", data.cat);
-    if (s) u.set("status", s);
-    const qs = u.toString();
-    return qs ? `/admin/services?${qs}` : "/admin/services";
-  }
-  function pageHref(p: number) {
-    const u = new URLSearchParams();
-    if (data.q) u.set("q", data.q);
-    if (data.cat) u.set("cat", data.cat);
-    if (data.status) u.set("status", data.status);
-    u.set("p", String(p));
-    return `/admin/services?${u.toString()}`;
-  }
+  const chipHref = (c: number | null) => href({ cat: c });
+  const statusChipHref = (s: "" | "1" | "0") => href({ status: s });
+  const scopeHref = (sc: "serving" | "all") => href({ scope: sc });
+  const pageHref = (p: number) => href({ p });
   const pageList = $derived.by<(number | "…")[]>(() => {
     const total = data.pages;
     const cur = data.page;
@@ -284,13 +313,17 @@
         <span class="mx-1 text-ink-300">·</span>
         <span class="font-semibold text-success">{fmt(data.stats.active)}</span> aktif
         <span class="mx-1 text-ink-300">·</span>
-        <span class="font-semibold text-primary-ink">{fmt(data.stats.categories)}</span> kategori
+        <span class="font-semibold text-primary-ink">
+          {fmt(data.scopeActive ? data.stats.servingCategories : data.stats.categories)}
+        </span>
+        kategori
       </p>
     </div>
     <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
       <form method="GET" class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         {#if data.cat}<input type="hidden" name="cat" value={data.cat} />{/if}
         {#if data.status}<input type="hidden" name="status" value={data.status} />{/if}
+        {#if data.scope === "all"}<input type="hidden" name="scope" value="all" />{/if}
         <div class="relative w-full min-w-0 flex-1 sm:w-72">
           <span
             class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-ink-400"
@@ -316,6 +349,45 @@
           </a>
         {/if}
       </form>
+      <!-- F13 — cakupan katalog. Default = hanya provider yang BENAR-BENAR
+           melayani (yang pelanggan bisa order). Dulu halaman ini campur baris
+           provider dorman dengan katalog serving, jadi angka di sini tidak
+           relate dengan kategori. -->
+      <div
+        class="inline-flex h-10 shrink-0 items-center gap-0.5 rounded-full border border-ink-200 bg-ink-50 p-0.5"
+        role="group"
+        aria-label="Cakupan katalog"
+      >
+        <a
+          href={scopeHref("serving")}
+          aria-current={data.scope === "serving" ? "page" : undefined}
+          title="Hanya layanan dari provider yang benar-benar melayani tiap kategori — inilah yang bisa dipesan pelanggan."
+          class="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-all {data.scope ===
+          'serving'
+            ? 'bg-surface text-ink-900 shadow-sm'
+            : 'text-ink-500 hover:text-ink-700'}"
+        >
+          <Icon name="zap" size={12} stroke={2.5} />
+          Serving
+        </a>
+        <a
+          href={scopeHref("all")}
+          aria-current={data.scope === "all" ? "page" : undefined}
+          title="Turut tampilkan layanan arsip dari provider yang sudah tidak melayani."
+          class="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-all {data.scope ===
+          'all'
+            ? 'bg-surface text-ink-900 shadow-sm'
+            : 'text-ink-500 hover:text-ink-700'}"
+        >
+          Semua
+          {#if data.stats.archived > 0}
+            <span
+              class="rounded-full bg-ink-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-ink-500"
+              >{fmt(data.stats.archived)}</span
+            >
+          {/if}
+        </a>
+      </div>
       <button
         type="button"
         onclick={openAdd}
@@ -359,7 +431,9 @@
       <div class="mt-1.5 font-display text-xl font-extrabold tabular-nums sm:text-2xl">
         {fmt(data.stats.total)}
       </div>
-      <div class="mt-0.5 text-[10px] text-ink-400 sm:text-[11px]">layanan terdaftar</div>
+      <div class="mt-0.5 text-[10px] text-ink-400 sm:text-[11px]">
+        {data.scopeActive ? "katalog provider serving" : "layanan terdaftar"}
+      </div>
     </div>
     <div
       class="reveal rounded-2xl border border-success-soft bg-success-soft/30 p-3.5 sm:p-4"
@@ -392,7 +466,7 @@
       <div
         class="mt-1.5 font-display text-xl font-extrabold tabular-nums sm:text-2xl text-primary-ink"
       >
-        {fmt(data.stats.categories)}
+        {fmt(data.scopeActive ? data.stats.servingCategories : data.stats.categories)}
       </div>
       <div class="mt-0.5 text-[10px] text-ink-500 sm:text-[11px]">grup layanan</div>
     </div>
@@ -416,7 +490,7 @@
           </span>
           <span class="mt-0.5 block text-[10px] tabular-nums text-ink-500">
             {selCat
-              ? `${selCat.active}/${selCat.total}`
+              ? `${selCat.servingActive}/${selCat.servingTotal}`
               : `${fmt(data.categories.length)} kategori`}
           </span>
         </span>
@@ -442,30 +516,30 @@
               class="h-9 w-full rounded-xl border border-ink-200 bg-ink-50 pl-9 pr-3 text-xs focus:border-primary-500 focus:bg-surface focus:outline-none"
             />
           </div>
-          <div class="flex gap-1">
+          <div class="flex gap-1" role="group" aria-label="Filter kesehatan kategori">
             <button
               type="button"
               onclick={() => (railSt = "")}
-              class="inline-flex h-7 flex-1 items-center justify-center rounded-full border px-2 text-[10px] font-bold transition-colors {railSt ===
-              ''
-                ? 'border-transparent bg-ink-900 text-ink-50'
-                : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}">Semua</button
+              class={railChip(railSt === "", "border-transparent bg-ink-900 text-ink-50")}
+              >Semua</button
             >
             <button
               type="button"
-              onclick={() => (railSt = "on")}
-              class="inline-flex h-7 flex-1 items-center justify-center rounded-full border px-2 text-[10px] font-bold transition-colors {railSt ===
-              'on'
-                ? 'border-transparent bg-success text-white'
-                : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}">Aktif</button
+              onclick={() => (railSt = "live")}
+              class={railChip(railSt === "live", "border-transparent bg-success text-white")}
+              >Aktif</button
             >
             <button
               type="button"
               onclick={() => (railSt = "off")}
-              class="inline-flex h-7 flex-1 items-center justify-center rounded-full border px-2 text-[10px] font-bold transition-colors {railSt ===
-              'off'
-                ? 'border-transparent bg-ink-700 text-white'
-                : 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300'}">Mati</button
+              class={railChip(railSt === "off", "border-transparent bg-ink-700 text-white")}
+              >Mati</button
+            >
+            <button
+              type="button"
+              onclick={() => (railSt = "archived")}
+              class={railChip(railSt === "archived", "border-transparent bg-ink-500 text-white")}
+              >Arsip</button
             >
           </div>
         </div>
@@ -481,6 +555,10 @@
             Semua kategori
           </a>
           {#each railShown as c (c.id)}
+            {@const willOff = toggleWillTurnOff(c)}
+            <!-- Arsip yang sudah OFF semua: enable akan ditolak server, jadi
+                 jangan tampil switch mati yang hanya menghasilkan toast gagal. -->
+            {@const canTgl = canToggleCategory(c)}
             <div
               class="flex items-center gap-1 rounded-xl transition-colors hover:bg-ink-50 {Number(
                 data.cat,
@@ -496,35 +574,42 @@
                 <!-- Nama kategori panjang (emoji + bracket) — jangan truncate:
                    wrap maks 2 baris biar kebaca di rail maupun view mobile. -->
                 <span
-                  class="line-clamp-2 break-words text-xs font-bold leading-snug {c.active === 0
+                  class="line-clamp-2 break-words text-xs font-bold leading-snug {c.health ===
+                    'archived' || c.health === 'empty'
                     ? 'text-ink-300'
-                    : 'text-ink-700'}">{c.name}</span
+                    : c.servingActive === 0
+                      ? 'text-ink-400'
+                      : 'text-ink-700'}">{c.name}</span
                 >
-                <span
-                  class="mt-0.5 ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums {c.active ===
-                  0
-                    ? 'bg-ink-50 text-ink-300'
-                    : 'bg-ink-100 text-ink-600'}">{c.active}/{c.total}</span
-                >
+                <span class="mt-0.5 ml-auto shrink-0">
+                  <CategoryHealthBadge
+                    compact
+                    health={c.health}
+                    servingActive={c.servingActive}
+                    servingTotal={c.servingTotal}
+                    legacyTotal={c.legacyTotal}
+                    legacyActive={c.legacyActive}
+                  />
+                </span>
               </a>
-              {#if c.total > 0}
+              {#if canTgl}
                 <button
                   type="button"
                   role="switch"
-                  aria-checked={c.active > 0}
+                  aria-checked={willOff}
                   onclick={() => toggleCat(c)}
-                  class="relative mr-1 mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors {c.active >
-                  0
-                    ? 'bg-success'
+                  class="relative mr-1 mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors {willOff
+                    ? c.servingActive === 0 && c.legacyActive > 0
+                      ? 'bg-danger'
+                      : 'bg-success'
                     : 'bg-ink-300'}"
-                  aria-label={c.active > 0
+                  aria-label={willOff
                     ? `Matikan semua layanan di ${c.name}`
                     : `Nyalakan kembali ${c.name}`}
-                  title={c.active > 0 ? "Matikan semua" : "Nyalakan semua"}
+                  title={willOff ? "Matikan semua" : "Nyalakan semua"}
                 >
                   <span
-                    class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform {c.active >
-                    0
+                    class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform {willOff
                       ? 'translate-x-[18px]'
                       : 'translate-x-[2px]'}"
                   ></span>
@@ -563,6 +648,122 @@
     </aside>
 
     <div class="min-w-0 space-y-5">
+      {#if data.scopeActive && data.stats.archived > 0}
+        <div
+          class="flex flex-wrap items-center gap-2 rounded-2xl border border-primary-100 bg-primary-50/60 px-3.5 py-2.5 text-xs text-ink-600"
+        >
+          <Icon name="zap" size={14} stroke={2.5} class="shrink-0 text-primary-ink" />
+          <span class="min-w-0 flex-1">
+            {#if data.servingProviderName}
+              Menampilkan katalog {data.servingProviderName} — provider yang melayani.
+              {fmt(data.stats.archived)} layanan arsip dari provider lain disembunyikan.
+            {:else}
+              Menampilkan katalog serving saja. {fmt(data.stats.archived)} layanan arsip dari provider
+              lain disembunyikan.
+            {/if}
+          </span>
+          <a
+            href={scopeHref("all")}
+            class="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-surface px-3 text-[11px] font-bold text-ink-700 ring-1 ring-ink-200 transition-colors hover:bg-ink-50"
+          >
+            Lihat semua
+            <Icon name="chevron_down" size={11} stroke={2.5} class="-rotate-90" />
+          </a>
+        </div>
+      {:else if !data.scopeActive && data.activeProviderId === null}
+        <!-- Tanpa provider aktif = filter serving tidak bisa dibangun. Jangan
+             tampil halaman kosong yang tidak bisa diperbaiki dari sini. -->
+        <div
+          class="flex items-start gap-2 rounded-2xl bg-warning-soft px-3.5 py-2.5 text-xs font-medium text-warning"
+        >
+          <Icon name="alert" size={14} stroke={2.5} class="mt-0.5 shrink-0" />
+          <span>
+            Tidak ada provider aktif — filter serving dilewati, semua baris ditampilkan. Atur satu
+            di halaman Provider.
+          </span>
+        </div>
+      {/if}
+
+      <!-- Band konteks kategori terpilih — jembatan langsung antara halaman ini
+           dan /admin/categories: nama + kesehatan + provider serving + toggle,
+           semua dari helper yang sama. Owner tidak perlu menebak lagi "kategori
+           ini punya berapa layanan yang bisa di-order". -->
+      {#if selCat}
+        {@const bandOff = toggleWillTurnOff(selCat)}
+        <div
+          class="rounded-2xl border border-ink-100 bg-surface p-3.5 shadow-sm"
+          role="group"
+          aria-label="Kategori terpilih"
+        >
+          <div class="flex flex-wrap items-start gap-3">
+            <span
+              class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-white"
+            >
+              <Icon name="layers" size={16} stroke={2.5} />
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="text-[10px] font-bold uppercase tracking-wide text-ink-400">
+                Kategori terpilih
+              </div>
+              <div class="break-words text-sm font-extrabold leading-snug text-ink-900">
+                {selCat.name}
+              </div>
+              <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <CategoryHealthBadge
+                  health={selCat.health}
+                  servingActive={selCat.servingActive}
+                  servingTotal={selCat.servingTotal}
+                  legacyTotal={selCat.legacyTotal}
+                  legacyActive={selCat.legacyActive}
+                />
+                <span
+                  class="inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-bold text-ink-600"
+                >
+                  <Icon name="zap" size={9} stroke={2.5} />
+                  {selCat.servingProviderName
+                    ? `Dilayani ${selCat.servingProviderName}`
+                    : "Tanpa provider sah"}
+                </span>
+              </div>
+              {#if selCat.legacyTotal > 0}
+                <p class="mt-1.5 text-[11px] text-ink-400">
+                  {fmt(selCat.legacyTotal)} layanan arsip dari provider lain tidak dihitung di sini.
+                </p>
+              {/if}
+            </div>
+            <div class="flex shrink-0 flex-wrap items-center gap-2">
+              {#if canToggleCategory(selCat)}
+                <button
+                  type="button"
+                  onclick={() => selCat && toggleCat(selCat)}
+                  class="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-all active:scale-95 {bandOff
+                    ? 'bg-ink-100 text-ink-700 hover:bg-ink-200'
+                    : 'bg-success text-white hover:brightness-95'}"
+                  title="Matikan atau nyalakan semua layanan di kategori ini"
+                >
+                  <Icon name={bandOff ? "eye_off" : "check"} size={12} stroke={2.5} />
+                  {bandOff ? "Matikan semua" : "Nyalakan semua"}
+                </button>
+              {/if}
+              <a
+                href="/admin/categories?q={encodeURIComponent(selCat.name)}"
+                class="inline-flex h-9 items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-3 text-xs font-bold text-ink-700 transition-colors hover:border-ink-300 hover:bg-ink-50"
+              >
+                <Icon name="edit" size={12} stroke={2.5} />
+                Kelola kategori
+              </a>
+              <a
+                href={chipHref(null)}
+                class="inline-flex h-9 items-center gap-1 rounded-full px-2.5 text-xs font-bold text-ink-500 transition-colors hover:text-ink-700"
+              >
+                <Icon name="x" size={12} stroke={2.5} />
+                Semua layanan
+              </a>
+            </div>
+          </div>
+        </div>
+      {/if}
+
       <!-- Category chips (filter navigation, pakai aria-current — bukan tab role
        karena tidak ada tabpanel dan link ini stand-alone navigation). -->
       <nav

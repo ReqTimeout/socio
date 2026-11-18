@@ -2,6 +2,8 @@
   import { Button, ConfirmDialog, EmptyState, Icon, toast } from "@socio/ui";
   import { enhance } from "$app/forms";
   import { invalidateAll } from "$app/navigation";
+  import CategoryHealthBadge from "$lib/components/CategoryHealthBadge.svelte";
+  import { canToggleCategory, toggleAffected, toggleWillTurnOff } from "$lib/catalog-counts";
   import type { ActionData, PageData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -11,14 +13,18 @@
     title: "Kategori",
     heading: "Kategori",
     back: "Kembali ke Layanan",
-    sub: "{n} kategori · {a} kategori punya layanan aktif",
+    subServing: "{n} kategori · {a} punya katalog serving · {r} arsip",
     addBtn: "Tambah Kategori",
-    colStatus: "Status",
-    colSvc: "Layanan",
+    colServing: "Katalog Serving",
+    colProvider: "Provider",
     search: "Cari kategori…",
     all: "Semua",
     on: "Aktif",
     off: "Mati",
+    archivedOnly: "Arsip",
+    emptyOnly: "Kosong",
+    scopeAria: "Filter kesehatan kategori",
+    noServing: "Tanpa provider sah",
     shown: "{n} dari {m} kategori",
     more: "Muat {n} lagi",
     empty: "Tidak ada kategori yang cocok.",
@@ -26,13 +32,13 @@
     enableTitle: "Nyalakan semua layanan di {n}",
     disableMsg:
       "Semua {m} layanan aktif di kategori ini akan dinonaktifkan (bertag manual-off, tahan dari auto-reaktivasi sync). Pesanan berjalan TIDAK dibatalkan.",
-    enableMsg: "{m} layanan yang sebelumnya dimatikan manual akan diaktifkan lagi.",
+    enableMsgServing:
+      "{m} layanan manual-off dari provider {p} akan dihidupkan lagi. Katalog provider lain tidak disentuh.",
     okOff: "{m} layanan di {n} → Nonaktif",
     okOn: "{m} layanan di {n} → Aktif",
     failed: "Gagal mengubah status kategori",
     routed: "Dirutekan",
     defaultRoute: "Provider Aktif",
-    servedBy: "Dilayani {p}",
     colId: "ID",
     colName: "Nama",
     colAksi: "Aksi",
@@ -43,7 +49,6 @@
     hapusConfirm: "Kategori {n} akan dihapus permanen.",
     deletedOk: "Kategori dihapus.",
     deleteFailed: "Gagal menghapus kategori",
-    active: "Aktif",
     addTitle: "Tambah Kategori",
     editTitle: "Edit Kategori #{n}",
     nama: "Nama kategori",
@@ -58,13 +63,26 @@
 
   type CatRow = PageData["categories"][number];
 
-  // Filter lokal (client-side) — ±1.800 kategori sudah dikirim server, jadi ketik
-  // langsung memfilter tanpa round trip. Nilai awal boleh datang dari URL
+  // Filter lokal (client-side) — semua kategori sudah dikirim server, jadi ketik
+  // langsung memfilter tanpa round trip. Nilai awal bisa datang dari URL
   // (?q=tiktok&st=off) supaya link dari halaman layanan bisa membawa konteks.
   let fq = $state(data.q);
-  let fst = $state<"" | "on" | "off">(data.st === "on" || data.st === "off" ? data.st : "");
+  // F13 — scope ikut HEALTH (provider yang melayani), bukan active/total mentah.
+  // "on" lama = alias "live" supaya URL lama tidak rusak.
+  type Scope = "" | "live" | "off" | "archived" | "empty";
+  const normScope = (v: string): Scope =>
+    v === "on" || v === "live"
+      ? "live"
+      : v === "off"
+        ? "off"
+        : v === "archived"
+          ? "archived"
+          : v === "empty"
+            ? "empty"
+            : "";
+  let fst = $state<Scope>(normScope(data.st));
   // Filter kondisi routing (routed = punya provider eksplisit; default = ikut
-  // provider aktif global). Client-side, sama seperti fq/fst.
+  // provider aktif global). Hanya tampil bila routing benar-benar dipakai.
   let fr = $state<"" | "routed" | "default">("");
   let limit = $state(100);
   $effect(() => {
@@ -78,15 +96,32 @@
     const needle = fq.trim().toLowerCase();
     return data.categories.filter((c) => {
       if (needle && !c.name.toLowerCase().includes(needle)) return false;
-      if (fst === "on" && c.active === 0) return false;
-      if (fst === "off" && !(c.total > 0 && c.active === 0)) return false;
+      if (fst === "live" && c.servingActive === 0) return false;
+      if (fst === "off" && c.health !== "off") return false;
+      if (fst === "archived" && c.health !== "archived") return false;
+      if (fst === "empty" && c.health !== "empty") return false;
       if (fr === "routed" && !c.routingProviderName) return false;
       if (fr === "default" && c.routingProviderId) return false;
       return true;
     });
   });
   const shown = $derived(filtered.slice(0, limit));
-  const withActive = $derived(data.categories.filter((c) => c.active > 0).length);
+  // Jumlah tiap scope ditampilkan di chip supaya owner tahu berapa kerja yang
+  // menanti tanpa perlu klik dulu (kategori arsip = kerja bersih-bersih).
+  const scopeCounts = $derived.by(() => {
+    let live = 0;
+    let off = 0;
+    let archived = 0;
+    let empty = 0;
+    for (const c of data.categories) {
+      if (c.servingTotal > 0) live++;
+      if (c.health === "off") off++;
+      else if (c.health === "archived") archived++;
+      else if (c.health === "empty") empty++;
+    }
+    return { live, off, archived, empty };
+  });
+  const anyRouted = $derived(data.categories.some((c) => c.routingProviderId !== null));
 
   let addOpen = $state(false);
   let editCat = $state<{ id: number; name: string } | null>(null);
@@ -101,14 +136,18 @@
   // Toggle satu kategori = matikan/nyalakan SEMUA layanannya. Jalur SQL-nya sama
   // dengan rail kiri /admin/services ($lib/server/category-admin) — disable selalu
   // bertag [manual-off] sehingga service-sync per jam tidak mengaktifkan ulang.
+  // F13 — arah + jumlah diambil dari helper yang SAMA dengan server, dan pesan
+  // enable menyebut provider serving (enable TIDAK menyentuh katalog arsip).
   function toggleCat(c: CatRow) {
-    const off = c.active > 0;
+    const off = toggleWillTurnOff(c);
+    const affected = toggleAffected(c);
+    const pname = c.servingProviderName ?? C.noServing;
     confirm = {
       open: true,
       title: off ? fill(C.disableTitle, { n: c.name }) : fill(C.enableTitle, { n: c.name }),
       message: off
-        ? fill(C.disableMsg, { m: String(c.total) })
-        : fill(C.enableMsg, { m: String(c.total) }),
+        ? fill(C.disableMsg, { m: String(affected) })
+        : fill(C.enableMsgServing, { m: String(affected), p: pname }),
       danger: off,
       action: async () => {
         const fd = new FormData();
@@ -117,8 +156,8 @@
         if (r.ok) {
           toast(
             off
-              ? fill(C.okOff, { n: c.name, m: String(c.total) })
-              : fill(C.okOn, { n: c.name, m: String(c.total) }),
+              ? fill(C.okOff, { n: c.name, m: String(affected) })
+              : fill(C.okOn, { n: c.name, m: String(affected) }),
             "success",
           );
           await invalidateAll();
@@ -198,7 +237,11 @@
         {C.heading}
       </h1>
       <p class="mt-1.5 text-sm text-ink-500">
-        {fill(C.sub, { n: String(data.totalCats), a: String(withActive) })}
+        {fill(C.subServing, {
+          n: String(data.totalCats),
+          a: String(scopeCounts.live),
+          r: String(scopeCounts.archived),
+        })}
       </p>
     </div>
     <button
@@ -235,45 +278,69 @@
         class="h-10 w-full rounded-full border border-ink-200 bg-surface pl-9 pr-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-4 focus:ring-primary-500/15"
       />
     </div>
-    <button
-      type="button"
-      onclick={() => (fst = "")}
-      class={chip(fst === "", "border-transparent bg-ink-900 text-ink-50")}
-    >
-      {C.all}
-    </button>
-    <button
-      type="button"
-      onclick={() => (fst = "on")}
-      class={chip(fst === "on", "border-transparent bg-success text-white")}
-    >
-      <span class="h-1.5 w-1.5 rounded-full {fst === 'on' ? 'bg-white' : 'bg-success'}"></span>
-      {C.on}
-    </button>
-    <button
-      type="button"
-      onclick={() => (fst = "off")}
-      class={chip(fst === "off", "border-transparent bg-ink-700 text-white")}
-    >
-      <span class="h-1.5 w-1.5 rounded-full {fst === 'off' ? 'bg-white' : 'bg-ink-400'}"></span>
-      {C.off}
-    </button>
-    <span class="mx-1 h-5 w-px bg-ink-200"></span>
-    <button
-      type="button"
-      onclick={() => (fr = "routed")}
-      class={chip(fr === "routed", "border-transparent bg-primary-500 text-white")}
-    >
-      <Icon name="share" size={12} stroke={2.5} />
-      {C.routed}
-    </button>
-    <button
-      type="button"
-      onclick={() => (fr = "default")}
-      class={chip(fr === "default", "border-transparent bg-ink-900 text-ink-50")}
-    >
-      {C.defaultRoute}
-    </button>
+    <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label={C.scopeAria}>
+      <button
+        type="button"
+        onclick={() => (fst = "")}
+        class={chip(fst === "", "border-transparent bg-ink-900 text-ink-50")}
+      >
+        {C.all}
+        <span class="tabular-nums opacity-70">{data.categories.length}</span>
+      </button>
+      <button
+        type="button"
+        onclick={() => (fst = "live")}
+        class={chip(fst === "live", "border-transparent bg-success text-white")}
+      >
+        <span class="h-1.5 w-1.5 rounded-full {fst === 'live' ? 'bg-white' : 'bg-success'}"></span>
+        {C.on}
+        <span class="tabular-nums opacity-70">{scopeCounts.live}</span>
+      </button>
+      <button
+        type="button"
+        onclick={() => (fst = "off")}
+        class={chip(fst === "off", "border-transparent bg-ink-700 text-white")}
+      >
+        <span class="h-1.5 w-1.5 rounded-full {fst === 'off' ? 'bg-white' : 'bg-ink-400'}"></span>
+        {C.off}
+        <span class="tabular-nums opacity-70">{scopeCounts.off}</span>
+      </button>
+      <button
+        type="button"
+        onclick={() => (fst = "archived")}
+        class={chip(fst === "archived", "border-transparent bg-ink-500 text-white")}
+      >
+        <Icon name="package" size={12} stroke={2.5} />
+        {C.archivedOnly}
+        <span class="tabular-nums opacity-70">{scopeCounts.archived}</span>
+      </button>
+      <button
+        type="button"
+        onclick={() => (fst = "empty")}
+        class={chip(fst === "empty", "border-transparent bg-ink-300 text-ink-800")}
+      >
+        {C.emptyOnly}
+        <span class="tabular-nums opacity-70">{scopeCounts.empty}</span>
+      </button>
+    </div>
+    {#if anyRouted}
+      <span class="mx-1 h-5 w-px bg-ink-200"></span>
+      <button
+        type="button"
+        onclick={() => (fr = fr === "routed" ? "" : "routed")}
+        class={chip(fr === "routed", "border-transparent bg-primary-500 text-white")}
+      >
+        <Icon name="share" size={12} stroke={2.5} />
+        {C.routed}
+      </button>
+      <button
+        type="button"
+        onclick={() => (fr = fr === "default" ? "" : "default")}
+        class={chip(fr === "default", "border-transparent bg-ink-900 text-ink-50")}
+      >
+        {C.defaultRoute}
+      </button>
+    {/if}
     <span class="ml-auto text-[11px] tabular-nums text-ink-400">
       {fill(C.shown, { n: String(filtered.length), m: String(data.categories.length) })}
     </span>
@@ -290,13 +357,18 @@
           <tr>
             <th class="w-16 p-3 font-semibold">{C.colId}</th>
             <th class="p-3 font-semibold">{C.colName}</th>
-            <th class="w-40 p-3 font-semibold">{C.colSvc}</th>
-            <th class="w-24 p-3 font-semibold">{C.colStatus}</th>
+            <th class="w-56 p-3 font-semibold">{C.colServing}</th>
+            <th class="w-36 p-3 font-semibold">{C.colProvider}</th>
             <th class="w-56 p-3 text-right font-semibold">{C.colAksi}</th>
           </tr>
         </thead>
         <tbody>
           {#each shown as c, i (c.id)}
+            {@const willOff = toggleWillTurnOff(c)}
+            <!-- Kategori yang tidak punya baris bisa diubah: enable akan ditolak
+                 server (no_serving_services). Jangan tampil switch mati yang
+                 hanya menghasilkan toast gagal. -->
+            {@const canToggle = canToggleCategory(c)}
             <tr
               class="reveal border-b border-ink-50 transition-colors hover:bg-ink-50/50 last:border-0"
               style="--d:{(i % 100) * 12}ms"
@@ -308,72 +380,56 @@
                   class="line-clamp-3 break-words leading-snug no-underline transition-colors hover:text-primary-ink"
                   title={c.name}>{c.name}</a
                 >
-                <div class="mt-1 flex flex-wrap gap-1">
-                  {#if c.routingProviderName}
-                    <span
-                      class="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-bold text-primary-ink"
-                    >
-                      <Icon name="share" size={9} stroke={2.5} />
-                      {fill(C.servedBy, { p: c.routingProviderName })}</span
-                    >
-                  {:else if c.providerNames.length}
-                    <span
-                      class="inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-bold text-ink-500"
-                      >{c.providerNames.join(" · ")}</span
-                    >
-                  {/if}
-                </div>
-              </td>
-              <td class="p-3 tabular-nums">
-                <span class="font-bold {c.active > 0 ? 'text-success' : 'text-ink-400'}"
-                  >{c.active}</span
-                ><span class="text-ink-400">/{c.total}</span>
               </td>
               <td class="p-3">
-                {#if c.total === 0}
-                  <span
-                    class="rounded-full bg-ink-50 px-2 py-0.5 text-[10px] font-bold text-ink-300"
-                    >—</span
-                  >
-                {:else if c.active === 0}
-                  <span
-                    class="rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-bold text-ink-500"
-                    >{C.off}</span
-                  >
-                {:else if c.active < c.total}
-                  <span
-                    class="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-bold text-warning"
-                  >
-                    {C.on}
-                  </span>
+                <CategoryHealthBadge
+                  health={c.health}
+                  servingActive={c.servingActive}
+                  servingTotal={c.servingTotal}
+                  legacyTotal={c.legacyTotal}
+                  legacyActive={c.legacyActive}
+                />
+              </td>
+              <td class="p-3">
+                {#if c.servingProviderName}
+                  <span class="text-xs font-bold text-ink-700">{c.servingProviderName}</span>
+                  {#if c.routingProviderName}
+                    <span
+                      class="ml-1 inline-flex items-center gap-1 rounded-full bg-primary-50 px-1.5 py-0.5 text-[10px] font-bold text-primary-ink"
+                    >
+                      <Icon name="share" size={9} stroke={2.5} />
+                      {C.routed}
+                    </span>
+                  {/if}
                 {:else}
-                  <span
-                    class="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-bold text-success"
-                  >
-                    <span class="h-1.5 w-1.5 rounded-full bg-success"></span>{C.active}
-                  </span>
+                  <span class="text-xs font-semibold text-ink-400">{C.noServing}</span>
+                {/if}
+                {#if c.providerNames.length && (c.providerNames.length > 1 || !c.servingProviderName)}
+                  <div class="mt-0.5 text-[10px] leading-snug text-ink-400">
+                    {c.providerNames.join(" · ")}
+                  </div>
                 {/if}
               </td>
               <td class="p-3 text-right">
                 <div class="inline-flex items-center gap-2">
-                  {#if c.total > 0}
+                  {#if canToggle}
                     <button
                       type="button"
                       role="switch"
-                      aria-checked={c.active > 0}
+                      aria-checked={willOff}
                       onclick={() => toggleCat(c)}
-                      class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors {c.active >
-                      0
-                        ? 'bg-success'
+                      class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors {willOff
+                        ? c.servingActive === 0 && c.legacyActive > 0
+                          ? 'bg-danger'
+                          : 'bg-success'
                         : 'bg-ink-300'}"
-                      aria-label={fill(c.active > 0 ? C.disableTitle : C.enableTitle, {
+                      aria-label={fill(willOff ? C.disableTitle : C.enableTitle, {
                         n: c.name,
                       })}
-                      title={c.active > 0 ? C.disableTitle : C.enableTitle}
+                      title={willOff ? C.disableTitle : C.enableTitle}
                     >
                       <span
-                        class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform {c.active >
-                        0
+                        class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform {willOff
                           ? 'translate-x-[22px]'
                           : 'translate-x-[2px]'}"
                       ></span>

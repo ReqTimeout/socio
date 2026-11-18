@@ -30,7 +30,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     // bukan COUNT(*) mentah — supaya header "{n} kategori" konsisten dgn tabel.
     totalCats: rows.length,
     q,
-    st: st === "on" || st === "off" ? st : "",
+    // F13 — scope kesehatan (provider serving). "on" lama tetap alias "live"
+    // supaya URL / link lama tidak rusak.
+    st: ["on", "live", "off", "archived", "empty"].includes(st) ? st : "",
   };
 };
 
@@ -48,6 +50,15 @@ export const actions: Actions = {
     if (!res.ok) {
       if (res.reason === "not_found") return fail(404, { error: "Kategori tidak ditemukan." });
       if (res.reason === "empty") return fail(400, { error: "Kategori ini tidak punya layanan." });
+      // W1: tidak ada provider sah / tidak ada baris memenuhi → helper tidak menulis DB.
+      if (res.reason === "no_active_provider")
+        return fail(409, {
+          error: "Tidak ada provider aktif — kategori tidak diubah. Aktifkan provider dulu.",
+        });
+      if (res.reason === "no_serving_services")
+        return fail(409, {
+          error: `Kategori ${res.name ? `"${res.name}"` : `#${categoryId}`} tidak punya layanan manual-off dari provider yang melayani — tidak ada yang dihidupkan.`,
+        });
       return fail(400, { error: "Kategori tidak valid." });
     }
     await logAudit({
@@ -127,24 +138,27 @@ export const actions: Actions = {
     const id = Number(form.get("id"));
     if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID tidak valid." });
     const used = await countCategoryServices(id);
-    if (used > 0)
-      return fail(400, {
-        error: `Tidak bisa hapus: ${used} layanan masih pakai kategori ini.`,
-      });
     const [cat] = await db
       .select({ name: categories.name })
       .from(categories)
       .where(eq(categories.id, id))
       .limit(1);
+    // F10 (port .my 083d0271): kategori tidak ada → 404 jujur. Dulu delete 0
+    // baris tetap lapor "Kategori dihapus." — sukses palsu di UI + audit.
+    if (!cat) return fail(404, { error: "Kategori tidak ditemukan." });
+    if (used > 0)
+      return fail(400, {
+        error: `Tidak bisa hapus: kategori "${cat.name}" masih dipakai ${used} layanan.`,
+      });
     await db.delete(categories).where(eq(categories.id, id));
     await logAudit({
       adminId: Number(locals.user.id),
       action: "delete_category",
       entity: "category",
       entityId: id,
-      detail: { name: cat?.name },
+      detail: { name: cat.name },
       ip: (locals as any).ip,
     });
-    return { success: "Kategori dihapus." };
+    return { success: `Kategori "${cat.name}" dihapus.` };
   },
 };
