@@ -1,7 +1,9 @@
 # Plan Port Gap socio.my → socio.id — 17 Nov 2026
 
-> **Status dokumen: P1 SELESAI DIEKSEKUSI — 18 Nov 2026, live image `23ef2b3`**
-> (jurnal: `docs/2026-11-18-p1-confirm-before-refund.md`). **P2–P4 masih RENCANA.**
+> **Status dokumen: P1 + F1 + batch email P2.5–P2.8 + P3 kosmetik SELESAI DIEKSEKUSI —
+> 18 Nov 2026, live image `54c8615`** (jurnal: `docs/2026-11-18-p1-confirm-before-refund.md`,
+> `docs/2026-11-18-f1-refund-ledger-fold-news-notif.md`,
+> `docs/2026-11-18-p2-email-p3-kosmetik-batch.md`). **P2.1–P2.4 + P4 masih RENCANA.**
 > Audit 17 Nov = read-only, nol perubahan kode/DB; semua temuan diverifikasi langsung
 > dari kode `.id`, kode `.my`, git log, jurnal `updatememory`, dan **3 probe produksi
 > READ-ONLY**. Eksekusi item berikutnya tetap **menunggu GO owner** + gate wajib.
@@ -248,16 +250,19 @@ di-port akan LANGSUNG LIVE di `.id`** kecuali di-gate eksplisit. Item WP7/quota/
 
 ### P2 — DEFENSIF ADMIN + EMAIL
 
+> **[SELESAI SEBAGIAN — 18 Nov 2026: P2.5–P2.8 (email) live, image `54c8615`, commit
+> `4259482`. P2.1–P2.4 (defensif admin) masih RENCANA.]**
+
 | ID | Gap | Bukti `.id` | Sumber `.my` | Klasifikasi |
 |---|---|---|---|---|
 | **P2.1** | W1 `planCategoryToggle` provider-gated enable (pure, 3 surface) | `category-admin.ts:215-248` (ON enable **semua** manual-off tanpa filter provider) | `82b52f11`; hardening §9.2 W1; `category-toggle-policy.ts` (77) + test (263) | **PORT** |
 | **P2.2** | F13 catalog-counts pure + `CategoryHealthBadge` + `/admin/services?scope=serving` + URL-builder | `admin/services` (tanpa scope/health badge); `$lib/` belum ada `catalog-counts.ts` | `083d0271`; §12.3 F13; `catalog-counts.ts` (172) + test (354) | **ADAPT** |
 | **P2.3** | F10 message key toggle terbalik + `deleteCategory` nama/404 | `category-admin.ts` (pesan error placeholder) | `083d0271`; §11.4 F10 | **ADAPT** |
 | **P2.4** | Routing leak guard kind-claim (`kindSignature`/`coveredByOtherProviderRouting`) di service-sync CREATE | `service-sync.ts:261-278` (CREATE born inert, **tanpa** kind-claim); `routing-policy.ts` `.id` belum ada `coveredByOtherProviderRouting` | `899a5b2b`; `kind-signature.ts` (47) + routing-policy (+32) | **CONFIRM** (MOOT: routing=0) |
-| **P2.5** | Email `quota.ts` lanes + provider cap (Resend protection) | `email-lifecycle.ts:25-60` (`ACTIVE_TRIGGERS=["activation"]`, **tanpa** quota); `$lib/server/email/` belum ada `quota.ts` | `9e000248`; `email/quota.ts` (116) + test (122) | **ADAPT** |
-| **P2.6** | Operator-only `notifyAdmins` (stop email semua akun Admin) | `email-templates.ts:94-141` (`eq(users.level,"Admin")` → email **semua** admin) | `95d9d78f`; jurnal 2026-11-10-admin-email-operator-only | **CONFIRM** |
-| **P2.7** | WP7 deposit-aware activation + lane `deposit_canceled`/`reseller_unpaid` | `segments.ts:40-100` (activation = createdAt≤-3d AND NOT ORDERED, **tanpa** deposit-aware; **tanpa** 2 lane baru) | `d8e531ef`; WP7; segments (+68) + templates (+163) + test (199) | **CONFIRM** (gate ON) |
-| **P2.8** | WP6 partial: first-deposit nudge + welcome rewrite + mid-life reminder + bonus-rate single source | `light.ts` (tanpa blok mid-life (2h,12h]); `format.ts` (tanpa `getDepositBonusRate`); `top-up/+page.server.ts:12` parse env lokal | `a1e013df`; WP6; `first-deposit.ts` (78) + `FirstDepositNudge` (238) | **ADAPT** (kode unik/ExactAmount SUDAH ada di `.id`; SKIP copy TnG/sen) |
+| **P2.5** | Email `quota.ts` lanes + provider cap (Resend protection) | `email-lifecycle.ts:25-60` (`ACTIVE_TRIGGERS=["activation"]`, **tanpa** quota); `$lib/server/email/` belum ada `quota.ts` | `9e000248`; `email/quota.ts` (116) + test (122) | **ADAPT** ✅ SELESAI 18 Nov (`4259482`) |
+| **P2.6** | Operator-only `notifyAdmins` (stop email semua akun Admin) | `email-templates.ts:94-141` (`eq(users.level,"Admin")` → email **semua** admin) | `95d9d78f`; jurnal 2026-11-10-admin-email-operator-only | **CONFIRM** ✅ SELESAI 18 Nov (`4259482`, operator-only) |
+| **P2.7** | WP7 deposit-aware activation + lane `deposit_canceled`/`reseller_unpaid` | `segments.ts:40-100` (activation = createdAt≤-3d AND NOT ORDERED, **tanpa** deposit-aware; **tanpa** 2 lane baru) | `d8e531ef`; WP7; segments (+68) + templates (+163) + test (199) | **CONFIRM** (gate ON) ✅ SELESAI 18 Nov (`4259482`, lane baru OFF per-lane) |
+| **P2.8** | WP6 partial: first-deposit nudge + welcome rewrite + mid-life reminder + bonus-rate single source | `light.ts` (tanpa blok mid-life (2h,12h]); `format.ts` (tanpa `getDepositBonusRate`); `top-up/+page.server.ts:12` parse env lokal | `a1e013df`; WP6; `first-deposit.ts` (78) + `FirstDepositNudge` (238) | **ADAPT** (kode unik/ExactAmount SUDAH ada di `.id`; SKIP copy TnG/sen) ✅ SELESAI 18 Nov (`4259482`) |
 
 **Catatan P2:**
 - **P2.1 W1** kontrak: OFF → semua provider + tag, **JANGAN refuse** (provider broken tak
@@ -297,12 +302,14 @@ di-port akan LANGSUNG LIVE di `.id`** kecuali di-gate eksplisit. Item WP7/quota/
 
 ### P3 — KOSMETIK (CONFIRM — nilai bisnis rendah, risiko rendah)
 
+> **[SELESAI — 18 Nov 2026: P3.1–P3.4 live, image `54c8615`, commit `e322797`.]**
+
 | ID | Gap | Bukti `.id` | Sumber `.my` | Klasifikasi |
 |---|---|---|---|---|
-| **P3.1** | `CouponTicket` strip kupon **publik** di bawah SaldoHero | `(app)/+page.server.ts` (tanpa coupon strip); `coupons` schema **ada + compatible** | `ebb164dd`; `CouponTicket.svelte` (133) + loader (+53) | **ADAPT** |
-| **P3.2** | SaldoHero sparkline gold + pulse/radar CTA + dots | `SaldoHero.svelte:21,82` (sparkline dekoratif ada; **tanpa** pulse/ping/radar) | `7f1080cf` `68173d06` `e0bfaf11` | **CONFIRM** |
-| **P3.3** | WP5 `ResellerArt` + reseller page enrichment | `/reseller` (H1 ada, tanpa art) | `111deaa5`; `ResellerArt.svelte` (112, packages/ui) | **CONFIRM** |
-| **P3.4** | WP1 `?mode` → `initialMode` di register | `daftar/+page.server.ts` load (baca `?r` referral **saja**, tanpa `?mode`) | `1f44abc9` (register +10/+3) | **ADAPT** (kecil) |
+| **P3.1** | `CouponTicket` strip kupon **publik** di bawah SaldoHero | `(app)/+page.server.ts` (tanpa coupon strip); `coupons` schema **ada + compatible** | `ebb164dd`; `CouponTicket.svelte` (133) + loader (+53) | **ADAPT** ✅ SELESAI 18 Nov (`e322797`, strip publik saja) |
+| **P3.2** | SaldoHero sparkline gold + pulse/radar CTA + dots | `SaldoHero.svelte:21,82` (sparkline dekoratif ada; **tanpa** pulse/ping/radar) | `7f1080cf` `68173d06` `e0bfaf11` | **CONFIRM** ✅ SELESAI 18 Nov (`e322797`) |
+| **P3.3** | WP5 `ResellerArt` + reseller page enrichment | `/reseller` (H1 ada, tanpa art) | `111deaa5`; `ResellerArt.svelte` (112, packages/ui) | **CONFIRM** ✅ SELESAI 18 Nov (`e322797`) |
+| **P3.4** | WP1 `?mode` → `initialMode` di register | `daftar/+page.server.ts` load (baca `?r` referral **saja**, tanpa `?mode`) | `1f44abc9` (register +10/+3) | **ADAPT** (kecil) ✅ SELESAI 18 Nov (`e322797`) |
 
 **Catatan P3:**
 - **P3.1 CouponTicket**: strip pakai tabel **`coupons` PUBLIK** (`.id` ada, schema cocok:
@@ -524,12 +531,25 @@ Sebelum eksekusi item CONFIRM, tanya owner (AskUserQuestion), jangan asumsi:
 2. **P2.6 operator-only**: `.id` punya 2 akun admin (`aramadhi92` + `info@beriklan`).
    Mau email alert **hanya** ke `aramadhi92@gmail.com` (seperti `.my`), bell tetap ke semua?
    Atau biarkan email ke kedua admin?
+   - **[GO DIBERIKAN + SELESAI 18 Nov 2026 — live `54c8615`.]** Perilaku `.my` dipakai:
+     email alert hanya operator (env `SOCIO_ADMIN_ALERT_EMAILS`, default
+     `aramadhi92@gmail.com`), bell `admin_notifications` tetap ke semua akun Admin,
+     tanpa demote akun admin.
 3. **P2.5/P2.7 email lanes**: switch `.id` ON. GO port quota + WP7 (deposit_canceled/
    reseller_unpaid, cohort 241 nyata) + WP6 nudge? **Default OFF per-lane** sampai GO aktif?
    Angka cap Resend `.id` berapa?
+   - **[GO DIBERIKAN + SELESAI 18 Nov 2026 — live `54c8615`.]** Cap quota default `.my`
+     (provider 95/hari, 3000/bulan; marketing 35/hari, guard 10 — semua env-overridable).
+     Lane baru `reseller_unpaid`/`deposit_canceled` **OFF per-lane** (env
+     `EMAIL_LANE_RESELLER_UNPAID`/`EMAIL_LANE_DEPOSIT_CANCELED` belum di-set di prod);
+     lane bawaan `activation` tetap ON (kini deposit-aware). Aktivasi lane baru =
+     keputusan GO owner terpisah. WP6 nudge + welcome + mid-life live.
 4. **P2.4 routing kind-claim**: routing=0 (MOOT). Port defensif sekarang, atau tunggu
    sampai owner hidupkan multi-provider?
 5. **P3 kosmetik**: GO CouponTicket strip publik / SaldoHero gold+pulse / ResellerArt / WP1 ?mode?
+   - **[GO DIBERIKAN + SELESAI 18 Nov 2026 — live `54c8615`.]** Keempat item live
+     (commit `e322797`); strip kupon hanya bagian publik (personal/H3 tetap SKIP,
+     `user_coupons` absent).
 6. **P4.1 GA4**: ada properti GA4 `.id`? GO port attribution (dormant, env-gated)?
 7. **P4.2 content_activation**: GO DDL `users.reg_source_page/reg_keyword` + landing cookie capture?
 8. **P4.3 H3 Coupon Loop**: GO engine personal + tabel `user_coupons` (kill switch OFF)?
@@ -577,5 +597,6 @@ Sebelum eksekusi item CONFIRM, tanya owner (AskUserQuestion), jangan asumsi:
 
 **Inti: P1 (uang) SELESAI 18 Nov 2026 — migration utf8mb3 BENAR (§1.4), backup → migration →
 deploy, 4 gate lulus, live `23ef2b3`. F1 perf + notif news ala .my SELESAI 18 Nov (live
-`37bb77a`). Jangan salin migration `.my` mentah (utf8mb4 = rebuild
-tabel live = MDL convoy). Berikutnya P2 (sebagian CONFIRM) → P3 → P4; item CONFIRM tunggu owner.**
+`37bb77a`). Batch email P2.5–P2.8 + P3 kosmetik SELESAI 18 Nov (live `54c8615`; lane baru
+OFF per-lane menunggu GO aktivasi owner). Jangan salin migration `.my` mentah (utf8mb4 = rebuild
+tabel live = MDL convoy). Berikutnya P2.1–P2.4 (defensif admin) → P4; item CONFIRM tunggu owner.**
