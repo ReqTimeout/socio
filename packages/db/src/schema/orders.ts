@@ -41,6 +41,7 @@ export const orders = mysqlTable(
       "In progress",
       "Canceled",
       "Refilling",
+      "Canceling",
     ])
       .notNull()
       .default("Pending"),
