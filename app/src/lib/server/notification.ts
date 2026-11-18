@@ -16,6 +16,7 @@ const STATUS_LABEL: Record<string, string> = {
   Canceled: "Dibatalkan",
   Partial: "Partial",
   Error: "Gagal",
+  Canceling: "Cancel diminta (menunggu konfirmasi provider)",
 };
 
 export type NotificationType = "order" | "deposit" | "ticket" | "news" | "promo";

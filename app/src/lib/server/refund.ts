@@ -1,6 +1,7 @@
 import { db } from "@socio/db";
 import { orders, users, balanceLogs, refundRequests } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { isLiveAtProvider } from "@socio/core/order-status";
 import { logAudit } from "./admin";
 import { notifyOrderUpdate } from "./notification";
 import { formatRupiah } from "$lib/format";
@@ -11,8 +12,10 @@ export async function requestRefund(params: {
   reason: string;
   requestedBy: number;
   ip?: string;
+  /** Override sadar admin untuk order yang masih hidup di provider (H5). */
+  ackProvider?: boolean;
 }) {
-  const { orderId, amount, reason, requestedBy, ip } = params;
+  const { orderId, amount, reason, requestedBy, ip, ackProvider } = params;
   if (!reason.trim()) throw new Error("Alasan refund wajib diisi.");
   const [o] = await db
     .select({
@@ -31,7 +34,7 @@ export async function requestRefund(params: {
   // Auto-execute langsung — TANPA approval admin kedua.
   // Refund dari status provider (Error/Partial/Canceled) sudah otomatis via cron;
   // refund manual admin pun harus LANGSUNG sampai ke saldo konsumen tanpa klik approve.
-  const res = await executeRefund({ orderId, amount, requestedBy, reason, ip });
+  const res = await executeRefund({ orderId, amount, requestedBy, reason, ip, ackProvider });
 
   // Catat di ledger refund_requests (status 'executed') supaya ada riwayat di
   // /admin/refunds — BUKAN sebagai antrean approval.
@@ -58,6 +61,12 @@ export async function executeRefund(params: {
   reason?: string;
   ip?: string;
   auto?: boolean;
+  /**
+   * Override sadar admin: izinkan refund walau order masih hidup di provider.
+   * Hanya jalur admin/orders yang memetakannya dari checkbox `ackProvider`.
+   * Jalur lain (approveRefund) TIDAK boleh override — lihat H5.
+   */
+  ackProvider?: boolean;
 }) {
   const { orderId, amount, requestedBy, reason, ip } = params;
   const [o] = await db
@@ -88,6 +97,19 @@ export async function executeRefund(params: {
   const refundAmount = Math.min(amount, price);
   if (refundAmount <= 0) throw new Error("Nominal refund tidak valid.");
 
+  // F12/H5 — SATU guard untuk SEMUA pintu refund, bukan per-route. Sebelumnya
+  // hanya admin/orders yang dijaga; admin/refunds → approveRefund → executeRefund
+  // bisa mengkredit saldo order yang MASIH diproses provider. Itu kebocoran modal
+  // owner yang sama lewat pintu kedua. Guard di choke point menutup keduanya
+  // dan setiap pemanggil baru secara otomatis.
+  const liveAtProvider = isLiveAtProvider(o.status);
+  const override = liveAtProvider && params.ackProvider === true;
+  if (liveAtProvider && !override) {
+    throw new Error(
+      `Order #${orderId} masih hidup di provider (${o.status}). Cancel dulu di provider — cron auto-refund membayar hanya setelah provider konfirmasi. Refund sekarang mengembalikan uang customer sementara provider masih menagih modal kamu.`,
+    );
+  }
+
   const [claim]: any[] = await db
     .update(orders)
     .set({ isRefund: 1, price: sql`GREATEST(${orders.price} - ${refundAmount}, 0)` })
@@ -103,7 +125,10 @@ export async function executeRefund(params: {
     userId: o.userId,
     type: "ref",
     amount: refundAmount,
-    note: `Refund ${params.auto ? "otomatis" : "approved"} oleh admin #${requestedBy} — order #${orderId}${reason ? ` (${reason})` : ""} (${o.status})`,
+    // Override ditandai di ledger supaya uang yang keluar melawan nasihat guard
+    // bisa dilacak kemudian. Marker `[provider-live override]` ASCII — aman untuk
+    // note utf8mb3 (lihat migration §1.4).
+    note: `Refund ${params.auto ? "otomatis" : "approved"} oleh admin #${requestedBy} — order #${orderId}${reason ? ` (${reason})` : ""} (${o.status})${override ? " [provider-live override]" : ""}`,
     createdAt: new Date(),
   });
 
@@ -112,7 +137,14 @@ export async function executeRefund(params: {
     action: params.auto ? "auto_refund_order" : "execute_refund",
     entity: "order",
     entityId: orderId,
-    detail: { userId: o.userId, amount: refundAmount, orderStatus: o.status, reason },
+    detail: {
+      userId: o.userId,
+      amount: refundAmount,
+      orderStatus: o.status,
+      reason,
+      liveAtProvider,
+      providerLiveOverride: override,
+    },
     ip,
   });
 
@@ -135,6 +167,21 @@ export async function approveRefund(requestId: number, approvedBy: number, ip?: 
   if (req.status !== "pending") throw new Error(`Status sudah ${req.status}, tidak bisa approve.`);
   if (req.requestedBy === approvedBy)
     throw new Error("Tidak bisa approve refund sendiri — butuh admin lain.");
+
+  // F12/H5 — jaga SEBELUM flip ke 'approved'. Kalau executeRefund menolak setelah
+  // flip, request tergantung sebagai 'approved' tanpa bayaran. Jalur ini TIDAK
+  // punya override: approval admin kedua tidak boleh melewati provider diam-diam.
+  // Untuk override sadar, pakai refund di /admin/orders (checkbox + audit).
+  const [ord] = await db
+    .select({ status: orders.status })
+    .from(orders)
+    .where(eq(orders.id, req.orderId))
+    .limit(1);
+  if (ord && isLiveAtProvider(ord.status)) {
+    throw new Error(
+      `Order #${req.orderId} masih hidup di provider (${ord.status}). Cancel dulu di provider — cron auto-refund membayar setelah provider konfirmasi. Approval diblokir supaya tidak ada uang bergerak selama provider masih menagih modal kamu.`,
+    );
+  }
 
   await db
     .update(refundRequests)
