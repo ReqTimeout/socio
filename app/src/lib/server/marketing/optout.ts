@@ -14,10 +14,7 @@ import { db } from "@socio/db";
 import { emailSuppressions, users } from "@socio/db/schema";
 import { eq } from "drizzle-orm";
 
-export async function applyUnsubscribe(
-  email: string,
-  campaignKey = "marketing",
-): Promise<void> {
+export async function applyUnsubscribe(email: string, campaignKey = "marketing"): Promise<void> {
   const e = email.trim().toLowerCase();
   if (!e) return;
   // 1. Flag subs=false di users (bila ada akunnya). Non-fatal bila tidak.

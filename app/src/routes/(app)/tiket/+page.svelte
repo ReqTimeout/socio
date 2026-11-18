@@ -1,6 +1,15 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
-  import { Input, Button, toast, revealDelay, hoverLift, EmptyTicketsArt, Sparko, BackButton } from "@socio/ui";
+  import {
+    Input,
+    Button,
+    toast,
+    revealDelay,
+    hoverLift,
+    EmptyTicketsArt,
+    Sparko,
+    BackButton,
+  } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
   import { applyAction, enhance } from "$app/forms";
@@ -191,7 +200,10 @@
           class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
         ></div>
         <EmptyTicketsArt size={112} class="relative mx-auto mb-3 text-ink-300" />
-        <div class="relative mx-auto -mt-8 mb-2 flex w-fit translate-x-12 justify-end" aria-hidden="true">
+        <div
+          class="relative mx-auto -mt-8 mb-2 flex w-fit translate-x-12 justify-end"
+          aria-hidden="true"
+        >
           <Sparko pose="wave" size={44} />
         </div>
         <p class="relative text-sm font-bold text-ink-800">{copy.empty.tickets.title}</p>

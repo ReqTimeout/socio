@@ -436,8 +436,8 @@
           <div class="text-xs font-extrabold text-ink-900">Cancel dikirim — menunggu provider</div>
           <p class="mt-1 text-[11px] leading-relaxed text-ink-600">
             {fmt(data.stats.cancelPending.count)} order ·
-            {formatRupiah(data.stats.cancelPending.total)} modal Anda masih ditahan provider.
-            Customer TIDAK di-refund sampai provider mengonfirmasi cancel tersebut.
+            {formatRupiah(data.stats.cancelPending.total)} modal Anda masih ditahan provider. Customer
+            TIDAK di-refund sampai provider mengonfirmasi cancel tersebut.
           </p>
           <p class="mt-1 text-[10px] leading-relaxed text-ink-400">
             Polling status hanya menaikkan status saat provider memberi status final, lalu
@@ -606,7 +606,8 @@
                 </div>
               </td>
               <td class="px-3 py-3 text-right tabular-nums text-ink-700">{fmt(o.quantity)}</td>
-              <td class="px-3 py-3 text-right font-semibold tabular-nums text-ink-900"
+              <td
+                class="px-3 py-3 text-right font-semibold tabular-nums text-ink-900"
                 title={Number(o.refunded ?? 0) > 0
                   ? `Sudah di-refund ${formatRupiah(Number(o.refunded))}`
                   : "Total dibayar user (harga awal)"}>{formatRupiah(o.charged)}</td
@@ -1064,8 +1065,8 @@
             Batalkan di Provider
           </button>
           <p class="text-[11px] text-ink-400">
-            Refund dibayar otomatis hanya setelah provider mengonfirmasi pembatalan. Kalau
-            provider menolak, tidak ada yang berubah.
+            Refund dibayar otomatis hanya setelah provider mengonfirmasi pembatalan. Kalau provider
+            menolak, tidak ada yang berubah.
           </p>
         </div>
       {/if}

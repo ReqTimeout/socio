@@ -28,7 +28,8 @@ export const actions: Actions = {
     const code = String(form.get("code") ?? "").trim();
     if (!code) return fail(400, { error: "Kode wajib diisi." });
     const ok = await verifyTotpForUser(userId, code);
-    if (!ok) return fail(400, { error: "Kode salah atau kadaluarsa. Coba lagi atau pakai backup code." });
+    if (!ok)
+      return fail(400, { error: "Kode salah atau kadaluarsa. Coba lagi atau pakai backup code." });
 
     // Create session (same as login)
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);

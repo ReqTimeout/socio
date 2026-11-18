@@ -207,7 +207,10 @@
         class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 opacity-10 blur-2xl"
       ></div>
       <EmptyAffiliateArt size={104} class="relative mx-auto mb-2 text-ink-300" />
-      <div class="relative mx-auto -mt-6 mb-2 flex w-fit translate-x-12 justify-end" aria-hidden="true">
+      <div
+        class="relative mx-auto -mt-6 mb-2 flex w-fit translate-x-12 justify-end"
+        aria-hidden="true"
+      >
         <Sparko pose="wave" size={44} />
       </div>
       <p class="relative text-sm font-bold text-ink-800">{copy.empty.affiliate.title}</p>

@@ -58,16 +58,14 @@ export async function runBackup(
   const filename = `${process.env.SOCIO_DB_NAME ?? "socio_smm"}-${stamp}.sql.gz`;
   const filepath = path.join(BACKUP_DIR, filename);
 
-  await db
-    .insert(backupLogs)
-    .values({
-      filename,
-      sizeBytes: 0,
-      status: "running",
-      triggeredBy,
-      startedAt: new Date(),
-      finishedAt: null,
-    } as any);
+  await db.insert(backupLogs).values({
+    filename,
+    sizeBytes: 0,
+    status: "running",
+    triggeredBy,
+    startedAt: new Date(),
+    finishedAt: null,
+  } as any);
   const last = await db
     .select({ id: backupLogs.id })
     .from(backupLogs)

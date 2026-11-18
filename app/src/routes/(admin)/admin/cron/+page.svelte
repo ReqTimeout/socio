@@ -55,16 +55,21 @@
   </header>
 
   {#if form?.error}
-    <div class="rounded-xl bg-danger/10 px-4 py-3 text-sm font-medium text-danger" role="alert">{form.error}</div>
+    <div class="rounded-xl bg-danger/10 px-4 py-3 text-sm font-medium text-danger" role="alert">
+      {form.error}
+    </div>
   {/if}
   {#if form?.success}
-    <div class="rounded-xl bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{form.success}</div>
+    <div class="rounded-xl bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">
+      {form.success}
+    </div>
   {/if}
 
   <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
     {#each data.jobs as j (j.key)}
       <div
-        class="rounded-2xl border border-ink-100 bg-surface p-4 {j.last?.status === 'error' || j.error24h > 2
+        class="rounded-2xl border border-ink-100 bg-surface p-4 {j.last?.status === 'error' ||
+        j.error24h > 2
           ? 'border-danger/30'
           : ''}"
         role="region"
@@ -119,17 +124,28 @@
             {/if}
           </div>
           <div>
-            <dt class="font-semibold uppercase tracking-wide text-ink-400 text-[10px]">Berikutnya</dt>
-            <dd class="font-bold text-ink-900">{j.running ? "sedang jalan" : nextIn(j.nextInSec)}</dd>
+            <dt class="font-semibold uppercase tracking-wide text-ink-400 text-[10px]">
+              Berikutnya
+            </dt>
+            <dd class="font-bold text-ink-900">
+              {j.running ? "sedang jalan" : nextIn(j.nextInSec)}
+            </dd>
           </div>
           <div>
-            <dt class="font-semibold uppercase tracking-wide text-ink-400 text-[10px]">Error 24h</dt>
-            <dd class="font-bold {j.error24h > 0 ? 'text-danger' : 'text-ink-900'}">{j.error24h}</dd>
+            <dt class="font-semibold uppercase tracking-wide text-ink-400 text-[10px]">
+              Error 24h
+            </dt>
+            <dd class="font-bold {j.error24h > 0 ? 'text-danger' : 'text-ink-900'}">
+              {j.error24h}
+            </dd>
           </div>
         </dl>
 
         {#if j.last?.error}
-          <p class="mt-2 truncate rounded-lg bg-danger/5 px-2.5 py-1.5 font-mono text-[11px] text-danger" title={j.last.error}>
+          <p
+            class="mt-2 truncate rounded-lg bg-danger/5 px-2.5 py-1.5 font-mono text-[11px] text-danger"
+            title={j.last.error}
+          >
             {j.last.error}
           </p>
         {/if}
@@ -138,6 +154,7 @@
   </div>
 
   <p class="text-center text-xs text-ink-400">
-    Riwayat max 200 run per job · trigger manual tercatat dengan ID admin · log detail di tabel cron_runs
+    Riwayat max 200 run per job · trigger manual tercatat dengan ID admin · log detail di tabel
+    cron_runs
   </p>
 </section>

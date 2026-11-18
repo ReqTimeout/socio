@@ -231,7 +231,16 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
   // B5: param dinamis per tipe ikut docs SMMturk (parity dgn form /pesan).
   const username = String(form["username"] ?? "").trim();
   const apiExtra: Record<string, string> = {};
-  for (const p of ["usernames", "hashtag", "groups", "answer_number", "keywords", "min", "max", "delay"]) {
+  for (const p of [
+    "usernames",
+    "hashtag",
+    "groups",
+    "answer_number",
+    "keywords",
+    "min",
+    "max",
+    "delay",
+  ]) {
     const v = String(form[p] ?? "").trim();
     if (v) apiExtra[p] = v;
   }
@@ -291,7 +300,14 @@ async function handleOrder(apiKey: string, form: Record<string, string>): Promis
   // `svc.type` menentukan semantik rate: layanan Package punya rate PER-PACK,
   // bukan per-1000 (di bawah ini provider memang di-panggil tanpa `quantity`
   // untuk Package — sisi tagihan harus memakai semantik yang sama).
-  const totalPrice = computePrice(basePer1k, qty, level, rules[level], Number(svc.priceApi), svc.type);
+  const totalPrice = computePrice(
+    basePer1k,
+    qty,
+    level,
+    rules[level],
+    Number(svc.priceApi),
+    svc.type,
+  );
   if (!Number.isFinite(totalPrice) || totalPrice <= 0) return fail("Invalid service price");
 
   // Deduct saldo atomik SEBELUM kontak provider (fix P0-1)

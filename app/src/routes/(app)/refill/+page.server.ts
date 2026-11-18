@@ -25,10 +25,19 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
   const base = await db
     .select({
-      id: orders.id, oid: orders.oid, serviceName: orders.serviceName, data: orders.data,
-      quantity: orders.quantity, remains: orders.remains, startCount: orders.startCount,
-      status: orders.status, createdAt: orders.createdAt, updatedAt: orders.updatedAt,
-      serviceId: orders.serviceId, providerId: orders.providerId, providerOrderId: orders.providerOrderId,
+      id: orders.id,
+      oid: orders.oid,
+      serviceName: orders.serviceName,
+      data: orders.data,
+      quantity: orders.quantity,
+      remains: orders.remains,
+      startCount: orders.startCount,
+      status: orders.status,
+      createdAt: orders.createdAt,
+      updatedAt: orders.updatedAt,
+      serviceId: orders.serviceId,
+      providerId: orders.providerId,
+      providerOrderId: orders.providerOrderId,
     })
     .from(orders)
     .innerJoin(services, eq(services.id, orders.serviceId))
@@ -37,7 +46,9 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     .limit(300);
 
   const candidates = base
-    .filter((o) => o.status === "Success" && !!o.providerOrderId && String(o.providerOrderId) !== "0")
+    .filter(
+      (o) => o.status === "Success" && !!o.providerOrderId && String(o.providerOrderId) !== "0",
+    )
     .slice(0, REFRESH_CAP);
   const liveRemains = new Map<number, number>();
 
@@ -60,7 +71,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       if (!key) continue;
       const endpoint = p?.apiUrlOrder || "https://smmturk.org/api/v2";
       try {
-        const res = await smmturkStatusFor(endpoint, key, list.map((o) => o.providerOrderId));
+        const res = await smmturkStatusFor(
+          endpoint,
+          key,
+          list.map((o) => o.providerOrderId),
+        );
         for (const o of list) {
           const r: any = res[o.providerOrderId];
           if (!r || typeof r === "string") continue;
@@ -68,8 +83,12 @@ export const load: PageServerLoad = async ({ url, locals }) => {
           const start = Number(r.start_count ?? o.startCount);
           if (Number.isFinite(rem)) liveRemains.set(Number(o.id), rem);
           if (Number.isFinite(rem) || Number.isFinite(start)) {
-            await db.update(orders)
-              .set({ remains: Number.isFinite(rem) ? rem : o.remains, startCount: Number.isFinite(start) ? start : o.startCount })
+            await db
+              .update(orders)
+              .set({
+                remains: Number.isFinite(rem) ? rem : o.remains,
+                startCount: Number.isFinite(start) ? start : o.startCount,
+              })
               .where(eq(orders.id, Number(o.id)));
           }
         }
@@ -86,14 +105,20 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   if (ids.length) {
     const res: any = await db.execute(sql`
       SELECT order_id AS orderId, status, created_at AS createdAt FROM refill
-      WHERE order_id IN (${sql.join(ids.map((i) => sql`${i}`), sql`, `)})
+      WHERE order_id IN (${sql.join(
+        ids.map((i) => sql`${i}`),
+        sql`, `,
+      )})
       ORDER BY created_at DESC
     `);
     const list = Array.isArray(res?.[0]) ? res[0] : Array.isArray(res) ? res : [];
     for (const r of list) {
       const oid = Number(r.orderId);
       if (!lastRefill.has(oid))
-        lastRefill.set(oid, { status: String(r.status), createdAt: r.createdAt ? String(r.createdAt) : null });
+        lastRefill.set(oid, {
+          status: String(r.status),
+          createdAt: r.createdAt ? String(r.createdAt) : null,
+        });
     }
   }
 
@@ -104,12 +129,25 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     const rf = lastRefill.get(id);
     const inProgress = o.status === ("Refilling" as any) || rf?.status === "Pending";
     const win = computeRefillWindow({
-      status: o.status, isRefill: 1, providerOrderId: o.providerOrderId,
-      quantity: Number(o.quantity ?? 0), remains: rem, successAt: o.updatedAt,
-      lastRefillAt: rf?.createdAt ?? null, inProgress, now: nowMs,
+      status: o.status,
+      isRefill: 1,
+      providerOrderId: o.providerOrderId,
+      quantity: Number(o.quantity ?? 0),
+      remains: rem,
+      successAt: o.updatedAt,
+      lastRefillAt: rf?.createdAt ?? null,
+      inProgress,
+      now: nowMs,
     });
-    return { ...o, remains: rem, estimate: win.estimate, state: win.state as RowState,
-      canRequest: win.canRequest, nextAvailableAt: win.nextAvailableAt, refillUntil: win.refillUntil };
+    return {
+      ...o,
+      remains: rem,
+      estimate: win.estimate,
+      state: win.state as RowState,
+      canRequest: win.canRequest,
+      nextAvailableAt: win.nextAvailableAt,
+      refillUntil: win.refillUntil,
+    };
   });
 
   const counts = {
@@ -118,9 +156,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     all: rows.length,
   };
   const filtered =
-    tab === "all" ? rows
-    : tab === "progress" ? rows.filter((r) => r.state === "progress" || r.state === "cooldown")
-    : rows.filter((r) => r.state === "refillable");
+    tab === "all"
+      ? rows
+      : tab === "progress"
+        ? rows.filter((r) => r.state === "progress" || r.state === "cooldown")
+        : rows.filter((r) => r.state === "refillable");
 
   return { tab, counts, rows: filtered, lastUpdate: new Date().toISOString() };
 };

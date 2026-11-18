@@ -38,7 +38,11 @@ async function prune(job: string): Promise<void> {
   }
 }
 
-export async function runJob<T>(job: string, fn: () => Promise<T>, triggeredBy = 0): Promise<T | null> {
+export async function runJob<T>(
+  job: string,
+  fn: () => Promise<T>,
+  triggeredBy = 0,
+): Promise<T | null> {
   if (running.has(job)) {
     console.warn(`[cron] ${job}: skip, masih berjalan`);
     return null;

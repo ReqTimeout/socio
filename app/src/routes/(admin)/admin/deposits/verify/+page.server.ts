@@ -10,9 +10,14 @@ import type { PageServerLoad, Actions } from "./$types";
 export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.user) throw redirect(303, "/login");
   if ((locals.user as any).level !== "Admin") throw redirect(303, "/");
-  const [roleRow] = await db.select({ role: adminRoles.role }).from(adminRoles).where(eq(adminRoles.userId, Number(locals.user!.id))).limit(1);
+  const [roleRow] = await db
+    .select({ role: adminRoles.role })
+    .from(adminRoles)
+    .where(eq(adminRoles.userId, Number(locals.user!.id)))
+    .limit(1);
   const role = normalizeRole(roleRow?.role ?? "admin");
-  if (!can(role, "deposits:read")) throw error(403, `Akses ditolak · role kamu: ${role} · butuh: deposits:read`);
+  if (!can(role, "deposits:read"))
+    throw error(403, `Akses ditolak · role kamu: ${role} · butuh: deposits:read`);
   // Only pending with proof image
   const rows = await db
     .select({
@@ -27,7 +32,12 @@ export const load: PageServerLoad = async ({ locals }) => {
     })
     .from(deposits)
     .leftJoin(users, eq(deposits.userId, users.id))
-    .where(and(eq(deposits.status, "Pending"), sql`${deposits.img} IS NOT NULL AND ${deposits.img} <> ''`))
+    .where(
+      and(
+        eq(deposits.status, "Pending"),
+        sql`${deposits.img} IS NOT NULL AND ${deposits.img} <> ''`,
+      ),
+    )
     .orderBy(desc(deposits.id))
     .limit(50);
 
@@ -40,9 +50,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
   verify: async ({ request, locals }) => {
     assertAdmin(locals);
-    const [roleRow2] = await db.select({ role: adminRoles.role }).from(adminRoles).where(eq(adminRoles.userId, Number(locals.user!.id))).limit(1);
+    const [roleRow2] = await db
+      .select({ role: adminRoles.role })
+      .from(adminRoles)
+      .where(eq(adminRoles.userId, Number(locals.user!.id)))
+      .limit(1);
     const role2 = normalizeRole(roleRow2?.role ?? "admin");
-    if (!can(role2, "deposits:approve")) return fail(403, { error: "Role kamu tidak bisa verifikasi deposit." });
+    if (!can(role2, "deposits:approve"))
+      return fail(403, { error: "Role kamu tidak bisa verifikasi deposit." });
     const _rate = await assertAdminRate("deposit-verify", (locals as any).ip ?? "0.0.0.0", 30, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -64,33 +79,69 @@ export const actions: Actions = {
       try {
         await db.transaction(async (tx) => {
           if (d.userId && !isResellerActivation) {
-            await tx.update(usersTbl).set({ balance: sql`${usersTbl.balance} + ${Number(d.amount)}` }).where(eq(usersTbl.id, d.userId));
-            await tx.insert(balanceLogs).values({ userId: d.userId, type: "dep", amount: Number(d.amount), note: `Deposit BCA dikonfirmasi #${id} (${d.methodName})`, createdAt: new Date() });
+            await tx
+              .update(usersTbl)
+              .set({ balance: sql`${usersTbl.balance} + ${Number(d.amount)}` })
+              .where(eq(usersTbl.id, d.userId));
+            await tx
+              .insert(balanceLogs)
+              .values({
+                userId: d.userId,
+                type: "dep",
+                amount: Number(d.amount),
+                note: `Deposit BCA dikonfirmasi #${id} (${d.methodName})`,
+                createdAt: new Date(),
+              });
           }
-          const upd: any = await tx.execute(sql`UPDATE deposits SET status = 'Success', verified_by = ${Number(locals.user!.id)}, verified_at = NOW(), verification_notes = ${notes || null} WHERE id = ${id} AND status = 'Pending'`);
-          const affected = Array.isArray(upd) ? Number((upd[0] as any)?.affectedRows ?? 0) : Number((upd as any)?.affectedRows ?? 0);
+          const upd: any = await tx.execute(
+            sql`UPDATE deposits SET status = 'Success', verified_by = ${Number(locals.user!.id)}, verified_at = NOW(), verification_notes = ${notes || null} WHERE id = ${id} AND status = 'Pending'`,
+          );
+          const affected = Array.isArray(upd)
+            ? Number((upd[0] as any)?.affectedRows ?? 0)
+            : Number((upd as any)?.affectedRows ?? 0);
           if (!affected) throw new Error("DEPOSIT_NOT_PENDING");
         });
       } catch (e: any) {
-        if (e?.message === "DEPOSIT_NOT_PENDING") return fail(409, { error: "Deposit sudah diproses." });
+        if (e?.message === "DEPOSIT_NOT_PENDING")
+          return fail(409, { error: "Deposit sudah diproses." });
         return fail(500, { error: "Gagal verifikasi." });
       }
       if (isResellerActivation && d.userId) {
         try {
           const { activateReseller } = await import("$lib/server/signup");
           await activateReseller(d.userId);
-        } catch { /* activateReseller best-effort */ }
+        } catch {
+          /* activateReseller best-effort */
+        }
       }
-      await logAudit({ adminId: Number(locals.user!.id), action: "verify_deposit_approve", entity: "deposit", entityId: id, detail: { amount: Number(d.amount), notes }, ip: (locals as any).ip });
+      await logAudit({
+        adminId: Number(locals.user!.id),
+        action: "verify_deposit_approve",
+        entity: "deposit",
+        entityId: id,
+        detail: { amount: Number(d.amount), notes },
+        ip: (locals as any).ip,
+      });
       // C4: notifikasi sukses deposit (bell + email)
       await notifyDepositSuccess(d.userId, Number(d.amount), isResellerActivation);
       return { success: `Deposit #${id} disetujui.` };
     } else {
       // reject
-      const upd: any = await db.execute(sql`UPDATE deposits SET status = 'Canceled', verified_by = ${Number(locals.user!.id)}, verified_at = NOW(), verification_notes = ${notes} WHERE id = ${id} AND status = 'Pending'`);
-      const affected = Array.isArray(upd) ? Number((upd[0] as any)?.affectedRows ?? 0) : Number((upd as any)?.affectedRows ?? 0);
+      const upd: any = await db.execute(
+        sql`UPDATE deposits SET status = 'Canceled', verified_by = ${Number(locals.user!.id)}, verified_at = NOW(), verification_notes = ${notes} WHERE id = ${id} AND status = 'Pending'`,
+      );
+      const affected = Array.isArray(upd)
+        ? Number((upd[0] as any)?.affectedRows ?? 0)
+        : Number((upd as any)?.affectedRows ?? 0);
       if (!affected) return fail(409, { error: "Deposit sudah diproses." });
-      await logAudit({ adminId: Number(locals.user!.id), action: "verify_deposit_reject", entity: "deposit", entityId: id, detail: { notes }, ip: (locals as any).ip });
+      await logAudit({
+        adminId: Number(locals.user!.id),
+        action: "verify_deposit_reject",
+        entity: "deposit",
+        entityId: id,
+        detail: { notes },
+        ip: (locals as any).ip,
+      });
       return { success: `Deposit #${id} ditolak.` };
     }
   },

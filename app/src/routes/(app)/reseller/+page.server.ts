@@ -139,14 +139,20 @@ export const actions: Actions = {
       .orderBy(desc(deposits.id))
       .limit(1);
     if (pend && new Date(pend.expire).getTime() > Date.now()) {
-      return { success: "Invoice aktivasi masih aktif. Selesaikan pembayarannya dulu ya.", pending: true };
+      return {
+        success: "Invoice aktivasi masih aktif. Selesaikan pembayarannya dulu ya.",
+        pending: true,
+      };
     }
     // Invoice expired → issueResellerActivationInvoice boleh terbit baru
     // (sama seperti jalur "kirim ulang invoice" di dashboard).
 
     try {
       const inv = await issueResellerActivationInvoice(userId);
-      return { success: "Invoice aktivasi dibuat! Cek instruksi transfer di email dan halaman Saldo.", amount: inv.amount };
+      return {
+        success: "Invoice aktivasi dibuat! Cek instruksi transfer di email dan halaman Saldo.",
+        amount: inv.amount,
+      };
     } catch (e) {
       console.error("[reseller] upgradeToReseller failed:", (e as Error)?.message);
       return fail(500, { error: "Gagal membuat invoice. Coba lagi ya." });

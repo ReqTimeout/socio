@@ -3,7 +3,13 @@ import { db } from "@socio/db";
 import { users } from "@socio/db/schema";
 import { eq } from "drizzle-orm";
 import { assertAdmin, logAudit } from "$lib/server/admin";
-import { setupTotpForUser, getTotpInfo, verifyAndEnable, getBackupCodesPlain, disableTotp } from "$lib/server/2fa";
+import {
+  setupTotpForUser,
+  getTotpInfo,
+  verifyAndEnable,
+  getBackupCodesPlain,
+  disableTotp,
+} from "$lib/server/2fa";
 import { decryptTotpSecret } from "$lib/server/2fa";
 import { generateSecret, otpauthURL } from "@socio/core/totp";
 import QRCode from "qrcode";
@@ -23,7 +29,10 @@ export const load: PageServerLoad = async ({ locals }) => {
   if (!enabled) {
     // If no secret, generate one (setupTotpForUser does it). If already has secret but not enabled, reuse it.
     if (!info?.secret) {
-      const res = await setupTotpForUser(userId, String(locals.user!.username ?? locals.user!.email));
+      const res = await setupTotpForUser(
+        userId,
+        String(locals.user!.username ?? locals.user!.email),
+      );
       secret = res.secret;
       url = res.url;
       // QR will be generated below
@@ -33,7 +42,10 @@ export const load: PageServerLoad = async ({ locals }) => {
         url = otpauthURL(secret, String(locals.user!.username ?? locals.user!.email), "Socio.id");
       } catch {
         // If decrypt fails, regenerate
-        const res = await setupTotpForUser(userId, String(locals.user!.username ?? locals.user!.email));
+        const res = await setupTotpForUser(
+          userId,
+          String(locals.user!.username ?? locals.user!.email),
+        );
         secret = res.secret;
         url = res.url;
       }
@@ -53,7 +65,8 @@ export const actions: Actions = {
     assertAdmin(locals);
     const form = await request.formData();
     const code = String(form.get("code") ?? "").trim();
-    if (!/^\d{6}$/.test(code.replace(/\s/g, ""))) return fail(400, { error: "Kode harus 6 digit." });
+    if (!/^\d{6}$/.test(code.replace(/\s/g, "")))
+      return fail(400, { error: "Kode harus 6 digit." });
     const ok = await verifyAndEnable(Number(locals.user!.id), code);
     if (!ok) return fail(400, { error: "Kode salah atau kadaluarsa. Coba lagi." });
     const codes = await getBackupCodesPlain(Number(locals.user!.id));
@@ -73,11 +86,20 @@ export const actions: Actions = {
     const code = String(form.get("code") ?? "").trim();
     // Require password check via accounts table (reuse login logic)
     const { accounts, users: usersTbl } = await import("@socio/db/schema");
-    const [user] = await db.select().from(usersTbl).where(eq(usersTbl.id, Number(locals.user!.id))).limit(1);
+    const [user] = await db
+      .select()
+      .from(usersTbl)
+      .where(eq(usersTbl.id, Number(locals.user!.id)))
+      .limit(1);
     if (!user) throw error(404, "User not found");
-    const [account] = await db.select().from(accounts).where(eq(accounts.userId, String(user.id))).limit(1);
+    const [account] = await db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.userId, String(user.id)))
+      .limit(1);
     if (!account?.password) return fail(400, { error: "Akun tidak punya password." });
-    if (!bcrypt.compareSync(password, account.password)) return fail(400, { error: "Password salah." });
+    if (!bcrypt.compareSync(password, account.password))
+      return fail(400, { error: "Password salah." });
     // If code provided, verify it (TOTP or backup)
     if (code) {
       const { verifyTotpForUser } = await import("$lib/server/2fa");
@@ -104,7 +126,11 @@ export const actions: Actions = {
     // Force regenerate secret (disable first)
     await disableTotp(userId);
     const res = await setupTotpForUser(userId, String(locals.user!.username ?? locals.user!.email));
-    const qr = await QRCode.toDataURL(res.url, { errorCorrectionLevel: "M", width: 260, margin: 1 });
+    const qr = await QRCode.toDataURL(res.url, {
+      errorCorrectionLevel: "M",
+      width: 260,
+      margin: 1,
+    });
     return { regenerated: true, secret: res.secret, url: res.url, qr, codes: res.codes };
   },
 };

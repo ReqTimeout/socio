@@ -69,7 +69,14 @@ export async function setFxFloor(rate: number): Promise<void> {
   if (!Number.isFinite(rate) || rate < 1000 || rate > 100000) {
     throw new Error("Floor harus 1.000–100.000.");
   }
-  await db.insert(fxRates).values({ pair: "USD_IDR", rate: Math.round(rate), source: "floor", fetchedAt: new Date() } as any);
+  await db
+    .insert(fxRates)
+    .values({
+      pair: "USD_IDR",
+      rate: Math.round(rate),
+      source: "floor",
+      fetchedAt: new Date(),
+    } as any);
   invalidateFxCache();
 }
 
@@ -86,7 +93,14 @@ export async function refreshFxRate(): Promise<{ rate: number } | null> {
     const j: any = await res.json();
     const idr = Number(j?.rates?.IDR);
     if (!Number.isFinite(idr) || idr < 1000 || idr > 100000) return null;
-    await db.insert(fxRates).values({ pair: "USD_IDR", rate: Math.round(idr), source: "live", fetchedAt: new Date() } as any);
+    await db
+      .insert(fxRates)
+      .values({
+        pair: "USD_IDR",
+        rate: Math.round(idr),
+        source: "live",
+        fetchedAt: new Date(),
+      } as any);
     invalidateFxCache();
     console.log(`[cron] fx-rate: USD_IDR=${Math.round(idr)}`);
     return { rate: Math.round(idr) };

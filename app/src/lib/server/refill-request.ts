@@ -79,9 +79,10 @@ export async function requestOrderRefill(
   if (win.state === "progress") return { ok: false, error: sm.refillProcessing };
   if (win.state === "expired") return { ok: false, error: sm.refillWindowClosed };
   if (win.state === "cooldown") {
-    const when = new Intl.DateTimeFormat(sm.locale, { dateStyle: "medium", timeStyle: "short" }).format(
-      new Date(win.nextAvailableAt ?? Date.now()),
-    );
+    const when = new Intl.DateTimeFormat(sm.locale, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(win.nextAvailableAt ?? Date.now()));
     return { ok: false, error: sm.refillTooSoon(when) };
   }
   if (!win.canRequest) return { ok: false, error: sm.noAutoRefill };

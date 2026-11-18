@@ -1,10 +1,5 @@
 import { db } from "@socio/db";
-import {
-  categories,
-  services,
-  provider,
-  categoryProviderRouting,
-} from "@socio/db/schema";
+import { categories, services, provider, categoryProviderRouting } from "@socio/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import {
   clearCategoryRoutingCache,
@@ -12,7 +7,12 @@ import {
   getCategoryRoutingMap,
 } from "./active-provider";
 import { getPricingRules } from "./pricing";
-import { MANUAL_OFF_TAG, planReconcile, deriveServingState, type ServingState } from "@socio/core/routing-policy";
+import {
+  MANUAL_OFF_TAG,
+  planReconcile,
+  deriveServingState,
+  type ServingState,
+} from "@socio/core/routing-policy";
 import { kindOf, type ServiceKind } from "@socio/core/kind-signature";
 
 /**
@@ -111,7 +111,7 @@ export async function listRoutingRows(): Promise<RoutingRow[]> {
         .filter((x): x is string => !!x),
       routingProviderId,
       routingProviderName:
-        routingProviderId !== null ? provById.get(routingProviderId)?.name ?? null : null,
+        routingProviderId !== null ? (provById.get(routingProviderId)?.name ?? null) : null,
       state,
       markup: {
         Member: rules.Member?.markupPercent ?? 0,

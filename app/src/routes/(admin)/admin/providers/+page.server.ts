@@ -7,10 +7,7 @@ import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/ser
 import { env } from "$env/dynamic/private";
 import { triggerProviderSync } from "$lib/server/cron";
 import { encryptSecret, decryptSecret, isEncrypted } from "$lib/server/crypto";
-import {
-  clearActiveProviderCache,
-  clearCategoryRoutingCache,
-} from "$lib/server/active-provider";
+import { clearActiveProviderCache, clearCategoryRoutingCache } from "$lib/server/active-provider";
 import { reconcileAllServices } from "$lib/server/category-routing";
 import type { Actions, PageServerLoad } from "./$types";
 

@@ -6,7 +6,11 @@ import { logAudit } from "./admin";
 
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   try {
-    webpush.setVapidDetails("mailto:admin@socio.id", process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
+    webpush.setVapidDetails(
+      "mailto:admin@socio.id",
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY,
+    );
   } catch {}
 }
 
@@ -22,7 +26,10 @@ export async function getUserIdsForSegment(segment: Segment): Promise<number[]> 
   // all = no conds
 
   const where = conds.length ? and(...conds) : undefined;
-  const rows = await db.select({ id: users.id }).from(users).where(where as any);
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(where as any);
   return rows.map((r) => Number(r.id));
 }
 
@@ -52,7 +59,11 @@ export async function sendBroadcast(params: {
     createdBy,
     createdAt: new Date(),
   } as any);
-  const campaignIdRow = await db.select({ id: broadcastCampaigns.id }).from(broadcastCampaigns).orderBy(sql`${broadcastCampaigns.id} DESC`).limit(1);
+  const campaignIdRow = await db
+    .select({ id: broadcastCampaigns.id })
+    .from(broadcastCampaigns)
+    .orderBy(sql`${broadcastCampaigns.id} DESC`)
+    .limit(1);
   const campaignId = campaignIdRow[0]?.id ?? 0;
 
   let sent = 0;
@@ -80,7 +91,10 @@ export async function sendBroadcast(params: {
     let pushSent = 0;
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
-      const subs = await db.select().from(webPushSubscriptions).where(inArray(webPushSubscriptions.userId, batch));
+      const subs = await db
+        .select()
+        .from(webPushSubscriptions)
+        .where(inArray(webPushSubscriptions.userId, batch));
       const payload = JSON.stringify({ title: title.trim(), body: body.trim(), url: "/" });
       await Promise.all(
         subs.map((r: any) => {
@@ -94,9 +108,19 @@ export async function sendBroadcast(params: {
   }
 
   // Update campaign
-  await db.update(broadcastCampaigns).set({ sentCount: sent, sentAt: new Date() }).where(eq(broadcastCampaigns.id, campaignId));
+  await db
+    .update(broadcastCampaigns)
+    .set({ sentCount: sent, sentAt: new Date() })
+    .where(eq(broadcastCampaigns.id, campaignId));
 
-  await logAudit({ adminId: createdBy, action: "broadcast_send", entity: "broadcast_campaign", entityId: campaignId, detail: { title, segment, channel, sent }, ip });
+  await logAudit({
+    adminId: createdBy,
+    action: "broadcast_send",
+    entity: "broadcast_campaign",
+    entityId: campaignId,
+    detail: { title, segment, channel, sent },
+    ip,
+  });
 
   return { campaignId, sent };
 }

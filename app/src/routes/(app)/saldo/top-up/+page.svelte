@@ -478,7 +478,13 @@
       upload bukti di halaman riwayat top up untuk konfirmasi cepat.
     </div>
 
-    <Button onclick={() => { instructionOpen = false; }} class="w-full" variant="ghost">Tutup</Button>
+    <Button
+      onclick={() => {
+        instructionOpen = false;
+      }}
+      class="w-full"
+      variant="ghost">Tutup</Button
+    >
   </div>
 </Sheet>
 

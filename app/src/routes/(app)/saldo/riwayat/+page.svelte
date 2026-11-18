@@ -99,7 +99,10 @@
   }
   // Bersihkan note untuk display: buang kode oid dari teks supaya gak polusi.
   function cleanNote(note: string): string {
-    return note.replace(/\s*\([^)]+\)\s*/, " ").replace(/\s{2,}/g, " ").trim();
+    return note
+      .replace(/\s*\([^)]+\)\s*/, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
   }
 
   // M12 — indicator mango di bawah chip filter aktif (diukur DOM, ikut filter/resize).
@@ -279,7 +282,7 @@
                 <td class="px-4 py-3">
                   {#if href}
                     <a
-                      href={href}
+                      {href}
                       title={cleanNote(l.note)}
                       class="inline-flex max-w-[260px] items-center gap-1 text-sm font-medium text-primary hover:underline"
                     >

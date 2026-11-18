@@ -142,7 +142,11 @@ export async function runStaleOrderRefund(): Promise<void> {
       await db.transaction(async (tx) => {
         const [claim]: any[] = await tx
           .update(orders)
-          .set({ isRefund: 1, status: "Error" as any, price: sql`GREATEST(${orders.price} - ${refundAmount}, 0)` })
+          .set({
+            isRefund: 1,
+            status: "Error" as any,
+            price: sql`GREATEST(${orders.price} - ${refundAmount}, 0)`,
+          })
           .where(and(eq(orders.id, o.id), eq(orders.isRefund, 0)));
         const affected = Number(claim?.affectedRows ?? 1);
         if (affected === 0) return;

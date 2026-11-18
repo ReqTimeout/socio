@@ -89,7 +89,10 @@ export function tableLayout(totalCols: number, widths: number[] | "*"): any {
   };
 }
 
-export const baseDoc = (content: any[], meta: { title: string; subtitle: string; fileName: string }): TDocumentDefinitions => ({
+export const baseDoc = (
+  content: any[],
+  meta: { title: string; subtitle: string; fileName: string },
+): TDocumentDefinitions => ({
   pageOrientation: "portrait",
   pageMargins: [30, 30, 30, 40],
   info: { title: meta.title, author: "Socio.id", subject: meta.subtitle },
@@ -114,7 +117,12 @@ export const baseDoc = (content: any[], meta: { title: string; subtitle: string;
     {
       columns: [
         { text: "Dibuat otomatis oleh Socio.id", fontSize: 7.5, color: "#8a93a6" },
-        { text: `Halaman ${currentPage} / ${pageCount}`, fontSize: 7.5, color: "#8a93a6", alignment: "right" },
+        {
+          text: `Halaman ${currentPage} / ${pageCount}`,
+          fontSize: 7.5,
+          color: "#8a93a6",
+          alignment: "right",
+        },
       ],
     },
   ],

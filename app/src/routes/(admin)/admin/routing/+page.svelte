@@ -64,7 +64,9 @@
       <h1
         class="flex items-center gap-2.5 font-display text-2xl font-extrabold tracking-tight text-ink-900 sm:text-[28px]"
       >
-        <span class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-ink-50 shadow-sm">
+        <span
+          class="grid h-10 w-10 place-items-center rounded-2xl bg-ink-900 text-ink-50 shadow-sm"
+        >
           <Icon name="share" size={18} stroke={2.5} />
         </span>
         Routing Provider
@@ -89,9 +91,9 @@
         </span>
       </p>
       <p class="mt-2 max-w-prose text-xs leading-relaxed text-ink-500">
-        Kategori yang di-route dilayani provider khusus (mis. TikTok → provider kedua).
-        Kategori tanpa routing mengikuti provider aktif global. Markup tetap sama
-        untuk semua kategori — yang berubah hanya sumber layanan & harganya.
+        Kategori yang di-route dilayani provider khusus (mis. TikTok → provider kedua). Kategori
+        tanpa routing mengikuti provider aktif global. Markup tetap sama untuk semua kategori — yang
+        berubah hanya sumber layanan & harganya.
       </p>
     </div>
   </header>
@@ -111,9 +113,7 @@
   <div class="flex flex-wrap items-center gap-2">
     <label class="relative min-w-[200px] flex-1">
       <span class="sr-only">Cari kategori</span>
-      <span
-        class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400"
-      >
+      <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">
         <Icon name="search" size={15} />
       </span>
       <input
@@ -194,13 +194,13 @@
                   {fmt(r.active)}<span class="text-ink-400">/{fmt(r.total)}</span>
                 </td>
                 <td class="px-2 py-3">
-                  <span
-                    class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold {st.cls}"
-                  >
+                  <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold {st.cls}">
                     {st.text}
                   </span>
                   {#if r.routingProviderId !== null}
-                    <span class="ml-1 text-[11px] text-ink-500">→ {providerName(r.routingProviderId)}</span>
+                    <span class="ml-1 text-[11px] text-ink-500"
+                      >→ {providerName(r.routingProviderId)}</span
+                    >
                   {/if}
                 </td>
                 <td class="px-4 py-3">
@@ -211,7 +211,10 @@
                       async ({ result }) => {
                         const j = result as any;
                         const ok = result.type !== "failure";
-                        toast(extractActionMsg(j.data) ?? (ok ? "OK" : "Gagal"), ok ? "success" : "error");
+                        toast(
+                          extractActionMsg(j.data) ?? (ok ? "OK" : "Gagal"),
+                          ok ? "success" : "error",
+                        );
                         if (ok) await applyAction(result);
                       }}
                     class="flex items-center justify-end gap-1.5"
@@ -266,7 +269,10 @@
                 async ({ result }) => {
                   const j = result as any;
                   const ok = result.type !== "failure";
-                  toast(extractActionMsg(j.data) ?? (ok ? "OK" : "Gagal"), ok ? "success" : "error");
+                  toast(
+                    extractActionMsg(j.data) ?? (ok ? "OK" : "Gagal"),
+                    ok ? "success" : "error",
+                  );
                   if (ok) await applyAction(result);
                 }}
               class="mt-2 flex items-center gap-1.5"

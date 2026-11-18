@@ -249,7 +249,10 @@ export const actions: Actions = {
         ? note.includes(EDIT_OFF_TAG)
           ? note
           : `${note} ${EDIT_OFF_TAG}`.trim()
-        : note.replace(EDIT_OFF_TAG, "").replace(/\s{2,}/g, " ").trim();
+        : note
+            .replace(EDIT_OFF_TAG, "")
+            .replace(/\s{2,}/g, " ")
+            .trim();
     await db
       .update(services)
       .set({
@@ -484,11 +487,11 @@ export const actions: Actions = {
         ? curNote.includes(MANUAL_OFF_TAG)
           ? curNote
           : `${curNote.trim()} ${MANUAL_OFF_TAG}`.trim()
-        : curNote.replace(MANUAL_OFF_TAG, "").replace(/\s{2,}/g, " ").trim();
-    await db
-      .update(services)
-      .set({ status: next, note: patchedNote })
-      .where(eq(services.id, id));
+        : curNote
+            .replace(MANUAL_OFF_TAG, "")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+    await db.update(services).set({ status: next, note: patchedNote }).where(eq(services.id, id));
     await logAudit({
       adminId: Number(locals.user!.id),
       action: "toggle_service_status",
@@ -516,12 +519,7 @@ export const actions: Actions = {
     assertAdmin(locals);
     const _g = await assertAdminCan(locals, "services:edit");
     if (_g) return _g;
-    const _rate = await assertAdminRate(
-      "category-toggle",
-      (locals as any).ip ?? "0.0.0.0",
-      10,
-      60,
-    );
+    const _rate = await assertAdminRate("category-toggle", (locals as any).ip ?? "0.0.0.0", 10, 60);
     if (_rate) return _rate;
     const form = await request.formData();
     const cid = Number(form.get("categoryId"));

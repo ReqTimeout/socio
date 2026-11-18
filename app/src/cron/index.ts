@@ -48,7 +48,10 @@ export function startCron(): void {
     cron.schedule(def.expr, task, def.tz ? { timezone: def.tz } : undefined);
   }
 
-  console.log(`[cron] ${CRON_JOBS.length} job terdaftar (1 chained):`, CRON_JOBS.map((j) => j.key).join(", "));
+  console.log(
+    `[cron] ${CRON_JOBS.length} job terdaftar (1 chained):`,
+    CRON_JOBS.map((j) => j.key).join(", "),
+  );
 }
 
 /** Manual trigger for provider sync (admin button / halaman providers). */

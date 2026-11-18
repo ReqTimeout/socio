@@ -17,7 +17,9 @@
   // data.tab dari URL bebas (string) — kunci peta empty-state dengan aman,
   // fallback 'refillable' supaya tak ada index-error & tak pernah undefined.
   const emptyFor = $derived(
-    c.app.refill.empty[(data.tab as TabKey) in c.app.refill.empty ? (data.tab as TabKey) : "refillable"],
+    c.app.refill.empty[
+      (data.tab as TabKey) in c.app.refill.empty ? (data.tab as TabKey) : "refillable"
+    ],
   );
 
   let rows = $state<(typeof data)["rows"]>(data.rows);
@@ -67,7 +69,9 @@
 
   // ── jendela waktu: format absolut + countdown relatif (hidup tanpa reload) ──
   const localeStr = "id";
-  const DAY = 86_400_000, HOUR = 3_600_000, MIN = 60_000;
+  const DAY = 86_400_000,
+    HOUR = 3_600_000,
+    MIN = 60_000;
   const dtfmt = new Intl.DateTimeFormat(localeStr, { dateStyle: "medium", timeStyle: "short" });
 
   let nowTick = $state(Date.now());
@@ -278,9 +282,16 @@
                   onclick={() => doRefill(o)}
                   class="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border-2 border-ink-900 bg-emerald-50 px-3 text-[13px] font-extrabold text-emerald-700 shadow-[2px_2px_0_var(--color-ink-900)] transition-all hover:bg-emerald-100 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-60"
                 >
-                  <Icon name="refresh" size={15} stroke={2.6} class={submitting.has(o.id) ? "animate-spin" : ""} />
+                  <Icon
+                    name="refresh"
+                    size={15}
+                    stroke={2.6}
+                    class={submitting.has(o.id) ? "animate-spin" : ""}
+                  />
                   {c.app.refill.card.button}
-                  <span class="ml-1 rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] tabular-nums">
+                  <span
+                    class="ml-1 rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] tabular-nums"
+                  >
                     {c.app.refill.card.estimate(num(o.estimate))}
                   </span>
                 </button>
@@ -338,7 +349,9 @@
             {/if}
           </div>
 
-          <div class="mt-2.5 flex items-center justify-between border-t border-ink-100 pt-2 text-[11px] font-semibold text-ink-400">
+          <div
+            class="mt-2.5 flex items-center justify-between border-t border-ink-100 pt-2 text-[11px] font-semibold text-ink-400"
+          >
             <span class="inline-flex items-center gap-1">
               <Icon name="clock" size={12} />{timeAgo(o.createdAt)}
             </span>

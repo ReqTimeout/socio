@@ -184,9 +184,19 @@
   // Meta render generik param tambahan B5 (label + bentuk input per param).
   const EXTRA_META: Record<string, { label: string; num: boolean; area: boolean; ph: string }> = {
     keywords: { label: "Kata Kunci", num: false, area: false, ph: "contoh: wisata bali" },
-    usernames: { label: "Daftar Username (1 per baris)", num: false, area: true, ph: "@user1\n@user2" },
+    usernames: {
+      label: "Daftar Username (1 per baris)",
+      num: false,
+      area: true,
+      ph: "@user1\n@user2",
+    },
     hashtag: { label: "Hashtag", num: false, area: false, ph: "#tantangan" },
-    groups: { label: "ID Grup (1 per baris)", num: false, area: true, ph: "-1001234567890\n-1009876543210" },
+    groups: {
+      label: "ID Grup (1 per baris)",
+      num: false,
+      area: true,
+      ph: "-1001234567890\n-1009876543210",
+    },
     answer_number: { label: "Nomor Jawaban Polling", num: true, area: false, ph: "1" },
     min: { label: "Min Per Post", num: true, area: false, ph: "" },
     max: { label: "Max Per Post", num: true, area: false, ph: "" },
@@ -1336,16 +1346,22 @@
                  terpilih tidak mendukung refill. Peringatan risiko + saran refill
                  terdekat yang bisa di-tap buat ganti, tepat sebelum user submit. -->
             {#if selectedService && !selectedService.isRefill}
-              <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-3.5 shadow-[0_0_0_3px_rgba(251,191,36,0.15)]">
-                <p class="flex items-start gap-2 text-xs font-semibold leading-relaxed text-amber-900">
+              <div
+                class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-3.5 shadow-[0_0_0_3px_rgba(251,191,36,0.15)]"
+              >
+                <p
+                  class="flex items-start gap-2 text-xs font-semibold leading-relaxed text-amber-900"
+                >
                   <Icon name="alert" size={16} class="mt-0.5 shrink-0 text-amber-600" />
                   <span>
-                    <strong>Non-Refill.</strong> Jumlah bisa berkurang (drop) setelah proses
-                    selesai, dan TIDAK ada refund.
+                    <strong>Non-Refill.</strong> Jumlah bisa berkurang (drop) setelah proses selesai,
+                    dan TIDAK ada refund.
                   </span>
                 </p>
                 {#if refillAlternatives.length > 0}
-                  <p class="mb-2 mt-3 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+                  <p
+                    class="mb-2 mt-3 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-700"
+                  >
                     <Icon name="info" size={12} />
                     Lebih aman — coba versi Refill
                   </p>
@@ -1363,7 +1379,9 @@
                         <span class="min-w-0 flex-1 truncate text-xs font-bold text-ink-900">
                           {whitelabel(alt.serviceName)}
                         </span>
-                        <span class="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-extrabold tabular-nums text-emerald-700">
+                        <span
+                          class="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-extrabold tabular-nums text-emerald-700"
+                        >
                           {formatRupiah(alt.pricePer1k)}/rb
                         </span>
                       </button>
@@ -1376,100 +1394,104 @@
             <!-- Link / Username — UX3.3 inline validation. B5: tipe tanpa link
                  (Subscriptions) menyembunyikan blok ini sepenuhnya. -->
             {#if specNeedsLink}
-            <div>
-              <label class="mb-1.5 block text-sm font-bold" for="link-input">Link / Username</label>
-              {#if data.saved.length > 0}
-                <div
-                  class="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+              <div>
+                <label class="mb-1.5 block text-sm font-bold" for="link-input"
+                  >Link / Username</label
                 >
-                  <span class="shrink-0 text-[10px] font-bold uppercase tracking-wide text-ink-500">
-                    Favorit
-                  </span>
-                  {#each data.saved as sv, i (sv.id)}
-                    <button
-                      type="button"
-                      style={revealDelay(i, 0, 40)}
-                      onclick={() => {
-                        haptic(8);
-                        if (sv.serviceId) {
-                          goto(
-                            `/pesan?service=${sv.serviceId}&link=${encodeURIComponent(sv.link)}`,
-                          );
-                        } else {
-                          link = sv.link;
-                        }
-                      }}
-                      title={sv.link}
-                      class="min-h-[44px] shrink-0 rounded-full border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-medium text-primary transition active:scale-95 hover:bg-primary/10 reveal"
+                {#if data.saved.length > 0}
+                  <div
+                    class="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+                  >
+                    <span
+                      class="shrink-0 text-[10px] font-bold uppercase tracking-wide text-ink-500"
                     >
-                      {sv.label || sv.link.slice(0, 20)}
-                    </button>
-                  {/each}
+                      Favorit
+                    </span>
+                    {#each data.saved as sv, i (sv.id)}
+                      <button
+                        type="button"
+                        style={revealDelay(i, 0, 40)}
+                        onclick={() => {
+                          haptic(8);
+                          if (sv.serviceId) {
+                            goto(
+                              `/pesan?service=${sv.serviceId}&link=${encodeURIComponent(sv.link)}`,
+                            );
+                          } else {
+                            link = sv.link;
+                          }
+                        }}
+                        title={sv.link}
+                        class="min-h-[44px] shrink-0 rounded-full border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-medium text-primary transition active:scale-95 hover:bg-primary/10 reveal"
+                      >
+                        {sv.label || sv.link.slice(0, 20)}
+                      </button>
+                    {/each}
+                  </div>
+                {/if}
+                <div class="relative">
+                  <Input
+                    id="link-input"
+                    name="link"
+                    bind:value={link}
+                    placeholder={dynamicPlaceholder}
+                    required
+                    inputmode="url"
+                    autocomplete="off"
+                    aria-invalid={linkHasError || platformMismatch ? "true" : undefined}
+                    aria-describedby="link-hint"
+                  />
+                  {#if platformMismatch}
+                    {#key expectedPlatform}
+                      <span
+                        class="stamp-pop pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full bg-amber-500 text-white"
+                        aria-hidden="true"
+                      >
+                        <Icon name="alert" size={12} stroke={3} />
+                      </span>
+                    {/key}
+                  {:else if linkOk}
+                    {#key linkPlatform}
+                      <span
+                        class="stamp-pop pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"
+                        aria-hidden="true"
+                      >
+                        <Icon name="check" size={12} stroke={3} />
+                      </span>
+                    {/key}
+                  {/if}
                 </div>
-              {/if}
-              <div class="relative">
-                <Input
-                  id="link-input"
-                  name="link"
-                  bind:value={link}
-                  placeholder={dynamicPlaceholder}
-                  required
-                  inputmode="url"
-                  autocomplete="off"
-                  aria-invalid={linkHasError || platformMismatch ? "true" : undefined}
-                  aria-describedby="link-hint"
-                />
-                {#if platformMismatch}
-                  {#key expectedPlatform}
-                    <span
-                      class="stamp-pop pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full bg-amber-500 text-white"
-                      aria-hidden="true"
-                    >
-                      <Icon name="alert" size={12} stroke={3} />
-                    </span>
-                  {/key}
-                {:else if linkOk}
-                  {#key linkPlatform}
-                    <span
-                      class="stamp-pop pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white"
-                      aria-hidden="true"
-                    >
-                      <Icon name="check" size={12} stroke={3} />
-                    </span>
-                  {/key}
-                {/if}
-              </div>
-              <p
-                id="link-hint"
-                class="mt-1.5 flex items-center gap-1 text-xs leading-relaxed
+                <p
+                  id="link-hint"
+                  class="mt-1.5 flex items-center gap-1 text-xs leading-relaxed
               {linkHasError || platformMismatch
-                  ? 'text-danger font-medium'
-                  : linkOk
-                    ? 'text-success font-medium'
-                    : 'text-ink-500'}"
-                aria-live="polite"
-              >
-                {#if platformMismatch}
-                  <Icon name="alert" size={12} class="shrink-0" />
-                  Layanan {expectedPlatform}, tapi link-mu {linkPlatform}. Pakai link
-                  {expectedPlatform}.
-                {:else if linkHasError}
-                  <Icon name="alert" size={12} class="shrink-0" />
-                  {linkReason}
-                {:else if linkOk}
-                  <Icon name="check" size={12} class="shrink-0" />
-                  Platform {linkPlatform} cocok
-                {:else if expectedPlatform}
-                  <Icon name="info" size={12} class="shrink-0" />
-                  {linkIsProfile
-                    ? `Layanan ini butuh link profil ${expectedPlatform}`
-                    : `Layanan ini butuh link postingan ${expectedPlatform}`}
-                {:else}
-                  <Icon name="info" size={12} class="shrink-0" />
-                  {copy.order.linkHelper}
-                {/if}
-              </p>
-            </div>
+                    ? 'text-danger font-medium'
+                    : linkOk
+                      ? 'text-success font-medium'
+                      : 'text-ink-500'}"
+                  aria-live="polite"
+                >
+                  {#if platformMismatch}
+                    <Icon name="alert" size={12} class="shrink-0" />
+                    Layanan {expectedPlatform}, tapi link-mu {linkPlatform}. Pakai link
+                    {expectedPlatform}.
+                  {:else if linkHasError}
+                    <Icon name="alert" size={12} class="shrink-0" />
+                    {linkReason}
+                  {:else if linkOk}
+                    <Icon name="check" size={12} class="shrink-0" />
+                    Platform {linkPlatform} cocok
+                  {:else if expectedPlatform}
+                    <Icon name="info" size={12} class="shrink-0" />
+                    {linkIsProfile
+                      ? `Layanan ini butuh link profil ${expectedPlatform}`
+                      : `Layanan ini butuh link postingan ${expectedPlatform}`}
+                  {:else}
+                    <Icon name="info" size={12} class="shrink-0" />
+                    {copy.order.linkHelper}
+                  {/if}
+                </p>
+              </div>
             {/if}
 
             <!-- B5: Username — label + helper dinamis ikut tipe layanan. -->

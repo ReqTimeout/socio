@@ -33,14 +33,27 @@ export const refillCopy = {
       dur: { d: "hari", h: "jam", m: "mnt" },
     },
     empty: {
-      refillable: { title: "Tidak ada yang perlu di-refill", desc: "Semua pesanan sehat. Cek lagi nanti setelah jumlah berkurang." },
-      progress: { title: "Belum ada refill berjalan", desc: "Minta refill dari tab 'Bisa refill' untuk memantaunya di sini." },
-      all: { title: "Belum ada pesanan refill", desc: "Pesanan dengan layanan pendukung refill akan tampil di sini." },
+      refillable: {
+        title: "Tidak ada yang perlu di-refill",
+        desc: "Semua pesanan sehat. Cek lagi nanti setelah jumlah berkurang.",
+      },
+      progress: {
+        title: "Belum ada refill berjalan",
+        desc: "Minta refill dari tab 'Bisa refill' untuk memantaunya di sini.",
+      },
+      all: {
+        title: "Belum ada pesanan refill",
+        desc: "Pesanan dengan layanan pendukung refill akan tampil di sini.",
+      },
     },
   },
   // Hanya bagian pesanan yang dipakai kartu /refill:
   pesanan: {
-    timeAgo: { just: "baru saja", minutesAgo: (m: number) => `${m}m lalu`, hoursAgo: (h: number) => `${h}j lalu` },
+    timeAgo: {
+      just: "baru saja",
+      minutesAgo: (m: number) => `${m}m lalu`,
+      hoursAgo: (h: number) => `${h}j lalu`,
+    },
     toast: { failed: "Gagal", refillOk: "Refill diajukan" },
     card: { refillBadge: "Bisa Refill" },
   },

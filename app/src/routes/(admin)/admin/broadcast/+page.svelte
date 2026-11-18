@@ -32,22 +32,49 @@
   </div>
 
   {#if form?.error}
-    <div class="rounded-xl bg-danger/10 px-4 py-3 text-sm font-medium text-danger" role="alert">{form.error}</div>
+    <div class="rounded-xl bg-danger/10 px-4 py-3 text-sm font-medium text-danger" role="alert">
+      {form.error}
+    </div>
   {/if}
   {#if form?.success}
-    <div class="rounded-xl bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{form.success}</div>
+    <div class="rounded-xl bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">
+      {form.success}
+    </div>
   {/if}
 
   <!-- Step indicator -->
   <div class="flex items-center gap-2 text-xs font-bold">
-    <span class="flex items-center gap-1 {step === 1 ? 'text-primary' : 'text-ink-400'}"><span class="grid h-6 w-6 place-items-center rounded-full {step === 1 ? 'bg-primary text-white' : 'bg-ink-100'}">1</span> Segment</span>
+    <span class="flex items-center gap-1 {step === 1 ? 'text-primary' : 'text-ink-400'}"
+      ><span
+        class="grid h-6 w-6 place-items-center rounded-full {step === 1
+          ? 'bg-primary text-white'
+          : 'bg-ink-100'}">1</span
+      > Segment</span
+    >
     <span class="h-px w-6 bg-ink-200"></span>
-    <span class="flex items-center gap-1 {step === 2 ? 'text-primary' : 'text-ink-400'}"><span class="grid h-6 w-6 place-items-center rounded-full {step === 2 ? 'bg-primary text-white' : 'bg-ink-100'}">2</span> Konten</span>
+    <span class="flex items-center gap-1 {step === 2 ? 'text-primary' : 'text-ink-400'}"
+      ><span
+        class="grid h-6 w-6 place-items-center rounded-full {step === 2
+          ? 'bg-primary text-white'
+          : 'bg-ink-100'}">2</span
+      > Konten</span
+    >
     <span class="h-px w-6 bg-ink-200"></span>
-    <span class="flex items-center gap-1 {step === 3 ? 'text-primary' : 'text-ink-400'}"><span class="grid h-6 w-6 place-items-center rounded-full {step === 3 ? 'bg-primary text-white' : 'bg-ink-100'}">3</span> Kirim</span>
+    <span class="flex items-center gap-1 {step === 3 ? 'text-primary' : 'text-ink-400'}"
+      ><span
+        class="grid h-6 w-6 place-items-center rounded-full {step === 3
+          ? 'bg-primary text-white'
+          : 'bg-ink-100'}">3</span
+      > Kirim</span
+    >
   </div>
 
-  <form method="POST" action="?/send" use:enhance class="space-y-4 rounded-2xl border border-ink-100 bg-surface p-5">
+  <form
+    method="POST"
+    action="?/send"
+    use:enhance
+    class="space-y-4 rounded-2xl border border-ink-100 bg-surface p-5"
+  >
     {#if step === 1}
       <h2 class="font-bold">Pilih target — siapa yang mau dikabari</h2>
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -73,20 +100,41 @@
       <h2 class="font-bold">Tulis pesan — judul + isi (push: 120 judul, 240 isi)</h2>
       <div>
         <label class="mb-1 block text-xs font-bold">Judul *</label>
-        <input name="title" bind:value={title} maxlength="120" required placeholder="Promo akhir tahun — diskon 20%" class="h-10 w-full rounded-xl border border-ink-200 px-3 text-sm" />
+        <input
+          name="title"
+          bind:value={title}
+          maxlength="120"
+          required
+          placeholder="Promo akhir tahun — diskon 20%"
+          class="h-10 w-full rounded-xl border border-ink-200 px-3 text-sm"
+        />
         <div class="mt-1 text-right text-[11px] text-ink-400">{title.length}/120</div>
       </div>
       <div>
         <label class="mb-1 block text-xs font-bold">Isi *</label>
-        <textarea name="body" bind:value={body} maxlength="240" required rows="3" placeholder="Hai, ada promo spesial buat kamu..." class="w-full rounded-xl border border-ink-200 px-3 py-2 text-sm"></textarea>
+        <textarea
+          name="body"
+          bind:value={body}
+          maxlength="240"
+          required
+          rows="3"
+          placeholder="Hai, ada promo spesial buat kamu..."
+          class="w-full rounded-xl border border-ink-200 px-3 py-2 text-sm"
+        ></textarea>
         <div class="mt-1 text-right text-[11px] text-ink-400">{body.length}/240</div>
       </div>
       <div>
         <label class="mb-1 block text-xs font-bold">Channel</label>
         <div class="flex gap-2">
-          <label class="flex items-center gap-1.5 text-sm"><input type="radio" bind:group={channel} value="in_app" /> In-app</label>
-          <label class="flex items-center gap-1.5 text-sm"><input type="radio" bind:group={channel} value="web_push" /> Web Push</label>
-          <label class="flex items-center gap-1.5 text-sm"><input type="radio" bind:group={channel} value="both" /> Keduanya</label>
+          <label class="flex items-center gap-1.5 text-sm"
+            ><input type="radio" bind:group={channel} value="in_app" /> In-app</label
+          >
+          <label class="flex items-center gap-1.5 text-sm"
+            ><input type="radio" bind:group={channel} value="web_push" /> Web Push</label
+          >
+          <label class="flex items-center gap-1.5 text-sm"
+            ><input type="radio" bind:group={channel} value="both" /> Keduanya</label
+          >
         </div>
       </div>
       <input type="hidden" name="segment" value={segment} />
@@ -102,7 +150,12 @@
           <p class="text-sm font-bold">{title || "(judul kosong)"}</p>
           <p class="mt-1 text-sm text-ink-600">{body || "(isi kosong)"}</p>
         </div>
-        <p class="mt-2 text-xs text-ink-500">Akan dikirim ke <span class="font-bold text-ink-900">{selectedCount.toLocaleString("id-ID")} user</span> · segment {segment} · channel {channel}</p>
+        <p class="mt-2 text-xs text-ink-500">
+          Akan dikirim ke <span class="font-bold text-ink-900"
+            >{selectedCount.toLocaleString("id-ID")} user</span
+          >
+          · segment {segment} · channel {channel}
+        </p>
       </div>
       <input type="hidden" name="segment" value={segment} />
       <input type="hidden" name="channel" value={channel} />
@@ -126,9 +179,14 @@
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-bold">{c.title}</p>
               <p class="truncate text-xs text-ink-500">{c.body}</p>
-              <p class="text-[11px] text-ink-400">{c.targetSegment} · {c.channel} · {new Date(c.createdAt).toLocaleString("id-ID")} · {c.sentCount} terkirim</p>
+              <p class="text-[11px] text-ink-400">
+                {c.targetSegment} · {c.channel} · {new Date(c.createdAt).toLocaleString("id-ID")} · {c.sentCount}
+                terkirim
+              </p>
             </div>
-            <span class="shrink-0 rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-bold">{c.sentCount}</span>
+            <span class="shrink-0 rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-bold"
+              >{c.sentCount}</span
+            >
           </li>
         {/each}
       </ul>

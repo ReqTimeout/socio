@@ -831,7 +831,9 @@
           class="flex items-start gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-700"
         >
           <Icon name="check" size={16} class="mt-0.5 shrink-0" />
-          <span>Dana {formatRupiah(Number(detail.refunded ?? 0))} sudah dikembalikan ke saldo Anda.</span>
+          <span
+            >Dana {formatRupiah(Number(detail.refunded ?? 0))} sudah dikembalikan ke saldo Anda.</span
+          >
         </div>
       {:else if detail.refundState === "pending"}
         <div

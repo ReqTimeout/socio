@@ -10,7 +10,11 @@ import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, locals }) => {
   if (!locals.user || (locals.user as any).level !== "Admin") throw redirect(303, "/login");
-  const [roleRow] = await db.select({ role: adminRoles.role }).from(adminRoles).where(eq(adminRoles.userId, Number(locals.user.id))).limit(1);
+  const [roleRow] = await db
+    .select({ role: adminRoles.role })
+    .from(adminRoles)
+    .where(eq(adminRoles.userId, Number(locals.user.id)))
+    .limit(1);
   if (!can(normalizeRole(roleRow?.role ?? "admin"), "backup:manage")) throw error(403, "Forbidden");
 
   const filepath = getBackupPath(params.filename);

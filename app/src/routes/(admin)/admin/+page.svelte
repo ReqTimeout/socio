@@ -7,7 +7,7 @@
   let { data }: { data: PageData } = $props();
 
   // P3-09: live overrides from SSE (metrics/feed/queue/chart)
-  let liveFeed = $state<(typeof data.feed) | null>(null);
+  let liveFeed = $state<typeof data.feed | null>(null);
   let liveMetrics = $state<typeof data.metrics | null>(null);
   let liveQueue = $state<typeof data.queue | null>(null);
   let liveChart = $state<typeof data.chart | null>(null);
@@ -17,11 +17,17 @@
   let flashIds = $state<Set<string>>(new Set());
 
   function connectSSE() {
-    if (es) { try { es.close(); } catch {} }
+    if (es) {
+      try {
+        es.close();
+      } catch {}
+    }
     sseState = "connecting";
     try {
       es = new EventSource("/api/admin/events");
-      es.addEventListener("ready", () => { sseState = "live"; });
+      es.addEventListener("ready", () => {
+        sseState = "live";
+      });
       es.addEventListener("dashboard", (ev: MessageEvent) => {
         try {
           const p = JSON.parse((ev as any).data);
@@ -32,7 +38,9 @@
           const fresh = incoming.filter((f: any) => !prevIds.has(f.id)).map((f: any) => f.id);
           if (fresh.length && liveFeed !== null) {
             flashIds = new Set(fresh);
-            setTimeout(() => { flashIds = new Set(); }, 1600);
+            setTimeout(() => {
+              flashIds = new Set();
+            }, 1600);
           }
           liveFeed = incoming;
           liveMetrics = p.metrics;
@@ -43,11 +51,15 @@
       });
       es.onerror = () => {
         sseState = "offline";
-        try { es?.close(); } catch {}
+        try {
+          es?.close();
+        } catch {}
         if (sseRetry) clearTimeout(sseRetry);
         sseRetry = setTimeout(connectSSE, 8000);
       };
-    } catch { sseState = "offline"; }
+    } catch {
+      sseState = "offline";
+    }
   }
 
   const m = $derived(liveMetrics ?? data.metrics);
@@ -88,7 +100,9 @@
       if (refreshTimer) clearInterval(refreshTimer);
       if (userPauseTimer) clearTimeout(userPauseTimer);
       if (sseRetry) clearTimeout(sseRetry);
-      try { es?.close(); } catch {}
+      try {
+        es?.close();
+      } catch {}
     };
   });
 
@@ -143,7 +157,11 @@
     for (const f of src) c[f.kind]++;
     return c;
   });
-  const shown = $derived(filter === "all" ? (feedSrc as any[]) : (feedSrc as any[]).filter((f: any) => f.kind === filter));
+  const shown = $derived(
+    filter === "all"
+      ? (feedSrc as any[])
+      : (feedSrc as any[]).filter((f: any) => f.kind === filter),
+  );
 
   const queue: {
     icon: string;
@@ -215,7 +233,13 @@
     <div class="flex items-center gap-2">
       <span
         class="inline-flex cursor-pointer items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-bold text-success transition-colors hover:bg-success/15 motion-safe:animate-[pulse_2.4s_ease-in-out_infinite]"
-        title={sseState === "live" ? "Realtime SSE terhubung" : sseState === "connecting" ? "Menyambungkan SSE…" : isPaused ? "Auto-refresh dijeda" : "Polling tiap 10 detik"}
+        title={sseState === "live"
+          ? "Realtime SSE terhubung"
+          : sseState === "connecting"
+            ? "Menyambungkan SSE…"
+            : isPaused
+              ? "Auto-refresh dijeda"
+              : "Polling tiap 10 detik"}
         onclick={pauseRefresh}
         onkeydown={(e) => (e.key === "Enter" || e.key === " ") && pauseRefresh()}
         role="button"
@@ -238,7 +262,13 @@
                 : 'bg-ink-300'}"
           ></span>
         </span>
-        <span>{sseState === "live" ? "LIVE · SSE" : sseState === "connecting" ? "Menghubungkan…" : "Live · 10s"}</span>
+        <span
+          >{sseState === "live"
+            ? "LIVE · SSE"
+            : sseState === "connecting"
+              ? "Menghubungkan…"
+              : "Live · 10s"}</span
+        >
         <span
           class="hidden rounded-md bg-success/15 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-success-ink sm:block"
         >
@@ -407,7 +437,9 @@
           {#each shown as f, i (f.id)}
             <a
               href={f.href}
-              class="reveal group flex items-start gap-3 rounded-xl px-2.5 py-2.5 transition-colors duration-200 hover:bg-ink-50 {flashIds.has(f.id)
+              class="reveal group flex items-start gap-3 rounded-xl px-2.5 py-2.5 transition-colors duration-200 hover:bg-ink-50 {flashIds.has(
+                f.id,
+              )
                 ? 'flash-new'
                 : ''}"
               style="--d:{i < 12 ? 440 + i * 35 : 0}ms"
@@ -470,16 +502,16 @@
       </div>
 
       <div class="reveal rounded-2xl border border-ink-100 bg-surface p-4" style="--d:540ms">
-        <h3 class="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-400">
-          Menu cepat
-        </h3>
+        <h3 class="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-400">Menu cepat</h3>
         <p class="mb-2.5 text-[11px] text-ink-400">Lompat ke antrian yang butuh tindakan.</p>
         <div class="grid grid-cols-2 gap-2">
           <a
             href="/admin/deposits"
             class="group flex min-h-[56px] flex-col justify-center gap-0.5 rounded-xl border border-ink-100 px-3 py-2 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-warning/40 hover:text-warning"
           >
-            <span class="flex items-center gap-1.5"><Icon name="wallet" size={16} stroke={2.25} /> Deposit</span>
+            <span class="flex items-center gap-1.5"
+              ><Icon name="wallet" size={16} stroke={2.25} /> Deposit</span
+            >
             <span class="text-[11px] font-medium text-ink-400">
               {#if m.depositPending.count > 0}
                 <span class="font-bold text-warning">{m.depositPending.count} pending</span>
@@ -492,7 +524,9 @@
             href="/admin/orders"
             class="group flex min-h-[56px] flex-col justify-center gap-0.5 rounded-xl border border-ink-100 px-3 py-2 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-accent-500/40 hover:text-accent-ink"
           >
-            <span class="flex items-center gap-1.5"><Icon name="receipt" size={16} stroke={2.25} /> Order</span>
+            <span class="flex items-center gap-1.5"
+              ><Icon name="receipt" size={16} stroke={2.25} /> Order</span
+            >
             <span class="text-[11px] font-medium text-ink-400">
               {#if queueSrc.polling > 0}
                 <span class="font-bold text-accent-ink">{queueSrc.polling} aktif</span>
@@ -505,14 +539,18 @@
             href="/admin/users"
             class="group flex min-h-[56px] flex-col justify-center gap-0.5 rounded-xl border border-ink-100 px-3 py-2 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-primary-500/40 hover:text-primary-ink"
           >
-            <span class="flex items-center gap-1.5"><Icon name="users" size={16} stroke={2.25} /> Users</span>
+            <span class="flex items-center gap-1.5"
+              ><Icon name="users" size={16} stroke={2.25} /> Users</span
+            >
             <span class="text-[11px] font-medium text-ink-400">{m.users.today} baru hari ini</span>
           </a>
           <a
             href="/admin/tickets"
             class="group flex min-h-[56px] flex-col justify-center gap-0.5 rounded-xl border border-ink-100 px-3 py-2 text-sm font-semibold text-ink-700 transition-all hover:-translate-y-0.5 hover:border-ink-300 hover:text-ink-900"
           >
-            <span class="flex items-center gap-1.5"><Icon name="message" size={16} stroke={2.25} /> Tiket</span>
+            <span class="flex items-center gap-1.5"
+              ><Icon name="message" size={16} stroke={2.25} /> Tiket</span
+            >
             <span class="text-[11px] font-medium text-ink-400">Support user</span>
           </a>
         </div>

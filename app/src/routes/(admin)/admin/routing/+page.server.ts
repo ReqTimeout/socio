@@ -39,12 +39,7 @@ export const actions: Actions = {
     assertAdmin(locals);
     const _g = await assertAdminCan(locals, "providers:edit");
     if (_g) return _g;
-    const _rate = await assertAdminRate(
-      "routing-set",
-      (locals as any).ip ?? "0.0.0.0",
-      20,
-      60,
-    );
+    const _rate = await assertAdminRate("routing-set", (locals as any).ip ?? "0.0.0.0", 20, 60);
     if (_rate) return _rate;
 
     const form = await request.formData();

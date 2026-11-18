@@ -18,10 +18,17 @@
       <Icon name="shield" size={24} />
     </div>
     <h1 class="mt-4 text-center font-display text-lg font-extrabold">Verifikasi 2FA</h1>
-    <p class="mt-1 text-center text-sm text-ink-500">Masukin 6 digit dari Authenticator untuk @{data.username}</p>
+    <p class="mt-1 text-center text-sm text-ink-500">
+      Masukin 6 digit dari Authenticator untuk @{data.username}
+    </p>
 
     {#if form?.error}
-      <div class="mt-4 rounded-xl bg-danger/10 px-4 py-3 text-sm font-medium text-danger" role="alert">{form.error}</div>
+      <div
+        class="mt-4 rounded-xl bg-danger/10 px-4 py-3 text-sm font-medium text-danger"
+        role="alert"
+      >
+        {form.error}
+      </div>
     {/if}
 
     <form
@@ -48,7 +55,9 @@
       <Button type="submit" full disabled={loading}>
         {#if loading}Memverifikasi…{:else}Verifikasi{/if}
       </Button>
-      <p class="text-center text-xs text-ink-400">Kehilangan HP? Pakai salah satu backup code (format: XXXXX-XXXXX).</p>
+      <p class="text-center text-xs text-ink-400">
+        Kehilangan HP? Pakai salah satu backup code (format: XXXXX-XXXXX).
+      </p>
     </form>
   </div>
 </div>

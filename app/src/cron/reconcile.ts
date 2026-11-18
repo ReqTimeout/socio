@@ -30,7 +30,10 @@ export async function runReconcile(): Promise<void> {
     if (rows.length > 0) {
       const total = rows.reduce((a: number, r: any) => a + Number(r.price ?? 0), 0);
       findings.push(
-        `${rows.length} order gagal belum refund (Rp${Math.round(total).toLocaleString("id-ID")}, cth #${rows.slice(0, 5).map((r: any) => r.id).join(",#")})`,
+        `${rows.length} order gagal belum refund (Rp${Math.round(total).toLocaleString("id-ID")}, cth #${rows
+          .slice(0, 5)
+          .map((r: any) => r.id)
+          .join(",#")})`,
       );
     }
   } catch (e) {
@@ -46,7 +49,10 @@ export async function runReconcile(): Promise<void> {
       .limit(20)) as any[];
     if (rows.length > 0) {
       findings.push(
-        `${rows.length} user saldo negatif (cth #${rows.slice(0, 5).map((r: any) => r.id).join(",#")})`,
+        `${rows.length} user saldo negatif (cth #${rows
+          .slice(0, 5)
+          .map((r: any) => r.id)
+          .join(",#")})`,
       );
     }
   } catch (e) {

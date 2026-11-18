@@ -10,7 +10,11 @@ export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.user) throw redirect(303, "/login");
   if ((locals.user as any).level !== "Admin") throw redirect(303, "/");
 
-  const campaigns = await db.select().from(broadcastCampaigns).orderBy(desc(broadcastCampaigns.id)).limit(20);
+  const campaigns = await db
+    .select()
+    .from(broadcastCampaigns)
+    .orderBy(desc(broadcastCampaigns.id))
+    .limit(20);
 
   // Count per segment for preview
   const counts: Record<string, number> = {};
@@ -34,8 +38,13 @@ export const actions: Actions = {
     const { adminRoles } = await import("@socio/db/schema");
     const { eq } = await import("drizzle-orm");
     const { normalizeRole, can } = await import("@socio/core/rbac");
-    const [roleRow] = await db2.select({ role: adminRoles.role }).from(adminRoles).where(eq(adminRoles.userId, Number(locals.user!.id))).limit(1);
-    if (!can(normalizeRole(roleRow?.role ?? "admin"), "broadcast:send")) return fail(403, { error: "Role kamu tidak bisa broadcast." });
+    const [roleRow] = await db2
+      .select({ role: adminRoles.role })
+      .from(adminRoles)
+      .where(eq(adminRoles.userId, Number(locals.user!.id)))
+      .limit(1);
+    if (!can(normalizeRole(roleRow?.role ?? "admin"), "broadcast:send"))
+      return fail(403, { error: "Role kamu tidak bisa broadcast." });
     const _rate = await assertAdminRate("broadcast-send", (locals as any).ip ?? "0.0.0.0", 5, 60);
     if (_rate) return _rate;
     const form = await request.formData();
@@ -50,8 +59,17 @@ export const actions: Actions = {
       return fail(400, { error: "Channel tidak valid." });
 
     try {
-      const res = await sendBroadcast({ title, body, segment, channel, createdBy: Number(locals.user!.id), ip: (locals as any).ip });
-      return { success: `Broadcast terkirim ke ${res.sent} user · in-app: ${channel !== "web_push" ? res.sent : 0} · push: ${channel !== "in_app" ? "batched" : 0}` };
+      const res = await sendBroadcast({
+        title,
+        body,
+        segment,
+        channel,
+        createdBy: Number(locals.user!.id),
+        ip: (locals as any).ip,
+      });
+      return {
+        success: `Broadcast terkirim ke ${res.sent} user · in-app: ${channel !== "web_push" ? res.sent : 0} · push: ${channel !== "in_app" ? "batched" : 0}`,
+      };
     } catch (e: any) {
       return fail(400, { error: e?.message ?? "Gagal kirim broadcast." });
     }

@@ -1,5 +1,13 @@
 import { db } from "@socio/db";
-import { services, categories, savedLinks, orders, users, balanceLogs, provider } from "@socio/db/schema";
+import {
+  services,
+  categories,
+  savedLinks,
+  orders,
+  users,
+  balanceLogs,
+  provider,
+} from "@socio/db/schema";
 import { eq, desc, asc, sql, and } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
 import {
@@ -73,7 +81,9 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       id: categories.id,
       name: categories.name,
       svcCount: sql<number>`COUNT(${services.id})`,
-      latestAt: sql<string | null>`MAX(GREATEST(COALESCE(${services.createdAt}, '1970-01-01'), COALESCE(${services.updatedAt}, '1970-01-01')))`
+      latestAt: sql<
+        string | null
+      >`MAX(GREATEST(COALESCE(${services.createdAt}, '1970-01-01'), COALESCE(${services.updatedAt}, '1970-01-01')))`,
     })
     .from(categories)
     .leftJoin(services, sql`${services.categoryId} = ${categories.id} AND ${services.status} = 1`)
@@ -382,14 +392,7 @@ export const actions: Actions = {
     // `s.type` WAJIB ikut dikirim: layanan Package punya rate per-pack, bukan
     // per-1000 (lihat pricing.ts `isFixedPackageType`) — tanpa ini Package
     // ditagih 1/1000 harga sebenarnya.
-    const finalPrice = computePrice(
-      basePer1k,
-      finalQty,
-      level,
-      rule,
-      Number(s.priceApi),
-      s.type,
-    );
+    const finalPrice = computePrice(basePer1k, finalQty, level, rule, Number(s.priceApi), s.type);
     if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
       return fail(400, { error: "Harga layanan tidak valid." });
     }

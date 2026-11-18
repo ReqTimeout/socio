@@ -81,12 +81,24 @@
     { href: "/", label: "Home", icon: "home", section: "Menu" },
     { href: "/pesanan", label: "Pesanan", icon: "receipt", section: "Menu" },
     { href: "/refill", label: "Refill", icon: "refresh", section: "Menu" },
-    { href: "/saldo", label: "Saldo", icon: "wallet", section: "Menu", pending: data.hasPendingDeposit },
+    {
+      href: "/saldo",
+      label: "Saldo",
+      icon: "wallet",
+      section: "Menu",
+      pending: data.hasPendingDeposit,
+    },
     { href: "/tiket", label: "Tiket", icon: "ticket", section: "Menu" },
     { href: "/layanan", label: "Layanan", icon: "grid", section: "Lainnya" },
     { href: "/affiliate", label: "Affiliate", icon: "gift", section: "Lainnya" },
     { href: "/akun", label: "Akun", icon: "user", section: "Lainnya" },
-    { href: "/notif", label: "Notifikasi", icon: "bell", section: "Lainnya", unread: data.unreadCount > 0 },
+    {
+      href: "/notif",
+      label: "Notifikasi",
+      icon: "bell",
+      section: "Lainnya",
+      unread: data.unreadCount > 0,
+    },
   ]);
   const isAdminUser = $derived((data.user as any)?.level === "Admin");
   // H1 (port .my): undangan upgrade Reseller — HANYA Member (Reseller/Admin/Agen
@@ -102,7 +114,13 @@
       : isMemberUser
         ? [
             ...sidebarBase.slice(0, 7),
-            { href: "/reseller", label: "Upgrade Reseller", icon: "crown", section: "Lainnya", hot: true },
+            {
+              href: "/reseller",
+              label: "Upgrade Reseller",
+              icon: "crown",
+              section: "Lainnya",
+              hot: true,
+            },
             ...sidebarBase.slice(7),
           ]
         : sidebarBase,
@@ -144,7 +162,12 @@
     >Lewati ke konten utama</a
   >
   <!-- Desktop sidebar -->
-  <Sidebar items={sidebarItems} user={data.user} collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+  <Sidebar
+    items={sidebarItems}
+    user={data.user}
+    collapsed={sidebarCollapsed}
+    onToggle={toggleSidebar}
+  />
 
   <!-- Mobile header — avatar + notif (thumb-friendly, single tap to sheet) -->
   <header
@@ -200,7 +223,10 @@
   <!-- Main content — offset for sidebar on desktop.
        pb-40 (mobile, FAB aktif): FAB duduk ~108px + dock ~70px — konten terakhir
        butuh clearance supaya tidak tertutup FAB/dock (P2-02/P3-01). -->
-  <main id="main" class="transition-[margin] duration-300 ease-out {sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}">
+  <main
+    id="main"
+    class="transition-[margin] duration-300 ease-out {sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}"
+  >
     <div
       class="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 lg:px-10 {showFab
         ? 'pb-40 lg:pb-12'

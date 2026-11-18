@@ -181,7 +181,9 @@
       class="pop-in relative overflow-hidden rounded-[var(--radius-sticker)] border-2 border-ink-900 bg-amber-50 p-4 shadow-[4px_4px_0_var(--color-ink-900)] lg:p-5"
     >
       <div class="flex items-start gap-3">
-        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700 ring-1 ring-ink-900/10">
+        <div
+          class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700 ring-1 ring-ink-900/10"
+        >
           <Icon name={pendingIsReseller ? "crown" : "clock"} size={20} stroke={2.4} />
         </div>
         <div class="min-w-0 flex-1">
@@ -196,8 +198,8 @@
             {formatRupiah(Number(pending.postAmount ?? pending.amount))}
           </div>
           <p class="mt-2 text-xs leading-relaxed text-amber-800">
-            Transfer PERSIS {formatRupiah(Number(pending.postAmount ?? pending.amount))} ke BCA
-            — kode unik di 3 digit akhir membantu kami mencocokkan transfer kamu otomatis.
+            Transfer PERSIS {formatRupiah(Number(pending.postAmount ?? pending.amount))} ke BCA — kode
+            unik di 3 digit akhir membantu kami mencocokkan transfer kamu otomatis.
           </p>
           {#if pendingLeft}
             <div class="mt-2 flex items-center gap-2">
@@ -394,14 +396,11 @@
   <div class="rounded-2xl border border-ink-100 bg-surface p-4 lg:p-5">
     <h2 class="text-sm font-bold lg:text-[15px]">Cara kerja top-up</h2>
     <ol class="mt-3 space-y-2.5">
-      {#each [
-        "Buka Top Up, pilih nominal — kamu dapat nomor rekening BCA + nominal persis dengan kode unik 3 digit akhir.",
-        "Transfer nominal PERSIS (termasuk kode unik) dari app bank manapun — kode unik membuat pencocokan otomatis.",
-        "Upload bukti transfer (opsional) dan tunggu konfirmasi admin (jam kerja) — saldo masuk, ada notifikasi & email.",
-      ] as step, i (i)}
+      {#each ["Buka Top Up, pilih nominal — kamu dapat nomor rekening BCA + nominal persis dengan kode unik 3 digit akhir.", "Transfer nominal PERSIS (termasuk kode unik) dari app bank manapun — kode unik membuat pencocokan otomatis.", "Upload bukti transfer (opsional) dan tunggu konfirmasi admin (jam kerja) — saldo masuk, ada notifikasi & email."] as step, i (i)}
         <li class="flex items-start gap-2.5 text-[13px] leading-relaxed text-ink-700">
           <span
-            class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ink-900 text-[11px] font-bold tabular-nums text-white">{i + 1}</span
+            class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ink-900 text-[11px] font-bold tabular-nums text-white"
+            >{i + 1}</span
           >
           <span>{step}</span>
         </li>
@@ -430,11 +429,12 @@
       <div class="min-w-0 flex-1">
         <div class="text-sm font-bold text-ink-900">Mau order lebih murah?</div>
         <div class="mt-0.5 text-xs leading-relaxed text-ink-600">
-          Reseller dapat harga grosir — aktivasi Rp50.000 (sudah termasuk saldo
-          Rp20.000). Bisa upgrade mandiri, invoice langsung dikirim.
+          Reseller dapat harga grosir — aktivasi Rp50.000 (sudah termasuk saldo Rp20.000). Bisa
+          upgrade mandiri, invoice langsung dikirim.
         </div>
       </div>
-      <span class="hidden shrink-0 items-center gap-1 text-xs font-bold text-amber-700 sm:inline-flex"
+      <span
+        class="hidden shrink-0 items-center gap-1 text-xs font-bold text-amber-700 sm:inline-flex"
         >Upgrade sekarang <Icon name="chevron_right" size={14} /></span
       >
       <Icon name="chevron_right" size={16} class="shrink-0 text-amber-700 sm:hidden" />

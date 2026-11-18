@@ -20,66 +20,77 @@ async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 export async function collectHealth() {
   const now = Date.now();
 
-  const [syncRows, backupRow, queueRows, dbSizeRows, tableSizeRows, providerErr24h, queueOldest] = await Promise.all([
-    safe(
-      () =>
-        db
-          .select({
-            status: providerSyncLog.status,
-            durationMs: providerSyncLog.durationMs,
-            fetched: providerSyncLog.fetched,
-            changed: providerSyncLog.changed,
-            createdAt: providerSyncLog.createdAt,
-          })
-          .from(providerSyncLog)
-          .orderBy(desc(providerSyncLog.createdAt))
-          .limit(10),
-      [] as any[],
-    ),
-    safe(
-      () =>
-        db
-          .select({ id: backupLogs.id, status: backupLogs.status, sizeBytes: backupLogs.sizeBytes, startedAt: backupLogs.startedAt, finishedAt: backupLogs.finishedAt })
-          .from(backupLogs)
-          .orderBy(desc(backupLogs.startedAt))
-          .limit(5),
-      [] as any[],
-    ),
-    safe(
-      () =>
-        db.execute(
-          sql`SELECT status, COUNT(*) AS c FROM ${jobQueue} GROUP BY status`,
-        ) as Promise<any>,
-      [] as any,
-    ),
-    safe(
-      () =>
-        db.execute(
-          sql`SELECT ROUND(SUM(DATA_LENGTH + INDEX_LENGTH), 0) AS total_bytes FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()`,
-        ) as Promise<any>,
-      [] as any,
-    ),
-    safe(
-      () =>
-        db.execute(
-          sql`SELECT TABLE_NAME AS name, ROUND(DATA_LENGTH + INDEX_LENGTH, 0) AS bytes FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY (DATA_LENGTH + INDEX_LENGTH) DESC LIMIT 5`,
-        ) as Promise<any>,
-      [] as any,
-    ),
-    safe(
-      () =>
-        db
-          .select({ c: sql<number>`count(*)` })
-          .from(providerSyncLog)
-          .where(sql`${providerSyncLog.status} = 'error' AND ${providerSyncLog.createdAt} >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`),
-      [{ c: 0 }] as any[],
-    ),
-    safe(
-      () =>
-        db.execute(sql`SELECT TIMESTAMPDIFF(SECOND, MIN(created_at), NOW()) AS oldest_sec FROM ${jobQueue} WHERE status = 'pending'`) as Promise<any>,
-      [] as any,
-    ),
-  ]);
+  const [syncRows, backupRow, queueRows, dbSizeRows, tableSizeRows, providerErr24h, queueOldest] =
+    await Promise.all([
+      safe(
+        () =>
+          db
+            .select({
+              status: providerSyncLog.status,
+              durationMs: providerSyncLog.durationMs,
+              fetched: providerSyncLog.fetched,
+              changed: providerSyncLog.changed,
+              createdAt: providerSyncLog.createdAt,
+            })
+            .from(providerSyncLog)
+            .orderBy(desc(providerSyncLog.createdAt))
+            .limit(10),
+        [] as any[],
+      ),
+      safe(
+        () =>
+          db
+            .select({
+              id: backupLogs.id,
+              status: backupLogs.status,
+              sizeBytes: backupLogs.sizeBytes,
+              startedAt: backupLogs.startedAt,
+              finishedAt: backupLogs.finishedAt,
+            })
+            .from(backupLogs)
+            .orderBy(desc(backupLogs.startedAt))
+            .limit(5),
+        [] as any[],
+      ),
+      safe(
+        () =>
+          db.execute(
+            sql`SELECT status, COUNT(*) AS c FROM ${jobQueue} GROUP BY status`,
+          ) as Promise<any>,
+        [] as any,
+      ),
+      safe(
+        () =>
+          db.execute(
+            sql`SELECT ROUND(SUM(DATA_LENGTH + INDEX_LENGTH), 0) AS total_bytes FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()`,
+          ) as Promise<any>,
+        [] as any,
+      ),
+      safe(
+        () =>
+          db.execute(
+            sql`SELECT TABLE_NAME AS name, ROUND(DATA_LENGTH + INDEX_LENGTH, 0) AS bytes FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY (DATA_LENGTH + INDEX_LENGTH) DESC LIMIT 5`,
+          ) as Promise<any>,
+        [] as any,
+      ),
+      safe(
+        () =>
+          db
+            .select({ c: sql<number>`count(*)` })
+            .from(providerSyncLog)
+            .where(
+              sql`${providerSyncLog.status} = 'error' AND ${providerSyncLog.createdAt} >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+            ),
+        [{ c: 0 }] as any[],
+      ),
+      safe(
+        () =>
+          db.execute(
+            sql`SELECT TIMESTAMPDIFF(SECOND, MIN(created_at), NOW()) AS oldest_sec FROM ${jobQueue} WHERE status = 'pending'`,
+          ) as Promise<any>,
+        [] as any,
+      ),
+    ]);
 
   const syncLast = syncRows[0] as any | undefined;
 
@@ -88,7 +99,14 @@ export async function collectHealth() {
   const cronStatus = await getCronStatus().catch(() => [] as any[]);
   const byKey = new Map((cronStatus as any[]).map((c: any) => [c.key, c]));
   // Hati-hati: JANGAN spread `def` mentah — CRON_JOBS.run adalah fungsi (tidak serializable ke client).
-  const pub = (def: any) => ({ key: def.key, label: def.label, scheduleLabel: def.scheduleLabel, intervalMin: def.intervalMin, note: def.note, expr: def.expr });
+  const pub = (def: any) => ({
+    key: def.key,
+    label: def.label,
+    scheduleLabel: def.scheduleLabel,
+    intervalMin: def.intervalMin,
+    note: def.note,
+    expr: def.expr,
+  });
   const cronHealth = CRON_JOBS.map((def) => {
     const live: any = byKey.get(def.key);
     if (!live?.last) {
@@ -117,14 +135,26 @@ export async function collectHealth() {
             lastAt: lastAt.toISOString(),
             nextInSec: Math.max(0, Math.round(86400 - elapsed)),
             status: b.status === "success" ? "ok" : b.status === "failed" ? "error" : b.status,
-            durationMs: b.startedAt && b.finishedAt ? new Date(b.finishedAt as any).getTime() - new Date(b.startedAt as any).getTime() : null,
+            durationMs:
+              b.startedAt && b.finishedAt
+                ? new Date(b.finishedAt as any).getTime() - new Date(b.startedAt as any).getTime()
+                : null,
             fetched: null,
             changed: null,
             error24h: 0,
           };
         }
       }
-      return { ...pub(def), lastAt: null, nextInSec: def.intervalMin * 60, status: "never" as const, durationMs: null, fetched: null, changed: null, error24h: 0 };
+      return {
+        ...pub(def),
+        lastAt: null,
+        nextInSec: def.intervalMin * 60,
+        status: "never" as const,
+        durationMs: null,
+        fetched: null,
+        changed: null,
+        error24h: 0,
+      };
     }
     const row: any = {
       ...pub(def),
@@ -146,15 +176,25 @@ export async function collectHealth() {
 
   // Queue depth
   const queueByStatus: Record<string, number> = {};
-  const qRows: any[] = Array.isArray((queueRows as any)[0]) ? (queueRows as any)[0] : ((queueRows as any) ?? []);
+  const qRows: any[] = Array.isArray((queueRows as any)[0])
+    ? (queueRows as any)[0]
+    : ((queueRows as any) ?? []);
   for (const r of qRows) queueByStatus[String(r.status)] = Number(r.c);
   const pending = queueByStatus["pending"] ?? 0;
   const oldestSec: number | null =
-    (queueOldest as any)?.[0]?.oldest_sec != null ? Number((queueOldest as any)[0].oldest_sec) : null;
+    (queueOldest as any)?.[0]?.oldest_sec != null
+      ? Number((queueOldest as any)[0].oldest_sec)
+      : null;
 
-  const totalBytes: number = Number((dbSizeRows as any)?.[0]?.total_bytes ?? (dbSizeRows as any)?.rows?.[0]?.total_bytes ?? 0);
-  const tableRows: any[] = Array.isArray((tableSizeRows as any)[0]) ? (tableSizeRows as any)[0] : ((tableSizeRows as any)?.rows ?? (tableSizeRows as any) ?? []);
-  const topTables = tableRows.slice(0, 5).map((r: any) => ({ name: String(r.name ?? r.TABLE_NAME ?? ""), bytes: Number(r.bytes ?? 0) }));
+  const totalBytes: number = Number(
+    (dbSizeRows as any)?.[0]?.total_bytes ?? (dbSizeRows as any)?.rows?.[0]?.total_bytes ?? 0,
+  );
+  const tableRows: any[] = Array.isArray((tableSizeRows as any)[0])
+    ? (tableSizeRows as any)[0]
+    : ((tableSizeRows as any)?.rows ?? (tableSizeRows as any) ?? []);
+  const topTables = tableRows
+    .slice(0, 5)
+    .map((r: any) => ({ name: String(r.name ?? r.TABLE_NAME ?? ""), bytes: Number(r.bytes ?? 0) }));
 
   return {
     generatedAt: new Date().toISOString(),
@@ -166,7 +206,13 @@ export async function collectHealth() {
     },
     provider: {
       balanceUsd: null as number | null,
-      lastSync: syncLast ? { at: new Date(syncLast.createdAt as any).toISOString(), status: syncLast.status, durationMs: Number(syncLast.durationMs ?? 0) } : null,
+      lastSync: syncLast
+        ? {
+            at: new Date(syncLast.createdAt as any).toISOString(),
+            status: syncLast.status,
+            durationMs: Number(syncLast.durationMs ?? 0),
+          }
+        : null,
     },
     db: {
       totalBytes,
