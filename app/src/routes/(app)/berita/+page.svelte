@@ -2,6 +2,7 @@
   import { Icon, revealDelay, EmptyNotifArt, Sparko, haptic } from "@socio/ui";
   import {
     newsMeta,
+    newsCategory,
     newsTimeAgo,
     NEWS_EVENT_FILTERS,
     isOrderableEvent,
@@ -10,6 +11,7 @@
     newsSplit,
     newsFinalPrice,
   } from "$lib/news-meta";
+  import NewsDetailSheet from "$lib/components/NewsDetailSheet.svelte";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
@@ -18,7 +20,54 @@
     const q = new URLSearchParams();
     q.set("page", String(p));
     if (data.t) q.set("t", data.t);
+    if (data.src) q.set("src", data.src);
     return `/berita?${q.toString()}`;
+  }
+
+  /** URL filter sumber (?src=) — jenis event (?t=) ikut dipertahankan. */
+  function srcHref(v: string): string {
+    const q = new URLSearchParams();
+    if (v) q.set("src", v);
+    if (data.t) q.set("t", data.t);
+    const s = q.toString();
+    return s ? `/berita?${s}` : "/berita";
+  }
+
+  /** URL filter jenis event (?t=) — pilihan sumber (?src=) ikut dipertahankan. */
+  function tHref(v: string): string {
+    const q = new URLSearchParams();
+    if (v) q.set("t", v);
+    if (data.src) q.set("src", data.src);
+    const s = q.toString();
+    return s ? `/berita?${s}` : "/berita";
+  }
+
+  const SOURCES = [
+    { v: "", label: "Semua" },
+    { v: "manual", label: "Manual" },
+    { v: "sync", label: "Sync" },
+  ];
+
+  // Kartu pengumuman manual tidak punya tujuan navigasi → buka popup detail
+  // (komponen yang sama dengan box dashboard) supaya isi panjang terbaca utuh.
+  let sheetItem = $state<{
+    id: number;
+    title?: string | null;
+    kategori?: string | null;
+    content: string;
+    createdAt: Date | string;
+  } | null>(null);
+  let sheetOpen = $state(false);
+  function openDetail(n: PageData["items"][number]) {
+    haptic(8);
+    sheetItem = {
+      id: n.id,
+      title: n.title,
+      kategori: n.kategori,
+      content: n.content,
+      createdAt: n.createdAt,
+    };
+    sheetOpen = true;
   }
 </script>
 
@@ -37,8 +86,26 @@
     </h1>
     <p class="mt-0.5 text-xs leading-relaxed text-ink-500 lg:text-sm">
       Kabar otomatis dari pembaruan katalog layanan Socio — layanan baru, harga naik/turun, dan yang
-      dihentikan. Tap baris untuk langsung pesan layanannya.
+      dihentikan — plus pengumuman dari admin. Tap baris untuk pesan layanan atau baca detail
+      pengumuman.
     </p>
+  </div>
+
+  <!-- Filter SUMBER — memisahkan pengumuman yang admin tulis dari berita otomatis katalog. -->
+  <div class="flex gap-1.5">
+    {#each SOURCES as s (s.v)}
+      {@const active = data.src === s.v}
+      <a
+        href={srcHref(s.v)}
+        aria-current={active ? "page" : undefined}
+        onclick={() => haptic(6)}
+        class="inline-flex min-h-[34px] flex-1 justify-center rounded-full border-2 border-ink-900 px-2.5 py-1 text-[11px] font-bold transition-all duration-200 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
+          {active
+          ? 'bg-ink-900 text-ink-50 shadow-none'
+          : 'bg-surface text-ink-600 shadow-[2px_2px_0_var(--color-ink-900)] hover:bg-ink-50'}"
+        >{s.label}</a
+      >
+    {/each}
   </div>
 
   <!-- Filter chips pop/neo-brutalist — compact + titik warna sesuai event -->
@@ -48,7 +115,7 @@
         {@const fm = f.v ? newsMeta(f.v) : null}
         {@const active = data.t === f.v}
         <a
-          href={f.v ? `/berita?t=${f.v}` : "/berita"}
+          href={tHref(f.v)}
           aria-current={active ? "page" : undefined}
           onclick={() => haptic(6)}
           class="inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full border-2 border-ink-900 px-3 py-1 text-[11px] font-bold shadow-[2px_2px_0_var(--color-ink-900)] transition-all duration-200 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
@@ -93,36 +160,44 @@
       {#each data.items as n, i (n.id)}
         {@const meta = newsMeta(n.eventType)}
         <!-- Konten sync = "Nama — info harga" (label event sudah ada di chip, jangan
-             diulang). Judul kartu = nama layanan; pengumuman manual tetap kategori. -->
+             diulang). Judul kartu sync = nama layanan; pengumuman manual = news.title
+             dengan chip KATEGORI (info/update/promo/maintenance/urgent). -->
         {@const sync = n.source === "sync"}
         {@const sp = newsSplit(n.content)}
-        {@const title = sync ? sp.name : cleanNewsText(n.kategori) || meta.label}
+        {@const cat = sync ? null : newsCategory(n.kategori)}
+        {@const chip = cat ?? meta}
+        {@const title = sync
+          ? sp.name
+          : String(n.title ?? "").trim() || cleanNewsText(n.content).slice(0, 70)}
         {@const segs = newsPriceSegments(sync ? sp.detail : n.content)}
         {@const price = sync ? newsFinalPrice(n.content) : ""}
         {@const href =
           n.serviceId > 0 && isOrderableEvent(n.eventType) ? `/pesan?service=${n.serviceId}` : null}
-        {@const showBadge = title.toLowerCase() !== meta.label.toLowerCase()}
+        {@const showBadge = title.toLowerCase() !== chip.label.toLowerCase()}
         <li class="reveal" style={revealDelay(i, 0, 30)}>
           <svelte:element
-            this={href ? "a" : "div"}
-            {...href ? { href } : {}}
-            onclick={() => haptic(8)}
-            class="group flex items-start gap-3 rounded-2xl border-2 border-ink-900 bg-surface p-3.5 text-left shadow-[2px_2px_0_var(--color-ink-900)] transition-all duration-200 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
+            this={href ? "a" : sync ? "div" : "button"}
+            {...href ? { href } : sync ? {} : { type: "button" }}
+            onclick={() => {
+              haptic(8);
+              if (!href && !sync) openDetail(n);
+            }}
+            class="group flex w-full items-start gap-3 rounded-2xl border-2 border-ink-900 bg-surface p-3.5 text-left shadow-[2px_2px_0_var(--color-ink-900)] transition-all duration-200 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
               {href ? 'hover:-translate-y-0.5 hover:shadow-[3px_3px_0_var(--color-ink-900)]' : ''}"
           >
             <span
-              class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-ink-900 {meta.chipBg} {meta.chipInk} transition-transform group-hover:scale-105"
+              class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-ink-900 {chip.chipBg} {chip.chipInk} transition-transform group-hover:scale-105"
             >
-              <Icon name={meta.icon} size={18} stroke={2} />
+              <Icon name={chip.icon} size={18} stroke={2} />
             </span>
             <span class="min-w-0 flex-1">
               <span class="flex items-center gap-2">
                 <span class="min-w-0 truncate text-sm font-extrabold text-ink-900">{title}</span>
                 {#if showBadge}
                   <span
-                    class="shrink-0 rounded-full border-2 border-ink-900 px-2 py-0.5 text-[10px] font-extrabold {meta.chipBg} {meta.chipInk}"
+                    class="shrink-0 rounded-full border-2 border-ink-900 px-2 py-0.5 text-[10px] font-extrabold {chip.chipBg} {chip.chipInk}"
                   >
-                    {meta.label}
+                    {chip.label}
                   </span>
                 {/if}
               </span>
@@ -192,4 +267,7 @@
       </nav>
     {/if}
   {/if}
+
+  <!-- Popup detail pengumuman manual — komponen yang sama dengan dashboard. -->
+  <NewsDetailSheet bind:open={sheetOpen} item={sheetItem} />
 </section>

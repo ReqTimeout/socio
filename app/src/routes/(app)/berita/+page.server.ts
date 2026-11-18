@@ -9,15 +9,19 @@ import type { PageServerLoad } from "./$types";
  * Sumber data = tabel `news` global (sama persis dgn widget "Update" dashboard),
  * BUKAN tabel `notifications` per-user → tidak membanjiri lonceng/inbox.
  * - Filter per jenis event lewat ?t=<event_type>.
+ * - Filter sumber lewat ?src=manual|sync (pengumuman admin vs berita otomatis katalog).
  * - Pagination lewat ?page=<n> (default 12 kartu / halaman).
  */
 export const load: PageServerLoad = async ({ locals, url }) => {
   if (!locals.user) throw redirect(303, "/login");
 
   const t = String(url.searchParams.get("t") ?? "").trim();
-  const where = t
-    ? and(eq(news.isHidden, 0), eq(news.eventType, t as never))
-    : eq(news.isHidden, 0);
+  const srcRaw = String(url.searchParams.get("src") ?? "").trim();
+  const src = srcRaw === "manual" || srcRaw === "sync" ? srcRaw : "";
+  const conds = [eq(news.isHidden, 0)];
+  if (t) conds.push(eq(news.eventType, t as never));
+  if (src) conds.push(eq(news.source, src));
+  const where = and(...conds);
 
   const perPage = 12;
   const rawPage = Number(url.searchParams.get("page") ?? 1);
@@ -28,6 +32,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       .select({
         id: news.id,
         kategori: news.kategori,
+        title: news.title,
         content: news.content,
         eventType: news.eventType,
         source: news.source,
@@ -45,5 +50,5 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const total = Number(countRow[0]?.c ?? 0);
   const pages = Math.max(1, Math.ceil(total / perPage));
 
-  return { items: rows, t, page, pages, total };
+  return { items: rows, t, src, page, pages, total };
 };
