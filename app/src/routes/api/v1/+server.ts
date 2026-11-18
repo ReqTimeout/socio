@@ -10,7 +10,7 @@ import {
   apiUsage,
 } from "@socio/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { smmturkAddFor, smmturkRefill } from "@socio/core/smmturk";
+import { smmturkAddFor, smmturkRefillFor } from "@socio/core/smmturk";
 import { orderFieldSpec } from "@socio/core/catalog";
 import {
   baseForLevel,
@@ -424,13 +424,35 @@ async function handleRefill(apiKey: string, form: Record<string, string>): Promi
     .where(eq(services.id, Number(order.serviceId)))
     .limit(1);
   if (!svc?.isRefill) return fail("Refill not available for this service");
+  if (!order.providerOrderId || order.providerOrderId === "0")
+    return fail("Refill not available for this order");
+
+  // Provider-safe (P1.5): endpoint + key milik provider order ini, bukan
+  // hardcoded SMMturk — order provider lain dulu dikirim ke key yang salah.
+  const [p] = await db
+    .select()
+    .from(provider)
+    .where(eq(provider.id, Number(order.providerId)))
+    .limit(1);
+  const key = p?.apiKey ? decryptSecret(p.apiKey) : "";
+  if (!key) return fail("Refill not available for this order");
+  const endpoint = p?.apiUrlOrder || "https://smmturk.org/api/v2";
 
   try {
-    await smmturkRefill([order.providerOrderId]);
+    const result = await smmturkRefillFor(endpoint, key, [order.providerOrderId]);
+    // Simpan refill_id + api_log='api' — tanpa ini runRefillPolling tidak bisa
+    // melacak request (dulu INSERT tanpa refill_id = polling buta).
+    const refillId = String(result?.refill ?? result?.order ?? "0");
     await db.execute(sql`
-      INSERT INTO refill (order_id, user_id, status, created_at)
-      VALUES (${order.id}, ${user.id}, 'Pending', NOW())
+      INSERT INTO refill (refill_id, order_id, user_id, status, api_log, api_log_status, created_at)
+      VALUES (${refillId}, ${order.id}, ${user.id}, 'Pending', 'api', 'Pending', NOW())
     `);
+    // Sama seperti jalur web (refill-request.ts): tandai 'Refilling' supaya
+    // runRefillPolling (WHERE o.status='Refilling') benar-benar memantau sampai selesai.
+    await db
+      .update(orders)
+      .set({ status: "Refilling" as any, updatedAt: new Date() })
+      .where(eq(orders.id, Number(order.id)));
     return ok("Refill requested", { id: order.oid });
   } catch (e: any) {
     return fail(`Refill error: ${e?.message ?? e}`);
