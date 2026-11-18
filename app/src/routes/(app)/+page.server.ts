@@ -54,6 +54,52 @@ const DUMMY_BANNERS: Banner[] = [
   },
 ];
 
+const WIDGET_NEWS_MAX = 5;
+
+/**
+ * Widget "Update" supaya BERAGAM, bukan 5 berita terbaru mentah. Provider
+ * (SMMturk) sering merepricing banyak layanan sekaligus, jadi 5 teratas bisa
+ * seragam (mis. semua "Harga Turun"). Ambil SATU terbaru per jenis event dulu,
+ * sisa slot diisi berita terbaru lain. Plus SATU per NAMA layanan: provider
+ * menjual produk sama di bawah beberapa pid — tanpa ini dua baris identik
+ * memakan 2 dari 5 slot. Signature = teks sebelum " — " (nama display),
+ * case/whitespace-insensitive. Baris diasumsikan terurut createdAt DESC, id DESC.
+ */
+function pickDiverseNews<T extends { id: number; eventType: string | null; content?: string }>(
+  rows: T[],
+  max: number,
+): T[] {
+  const nameKey = (c?: string) =>
+    (c ?? "").split(" — ")[0].toLowerCase().replace(/\s+/g, " ").trim();
+  const chosen: T[] = [];
+  const seenType = new Set<string>();
+  const seenName = new Set<string>();
+  const take = (r: T) => {
+    chosen.push(r);
+    const k = nameKey(r.content);
+    if (k) seenName.add(k);
+  };
+  for (const r of rows) {
+    const key = r.eventType ?? "other";
+    if (seenType.has(key)) continue;
+    if (seenName.has(nameKey(r.content))) continue;
+    seenType.add(key);
+    take(r);
+    if (chosen.length >= max) break;
+  }
+  // Kurang dari max (jenis sedikit) → isi dengan berita terbaru lain yang belum masuk.
+  if (chosen.length < max) {
+    const ids = new Set(chosen.map((c) => c.id));
+    for (const r of rows) {
+      if (ids.has(r.id)) continue;
+      if (seenName.has(nameKey(r.content))) continue;
+      take(r);
+      if (chosen.length >= max) break;
+    }
+  }
+  return chosen;
+}
+
 export const load: PageServerLoad = async ({ locals }) => {
   const userId = Number(locals.user!.id);
 
@@ -128,108 +174,98 @@ export const load: PageServerLoad = async ({ locals }) => {
   start.setDate(start.getDate() - 13);
   start.setHours(0, 0, 0, 0);
 
-  const [recent, statOrders, statDeposit, orderSeries, depositSeries, statActive, recentNews] =
-    await Promise.all([
-      db
-        .select({
-          id: orders.id,
-          oid: orders.oid,
-          serviceName: orders.serviceName,
-          serviceId: orders.serviceId,
-          data: orders.data,
-          quantity: orders.quantity,
-          price: orders.price,
-          status: orders.status,
-          createdAt: orders.createdAt,
-          remains: orders.remains,
-        })
-        .from(orders)
-        .where(eq(orders.userId, userId))
-        .orderBy(desc(orders.createdAt))
-        .limit(5),
+  const [
+    recent,
+    statOrders,
+    statDeposit,
+    orderSeries,
+    depositSeries,
+    statActive,
+    recentNews,
+    announcements,
+  ] = await Promise.all([
+    db
+      .select({
+        id: orders.id,
+        oid: orders.oid,
+        serviceName: orders.serviceName,
+        serviceId: orders.serviceId,
+        data: orders.data,
+        quantity: orders.quantity,
+        price: orders.price,
+        status: orders.status,
+        createdAt: orders.createdAt,
+        remains: orders.remains,
+      })
+      .from(orders)
+      .where(eq(orders.userId, userId))
+      .orderBy(desc(orders.createdAt))
+      .limit(5),
 
-      // Total pesanan + total belanja user (port stat card index-edit.php)
-      db
-        .select({
-          count: sql<number>`count(*)`,
-          spent: sql<number>`coalesce(sum(${orders.price}), 0)`,
-        })
-        .from(orders)
-        .where(eq(orders.userId, userId)),
+    // Total pesanan + total belanja user (port stat card index-edit.php)
+    db
+      .select({
+        count: sql<number>`count(*)`,
+        spent: sql<number>`coalesce(sum(${orders.price}), 0)`,
+      })
+      .from(orders)
+      .where(eq(orders.userId, userId)),
 
-      // Total deposit sukses user
-      db
-        .select({ total: sql<number>`coalesce(sum(${deposits.amount}), 0)` })
-        .from(deposits)
-        .where(and(eq(deposits.userId, userId), eq(deposits.status, "Success"))),
+    // Total deposit sukses user
+    db
+      .select({ total: sql<number>`coalesce(sum(${deposits.amount}), 0)` })
+      .from(deposits)
+      .where(and(eq(deposits.userId, userId), eq(deposits.status, "Success"))),
 
-      // Serie 14 hari: jumlah pesanan + belanja per hari
-      db
-        .select({
-          day: sql<string>`date(${orders.createdAt})`,
-          count: sql<number>`count(*)`,
-          spent: sql<number>`coalesce(sum(${orders.price}), 0)`,
-        })
-        .from(orders)
-        .where(and(eq(orders.userId, userId), gte(orders.createdAt, start)))
-        .groupBy(sql`date(${orders.createdAt})`),
+    // Serie 14 hari: jumlah pesanan + belanja per hari
+    db
+      .select({
+        day: sql<string>`date(${orders.createdAt})`,
+        count: sql<number>`count(*)`,
+        spent: sql<number>`coalesce(sum(${orders.price}), 0)`,
+      })
+      .from(orders)
+      .where(and(eq(orders.userId, userId), gte(orders.createdAt, start)))
+      .groupBy(sql`date(${orders.createdAt})`),
 
-      // Serie 14 hari: total deposit sukses per hari
-      db
-        .select({
-          day: sql<string>`date(${deposits.createdAt})`,
-          total: sql<number>`coalesce(sum(${deposits.amount}), 0)`,
-        })
-        .from(deposits)
-        .where(
-          and(
-            eq(deposits.userId, userId),
-            eq(deposits.status, "Success"),
-            gte(deposits.createdAt, start),
-          ),
-        )
-        .groupBy(sql`date(${deposits.createdAt})`),
-
-      // Pesanan yang benar-benar sedang berjalan (untuk copy dinamis di greeting).
-      // 'partial' TIDAK termasuk — itu status final (sebagian selesai + sisanya
-      // direfund), bukan sedang diproses. Data legacy 2023 ber-status partial
-      // pernah bikin greeting menampilkan "604 pesanan berjalan" untuk user
-      // yang tidak punya order aktif.
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(orders)
-        .where(
-          and(
-            eq(orders.userId, userId),
-            sql`lower(${orders.status}) in ('pending','proses','processing','in progress','refilling')`,
-          ),
+    // Serie 14 hari: total deposit sukses per hari
+    db
+      .select({
+        day: sql<string>`date(${deposits.createdAt})`,
+        total: sql<number>`coalesce(sum(${deposits.amount}), 0)`,
+      })
+      .from(deposits)
+      .where(
+        and(
+          eq(deposits.userId, userId),
+          eq(deposits.status, "Success"),
+          gte(deposits.createdAt, start),
         ),
+      )
+      .groupBy(sql`date(${deposits.createdAt})`),
 
-      // Widget "Update" — 5 berita layanan terbaru dalam 14 hari (PRD Service Sync v2 §10).
-      // Campur source='sync' (event layanan) + 'manual' (pengumuman admin) supaya user
-      // tetap lihat pengumuman manual di tempat yang sama.
-      db
-        .select({
-          id: news.id,
-          kategori: news.kategori,
-          content: news.content,
-          eventType: news.eventType,
-          serviceId: news.serviceId,
-          source: news.source,
-          createdAt: news.createdAt,
-        })
-        .from(news)
-        .where(and(eq(news.isHidden, 0), sql`${news.createdAt} > DATE_SUB(NOW(), INTERVAL 14 DAY)`))
-        .orderBy(desc(news.createdAt), desc(news.id))
-        .limit(5),
-    ]);
+    // Pesanan yang benar-benar sedang berjalan (untuk copy dinamis di greeting).
+    // 'partial' TIDAK termasuk — itu status final (sebagian selesai + sisanya
+    // direfund), bukan sedang diproses. Data legacy 2023 ber-status partial
+    // pernah bikin greeting menampilkan "604 pesanan berjalan" untuk user
+    // yang tidak punya order aktif.
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.userId, userId),
+          sql`lower(${orders.status}) in ('pending','proses','processing','in progress','refilling')`,
+        ),
+      ),
 
-  // Fallback widget "Update": kalau tak ada berita <=14 hari (pengumuman lama,
-  // atau Service Sync belum memproduksi event), tampil 5 berita terbaru secara
-  // umum supaya widget tidak pernah kosong.
-  let newsFeed = recentNews;
-  if (newsFeed.length === 0) {
-    newsFeed = await db
+    // Pool kandidat widget "Update" — HANYA berita otomatis katalog (source='sync').
+    // Pengumuman tulisan admin (source='manual') dipisah ke box "Pengumuman" di bawah:
+    // dulu keduanya rebutan 5 slot yang sama, jadi pengumuman penting kalah jumlah vs
+    // berita sync dan user tidak pernah melihatnya. Diambil >WIDGET_NEWS_MAX lalu
+    // diragamkan pickDiverseNews() — bukan 5 mentah, karena satu jenis event bisa
+    // mendominasi dan membuat feed seragam.
+    db
       .select({
         id: news.id,
         kategori: news.kategori,
@@ -240,10 +276,58 @@ export const load: PageServerLoad = async ({ locals }) => {
         createdAt: news.createdAt,
       })
       .from(news)
-      .where(eq(news.isHidden, 0))
+      .where(
+        and(
+          eq(news.isHidden, 0),
+          eq(news.source, "sync"),
+          sql`${news.createdAt} > DATE_SUB(NOW(), INTERVAL 14 DAY)`,
+        ),
+      )
       .orderBy(desc(news.createdAt), desc(news.id))
-      .limit(5);
+      .limit(40),
+
+    // Box "Pengumuman" — berita yang admin tulis di /admin/news (source='manual'),
+    // terbaru dulu. Klik → popup (bukan navigate) supaya user tidak kehilangan konteks
+    // dashboard. 4 baris cukup; sisanya di /berita?src=manual.
+    db
+      .select({
+        id: news.id,
+        title: news.title,
+        kategori: news.kategori,
+        content: news.content,
+        createdAt: news.createdAt,
+      })
+      .from(news)
+      .where(and(eq(news.isHidden, 0), eq(news.source, "manual")))
+      .orderBy(desc(news.createdAt), desc(news.id))
+      .limit(4),
+  ]);
+
+  // Fallback widget "Update": kalau tak ada berita sync <=14 hari (Service Sync
+  // belum memproduksi event), tampil berita sync terbaru secara umum supaya widget
+  // tidak pernah kosong — tetap sync-only, pengumuman manual tidak masuk sini.
+  // Ragamkan: satu terbaru per jenis event, sisa diisi berita terbaru lainnya.
+  let newsFeed = pickDiverseNews(recentNews, WIDGET_NEWS_MAX);
+  if (newsFeed.length === 0) {
+    const pool = await db
+      .select({
+        id: news.id,
+        kategori: news.kategori,
+        content: news.content,
+        eventType: news.eventType,
+        serviceId: news.serviceId,
+        source: news.source,
+        createdAt: news.createdAt,
+      })
+      .from(news)
+      .where(and(eq(news.isHidden, 0), eq(news.source, "sync")))
+      .orderBy(desc(news.createdAt), desc(news.id))
+      .limit(20);
+    newsFeed = pickDiverseNews(pool, WIDGET_NEWS_MAX);
   }
+
+  // Pengumuman manual yang disembunyikan admin (is_hidden=1) sudah terfilter di query;
+  // jangan diragamkan — user memang harus melihat seluruh pengumuman terbaru.
 
   // Isi 14 hari (0=paling lama, 13=hari ini) supaya chart selalu penuh.
   const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -438,6 +522,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     activeOrders: Number(statActive[0]?.count ?? 0),
     quickOrders,
     newsFeed,
+    announcements,
 
     stats: {
       totalOrders: Number(statOrders[0]?.count ?? 0),

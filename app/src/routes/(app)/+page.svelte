@@ -21,7 +21,14 @@
   import { copy } from "@socio/core/copy";
   import { onMount } from "svelte";
   import { formatRupiah, serviceDisplayName } from "$lib/format";
-  import { newsMeta, isOrderableEvent, newsPriceSegments, newsSplit } from "$lib/news-meta";
+  import {
+    newsMeta,
+    newsCategory,
+    isOrderableEvent,
+    newsPriceSegments,
+    newsSplit,
+  } from "$lib/news-meta";
+  import NewsDetailSheet from "$lib/components/NewsDetailSheet.svelte";
 
   let { data, form } = $props();
 
@@ -141,6 +148,22 @@
   }
 
   // Widget "Update" memakai newsMeta() dari $lib/news-meta (dipakai bersama /berita).
+  // Box "Pengumuman" (berita manual admin) memakai NewsDetailSheet — klik baris
+  // membuka popup, TIDAK pindah halaman, supaya user tidak kehilangan konteks.
+  type Announcement = {
+    id: number;
+    title?: string | null;
+    kategori?: string | null;
+    content: string;
+    createdAt: Date | string;
+  };
+  let announceSheet = $state<Announcement | null>(null);
+  let announceOpen = $state(false);
+  function openAnnouncement(a: Announcement) {
+    haptic(8);
+    announceSheet = a;
+    announceOpen = true;
+  }
 
   const hasActivity = $derived(
     data.chart.orders.some((v: number) => v > 0) || data.chart.deposits.some((v: number) => v > 0),
@@ -569,6 +592,76 @@
         </ul>
       </div>
     </div>
+  {/if}
+
+  <!-- Box "Pengumuman" — khusus berita yang admin tulis di /admin/news
+       (news.source='manual'). Beda dari widget Update: barisnya BUTTON, klik
+       membuka popup detail (NewsDetailSheet) — user tidak dibuang ke halaman lain.
+       Section TIDAK dirender saat belum ada pengumuman → tidak ada box kosong. -->
+  {#if data.announcements?.length}
+    <div class="reveal" style={revealDelay(0, 160)}>
+      <div class="mb-2.5 flex items-center justify-between">
+        <h2
+          class="sec-title flex items-center gap-1.5 font-display text-base font-extrabold tracking-tight lg:text-[17px]"
+        >
+          <Icon name="megaphone" size={20} stroke={2} class="shrink-0 text-primary" />
+          Pengumuman
+        </h2>
+        <a
+          href="/berita?src=manual"
+          class="inline-flex items-center gap-0.5 text-xs font-semibold text-ink-500 transition-colors hover:text-ink-800"
+        >
+          Lihat Semua <Icon name="chevron_right" size={12} stroke={2.5} />
+        </a>
+      </div>
+      <div
+        class="overflow-hidden rounded-2xl border-2 border-ink-900 bg-surface shadow-[2px_2px_0_var(--color-ink-900)]"
+      >
+        <ul class="divide-y divide-ink-100">
+          {#each data.announcements as a (a.id)}
+            {@const cat = newsCategory(a.kategori)}
+            {@const preview = String(a.content ?? "")
+              .replace(/\s+/g, " ")
+              .trim()}
+            {@const headingText = String(a.title ?? "").trim() || preview.slice(0, 60)}
+            <li>
+              <button
+                type="button"
+                onclick={() => openAnnouncement(a)}
+                class="group flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 lg:px-4 lg:py-3"
+              >
+                <span
+                  class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-ink-900/10 {cat.chipBg} {cat.chipInk} transition-transform group-hover:scale-105"
+                >
+                  <Icon name={cat.icon} size={16} stroke={2} />
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="flex items-center gap-1.5">
+                    <span
+                      class="shrink-0 rounded-full border border-ink-900 px-1.5 py-px text-[9px] font-extrabold {cat.chipBg} {cat.chipInk}"
+                    >
+                      {cat.label}
+                    </span>
+                    <span class="min-w-0 truncate text-xs font-bold leading-snug text-ink-700">
+                      {headingText}
+                    </span>
+                  </span>
+                  {#if String(a.title ?? "").trim()}
+                    <span class="mt-0.5 block truncate text-[11px] leading-snug text-ink-500">
+                      {preview}
+                    </span>
+                  {/if}
+                </span>
+                <span class="shrink-0 text-[11px] tabular-nums text-ink-400">
+                  {timeAgo(a.createdAt)}
+                </span>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    </div>
+    <NewsDetailSheet bind:open={announceOpen} item={announceSheet} />
   {/if}
 
   <!-- INLINE-STAT (P3-04): mobile = ledger rows (label kiri · angka kanan, tidak
