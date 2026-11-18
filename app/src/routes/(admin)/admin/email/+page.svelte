@@ -172,6 +172,15 @@
             <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>{data.queueFailed} gagal
           </span>
         {/if}
+        <!-- Kuota provider Resend (P2.5): dipakai bersama email transaksional -->
+        <span
+          class="inline-flex items-center gap-1 rounded-full border border-ink-200 bg-surface px-2.5 py-1"
+          title="Blast campaign ditolak bila penerima melebihi sisa kuota — inbox user didahulukan"
+        >
+          <span class="h-1.5 w-1.5 rounded-full bg-sky-500"></span>Kuota Resend: {data.quota
+            .sentToday}/{data.quota.dailyCap} hari ini · {data.quota.sentMonth}/{data.quota
+            .monthlyCap} bulan ini
+        </span>
         <span class="hidden sm:inline text-ink-300">·</span>
         <span class="rounded-full bg-ink-50 px-2.5 py-1 text-ink-500"
           >6 segment · templated CTA via Resend</span
@@ -220,7 +229,10 @@
                 >
                 {#if t.at}
                   <p class="mt-0.5 text-[11px] tabular-nums text-ink-400">
-                    {new Date(t.at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                    {new Date(t.at).toLocaleString("id-ID", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
                   </p>
                 {/if}
               </div>
@@ -246,7 +258,9 @@
     <div class="space-y-2 border-t border-ink-100 p-3">
       {#each data.sysTemplates as t (t.key)}
         <details class="overflow-hidden rounded-xl border border-ink-100">
-          <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 hover:bg-ink-50">
+          <summary
+            class="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 hover:bg-ink-50"
+          >
             <span class="min-w-0">
               <span class="block truncate text-sm font-bold">{t.label}</span>
               <span class="block truncate text-[11px] text-ink-500">{t.description}</span>
@@ -269,17 +283,31 @@
 
   <div class="flex flex-wrap items-center justify-between gap-2">
     <div class="flex flex-wrap items-center gap-2">
-      <span class="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-2.5 py-1 text-[11px] font-bold text-ink-600">
+      <span
+        class="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-2.5 py-1 text-[11px] font-bold text-ink-600"
+      >
         <Icon name="users" size={12} />
         List XLS: {data.mailingCount.toLocaleString("id-ID")} aktif
       </span>
-      <form method="POST" action="?/importXls" enctype="multipart/form-data" use:enhance class="flex items-center gap-1.5">
+      <form
+        method="POST"
+        action="?/importXls"
+        enctype="multipart/form-data"
+        use:enhance
+        class="flex items-center gap-1.5"
+      >
         <label
           class="inline-flex min-h-[36px] cursor-pointer items-center gap-1.5 rounded-full border border-ink-200 bg-surface px-3 text-xs font-bold text-ink-600 hover:bg-ink-50"
         >
           <Icon name="upload" size={13} />
           Import XLS/CSV
-          <input type="file" name="file" accept=".xlsx,.xls,.csv" class="hidden" onchange={(e) => (e.currentTarget.form as HTMLFormElement)?.requestSubmit()} />
+          <input
+            type="file"
+            name="file"
+            accept=".xlsx,.xls,.csv"
+            class="hidden"
+            onchange={(e) => (e.currentTarget.form as HTMLFormElement)?.requestSubmit()}
+          />
         </label>
       </form>
     </div>

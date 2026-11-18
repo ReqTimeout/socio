@@ -146,9 +146,7 @@ async function sendViaResend(args: SendArgs): Promise<boolean> {
     text: args.text,
     headers: {
       "List-Unsubscribe": listUnsubscribeHeader(args.unsubscribeUrl),
-      ...(args.unsubscribeUrl
-        ? { "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
-        : {}),
+      ...(args.unsubscribeUrl ? { "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : {}),
     },
   });
   if (error) {
@@ -165,8 +163,11 @@ import {
   emailCopyLink,
   emailFooterTransactional,
   emailSupportAfterCard,
+  emailPriceCard,
 } from "./email/render.js";
 import type { SparkoPose } from "./email/render.js";
+import { EMAIL_COLORS } from "./email/tokens.js";
+import { formatRupiah, getDepositBonusRate, getTopupMin } from "$lib/format";
 
 function wrapEmail(opts: {
   preheader: string;
@@ -176,8 +177,10 @@ function wrapEmail(opts: {
   ctaHref: string;
   note?: string;
   mascot?: SparkoPose;
+  /** HTML tambahan setelah CTA (langkah/bonus) — WP6 L1 email sambutan. */
+  afterCta?: string;
 }): string {
-  const { preheader, title, intro, ctaLabel, ctaHref, note, mascot } = opts;
+  const { preheader, title, intro, ctaLabel, ctaHref, note, mascot, afterCta } = opts;
   // Sumber HTML: app/src/lib/server/email/render.ts (token DNA).
   // Copy teks IDENTIK dengan versi lama; yang berubah hanya warna sub-AA
   // (#94a3b8 → #64748b di permukaan terang) + dark-mode + preheader aman.
@@ -188,6 +191,7 @@ function wrapEmail(opts: {
     content:
       emailTitleBlock(title, intro) +
       emailCta({ label: ctaLabel, href: ctaHref }) +
+      (afterCta ?? "") +
       emailCopyLink(ctaHref, note),
     footer: emailFooterTransactional("security"),
     afterCard: emailSupportAfterCard(),
@@ -230,5 +234,52 @@ export function verificationEmail(verifyLink: string): {
       note: "Link verifikasi akan kedaluwarsa dalam 24 jam. Jika tombol tidak berfungsi, salin link di atas ke browser.",
     }),
     text: `Verifikasi email Socio.id\n\nKlik link berikut untuk mengaktifkan akun: ${verifyLink}`,
+  };
+}
+
+/**
+ * Email SAMBUTAN (WP6, port .my) — dikirim SEKALI setelah verifikasi email
+ * sukses (lihat sendWelcomeEmailOnce di signup.ts). Akun .id tetap lewat
+ * verifikasi; email ini menyapa + menunjukkan jalan terpendek ke pesanan
+ * pertama: 3 langkah jelas, bonus asli dari env, CTA langsung ke top-up.
+ * Catatan: `emailTitleBlock` meng-escape intro → intro harus TEKS POLOS
+ * (jangan taruh <b> di situ — tag-nya akan terpapar mentah ke penerima).
+ */
+export function welcomeEmail(
+  fullName: string,
+  topUpUrl: string,
+): {
+  html: string;
+  text: string;
+} {
+  const first = (fullName || "").trim().split(/\s+/)[0] || "";
+  const title = first ? `Selamat bergabung, ${first}!` : "Selamat bergabung!";
+  const bonusPct = Math.round(getDepositBonusRate() * 100);
+  const minTopup = formatRupiah(getTopupMin());
+  const steps = `<ol style="margin:16px 0 0 0;padding-left:20px;font-size:13px;line-height:1.7;color:${EMAIL_COLORS.inkBody}">
+    <li><b>Top up</b> — transfer BCA sesuai nominal pas yang ditampilkan (termasuk 3 digit kode unik; jangan dibulatkan).</li>
+    <li><b>Saldo masuk</b> — begitu admin verifikasi transfer, saldo plus bonus deposit langsung masuk. Upload bukti opsional.</li>
+    <li><b>Order</b> — pilih layanan, tempel link, bayar dari saldo. Pesanan pertamamu selesai.</li>
+  </ol>`;
+  const bonus =
+    bonusPct > 0
+      ? emailPriceCard({
+          label: "Bonus deposit",
+          price: `+${bonusPct}%`,
+          note: `Ditambahkan ke setiap top-up yang terkonfirmasi. Minimum top-up ${minTopup}.`,
+        })
+      : `<p style="margin:14px 0 0 0;font-size:13px;color:${EMAIL_COLORS.inkBody}">Minimum top-up ${minTopup}.</p>`;
+  return {
+    html: wrapEmail({
+      preheader: `Selamat datang di Socio.id — top up dalam 3 langkah`,
+      title,
+      intro: `Email kamu sudah terverifikasi dan akun Socio.id kamu aktif. Ini jalan terpendek menuju pesanan pertamamu:`,
+      ctaLabel: "Top up & mulai",
+      ctaHref: topUpUrl,
+      mascot: "celebrate",
+      afterCta: steps + bonus,
+      note: `Butuh bantuan? Balas email ini atau hubungi support — biasanya dibalas dalam hitungan menit.`,
+    }),
+    text: `Selamat datang di Socio.id${first ? `, ${first}` : ""}!\n\nEmail kamu sudah terverifikasi — akun aktif.\n\n1. Top up: transfer BCA sesuai nominal pas (termasuk 3 digit kode unik, jangan dibulatkan): ${topUpUrl}\n2. Saldo plus bonus masuk setelah admin verifikasi transfer.\n3. Order: pilih layanan, tempel link, bayar dari saldo.\n${bonusPct > 0 ? `\nBonus deposit: +${bonusPct}% untuk setiap top-up terkonfirmasi. Minimum top-up ${minTopup}.` : `\nMinimum top-up ${minTopup}.`}`,
   };
 }

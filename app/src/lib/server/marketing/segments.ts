@@ -13,6 +13,15 @@
  * Semua query menyaring di level SQL (verified-by-opt-in, bukan Admin/Developers/
  * Blacklist/Demo, tidak ada di `email_suppressions`). Segment memakai EXISTS /
  * NOT EXISTS (subquery korrelated) — BUKAN pola `IN (${join})` (bug id pertama).
+ *
+ * WP7 (port .my d8e531ef — activation sadar deposit + 2 lane baru):
+ *  - activation: DIKECUALIKAN reseller belum aktivasi + user yang masih punya
+ *    invoice Pending hidup (reminder transaksional WP6 sudah mengurus mereka).
+ *  - deposit_canceled: pernah deposit Canceled (30 hari) tapi belum pernah
+ *    Success → winback "invoice kedaluwarsa, buat baru".
+ *  - reseller_unpaid: level Reseller + belum aktivasi + tanpa invoice Pending
+ *    hidup → pengingat aktivasi dengan nilai bersih (kohort .id: 241 user).
+ * Lane baru default OFF per-lane di cron (gate env EMAIL_LANE_*).
  */
 import { db } from "@socio/db";
 import { users } from "@socio/db/schema";
@@ -25,7 +34,11 @@ export type SegmentKey =
   | "winback_30"
   | "winback_60"
   | "winback_90"
-  | "balance_low";
+  | "balance_low"
+  /** WP7 — deposit pernah batal, belum pernah berhasil → winback top-up baru. */
+  | "deposit_canceled"
+  /** WP7 — reseller belum bayar aktivasi (tanpa invoice hidup) → /reseller. */
+  | "reseller_unpaid";
 
 export interface Recipient {
   userId: number;
@@ -58,6 +71,18 @@ function orderSince(days: number) {
   return sql`EXISTS (SELECT 1 FROM orders o WHERE o.user_id = ${users.id} AND o.created_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY))`;
 }
 
+/** Sudah pernah deposit BERHASIL sepanjang masa (penanda "pernah top-up"). */
+const DEPOSITED = sql`EXISTS (SELECT 1 FROM deposits d WHERE d.user_id = ${users.id} AND d.status = 'Success')`;
+/** Invoice Pending yang MASIH hidup. Lane transaksional WP6 (mid-life / T-2h /
+ *  H-2 / H-1) sudah mengingatkan mereka → marketing JANGAN menimpa. */
+const LIVE_PENDING = sql`EXISTS (SELECT 1 FROM deposits d WHERE d.user_id = ${users.id} AND d.status = 'Pending' AND d.expire > NOW())`;
+/** Reseller belum aktivasi: jalurnya `/reseller` (invoice aktivasi), BUKAN
+ *  top-up biasa — jangan kirim mereka ke /saldo/top-up. */
+const RESELLER_UNPAID = sql`(${users.level} = 'Reseller' AND ${users.resellerActivated} = 0)`;
+function canceledDepositSince(days: number) {
+  return sql`EXISTS (SELECT 1 FROM deposits d WHERE d.user_id = ${users.id} AND d.status = 'Canceled' AND d.created_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY))`;
+}
+
 function segmentCondition(key: SegmentKey): {
   where: ReturnType<typeof sql>;
   order: ReturnType<typeof sql>;
@@ -67,17 +92,63 @@ function segmentCondition(key: SegmentKey): {
       // Akun >= 3 hari yang BELUM pernah order sama sekali → konversi pertama.
       return {
         where: sql.join(
-          [sql`${users.createdAt} <= DATE_SUB(NOW(), INTERVAL 3 DAY)`, sql`NOT ${ORDERED}`],
+          [
+            sql`${users.createdAt} <= DATE_SUB(NOW(), INTERVAL 3 DAY)`,
+            sql`NOT ${ORDERED}`,
+            // WP7: reseller belum aktivasi → segmen khusus reseller_unpaid.
+            sql`NOT ${RESELLER_UNPAID}`,
+            // WP7: invoice hidup → reminder transaksional WP6 sudah jalan.
+            sql`NOT ${LIVE_PENDING}`,
+          ],
           sql` AND `,
         ),
         order: sql`${users.createdAt} ASC`, // akun terlama dulu (paling siap dikonversi)
       };
+    case "deposit_canceled":
+      // WP7 — pernah coba top-up tapi invoice mati, dan belum pernah berhasil.
+      // Bukan winback order (mereka belum pernah order).
+      return {
+        where: sql.join(
+          [
+            canceledDepositSince(30),
+            sql`NOT ${DEPOSITED}`,
+            sql`NOT ${LIVE_PENDING}`,
+            sql`NOT ${RESELLER_UNPAID}`,
+          ],
+          sql` AND `,
+        ),
+        order: sql`${users.createdAt} ASC`,
+      };
+    case "reseller_unpaid":
+      // WP7 — reseller belum bayar aktivasi. Invoice hidup dikecualikan
+      // (reminder transaksional H-2/H-1 sedang jalan); sisanya = invoice sudah
+      // mati/belum pernah terbit → perlu invoice aktivasi baru di /reseller.
+      return {
+        where: sql.join(
+          [
+            RESELLER_UNPAID,
+            sql`${users.createdAt} <= DATE_SUB(NOW(), INTERVAL 3 DAY)`,
+            sql`NOT ${LIVE_PENDING}`,
+          ],
+          sql` AND `,
+        ),
+        order: sql`${users.createdAt} ASC`,
+      };
     case "winback_30":
-      return { where: sql.join([ORDERED, noOrderSince(30)], sql` AND `), order: sql`${users.createdAt} ASC` };
+      return {
+        where: sql.join([ORDERED, noOrderSince(30)], sql` AND `),
+        order: sql`${users.createdAt} ASC`,
+      };
     case "winback_60":
-      return { where: sql.join([ORDERED, noOrderSince(60)], sql` AND `), order: sql`${users.createdAt} ASC` };
+      return {
+        where: sql.join([ORDERED, noOrderSince(60)], sql` AND `),
+        order: sql`${users.createdAt} ASC`,
+      };
     case "winback_90":
-      return { where: sql.join([ORDERED, noOrderSince(90)], sql` AND `), order: sql`${users.createdAt} ASC` };
+      return {
+        where: sql.join([ORDERED, noOrderSince(90)], sql` AND `),
+        order: sql`${users.createdAt} ASC`,
+      };
     case "balance_low":
       // 0 < saldo < Rp10.000 DAN masih aktif order 30 hari terakhir → reminder top-up.
       return {

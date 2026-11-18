@@ -67,5 +67,16 @@ export const load: PageServerLoad = async ({ url }) => {
     .delete(verifications)
     .where(like(verifications.identifier, `email-verification:${userEmail}`));
 
+  // WP6: email sambutan sekali setelah verifikasi sukses (best-effort, idempoten
+  // via email_queue — lihat sendWelcomeEmailOnce). Tidak memblokir alur verifikasi.
+  if (u) {
+    try {
+      const { sendWelcomeEmailOnce } = await import("$lib/server/signup");
+      await sendWelcomeEmailOnce(Number(u.id));
+    } catch {
+      /* welcome best-effort — verifikasi tetap sukses */
+    }
+  }
+
   return { ok: true as boolean | null, resent: false, sendFailed: false, email: userEmail };
 };

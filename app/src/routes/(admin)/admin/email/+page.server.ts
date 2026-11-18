@@ -10,6 +10,7 @@ import { desc, eq, sql, count } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import { listSystemTemplates } from "$lib/server/email-templates";
+import { providerDailyCap, providerMonthlyCap } from "$lib/server/email/quota.js";
 import type { Actions, PageServerLoad } from "./$types";
 import type { RowDataPacket } from "mysql2";
 
@@ -37,6 +38,40 @@ type Audience = (typeof AUDIENCES)[number];
 const isTemplateType = (v: string): v is TemplateType =>
   (TEMPLATE_TYPES as readonly string[]).includes(v);
 const isAudience = (v: string): v is Audience => (AUDIENCES as readonly string[]).includes(v);
+
+/**
+ * Snapshot kuota provider (P2.5 — Resend free 100/hari · 3.000/bulan, dipakai
+ * bersama transaksional+marketing). Hitung pakai `created_at` (clock MySQL,
+ * sama dengan CURDATE()) — sent_at ditulis JS (UTC) dan meleset 7 jam.
+ * Best-effort: query gagal → anggap 0 terkirim (angka tampil = cap penuh).
+ */
+async function providerQuota() {
+  let sentToday = 0;
+  let sentMonth = 0;
+  try {
+    const [row] = await db
+      .select({
+        today: sql<number>`SUM(DATE(${emailQueue.createdAt}) = CURDATE())`,
+        month: sql<number>`SUM(${emailQueue.createdAt} >= DATE_FORMAT(CURDATE(), '%Y-%m-01'))`,
+      })
+      .from(emailQueue)
+      .where(eq(emailQueue.status, "sent"));
+    sentToday = Number(row?.today ?? 0);
+    sentMonth = Number(row?.month ?? 0);
+  } catch {
+    /* default 0 */
+  }
+  const dailyCap = providerDailyCap();
+  const monthlyCap = providerMonthlyCap();
+  return {
+    sentToday,
+    sentMonth,
+    dailyCap,
+    monthlyCap,
+    dayLeft: Math.max(0, dailyCap - sentToday),
+    monthLeft: Math.max(0, monthlyCap - sentMonth),
+  };
+}
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   if (!locals.user) throw redirect(303, "/login");
@@ -127,6 +162,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     filterStatuses: [""].concat(STATUSES),
     queuePending: Number(pendingQ[0]?.c ?? 0),
     queueFailed: Number(failedQ[0]?.c ?? 0),
+    quota: await providerQuota(),
     mailingCount: Number(
       (
         await db
@@ -326,6 +362,17 @@ export const actions: Actions = {
     }
     if (!rows || rows.length === 0)
       return fail(400, { error: "Tidak ada penerima untuk segment ini." });
+
+    // GUARD KUOTA (P2.5, port .my 9e000248): blast campaign memakai kuota Resend
+    // yang sama dengan email transaksional user. Tolak SEBELUM fan-out bila
+    // penerima melebihi sisa kuota hari ini atau bulan ini — transaksional
+    // tidak boleh tergadai.
+    const quota = await providerQuota();
+    if (rows.length > quota.dayLeft || rows.length > quota.monthLeft) {
+      return fail(400, {
+        error: `Kuota Resend tidak cukup: ${rows.length} penerima, sisa ${quota.dayLeft} hari ini / ${quota.monthLeft} bulan ini. Kurangi penerima atau tunggu besok.`,
+      });
+    }
 
     const templateData = JSON.stringify({
       subject: c.subjectLine,

@@ -1,5 +1,10 @@
 import { db } from "@socio/db";
-import { emailQueue, emailCampaignTracking, emailCampaignLog, emailSuppressions } from "@socio/db/schema";
+import {
+  emailQueue,
+  emailCampaignTracking,
+  emailCampaignLog,
+  emailSuppressions,
+} from "@socio/db/schema";
 import { eq, and, lt, inArray, sql } from "drizzle-orm";
 import { sendEmail } from "$lib/server/email";
 import { marketingEnabled } from "$lib/server/marketing/config.js";
@@ -11,6 +16,12 @@ import {
   emailFooterTransactional,
 } from "$lib/server/email/render.js";
 import { blankReason, describeEmail } from "@socio/core/email-guard";
+import {
+  providerDailyCap,
+  isMarketingTemplate,
+  isAdminAlertTemplate,
+  ADMIN_ALERT_RESERVE,
+} from "$lib/server/email/quota.js";
 
 /**
  * Drain antrian `email_queue` → kirim via SMTP/Resend.
@@ -28,8 +39,7 @@ const BATCH = 30;
 const MAX_MARKETING_PER_RUN = 10;
 const MAX_GMAIL_PER_RUN = 5;
 const GMAIL_RE = /@(gmail|googlemail)\.com$/i;
-const isMarketing = (t: string | null | undefined) =>
-  !!t && (/^campaign-/i.test(t) || /^marketing-/i.test(t));
+const isMarketing = isMarketingTemplate;
 
 export async function runEmailQueue(): Promise<void> {
   // Hapus queueue gagal > 7 hari
@@ -73,13 +83,32 @@ export async function runEmailQueue(): Promise<void> {
         .where(inArray(emailSuppressions.email, mktEmails));
       for (const r of rows) suppressed.add(String(r.email).toLowerCase());
     } catch (e) {
-      console.error("[cron] email-queue: lookup suppression gagal (fail-open=aman utk transaksional):", e);
+      console.error(
+        "[cron] email-queue: lookup suppression gagal (fail-open=aman utk transaksional):",
+        e,
+      );
     }
+  }
+
+  // Sisa kuota provider hari ini (P2.5, port .my 9e000248). `created_at` jam
+  // MySQL (sama dengan CURDATE()) — sent_at ditulis JS (UTC) jadi sengaja
+  // tidak dipakai agar tidak meleset 7 jam (pitfall timezone DATETIME).
+  let quotaLeft: number;
+  try {
+    const [sentRow] = await db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(emailQueue)
+      .where(and(eq(emailQueue.status, "sent"), sql`DATE(${emailQueue.createdAt}) = CURDATE()`));
+    quotaLeft = Math.max(0, providerDailyCap() - Number(sentRow?.c ?? 0));
+  } catch (e) {
+    console.error("[cron] email-queue: quota count failed, assume full", e);
+    quotaLeft = providerDailyCap();
   }
 
   let sent = 0;
   let failed = 0;
   let skippedCap = 0;
+  let skippedQuota = 0;
   let blanked = 0;
   let held = 0;
   let suppressedCount = 0;
@@ -99,7 +128,10 @@ export async function runEmailQueue(): Promise<void> {
       if (suppressed.has((q.recipientEmail ?? "").toLowerCase())) {
         await db
           .update(emailQueue)
-          .set({ status: "failed", errorMessage: "suppressed: penerima telah berhenti berlangganan" })
+          .set({
+            status: "failed",
+            errorMessage: "suppressed: penerima telah berhenti berlangganan",
+          })
           .where(eq(emailQueue.id, q.id));
         suppressedCount++;
         continue;
@@ -113,6 +145,17 @@ export async function runEmailQueue(): Promise<void> {
       skippedCap++;
       continue;
     }
+    // Gerbang kuota provider: marketing hanya boleh pakai slot yang benar-benar
+    // ada; admin-alert (internal) menyisakan ADMIN_ALERT_RESERVE untuk inbox
+    // user. Email transaksional user-facing selalu boleh mencoba.
+    if (mk && quotaLeft <= 0) {
+      skippedQuota++;
+      continue;
+    }
+    if (!mk && isAdminAlertTemplate(q.templateName) && quotaLeft <= ADMIN_ALERT_RESERVE) {
+      skippedQuota++;
+      continue;
+    }
     try {
       let subject = `Socio.id`;
       let html = "";
@@ -122,7 +165,9 @@ export async function runEmailQueue(): Promise<void> {
         const d = JSON.parse(q.templateData ?? "{}");
         subject = d.subject ?? subject;
         unsubUrl =
-          typeof d.unsubscribe_url === "string" && d.unsubscribe_url ? d.unsubscribe_url : undefined;
+          typeof d.unsubscribe_url === "string" && d.unsubscribe_url
+            ? d.unsubscribe_url
+            : undefined;
         // Custom HTML penuh (mis. email deposit dengan kartu bank) — pakai langsung
         if (d.html && String(d.html).includes("<html")) {
           html = String(d.html);
@@ -188,6 +233,9 @@ export async function runEmailQueue(): Promise<void> {
         text,
         unsubscribeUrl: unsubUrl,
       });
+      // Setiap percobaan nyata mengurangi kuota — sukses maupun gagal
+      // (4xx provider tetap dihitung; retry berikutnya dibatasi maxAttempts).
+      quotaLeft = Math.max(0, quotaLeft - 1);
       if (ok) {
         await db
           .update(emailQueue)
@@ -240,6 +288,6 @@ export async function runEmailQueue(): Promise<void> {
     }
   }
   console.log(
-    `[cron] email-queue: sent=${sent} failed=${failed} blanked=${blanked} skippedCap=${skippedCap} held=${held} suppressed=${suppressedCount} (mkt=${sentMarketing} gmail=${sentGmail})`,
+    `[cron] email-queue: sent=${sent} failed=${failed} blanked=${blanked} skippedCap=${skippedCap} skippedQuota=${skippedQuota} held=${held} suppressed=${suppressedCount} quotaLeft=${quotaLeft}/${providerDailyCap()} (mkt=${sentMarketing} gmail=${sentGmail})`,
   );
 }

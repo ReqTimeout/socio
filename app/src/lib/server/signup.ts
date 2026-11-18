@@ -1,11 +1,24 @@
 import { db } from "@socio/db";
-import { users, accounts, verifications, deposits, balanceLogs } from "@socio/db/schema";
-import { eq, or, sql } from "drizzle-orm";
+import {
+  users,
+  accounts,
+  verifications,
+  deposits,
+  balanceLogs,
+  emailQueue,
+} from "@socio/db/schema";
+import { eq, or, and, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
-import { emailShell, emailAmountBox, emailFooterTransactional, escapeHtml } from "./email/render.js";
+import {
+  emailShell,
+  emailAmountBox,
+  emailFooterTransactional,
+  escapeHtml,
+} from "./email/render.js";
 import { EMAIL_COLORS } from "./email/tokens.js";
 import { sendEmail } from "./email";
+import { formatRupiah, getResellerActivationAmount, getResellerBonus } from "$lib/format";
 
 export interface SignupInput {
   email: string;
@@ -159,7 +172,55 @@ export function resellerActivationAmount(): {
   saldoIncluded: number;
 } {
   const suffix = 111 + Math.floor(Math.random() * 889); // 111..999
-  return { amount: 50000 + suffix, suffix, saldoIncluded: 20000 };
+  // Single-source getter (env) — angka sama dengan email WP6 + halaman reseller.
+  return {
+    amount: getResellerActivationAmount() + suffix,
+    suffix,
+    saldoIncluded: getResellerBonus(),
+  };
+}
+
+/**
+ * WP6 — email sambutan SEKALI setelah verifikasi email sukses (port .my,
+ * adaptasi .id: akun .id tetap lewat verifikasi, jadi welcome dikirim sesudah
+ * verifikasi — bukan menggantikan email verifikasi).
+ * Idempoten via email_queue (recipientId + templateName='welcome') — BUKAN
+ * email_triggers_sent: claim di tabel itu ikut terhitung cooldown sentAnyInDays
+ * dan akan menekan lane activation prioritas selama 7 hari.
+ * Best-effort: gagal tidak boleh memblokir alur verifikasi.
+ */
+export async function sendWelcomeEmailOnce(userId: number): Promise<void> {
+  try {
+    const [already] = await db
+      .select({ id: emailQueue.id })
+      .from(emailQueue)
+      .where(and(eq(emailQueue.recipientId, userId), eq(emailQueue.templateName, "welcome")))
+      .limit(1);
+    if (already) return;
+    const [u] = await db
+      .select({ email: users.email, fullName: users.fullName, level: users.level })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    // Hanya Member — reseller punya alur aktivasi sendiri (invoice + email instruksi).
+    if (!u?.email || u.level !== "Member") return;
+    const base = process.env.SOCIO_APP_URL ?? "https://app.socio.id";
+    const { welcomeEmail } = await import("./email");
+    const m = welcomeEmail(u.fullName ?? "", `${base}/saldo/top-up`);
+    const { enqueueEmail } = await import("./deposit-emails");
+    await enqueueEmail({
+      to: u.email,
+      userId,
+      templateName: "welcome",
+      subject: "Selamat datang di Socio.id — mulai dalam 3 langkah",
+      body: m.text,
+      ctaText: "Top up & mulai",
+      ctaUrl: `${base}/saldo/top-up`,
+      html: m.html,
+    });
+  } catch (e) {
+    console.error(`[signup] welcome email failed userId=${userId}`, (e as Error)?.message);
+  }
 }
 
 /**
@@ -238,6 +299,9 @@ async function sendResellerInstructionsEmail(
     .limit(1);
   if (!u) return;
   const amt = Math.round(amount).toLocaleString("id-ID");
+  const bonus = getResellerBonus();
+  const baseFee = getResellerActivationAmount();
+  const net = Math.max(0, baseFee - bonus);
   const deadline = new Date(expireAt).toLocaleString("id-ID", {
     day: "numeric",
     month: "short",
@@ -253,7 +317,10 @@ async function sendResellerInstructionsEmail(
       `<p style="margin:0 0 12px">Terima kasih sudah mendaftar sebagai <b>Reseller Socio.id</b>. Tinggal selangkah lagi! Silakan transfer biaya aktivasi sebesar:</p>` +
       emailAmountBox({ amount: `Rp${amt}`, caption: target }) +
       `<p style="margin:0 0 12px"><b>Penting:</b> transfer <u>sesuai nominal</u> (termasuk 3 digit terakhir) supaya bisa dicocokkan, maksimal <b>${resellerActivationDeadlineLabel()}</b> dari email ini (sebelum ${deadline} WIB).</p>` +
-      `<p style="margin:0 0 12px">Akun reseller kamu otomatis aktif dan saldo <b>Rp20.000 sudah termasuk</b> dalam pembayaranmu — langsung bisa dipakai pesan. Nikmati harga khusus untuk jualan ulang!</p>` +
+      `<p style="margin:0 0 12px">Akun reseller kamu otomatis aktif dan saldo <b>${formatRupiah(bonus)} sudah termasuk</b> dalam pembayaranmu — langsung bisa dipakai pesan. Nikmati harga khusus untuk jualan ulang!</p>` +
+      (bonus > 0
+        ? `<p style="margin:0 0 12px;font-size:13px;color:${EMAIL_COLORS.inkBody}"><b>Yang kamu dapat:</b> ${formatRupiah(baseFee)} sekali bayar · saldo ${formatRupiah(bonus)} termasuk · bersih ${formatRupiah(net)} — harga reseller di semua layanan, permanen.</p>`
+        : "") +
       `<p style="margin:0;color:${EMAIL_COLORS.inkSecondary};font-size:13px">Selamat bergabung!<br>Tim Socio.id</p>`,
     footer: emailFooterTransactional("bare"),
     mascot: "wave",
@@ -262,7 +329,7 @@ async function sendResellerInstructionsEmail(
     to: u.email,
     subject: "Aktivasi Akun Reseller — Socio.id",
     html,
-    text: `Aktivasi reseller: transfer Rp${amt} ke ${target} (sudah termasuk saldo Rp20.000). Bayar sebelum ${deadline} WIB. Akun aktif otomatis setelah pembayaran diterima.`,
+    text: `Aktivasi reseller: transfer Rp${amt} ke ${target} (sudah termasuk saldo ${formatRupiah(bonus)}). Bayar sebelum ${deadline} WIB. Akun aktif otomatis setelah pembayaran diterima.`,
   });
 }
 
@@ -280,7 +347,7 @@ async function sendResellerInstructionsEmail(
  * Reseller signup = no-op; Admin/Agen tidak pernah di-clobber.
  */
 export async function activateReseller(userId: number): Promise<void> {
-  const bonus = Number(process.env.SOCIO_RESELLER_BONUS ?? 20000);
+  const bonus = getResellerBonus();
   await db
     .update(users)
     .set({

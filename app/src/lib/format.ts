@@ -6,6 +6,49 @@ export function formatNumber(n: number): string {
   return n.toLocaleString("id-ID");
 }
 
+/** Baca env dengan guard browser (process.env tidak ada di client bundle). */
+function readEnvNum(key: string, fallback: number): number {
+  try {
+    if (typeof process !== "undefined" && process?.env?.[key]) {
+      const v = Number(process.env[key]);
+      if (Number.isFinite(v)) return v;
+    }
+  } catch {
+    // tidak bisa diakses dari browser — pakai fallback.
+  }
+  return fallback;
+}
+
+/**
+ * Single source nominal bisnis (WP6, port .my a1e013df): server top-up,
+ * nudge dashboard, email lifecycle, dan signup membaca angka yang SAMA —
+ * jangan hardcode per file. Default = perilaku .id saat ini (tanpa perubahan).
+ */
+
+/** Bonus deposit (0.10 = 10%) — env SOCIO_DEPOSIT_BONUS. Invalid → 0 (jangan janji). */
+export function getDepositBonusRate(): number {
+  const r = readEnvNum("SOCIO_DEPOSIT_BONUS", 0.1);
+  return r >= 0 && r <= 1 ? r : 0;
+}
+
+/** Minimum top-up (Rupiah) — env SOCIO_TOPUP_MIN, default Rp20.000 (validasi top-up). */
+export function getTopupMin(): number {
+  const n = readEnvNum("SOCIO_TOPUP_MIN", 20000);
+  return n > 0 ? Math.round(n) : 20000;
+}
+
+/** Biaya aktivasi reseller (Rupiah, dasar tanpa kode unik) — default Rp50.000. */
+export function getResellerActivationAmount(): number {
+  const n = readEnvNum("SOCIO_RESELLER_ACTIVATION_AMOUNT", 50000);
+  return n > 0 ? Math.round(n) : 50000;
+}
+
+/** Saldo termasuk aktivasi reseller (Rupiah) — env SOCIO_RESELLER_BONUS, default Rp20.000. */
+export function getResellerBonus(): number {
+  const n = readEnvNum("SOCIO_RESELLER_BONUS", 20000);
+  return n >= 0 ? Math.round(n) : 20000;
+}
+
 /**
  * Buang karakter non-ASCII (emoji 4-byte, mojibake) supaya teks aman disimpan
  * ke kolom ber-charset utf8mb3 (mis. balance_logs.note). Dipakai untuk catatan
@@ -95,24 +138,21 @@ const NAMED_ENTITIES: Record<string, string> = {
  */
 export function decodeHtmlEntities(s: string): string {
   if (!s || !s.includes("&")) return s;
-  return String(s).replace(
-    /&#(?:[xX][0-9a-fA-F]+|[0-9]+);|&[a-zA-Z][a-zA-Z0-9]*;/g,
-    (m) => {
-      if (m[1] === "#") {
-        const isHex = m[2] === "x" || m[2] === "X";
-        const code = parseInt(isHex ? m.slice(3, -1) : m.slice(2, -1), isHex ? 16 : 10);
-        if (Number.isFinite(code) && code >= 0 && code <= 0x10ffff) {
-          try {
-            return String.fromCodePoint(code);
-          } catch {
-            return m;
-          }
+  return String(s).replace(/&#(?:[xX][0-9a-fA-F]+|[0-9]+);|&[a-zA-Z][a-zA-Z0-9]*;/g, (m) => {
+    if (m[1] === "#") {
+      const isHex = m[2] === "x" || m[2] === "X";
+      const code = parseInt(isHex ? m.slice(3, -1) : m.slice(2, -1), isHex ? 16 : 10);
+      if (Number.isFinite(code) && code >= 0 && code <= 0x10ffff) {
+        try {
+          return String.fromCodePoint(code);
+        } catch {
+          return m;
         }
-        return m;
       }
-      return NAMED_ENTITIES[m.slice(1, -1).toLowerCase()] ?? m;
-    },
-  );
+      return m;
+    }
+    return NAMED_ENTITIES[m.slice(1, -1).toLowerCase()] ?? m;
+  });
 }
 
 /**
@@ -139,22 +179,22 @@ const SMMT_PAT = "SMMT[\\sÜÃœ�\\u0080-\\u00BF\\uFFFD]*[UÜ]?[\\sÜÃœ�\\
  * fullwidth). Emoji/flag/simbol/Cyrillic TIDAK disentuh.
  */
 const HOMOGLYPH_MAP: Record<string, string> = {
-  "İ": "I", // U+0130
-  "ı": "i", // U+0131
-  "ɪ": "i", // U+026A
-  "ʀ": "r", // U+0280
-  "ʜ": "H", // U+029C
-  "ʟ": "L", // U+029F
-  "ᴀ": "a", // U+1D00
-  "ᴄ": "c", // U+1D04
-  "ᴅ": "d", // U+1D05
-  "ᴇ": "e", // U+1D07
-  "ᴍ": "m", // U+1D0D
-  "ᴏ": "o", // U+1D0F
-  "ᴘ": "p", // U+1D18
-  "ᴛ": "t", // U+1D1B
-  "ᴜ": "u", // U+1D1C
-  "ᴠ": "v", // U+1D20
+  İ: "I", // U+0130
+  ı: "i", // U+0131
+  ɪ: "i", // U+026A
+  ʀ: "r", // U+0280
+  ʜ: "H", // U+029C
+  ʟ: "L", // U+029F
+  ᴀ: "a", // U+1D00
+  ᴄ: "c", // U+1D04
+  ᴅ: "d", // U+1D05
+  ᴇ: "e", // U+1D07
+  ᴍ: "m", // U+1D0D
+  ᴏ: "o", // U+1D0F
+  ᴘ: "p", // U+1D18
+  ᴛ: "t", // U+1D1B
+  ᴜ: "u", // U+1D1C
+  ᴠ: "v", // U+1D20
 };
 
 /**
@@ -170,7 +210,9 @@ export function normalizeHomoglyphs(s: string): string {
   for (const ch of String(s ?? "")) o += HOMOGLYPH_MAP[ch] ?? ch;
   o = o.normalize("NFKD").replace(/\u0307/gu, "");
   // buang lone surrogate (setengah pasangan UTF-16 yatim)
-  o = o.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "").replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
+  o = o
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "")
+    .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
   return o;
 }
 
@@ -178,7 +220,9 @@ export function normalizeHomoglyphs(s: string): string {
 function hasBrandToken(s: string): boolean {
   const n = normalizeHomoglyphs(s);
   return (
-    new RegExp(SMMT_PAT, "i").test(n) || /P\s*R\s*O\s*V\s*\?\s*D\s*E\s*R\s*S?/i.test(n) || /\bProviders?\b/i.test(n)
+    new RegExp(SMMT_PAT, "i").test(n) ||
+    /P\s*R\s*O\s*V\s*\?\s*D\s*E\s*R\s*S?/i.test(n) ||
+    /\bProviders?\b/i.test(n)
   );
 }
 
@@ -247,13 +291,13 @@ export function serviceDisplayName(name: string): string {
  * 1. buang grup dalam kurung yang menyebut brand,
  * 2. buang segmen ber-pipe yang menyebut brand,
  * 3. buang anak-kalimat trailing (setelah , : - –) yang masih menyebut brand,
-  * 4. netralisasi sisa token brand → "Socio",
-  * 4b. normalisasi homoglyph (İ/ı/ɪ, math-bold, superscript) → ASCII,
-  * 5. rapikan kata noise ("Own"/"Exclusive"/"Special Update") + separator
-  *    menggantung,
-  * 6. buang tag `[...Provider...]` (bracket/paren-wrapped), kata "Provider"
-  *    standalone, samaran "PROV?DER"/"P R O V I D E R", suffix `| Provider`,
-  *    dan frasa `of Provider(s)` (idempotent, owner 7-8 Okt).
+ * 4. netralisasi sisa token brand → "Socio",
+ * 4b. normalisasi homoglyph (İ/ı/ɪ, math-bold, superscript) → ASCII,
+ * 5. rapikan kata noise ("Own"/"Exclusive"/"Special Update") + separator
+ *    menggantung,
+ * 6. buang tag `[...Provider...]` (bracket/paren-wrapped), kata "Provider"
+ *    standalone, samaran "PROV?DER"/"P R O V I D E R", suffix `| Provider`,
+ *    dan frasa `of Provider(s)` (idempotent, owner 7-8 Okt).
  */
 export function whitelabel(raw: string): string {
   let s = decodeHtmlEntities(fixMojibake(String(raw ?? "")));

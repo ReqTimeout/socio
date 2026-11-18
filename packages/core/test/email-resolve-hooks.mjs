@@ -1,11 +1,12 @@
 /**
- * Resolver hooks untuk selftest email-guard (lihat register.mjs).
+ * Resolver hooks untuk selftest email (lihat register.mjs).
  *
- * File app ditulis untuk SvelteKit/Vite: import pakai alias `$app/*` serta
- * ekstensi `.js` untuk file TypeScript (gaya NodeNext). Node polos tak
+ * File app ditulis untuk SvelteKit/Vite: import pakai alias `$app/*`/`$lib/*`
+ * serta ekstensi `.js` untuk file TypeScript (gaya NodeNext). Node polos tak
  * memahami itu, jadi hooks ini menerjemahkannya:
  *
  *  - `$app/environment`  → `test/stubs/app-environment.ts`
+ *  - `$lib/*`            → `app/src/lib/*` (modul app asli: templates, signup, format)
  *  - `./render.js`       → `./render.ts`
  *  - `../tokens`         → `../tokens.ts`
  *
@@ -21,7 +22,12 @@ const HOOK_DIR = path.dirname(fileURLToPath(import.meta.url));
 function realFile(base) {
   const cands = base.endsWith(".js")
     ? [base.slice(0, -3) + ".ts", base]
-    : [base + ".ts", base + ".js", path.join(base, "index.ts"), path.join(base, "index.js")];
+    : [
+        base + ".ts",
+        base + ".js",
+        path.join(base, "index.ts"),
+        path.join(base, "index.js"),
+      ];
   for (const c of cands) {
     try {
       if (existsSync(c) && statSync(c).isFile()) return c;
@@ -34,11 +40,34 @@ function realFile(base) {
 
 export async function resolve(specifier, context, nextResolve) {
   if (specifier === "$app/environment") {
-    return nextResolve(pathToFileURL(path.join(HOOK_DIR, "stubs", "app-environment.ts")).href, context);
+    return nextResolve(
+      pathToFileURL(path.join(HOOK_DIR, "stubs", "app-environment.ts")).href,
+      context,
+    );
+  }
+
+  // Alias SvelteKit `$lib/*` → app/src/lib/* (dipakai selftest quota/lanes yang
+  // menguji modul app asli: marketing/templates.ts, signup.ts, format.ts).
+  if (specifier.startsWith("$lib/")) {
+    const base = path.join(
+      HOOK_DIR,
+      "..",
+      "..",
+      "..",
+      "app",
+      "src",
+      "lib",
+      specifier.slice(5),
+    );
+    const hit = realFile(base);
+    if (hit) return nextResolve(pathToFileURL(hit).href, context);
   }
 
   // Import relatif: .js → .ts, tanpa ekstensi → .ts
-  if ((specifier.startsWith("./") || specifier.startsWith("../")) && context.parentURL) {
+  if (
+    (specifier.startsWith("./") || specifier.startsWith("../")) &&
+    context.parentURL
+  ) {
     const parentDir = path.dirname(fileURLToPath(context.parentURL));
     const hit = realFile(path.resolve(parentDir, specifier));
     if (hit) return nextResolve(pathToFileURL(hit).href, context);

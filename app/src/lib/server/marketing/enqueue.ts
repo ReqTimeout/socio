@@ -57,7 +57,9 @@ export async function enqueueLifecycleEmail(a: EnqueueArgs): Promise<number | nu
       unsubscribeUrl: humanUrl,
       preferencesUrl: a.preferencesUrl,
       grid: a.grid,
-      balanceRp: trigger === "balance_low" ? recipient.balance : undefined,
+      // WP7: activation juga butuh saldo — saldo 0 → copy/CTA top-up dulu.
+      balanceRp:
+        trigger === "balance_low" || trigger === "activation" ? recipient.balance : undefined,
       daysSince: a.daysSince,
     });
 

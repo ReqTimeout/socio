@@ -1,10 +1,17 @@
 import { db } from "@socio/db";
 import { emailQueue, users } from "@socio/db/schema";
 import { eq } from "drizzle-orm";
-import { emailShell, emailCta, emailBankCard, emailFooterTransactional, escapeHtml } from "./email/render.js";
+import {
+  emailShell,
+  emailCta,
+  emailBankCard,
+  emailFooterTransactional,
+  escapeHtml,
+} from "./email/render.js";
 import { EMAIL_COLORS } from "./email/tokens.js";
 import { createNotification } from "./notification.js";
 import type { SparkoPose } from "./email/render.js";
+import { getDepositBonusRate, getResellerActivationAmount, getResellerBonus } from "$lib/format";
 
 /**
  * Email transaksional deposit — instruksi, reminder, sukses, batal.
@@ -59,9 +66,30 @@ function steps(): string {
   </ol>`;
 }
 
+/** Baris "saldo yang diterima" — hanya muncul bila credited > nominal transfer
+ *  (WP6: user harus lihat angka PAS yang ditransfer, bonus sebagai baris terpisah). */
+function creditedLine(payAmount: number, credited?: number): string {
+  if (!credited || !(Number(credited) > Number(payAmount))) return "";
+  return `<p style="margin:12px 0 0 0;font-size:13px;color:${EMAIL_COLORS.inkBody}">Saldo yang diterima: <b>${idr(credited)}</b> — top-up kamu plus bonus deposit. Transfer cukup sesuai nominal di kotak atas.</p>`;
+}
+
+/** Nilai bersih aktivasi reseller (bayar sekali − saldo termasuk = biaya bersih). */
+function resellerValueLine(): string {
+  const base = getResellerActivationAmount();
+  const bonus = getResellerBonus();
+  if (!(bonus > 0)) return "";
+  const net = Math.max(0, base - bonus);
+  return `<p style="margin:12px 0 0 0;font-size:13px;color:${EMAIL_COLORS.inkBody}"><b>Yang kamu dapat:</b> ${idr(base)} sekali bayar · saldo ${idr(bonus)} termasuk · bersih ${idr(net)} — harga reseller di semua layanan, permanen.</p>`;
+}
+
 export interface DepositMailInput {
   name: string;
+  /** Nominal PAS yang harus dibayar = `deposits.post_amount` (termasuk kode unik
+   *  3 digit). JANGAN kirim `deposits.amount` untuk top-up biasa — itu sudah
+   *  termasuk bonus dan bukan jumlah yang harus ditransfer. */
   amount: number;
+  /** Saldo yang akan masuk setelah bonus (opsional) — tampil sebagai baris terpisah. */
+  credited?: number;
   invoiceId: string;
   expireAt: Date | string;
   isReseller?: boolean;
@@ -85,9 +113,11 @@ export function depositInstructionMail(i: DepositMailInput): {
   const amt = idr(i.amount);
   const exp = fmtExpire(i.expireAt);
   const title = i.isReseller ? "Selesaikan aktivasi Reseller" : "Selesaikan pembayaran deposit";
+  const value = i.isReseller ? resellerValueLine() : creditedLine(i.amount, i.credited);
   const body = `<p style="margin:0 0 4px 0">Halo <b>${escapeHtml(i.name)}</b>,</p>
     <p style="margin:8px 0 0 0">${title} sebesar <b>${amt}</b> dengan transfer ke rekening berikut:</p>
     ${bankCard(amt, i.invoiceId, exp)}
+    ${value}
     ${steps()}
     ${cta(i.isReseller ? "Lihat status aktivasi" : "Lihat status deposit", "https://app.socio.id/saldo")}`;
   return {
@@ -98,24 +128,49 @@ export function depositInstructionMail(i: DepositMailInput): {
       body,
       "idle",
     ),
-    text: `${title}\nTransfer ${amt} ke BCA ${BCA_NUMBER} a.n ${BCA_NAME}\nInvoice ${i.invoiceId}\nBayar sebelum ${exp}`,
+    text: `${title}\nTransfer ${amt} ke BCA ${BCA_NUMBER} a.n ${BCA_NAME}${i.credited && i.credited > i.amount ? `\nSaldo yang diterima: ${idr(i.credited)} (termasuk bonus deposit).` : ""}\nInvoice ${i.invoiceId}\nBayar sebelum ${exp}`,
   };
 }
 
-export function depositReminderMail(i: DepositMailInput & { leftText: string }): {
+/**
+ * Reminder deposit / aktivasi.
+ * `tone`:
+ *  - "final" (default) = T-2h terakhir, nada segera (hindari batal otomatis).
+ *  - "mid" = pertengahan masa berlaku invoice (WP6 L2: dulu hanya SATU reminder
+ *    telat, jadi user yang lupa bayar terus hilang sampai kedaluwarsa).
+ * `isReseller` = bahasa aktivasi (bukan "deposit").
+ */
+export function depositReminderMail(
+  i: DepositMailInput & { leftText: string; tone?: "mid" | "final" },
+): {
   subject: string;
   html: string;
   text: string;
 } {
   const amt = idr(i.amount);
+  const exp = fmtExpire(i.expireAt);
+  const mid = i.tone === "mid";
+  const label = i.isReseller ? "Aktivasi Reseller" : "Deposit";
+  const head = mid
+    ? `${label} <b>${amt}</b> (invoice ${i.invoiceId}) masih belum dibayar — sisa ${i.leftText}. Bayar sekarang, ${i.isReseller ? "akun kamu langsung aktif" : "saldo masuk"} begitu admin verifikasi:`
+    : `${label} <b>${amt}</b> (invoice ${i.invoiceId}) <b style="color:${EMAIL_COLORS.berryInk}">segera kedaluwarsa — sisa ${i.leftText}</b>. Transfer sekarang agar tidak batal otomatis:`;
+  const value = i.isReseller ? resellerValueLine() : creditedLine(i.amount, i.credited);
   const body = `<p style="margin:0 0 4px 0">Halo <b>${escapeHtml(i.name)}</b>,</p>
-    <p style="margin:8px 0 0 0">Deposit <b>${amt}</b> (invoice ${i.invoiceId}) <b style="color:${EMAIL_COLORS.berryInk}">segera kedaluwarsa — sisa ${i.leftText}</b>. Transfer sekarang agar tidak batal otomatis:</p>
-    ${bankCard(amt, i.invoiceId, fmtExpire(i.expireAt))}
-    ${cta("Bayar sekarang", "https://app.socio.id/saldo")}`;
+    <p style="margin:8px 0 0 0">${head}</p>
+    ${bankCard(amt, i.invoiceId, exp)}
+    ${value}
+    ${cta(i.isReseller ? "Selesaikan aktivasi" : "Bayar sekarang", "https://app.socio.id/saldo")}`;
   return {
-    subject: `Segera berakhir: deposit ${amt} sisa ${i.leftText}`,
-    html: shell(`Deposit ${amt} segera kedaluwarsa`, "Pengingat Deposit", body, "idle"),
-    text: `Deposit ${amt} sisa ${i.leftText}. Transfer ke BCA ${BCA_NUMBER} a.n ${BCA_NAME} sebelum ${fmtExpire(i.expireAt)}`,
+    subject: mid
+      ? `${label} ${amt} belum dibayar — sisa ${i.leftText}`
+      : `Segera berakhir: ${label.toLowerCase()} ${amt} sisa ${i.leftText}`,
+    html: shell(
+      `${label} ${amt} — sisa ${i.leftText}`,
+      mid ? "Pengingat Pembayaran" : i.isReseller ? "Pengingat Aktivasi" : "Pengingat Deposit",
+      body,
+      "idle",
+    ),
+    text: `${label} ${amt} sisa ${i.leftText}. Transfer ke BCA ${BCA_NUMBER} a.n ${BCA_NAME} sebelum ${exp}`,
   };
 }
 
@@ -142,19 +197,50 @@ export function depositSuccessMail(i: { name: string; amount: number; isReseller
   };
 }
 
-export function depositCanceledMail(i: { name: string; amount: number; reason: string }): {
+/**
+ * Deposit batal / kedaluwarsa — WP6 L2 winback: nyatakan saldo tidak berubah,
+ * kenapa batal, langkah lanjutan bila user TERLANJUR transfer, dan langkah
+ * berikutnya yang paling pendek (bukan sekadar pemberitahuan).
+ * Reseller: bahasa aktivasi + CTA mulai ulang (invoice bisa diterbitkan lagi).
+ * Catatan jujur: jangan janji "tidak ada uang dipotong" — deposit manual bisa
+ * saja user sudah transfer tetapi lewat/tidak cocok; sebab itu ada baris bukti.
+ */
+export function depositCanceledMail(i: {
+  name: string;
+  amount: number;
+  reason: string;
+  isReseller?: boolean;
+}): {
   subject: string;
   html: string;
   text: string;
 } {
   const amt = idr(i.amount);
-  const body = `<p style="margin:0 0 4px 0">Halo <b>${escapeHtml(i.name)}</b>,</p>
-    <p style="margin:8px 0 0 0">Deposit <b>${amt}</b> dibatalkan (${escapeHtml(i.reason)}). Saldo tidak berubah. Silakan buat deposit baru kapan saja:</p>
-    ${cta("Top up lagi", "https://app.socio.id/saldo/topup")}`;
+  const bonusPct = Math.round(getDepositBonusRate() * 100);
+  const bonusBit =
+    bonusPct > 0 ? ` Bonus deposit ${bonusPct}% tetap berlaku untuk top-up berikutnya.` : "";
+  const body = i.isReseller
+    ? `<p style="margin:0 0 4px 0">Halo <b>${escapeHtml(i.name)}</b>,</p>
+    <p style="margin:8px 0 0 0">Invoice aktivasi Reseller <b>${amt}</b> kedaluwarsa (${escapeHtml(i.reason)}). Saldo tidak berkurang dan akun kamu masih menunggu aktivasi.</p>
+    ${resellerValueLine()}
+    <p style="margin:12px 0 0 0;font-size:13px;color:${EMAIL_COLORS.inkBody}">Minta invoice baru di halaman reseller dan transfer sesuai nominal (termasuk 3 digit kode unik) — akun aktif otomatis setelah admin verifikasi. Sudah terlanjur bayar? Balas email ini dengan bukti transfer — kami cocokkan ke akunmu.</p>
+    ${cta("Mulai ulang aktivasi", "https://app.socio.id/reseller")}`
+    : `<p style="margin:0 0 4px 0">Halo <b>${escapeHtml(i.name)}</b>,</p>
+    <p style="margin:8px 0 0 0">Deposit <b>${amt}</b> dibatalkan (${escapeHtml(i.reason)}). Saldo kamu tidak berubah.</p>
+    <p style="margin:12px 0 0 0;font-size:13px;color:${EMAIL_COLORS.inkBody}">Mulai lagi kurang dari semenit: pilih nominal, transfer BCA sesuai angka pas (termasuk 3 digit kode unik).${bonusBit} Sudah terlanjur transfer? Balas email ini dengan bukti transfer — kami cocokkan ke akunmu.</p>
+    ${cta("Top up lagi", "https://app.socio.id/saldo/top-up")}`;
+  const subject = i.isReseller
+    ? `Aktivasi Reseller ${amt} kedaluwarsa — mulai ulang dalam 1 menit`
+    : `Deposit ${amt} dibatalkan — top up lagi dalam 1 menit`;
+  const preheader = i.isReseller
+    ? `Invoice aktivasi ${amt} kedaluwarsa — minta invoice baru`
+    : `Deposit ${amt} dibatalkan — saldo kamu tidak berubah`;
   return {
-    subject: `Deposit ${amt} dibatalkan`,
-    html: shell(`Deposit ${amt} dibatalkan`, "Info Deposit", body, "sad"),
-    text: `Deposit ${amt} dibatalkan (${i.reason}). Buat deposit baru di https://app.socio.id/saldo/topup`,
+    subject,
+    html: shell(preheader, i.isReseller ? "Aktivasi Kedaluwarsa" : "Info Deposit", body, "sad"),
+    text: i.isReseller
+      ? `Aktivasi Reseller ${amt} kedaluwarsa (${i.reason}). Saldo tidak berkurang. Minta invoice baru di https://app.socio.id/reseller — akun aktif otomatis setelah pembayaran diverifikasi. Sudah terlanjur bayar? Balas email ini dengan bukti transfer.`
+      : `Deposit ${amt} dibatalkan (${i.reason}). Saldo kamu tidak berubah. Buat deposit baru di https://app.socio.id/saldo/top-up (transfer sesuai nominal pas, termasuk 3 digit kode unik).${bonusBit} Sudah terlanjur transfer? Balas email ini dengan bukti transfer — kami cocokkan ke akunmu.`,
   };
 }
 

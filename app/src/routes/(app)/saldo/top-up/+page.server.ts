@@ -5,13 +5,12 @@ import { redirect, fail } from "@sveltejs/kit";
 import { createHmac, randomInt } from "node:crypto";
 import { uploadToR2 } from "$lib/server/r2";
 import { depositInstructionMail, enqueueEmail } from "$lib/server/deposit-emails";
+import { formatRupiah, getDepositBonusRate, getTopupMin } from "$lib/format";
 import type { PageServerLoad, Actions } from "./$types";
 
-/** Bonus deposit (0.10 = 10%). Dikredit saat admin konfirmasi — port PHP lama `add-action.php:35`. */
-function depositBonusRate(): number {
-  const r = Number(process.env.SOCIO_DEPOSIT_BONUS ?? "0.10");
-  return Number.isFinite(r) && r >= 0 && r <= 1 ? r : 0;
-}
+// Bonus deposit dibaca dari getter single-source ($lib/format, env
+// SOCIO_DEPOSIT_BONUS) — angka sama dengan nudge dashboard + email WP6.
+// Dikredit saat admin konfirmasi — port PHP lama `add-action.php:35`.
 
 /** HMAC suffix kode unik → client tidak bisa manipulasi nominal transfer. */
 function signSuffix(userId: number, suffix: number): string {
@@ -95,7 +94,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     balance: locals.user.balance ?? 0,
     bcaNumber: process.env.SOCIO_BCA_NUMBER ?? "1392680815",
     bcaName: process.env.SOCIO_BCA_NAME ?? "Awangga Ramadhi",
-    bonusRate: depositBonusRate(),
+    bonusRate: getDepositBonusRate(),
     // Preview kode unik + HMAC; action validasi signature (anti-tamper).
     suffix,
     suffixSig: signSuffix(userId, suffix),
@@ -116,7 +115,9 @@ export const actions: Actions = {
       return fail(400, { error: "Metode pembayaran unavailable. Gunakan transfer BCA." });
     }
 
-    if (!amount || amount < 20000) return fail(400, { error: "Minimal top up Rp20.000" });
+    const minTopup = getTopupMin();
+    if (!amount || amount < minTopup)
+      return fail(400, { error: `Minimal top up ${formatRupiah(minTopup)}` });
     if (amount > 10_000_000) return fail(400, { error: "Maksimal top up Rp10.000.000" });
 
     // B-07: max 2 deposit pending (port PHP lama `add-action.php:31`).
@@ -137,8 +138,8 @@ export const actions: Actions = {
         : newSuffix();
 
     const postAmount = amount + suffix;
-    const bonus = Math.round(amount * depositBonusRate());
-    // Saldo masuk = nominal transfer + bonus 10% (paritas PHP lama: amount tersimpan
+    const bonus = Math.round(amount * getDepositBonusRate());
+    // Saldo masuk = nominal transfer + bonus (paritas PHP lama: amount tersimpan
     // sudah termasuk bonus; admin confirm kredit `deposits.amount` apa adanya).
     const credited = postAmount + bonus;
     const invoiceId = `DEP-${Date.now()}-${userId}`;
@@ -174,7 +175,10 @@ export const actions: Actions = {
       if (u?.email) {
         const m = depositInstructionMail({
           name: u.fullName || "Pengguna Socio.id",
-          amount: credited,
+          // WP6: nominal PAS yang ditransfer = postAmount (bukan credited yang
+          // sudah termasuk bonus) — bonus tampil sebagai baris "saldo yang diterima".
+          amount: postAmount,
+          credited,
           invoiceId,
           expireAt,
         });

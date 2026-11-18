@@ -4,7 +4,11 @@ import { sql, desc, eq, and, ne } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate } from "$lib/server/admin";
 import { creditAffiliateCommission } from "$lib/server/affiliate";
-import { depositCanceledMail, enqueueEmail, notifyDepositSuccess } from "$lib/server/deposit-emails";
+import {
+  depositCanceledMail,
+  enqueueEmail,
+  notifyDepositSuccess,
+} from "$lib/server/deposit-emails";
 import { can, normalizeRole } from "@socio/core/rbac";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -29,7 +33,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     // C5: badge/filter virtual "Kedaluwarsa" — rows Canceled yang di-stamp
     // otomatis oleh cron light / webhook Midtrans expire (prefix "Expired:").
     conds.push(eq(deposits.status, "Canceled"));
-    conds.push(sql`(${deposits.verificationNotes} LIKE ${"Expired%"} OR ${deposits.verificationNotes} LIKE ${"Kedaluwarsa%"})`);
+    conds.push(
+      sql`(${deposits.verificationNotes} LIKE ${"Expired%"} OR ${deposits.verificationNotes} LIKE ${"Kedaluwarsa%"})`,
+    );
   } else if (status && STATUSES.includes(status as Status)) {
     conds.push(eq(deposits.status, status as never));
   }
@@ -251,7 +257,12 @@ export const actions: Actions = {
     // Email batal ke user (async via queue)
     try {
       const [dd] = await db
-        .select({ userId: deposits.userId, amount: deposits.amount })
+        .select({
+          userId: deposits.userId,
+          amount: deposits.amount,
+          postAmount: deposits.postAmount,
+          untukApa: deposits.untukApa,
+        })
         .from(deposits)
         .where(eq(deposits.id, id))
         .limit(1);
@@ -262,10 +273,13 @@ export const actions: Actions = {
           .where(eq(users.id, dd.userId))
           .limit(1);
         if (u?.email) {
+          const isReseller = dd.untukApa === "reseller";
           const m = depositCanceledMail({
             name: u.fullName || "Pengguna Socio.id",
-            amount: Number(dd.amount),
+            // WP6: nominal PAS = postAmount (amount sudah termasuk bonus top-up).
+            amount: Number(dd.postAmount || dd.amount),
             reason: "ditolak admin — hubungi support jika keberatan",
+            isReseller,
           });
           await enqueueEmail({
             to: u.email,
@@ -273,8 +287,10 @@ export const actions: Actions = {
             templateName: "deposit-canceled",
             subject: m.subject,
             body: m.text,
-            ctaText: "Top up lagi",
-            ctaUrl: "https://app.socio.id/saldo/topup",
+            ctaText: isReseller ? "Mulai ulang aktivasi" : "Top up lagi",
+            ctaUrl: isReseller
+              ? "https://app.socio.id/reseller"
+              : "https://app.socio.id/saldo/top-up",
             html: m.html,
           });
         }
