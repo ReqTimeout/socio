@@ -79,6 +79,95 @@ export const NEWS_EVENT_FILTERS: ReadonlyArray<{ v: string; label: string }> = [
 ];
 
 /**
+ * Kategori pengumuman MANUAL (/admin/news, source='manual'). Yang disimpan di
+ * kolom `news.kategori` adalah KEY stabil ini — bukan teks bebas — supaya label
+ * & warna chip konsisten (satu sumber admin & user) dan tidak berubah karena
+ * typo admin. Baris sync menyimpan label event ("Harga Turun" dll.) di kolom
+ * yang sama; nilai itu tidak pernah match key → jatuh ke fallback netral.
+ * Label Indonesia inline (konvensi .id, tanpa i18n).
+ */
+export const NEWS_CATEGORIES = ["info", "update", "promo", "maintenance", "urgent"] as const;
+export type NewsCategoryKey = (typeof NEWS_CATEGORIES)[number];
+
+export function isNewsCategoryKey(v: string | null | undefined): v is NewsCategoryKey {
+  return !!v && (NEWS_CATEGORIES as readonly string[]).includes(v);
+}
+
+export type NewsCatMeta = {
+  key: string;
+  label: string;
+  icon: string;
+  chipBg: string;
+  chipInk: string;
+  dot: string;
+};
+
+/** Label Indonesia per key preset (satu sumber untuk SELECT admin + chip user). */
+const NEWS_CATEGORY_LABELS: Record<NewsCategoryKey, string> = {
+  info: "Info",
+  update: "Update",
+  promo: "Promo",
+  maintenance: "Maintenance",
+  urgent: "Penting",
+};
+
+/**
+ * Meta tampilan satu kategori pengumuman. Teks lama/luar preset (termasuk baris
+ * sync) → key "custom", label = teks asli yang sudah dibersihkan, tone sky netral.
+ * Dipakai admin/news, /berita, dashboard (box Pengumuman) + NewsDetailSheet.
+ */
+export function newsCategory(raw: string | null | undefined): NewsCatMeta {
+  const tone: Record<NewsCategoryKey, Omit<NewsCatMeta, "key" | "label">> = {
+    info: { icon: "info", chipBg: "bg-sky-50", chipInk: "text-sky-700", dot: "bg-sky-500" },
+    update: {
+      icon: "sparkles",
+      chipBg: "bg-violet-50",
+      chipInk: "text-violet-700",
+      dot: "bg-violet-500",
+    },
+    promo: { icon: "tag", chipBg: "bg-rose-50", chipInk: "text-rose-700", dot: "bg-rose-500" },
+    maintenance: {
+      icon: "settings",
+      chipBg: "bg-ink-100",
+      chipInk: "text-ink-600",
+      dot: "bg-ink-400",
+    },
+    urgent: { icon: "alert", chipBg: "bg-red-50", chipInk: "text-red-600", dot: "bg-red-500" },
+  };
+  if (isNewsCategoryKey(raw)) {
+    return { key: raw, label: NEWS_CATEGORY_LABELS[raw], ...tone[raw] };
+  }
+  // Baris manual lama (teks bebas Indonesia) — petakan ke preset bila jelas.
+  const legacy = String(raw ?? "");
+  const keyFromLegacy: NewsCategoryKey | null = /promo|diskon|discount|sale|murah/i.test(legacy)
+    ? "promo"
+    : /maintenance|pemeliharaan|perbaikan|gangguan/i.test(legacy)
+      ? "maintenance"
+      : /urgent|penting|critical|darurat|segera/i.test(legacy)
+        ? "urgent"
+        : /terbaru|latest|new|rekomend|recommend|trend|update|turun harga/i.test(legacy)
+          ? "update"
+          : /info|informasi/i.test(legacy)
+            ? "info"
+            : null;
+  if (keyFromLegacy) {
+    return {
+      key: keyFromLegacy,
+      label: NEWS_CATEGORY_LABELS[keyFromLegacy],
+      ...tone[keyFromLegacy],
+    };
+  }
+  return {
+    key: "custom",
+    label: cleanNewsText(legacy) || "Info",
+    icon: "megaphone",
+    chipBg: "bg-sky-50",
+    chipInk: "text-sky-700",
+    dot: "bg-sky-500",
+  };
+}
+
+/**
  * Format relatif singkat untuk timestamp berita (id-ID).
  * Dipakai widget + /berita supaya "kapan" konsisten.
  */

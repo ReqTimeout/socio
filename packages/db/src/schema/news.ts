@@ -9,7 +9,16 @@ import {
 
 export const news = mysqlTable("news", {
   id: int("id").autoincrement().primaryKey(),
+  /**
+   * Kategori pengumuman manual = KEY preset stabil (`info|update|promo|
+   * maintenance|urgent`) — label & warna chip dari `newsCategory()` (satu sumber
+   * admin & user), jadi baris lama teks bebas tetap tampil (fallback netral).
+   * Baris sync menyimpan label event ("Harga Turun" dll.) yang tidak pernah
+   * dibaca sebagai kategori preset.
+   */
   kategori: varchar("kategori", { length: 128 }).notNull().default(""),
+  /** Judul pengumuman (hanya source='manual'; baris sync = '' → judul diturunkan dari konten). */
+  title: varchar("title", { length: 255 }).notNull().default(""),
   content: text("content").notNull(),
   createdAt: datetime("created_at").notNull(),
   /** PRD Service Sync v2 — news terintegrasi sync layanan. */
