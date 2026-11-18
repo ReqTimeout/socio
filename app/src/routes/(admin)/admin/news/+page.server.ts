@@ -3,6 +3,7 @@ import { news } from "@socio/db/schema";
 import { desc, eq, sql, count, like, or, and } from "drizzle-orm";
 import { fail, redirect } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
+import { isNewsCategoryKey, newsCategory } from "$lib/news-meta";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -21,6 +22,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const term = q
     ? or(
         like(sql<string>`LOWER(${news.kategori})`, `%${q.toLowerCase()}%`),
+        like(sql<string>`LOWER(${news.title})`, `%${q.toLowerCase()}%`),
         like(sql<string>`LOWER(${news.content})`, `%${q.toLowerCase()}%`),
       )
     : undefined;
@@ -43,8 +45,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     items: rows.map((r) => ({
       id: Number(r.id),
       kategori: String(r.kategori ?? ""),
+      title: String(r.title ?? ""),
       content: String(r.content ?? ""),
       source: String(r.source ?? "manual"),
+      eventType: String(r.eventType ?? "manual"),
       isHidden: Number(r.isHidden ?? 0),
       createdAt: r.createdAt,
     })),
@@ -68,11 +72,12 @@ export const actions: Actions = {
     const form = await request.formData();
     const id = Number(form.get("id") ?? 0);
     const kategori = String(form.get("kategori") ?? "").trim();
+    const title = String(form.get("title") ?? "")
+      .trim()
+      .slice(0, 255);
     const content = String(form.get("content") ?? "").trim();
 
-    if (!kategori) return fail(400, { error: "Kategori wajib diisi." });
     if (!content) return fail(400, { error: "Konten berita wajib diisi." });
-    if (kategori.length > 128) return fail(400, { error: "Kategori maksimal 128 karakter." });
 
     if (id > 0) {
       const [existing] = await db
@@ -81,22 +86,42 @@ export const actions: Actions = {
         .where(eq(news.id, id))
         .limit(1);
       if (!existing) return fail(404, { error: "Berita tidak ditemukan." });
-      // E7: baris sync hanya boleh koreksi konten — jangan timpa kategori.
+      // E7: baris sync hanya boleh koreksi konten — jangan timpa kategori/title.
       const patch =
-        existing.source === "sync" ? { content } : { kategori: kategori || existing.kategori, content };
+        existing.source === "sync"
+          ? { content }
+          : { kategori: kategori || existing.kategori, title, content };
       await db.update(news).set(patch).where(eq(news.id, id));
       await logAudit({
         adminId: Number(locals.user.id),
         action: "update_news",
         entity: "news",
         entityId: id,
-        detail: { kategori },
+        detail: { kategori, title },
         ip: (locals as any).ip,
       });
       return { success: `Berita #${id} diperbarui.` };
     }
 
-    await db.insert(news).values({ kategori, content, source: "manual", eventType: "manual", createdAt: new Date() });
+    // Pengumuman baru → selalu manual (source + event_type), supaya masuk box
+    // "Pengumuman" dashboard & /berita?src=manual, BUKAN widget Update (sync-only).
+    // Kategori wajib preset → chip & filter kategori user-side konsisten.
+    if (!kategori) return fail(400, { error: "Kategori wajib diisi." });
+    if (!isNewsCategoryKey(kategori))
+      return fail(400, { error: "Kategori harus salah satu preset." });
+    if (!title) return fail(400, { error: "Judul wajib diisi." });
+    if (title.length > 255) return fail(400, { error: "Judul maksimal 255 karakter." });
+    const catLabel = newsCategory(kategori).label;
+    await db.insert(news).values({
+      kategori,
+      title,
+      content,
+      eventType: "manual",
+      source: "manual",
+      serviceId: 0,
+      isHidden: 0,
+      createdAt: new Date(),
+    });
     // A-11: broadcast read_popup legacy. Bungkus best-effort (kalau kolom
     // sudah di-drop, gak fatal). User.notification insert sudah di-batasi.
     try {
@@ -106,9 +131,10 @@ export const actions: Actions = {
     }
     try {
       const msg = String(content).slice(0, 160).replace(/\s+/g, " ").trim();
+      const head = (title || msg).slice(0, 60);
       await db.execute(sql`
         INSERT INTO notifications (user_id, type, title, message, action_url, created_at)
-        SELECT id, 'news', ${`[${kategori}] ${msg.slice(0, 60)}`}, ${msg}, ${`/notif?type=news`}, NOW()
+        SELECT id, 'news', ${`[${catLabel}] ${head}`}, ${msg}, ${`/notif?type=news`}, NOW()
         FROM users WHERE status = 1 LIMIT 10000
       `);
     } catch {
@@ -118,10 +144,10 @@ export const actions: Actions = {
       adminId: Number(locals.user.id),
       action: "create_news",
       entity: "news",
-      detail: { kategori },
+      detail: { kategori, title },
       ip: (locals as any).ip,
     });
-    return { success: `Berita kategori "${kategori}" ditambahkan.` };
+    return { success: `Berita "${catLabel}" ditambahkan.` };
   },
 
   delete: async ({ request, locals }) => {

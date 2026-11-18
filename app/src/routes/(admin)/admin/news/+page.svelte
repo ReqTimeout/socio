@@ -3,9 +3,13 @@
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
+  import { NEWS_CATEGORIES, isNewsCategoryKey, newsCategory } from "$lib/news-meta";
   import type { ActionData, PageData } from "./$types";
 
   let { data }: { data: PageData; form: ActionData } = $props();
+
+  // Label kategori dari newsCategory() — satu sumber nama untuk admin & user.
+  const CATS = NEWS_CATEGORIES.map((k) => ({ v: k, label: newsCategory(k).label }));
 
   type Item = PageData["items"][number];
 
@@ -26,37 +30,31 @@
   });
   let modal = $state<"add" | number | null>(null);
   let modalIsSync = $state(false);
-  let fKategori = $state("");
+  let fTajuk = $state("");
+  let fKategori = $state<string>("info");
   let fContent = $state("");
-  const KATEGORI_PRESET = [
-    "✅ Layanan Terbaru",
-    "✅ RECOMMENDED",
-    "✅ TRENDING NOW",
-    "? Layanan Turun Harga",
-    "Info",
-    "Promo",
-    "Maintenance",
-  ] as const;
+  /** Nilai mentah news.kategori — buat menampilkan label baris sync yang terkunci. */
+  let fKategoriRaw = $state("");
+  /** Chip kategori — warna SAMA dengan yang dilihat user (newsCategory()). */
   function catTone(cat: string): string {
-    if (cat.includes("Terbaru")) return "bg-emerald-50 border-emerald-200 text-emerald-700";
-    if (cat.includes("RECOMMEND")) return "bg-sky-50 border-sky-200 text-sky-700";
-    if (cat.includes("TRENDING")) return "bg-violet-50 border-violet-200 text-violet-700";
-    if (cat.includes("Turun")) return "bg-amber-50 border-amber-200 text-amber-700";
-    if (cat.toLowerCase().includes("promo")) return "bg-rose-50 border-rose-200 text-rose-700";
-    if (cat.toLowerCase().includes("maintenance")) return "bg-ink-100 border-ink-200 text-ink-600";
-    return "bg-ink-900 border-transparent text-ink-50";
+    const m = newsCategory(cat);
+    return `${m.chipBg} border-current/20 ${m.chipInk}`;
   }
 
   function openAdd() {
     modal = "add";
     modalIsSync = false;
-    fKategori = "";
+    fTajuk = "";
+    fKategori = "info";
+    fKategoriRaw = "";
     fContent = "";
   }
   function openEdit(r: Item) {
     modal = r.id;
     modalIsSync = r.source === "sync";
-    fKategori = r.kategori;
+    fTajuk = r.title;
+    fKategoriRaw = r.kategori;
+    fKategori = isNewsCategoryKey(r.kategori) ? r.kategori : "info";
     fContent = r.content;
   }
   function closeModal() {
@@ -200,18 +198,23 @@
     {/if}
   </form>
 
-  <!-- E7: Source tabs -->
-  <div class="flex flex-wrap items-center gap-2">
-    {#each [{ v: "", label: "Semua", n: data.counts.manual + data.counts.sync }, { v: "manual", label: "Manual", n: data.counts.manual }, { v: "sync", label: "Sync", n: data.counts.sync }] as t}
+  <!-- E7: Tab sumber — Semua / Manual (pengumuman admin) / Sync (berita katalog) -->
+  <div class="flex flex-wrap gap-1.5">
+    {#each [{ v: "", label: "Semua", n: data.counts.manual + data.counts.sync }, { v: "manual", label: "Manual", n: data.counts.manual }, { v: "sync", label: "Sync", n: data.counts.sync }] as t (t.v)}
       <button
         type="button"
         onclick={() => selectSrc(t.v)}
-        class="rounded-full px-3 py-1.5 text-xs font-bold transition {data.src === t.v
-          ? 'bg-ink-900 text-ink-50'
-          : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}"
+        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors
+          {data.src === t.v
+          ? 'border-ink-900 bg-ink-900 text-ink-50'
+          : 'border-ink-200 bg-surface text-ink-600 hover:bg-ink-50'}"
       >
         {t.label}
-        <span class="ml-1 tabular-nums opacity-70">{t.n}</span>
+        <span
+          class="rounded-full px-1.5 py-px text-[10px] tabular-nums {data.src === t.v
+            ? 'bg-white/20'
+            : 'bg-ink-100 text-ink-500'}">{t.n}</span
+        >
       </button>
     {/each}
   </div>
@@ -247,36 +250,50 @@
           <div
             class="flex items-center justify-between gap-2 border-b border-ink-100 bg-ink-50/60 px-3 py-2"
           >
-            <span
-              class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold {catTone(
-                r.kategori,
-              )}">{r.kategori || "—"}</span
-            >
-            <span class="flex items-center gap-1.5">
+            <span class="flex min-w-0 flex-wrap items-center gap-1.5">
+              <span
+                class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold {catTone(
+                  r.kategori,
+                )}">{newsCategory(r.kategori).label || "—"}</span
+              >
+              <span
+                class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold {r.source ===
+                'sync'
+                  ? 'bg-ink-100 text-ink-500'
+                  : 'bg-primary/10 text-primary'}">{r.source === "sync" ? "Sync" : "Manual"}</span
+              >
               {#if r.isHidden}
-                <span class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">Sembunyi</span>
+                <span
+                  class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700"
+                  >Sembunyi</span
+                >
               {/if}
-              <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold {r.source === "sync" ? 'bg-violet-100 text-violet-700' : 'bg-sky-100 text-sky-700'}">{r.source === "sync" ? "Sync" : "Manual"}</span>
-              <span class="font-mono text-[11px] text-ink-400">#{r.id}</span>
             </span>
+            <span class="shrink-0 font-mono text-[11px] text-ink-400">#{r.id}</span>
           </div>
+          {#if r.title}
+            <p class="px-3 pt-2 text-sm font-bold leading-snug text-ink-900">{r.title}</p>
+          {/if}
           <p
             class="line-clamp-4 whitespace-pre-wrap px-3 py-2.5 text-sm leading-relaxed text-ink-700"
           >
             {r.content}
           </p>
-          <div class="flex gap-1.5 border-t border-ink-100 bg-ink-50/30 px-3 py-2">
+          <div class="flex items-center gap-1.5 border-t border-ink-100 bg-ink-50/30 px-3 py-2">
+            <span class="mr-auto text-[11px] text-ink-400">{fmtDate(r.createdAt)}</span>
+            {#if r.source === "manual"}
+              <button
+                type="button"
+                onclick={() => doToggle(r)}
+                class="rounded-full border border-ink-200 bg-surface px-3 py-2 text-xs font-bold text-ink-600 hover:bg-ink-50"
+                >{r.isHidden ? "Tayang" : "Sembunyi"}</button
+              >
+            {/if}
             <button
               type="button"
               onclick={() => openEdit(r)}
               class="flex-1 rounded-full bg-ink-900 px-3 py-2 text-xs font-bold text-ink-50 hover:bg-ink-800"
               >Edit</button
-            >
-            <button
-              type="button"
-              onclick={() => doToggle(r)}
-              class="rounded-full border border-ink-200 bg-surface px-3 py-2 text-xs font-bold text-ink-600 hover:bg-ink-50"
-              >{r.isHidden ? "Tayang" : "Sembunyi"}</button
             >
             <button
               type="button"
@@ -296,7 +313,7 @@
           <tr>
             <th class="px-4 py-2.5 font-semibold">ID</th>
             <th class="px-3 py-2.5 font-semibold">Kategori</th>
-            <th class="px-3 py-2.5 font-semibold">Sumber</th>
+            <th class="px-4 py-2.5 font-semibold">Tajuk</th>
             <th class="px-4 py-2.5 font-semibold">Konten</th>
             <th class="px-4 py-2.5 font-semibold">Tanggal</th>
             <th class="px-4 py-2.5 text-right font-semibold">Aksi</th>
@@ -307,17 +324,31 @@
             <tr class="group hover:bg-ink-50/60">
               <td class="px-4 py-3 font-mono text-xs text-ink-400">#{r.id}</td>
               <td class="px-3 py-3">
-                <span
-                  class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold {catTone(
-                    r.kategori,
-                  )}">{r.kategori}</span
-                >
-                {#if r.isHidden}
-                  <span class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">Sembunyi</span>
-                {/if}
+                <span class="flex flex-wrap items-center gap-1">
+                  <span
+                    class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-bold {catTone(
+                      r.kategori,
+                    )}">{newsCategory(r.kategori).label}</span
+                  >
+                  <span
+                    class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold {r.source ===
+                    'sync'
+                      ? 'bg-ink-100 text-ink-500'
+                      : 'bg-primary/10 text-primary'}"
+                    >{r.source === "sync" ? "Sync" : "Manual"}</span
+                  >
+                  {#if r.isHidden}
+                    <span
+                      class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700"
+                      >Sembunyi</span
+                    >
+                  {/if}
+                </span>
               </td>
-              <td class="px-3 py-3">
-                <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold {r.source === "sync" ? 'bg-violet-100 text-violet-700' : 'bg-sky-100 text-sky-700'}">{r.source === "sync" ? "Sync" : "Manual"}</span>
+              <td class="max-w-[220px] px-4 py-3">
+                <div class="line-clamp-2 text-[13px] font-bold leading-snug text-ink-900">
+                  {r.title || "—"}
+                </div>
               </td>
               <td class="max-w-[520px] px-4 py-3">
                 <div
@@ -331,17 +362,21 @@
               >
               <td class="px-4 py-3">
                 <div class="flex justify-end gap-1">
+                  {#if r.source === "manual"}
+                    <button
+                      type="button"
+                      onclick={() => doToggle(r)}
+                      class="grid h-8 w-8 place-items-center rounded-full border border-ink-200 bg-surface text-ink-600 hover:bg-ink-50"
+                      title={r.isHidden ? "Tayang" : "Sembunyi"}
+                    >
+                      <Icon name={r.isHidden ? "eye_off" : "eye"} size={14} />
+                    </button>
+                  {/if}
                   <button
                     type="button"
                     onclick={() => openEdit(r)}
                     class="grid h-8 w-8 place-items-center rounded-full bg-ink-900 text-ink-50 hover:bg-ink-800"
                     title="Edit"><Icon name="settings" size={14} /></button
-                  >
-                  <button
-                    type="button"
-                    onclick={() => doToggle(r)}
-                    class="grid h-8 w-8 place-items-center rounded-full border border-ink-200 bg-surface text-ink-500 hover:bg-ink-50"
-                    title={r.isHidden ? "Tayang" : "Sembunyi"}><Icon name={r.isHidden ? "globe" : "eye"} size={14} /></button
                   >
                   <button
                     type="button"
@@ -438,26 +473,47 @@
         class="space-y-3"
       >
         <input type="hidden" name="id" value={modal === "add" ? 0 : modal} />
+        {#if modalIsSync}
+          <p
+            class="rounded-xl border border-ink-200 bg-ink-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-ink-500"
+          >
+            Baris Sync diproduksi Service Sync — kategori dan tajuk terkunci, hanya konten yang bisa
+            dikoreksi.
+          </p>
+        {/if}
+        <div>
+          <label class="mb-1 block text-sm font-semibold" for="news-tajuk"
+            >Judul<span class="text-danger">*</span></label
+          >
+          <input
+            id="news-tajuk"
+            name="title"
+            bind:value={fTajuk}
+            required={!modalIsSync}
+            maxlength="255"
+            disabled={modalIsSync}
+            placeholder="Judul pengumuman…"
+            class="{input} {modalIsSync ? 'opacity-60' : ''}"
+          />
+        </div>
         <div>
           <label class="mb-1 block text-sm font-semibold" for="news-kategori"
             >Kategori<span class="text-danger">*</span></label
           >
-          <input
+          <select
             id="news-kategori"
             name="kategori"
             bind:value={fKategori}
             required={!modalIsSync}
-            readonly={modalIsSync}
-            maxlength="128"
-            list="news-kategori-list"
-            placeholder="Ketik atau pilih preset…"
-            class={input + (modalIsSync ? " bg-ink-50 text-ink-400 cursor-not-allowed" : "")}
-          />
-          <datalist id="news-kategori-list">
-            {#each KATEGORI_PRESET as k}<option value={k}></option>{/each}
-          </datalist>
+            disabled={modalIsSync}
+            class="{input} {modalIsSync ? 'opacity-60' : ''}"
+          >
+            {#each CATS as k (k.v)}
+              <option value={k.v}>{k.label}</option>
+            {/each}
+          </select>
           {#if modalIsSync}
-            <p class="mt-1 text-[11px] text-ink-400">Baris Sync — kategori terkunci, hanya konten yang bisa diedit.</p>
+            <p class="mt-1 text-[11px] text-ink-400">{fKategoriRaw}</p>
           {/if}
         </div>
         <div>
