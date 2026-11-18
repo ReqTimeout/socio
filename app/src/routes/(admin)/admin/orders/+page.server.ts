@@ -7,12 +7,7 @@ import { notifyOrderUpdate } from "$lib/server/notification";
 import { modalAmountFor } from "@socio/core/pricing";
 import { isLiveAtProvider } from "@socio/core/order-status";
 import { requestOrderCancel } from "$lib/server/order-cancel";
-import {
-  ledgerRefundAmount,
-  ledgerRefundAt,
-  refundStateOf,
-  charged,
-} from "$lib/server/refund";
+import { ledgerRefundProofs, refundStateOf, charged } from "$lib/server/refund";
 import type { PageServerLoad, Actions } from "./$types";
 
 const UPDATABLE_FROM = ["Pending", "Processing", "In progress"];
@@ -75,10 +70,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         isApi: orders.isApi,
         isRefund: orders.isRefund,
         // Bukti refund = ledger saldo (balance_logs type 'ref'), BUKAN flag
-        // is_refund saja. Lihat lib/server/refund.ts untuk alasannya (flag bisa
-        // bohong dua arah; ledger uang tidak).
-        refundedLedger: ledgerRefundAmount,
-        refundedAt: ledgerRefundAt,
+        // is_refund saja (flag bisa bohong dua arah; ledger uang tidak).
+        // F1: di-fold setelah query via ledgerRefundProofs — tanpa REGEXP per
+        // baris. Lihat lib/server/refund.ts.
         komen: orders.komen,
         apiOrderLog: orders.apiOrderLog,
         apiStatusLog: orders.apiStatusLog,
@@ -116,7 +110,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         // Refund stats: pakai flag is_refund (indexed, O(1) per baris) untuk
         // AGGREGATE — correlated REGEXP subquery (ledgerRefundExists) di sini
         // bikin query macet 30+ menit karena scan balance_logs × 38k orders.
-        // Per-row ledger check tetap dipakai di 25 baris paginated (presisi).
+        // Per-row ledger check tetap ledger-first di 25 baris paginated —
+        // di-fold via ledgerRefundProofs (F1, tanpa REGEXP).
         refundedCount: sql<number>`COALESCE(SUM(CASE WHEN ${orders.isRefund} = 1 THEN 1 ELSE 0 END),0)`,
         refundedTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.isRefund} = 1 THEN ${orders.price} ELSE 0 END),0)`,
         // WAJIB 0. Kalau >0: ada order batal/gagal yang saldonya belum kembali
@@ -136,6 +131,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const total = Number(totalRow[0]?.total ?? 0);
   const s = statRow[0];
 
+  // F1 — bukti refund ledger: satu query ber-index user_id + fold pure,
+  // pengganti subquery REGEXP per baris yang bikin list ~7 detik.
+  const proofs = await ledgerRefundProofs(rows);
+
   // Kaya-row utk admin: hitung total modal + margin riil per order.
   //   modalTotal = services.price_api × qty dengan pembagi mengikuti semantik
   //   rate `services.type` (per-1000 tipe biasa, per-pack utk Package) — sama
@@ -143,16 +142,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   //   jual:modal ratio = price / modalTotal — harus ≈ (1 + markup%/100) kalau
   //   pricing rules tidak berubah sejak order dibuat.
   const ordersView = rows.map((o) => {
+    const p = proofs.get(Number(o.id)) ?? { refundedLedger: 0, refundedAt: null };
     const modal = Number((o as any).modalPer1k ?? 0);
     const qty = Number(o.quantity) || 0;
     const modalTotal = modalAmountFor((o as any).serviceType, modal, qty);
     const paid = Number(o.price) || 0;
-    const refunded = Number((o as any).refundedLedger ?? 0);
+    const refunded = p.refundedLedger;
     const profitActual = Number(o.profit) || 0;
     const profitExpected = paid - modalTotal;
     const ratio = modalTotal > 0 ? paid / modalTotal : 0;
     return {
       ...o,
+      refundedLedger: p.refundedLedger,
+      refundedAt: p.refundedAt,
       modalTotal,
       profitActual,
       profitExpected,
@@ -302,9 +304,14 @@ export const actions: Actions = {
         case "rejected":
           return fail(409, { error: "Provider menolak cancel — order sudah mulai diproses." });
         case "unreachable":
-          return fail(503, { error: "Provider tidak terjangkau. Order TIDAK dibatalkan dan TIDAK di-refund — coba lagi sebentar." });
+          return fail(503, {
+            error:
+              "Provider tidak terjangkau. Order TIDAK dibatalkan dan TIDAK di-refund — coba lagi sebentar.",
+          });
         case "already":
-          return fail(409, { error: "Cancel order ini sudah diminta, sedang menunggu konfirmasi provider." });
+          return fail(409, {
+            error: "Cancel order ini sudah diminta, sedang menunggu konfirmasi provider.",
+          });
         default:
           return fail(400, { error: "Order status ini tidak bisa dibatalkan." });
       }

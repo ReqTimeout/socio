@@ -1,7 +1,8 @@
 import { db } from "@socio/db";
 import { orders, users, balanceLogs, refundRequests } from "@socio/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { isLiveAtProvider } from "@socio/core/order-status";
+import { foldRefundLedger, type RefundLedgerProof } from "@socio/core/refund-ledger";
 import { logAudit } from "./admin";
 import { notifyOrderUpdate } from "./notification";
 import { formatRupiah } from "$lib/format";
@@ -248,23 +249,44 @@ export async function rejectRefund(
  *   cron auto-refund : "Pengembalian dana otomatis (Canceled) - order #7"
  *   user cancel      : "Refund cancel order #7"
  *   admin manual     : "Refund approved oleh admin #1 — order #7 (reason)"
- * Batas non-digit di REGEXP supaya "#7" tidak ikut menarik "#70"/"#700".
+ * Batas non-digit di pencocokan note supaya "#7" tidak ikut menarik "#70"/"#700".
  *
  * Kenapa bukan `orders.is_refund` saja: flag terbukti bisa salah dua arah (order
  * Success dengan refund kecil di ledger & flag 0; order Canceled flag 1 tapi price
  * tak dipotong). Flag boleh bohong; ledger uang tidak. Label = ledger-first.
  *
+ * F1 (18 Nov 2026): dulu bukti ini diambil via subquery REGEXP terkait per baris
+ * (ledgerRefundAmount/ledgerRefundAt/ledgerRefundExists) — tiap baris order
+ * men-scan balance_logs → list pesanan/admin-orders ~7 detik. Sekarang SATU
+ * query ber-index user_id + fold pure `foldRefundLedger` (@socio/core). Semantik
+ * identik dengan REGEXP lama: filter user aman karena SEMUA penulis ledger 'ref'
+ * memakai userId pemilik order (cron/refund.ts ×2 + executeRefund di bawah) dan
+ * probe prod 18 Nov: 0 baris mismatch. Aggregate stats admin tetap pakai flag
+ * is_refund (indexed, lihat 4bda2e1); presisi ledger hanya utk baris paginated.
+ *
  * CATATAN .id: amount disimpan RUPIAH (double), bukan sen — helper nominal di sini
  * mengembalikan Rupiah apa adanya.
  */
-export const ledgerRefundAmount = sql<number>`COALESCE((SELECT SUM(bl.amount) FROM balance_logs bl WHERE bl.type = 'ref' AND bl.note REGEXP CONCAT('order #', ${orders.id}, '([^0-9]|$)')), 0)`;
-
-export const ledgerRefundAt = sql<
-  string | null
->`(SELECT MAX(bl.created_at) FROM balance_logs bl WHERE bl.type = 'ref' AND bl.note REGEXP CONCAT('order #', ${orders.id}, '([^0-9]|$)'))`;
-
-/** Versi boolean (buat agregat stats admin) — regex-nya TETAP satu sumber. */
-export const ledgerRefundExists = sql<boolean>`EXISTS (SELECT 1 FROM balance_logs bl WHERE bl.type = 'ref' AND bl.note REGEXP CONCAT('order #', ${orders.id}, '([^0-9]|$)'))`;
+export async function ledgerRefundProofs(
+  rows: readonly { id: number; userId: number }[],
+): Promise<Map<number, RefundLedgerProof>> {
+  if (!rows.length) return new Map();
+  const userIds = [
+    ...new Set(rows.map((r) => Number(r.userId)).filter((n) => Number.isFinite(n) && n > 0)),
+  ];
+  const ledgerRows = userIds.length
+    ? await db
+        .select({
+          userId: balanceLogs.userId,
+          amount: balanceLogs.amount,
+          note: balanceLogs.note,
+          createdAt: balanceLogs.createdAt,
+        })
+        .from(balanceLogs)
+        .where(and(eq(balanceLogs.type, "ref"), inArray(balanceLogs.userId, userIds)))
+    : [];
+  return foldRefundLedger(rows, ledgerRows);
+}
 
 // RefundState, refundStateOf, charged = predikat PURE di @socio/core/refund-state
 // (diuji offline refund-state.test.ts). Re-export supaya consumer lama yang import
@@ -273,8 +295,8 @@ export { refundStateOf, charged, type RefundState } from "@socio/core/refund-sta
 
 /**
  * Nominal refund yang SUDAH tercatat di ledger saldo untuk order ini (RUPIAH).
- * Sama maksudnya dengan `ledgerRefundAmount` (SQL) tapi tanpa REGEXP — dipakai
- * di JALUR TULIS (cron + refund manual) sebagai guard anti refund ganda.
+ * Sama maksudnya dengan bukti refund list (`foldRefundLedger`) tapi untuk JALUR
+ * TULIS (cron + refund manual) sebagai guard anti refund ganda.
  * `balance_logs` tidak punya order_id → cocokkan note "order #<id>" dengan
  * lookahead non-digit ("#7" tidak boleh match "#70").
  */

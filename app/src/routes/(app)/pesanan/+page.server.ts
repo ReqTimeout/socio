@@ -8,12 +8,7 @@ import { requestOrderCancel } from "$lib/server/order-cancel";
 import { refillServerMsgs } from "$lib/refill-copy";
 import { baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
 import { getPricingRules } from "$lib/server/pricing";
-import {
-  ledgerRefundAmount,
-  ledgerRefundAt,
-  refundStateOf,
-  charged,
-} from "$lib/server/refund";
+import { ledgerRefundProofs, refundStateOf, charged } from "$lib/server/refund";
 import type { PageServerLoad, Actions } from "./$types";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
@@ -68,9 +63,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       serviceId: orders.serviceId,
       providerOrderId: orders.providerOrderId,
       // Label refund user = ledger saldo (balance_logs 'ref'), bukan flag is_refund.
+      // F1: bukti ledger di-fold setelah query (ledgerRefundProofs), tanpa REGEXP.
       isRefund: orders.isRefund,
-      refundedLedger: ledgerRefundAmount,
-      refundedAt: ledgerRefundAt,
     })
     .from(orders)
     .where(and(...conditions))
@@ -82,7 +76,12 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const svcIds = [...new Set(rows.map((r) => Number(r.serviceId)))];
   const svcRows = svcIds.length
     ? await db
-        .select({ id: services.id, isRefill: services.isRefill, allowCancel: services.allowCancel, status: services.status })
+        .select({
+          id: services.id,
+          isRefill: services.isRefill,
+          allowCancel: services.allowCancel,
+          status: services.status,
+        })
         .from(services)
         .where(inArray(services.id, svcIds))
     : [];
@@ -201,9 +200,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
           );
         // Kunci (providerId, providerServiceId) — id yang sama di provider
         // berbeda tidak boleh tertukar (multi-provider).
-        const byKey = new Map(
-          svc.map((s) => [`${s.providerId}|${s.providerServiceId}`, s]),
-        );
+        const byKey = new Map(svc.map((s) => [`${s.providerId}|${s.providerServiceId}`, s]));
         // Harga populer = harga JUAL efektif per level user (bukan modal mentah),
         // supaya widget konsisten dgn apa yang dibayar saat order.
         const lvl = ((locals.user?.level as UserLevel) ?? "Member") as UserLevel;
@@ -256,8 +253,6 @@ export const load: PageServerLoad = async ({ url, locals }) => {
         serviceId: orders.serviceId,
         providerOrderId: orders.providerOrderId,
         isRefund: orders.isRefund,
-        refundedLedger: ledgerRefundAmount,
-        refundedAt: ledgerRefundAt,
       })
       .from(orders)
       .where(and(eq(orders.userId, userId), eq(orders.oid, deepOid)))
@@ -268,21 +263,31 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     }
   }
 
+  // F1 — bukti refund ledger di-fold sekali untuk semua rows (termasuk target
+  // deep-link yang di-unshift di atas), pengganti subquery REGEXP per baris (~7s).
+  // Semua rows scoped userId yang sama (query di atas) → key fold pakai userId load.
+  const proofs = await ledgerRefundProofs(rows.map((r) => ({ id: Number(r.id), userId })));
+
   return {
-    orders: rows.map((r) => ({
-      ...r,
-      isRefill: refillMap.get(Number(r.serviceId)) ?? 0,
-      refillStatus: refillStatusMap.get(Number(r.id)) ?? null,
-      allowCancel: cancelMap.get(Number(r.serviceId)) === true,
-      serviceActive: activeMap.get(Number(r.serviceId)) === true,
-      refunded: Number((r as any).refundedLedger ?? 0),
-      refundState: refundStateOf({
-        status: r.status,
-        isRefund: (r as any).isRefund,
-        refundedLedger: Number((r as any).refundedLedger ?? 0),
-      }),
-      charged: charged(Number(r.price ?? 0), Number((r as any).refundedLedger ?? 0)),
-    })),
+    orders: rows.map((r) => {
+      const p = proofs.get(Number(r.id)) ?? { refundedLedger: 0, refundedAt: null };
+      return {
+        ...r,
+        refundedLedger: p.refundedLedger,
+        refundedAt: p.refundedAt,
+        isRefill: refillMap.get(Number(r.serviceId)) ?? 0,
+        refillStatus: refillStatusMap.get(Number(r.id)) ?? null,
+        allowCancel: cancelMap.get(Number(r.serviceId)) === true,
+        serviceActive: activeMap.get(Number(r.serviceId)) === true,
+        refunded: p.refundedLedger,
+        refundState: refundStateOf({
+          status: r.status,
+          isRefund: r.isRefund,
+          refundedLedger: p.refundedLedger,
+        }),
+        charged: charged(Number(r.price ?? 0), p.refundedLedger),
+      };
+    }),
     filter,
     searchQuery: q,
     counts: tabCounts,
