@@ -132,9 +132,11 @@ export const actions: Actions = {
     try {
       const msg = String(content).slice(0, 160).replace(/\s+/g, " ").trim();
       const head = (title || msg).slice(0, 60);
+      // Samakan .my: tap notif berita mendarat di feed berita manual (bukan
+      // list /notif polos) — user langsung lihat pengumuman + popup detail.
       await db.execute(sql`
         INSERT INTO notifications (user_id, type, title, message, action_url, created_at)
-        SELECT id, 'news', ${`[${catLabel}] ${head}`}, ${msg}, ${`/notif?type=news`}, NOW()
+        SELECT id, 'news', ${`[${catLabel}] ${head}`}, ${msg}, ${`/berita?src=manual`}, NOW()
         FROM users WHERE status = 1 LIMIT 10000
       `);
     } catch {

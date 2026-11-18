@@ -155,8 +155,8 @@
           >{/if}
       </h1>
       <p class="mt-1.5 text-xs font-medium text-ink-500">
-        Broadcast ke <span class="font-bold text-ink-700">NotifBell + /notif</span> (type info) & popup
-        user · kategori pill + jadwal broadcast
+        Broadcast ke <span class="font-bold text-ink-700">NotifBell</span> (tap membuka /berita?src=manual)
+        & popup user · kategori pill + jadwal broadcast
       </p>
     </div>
     <Button size="md" onclick={openAdd}>
@@ -222,9 +222,9 @@
   <p class="text-[11px] font-medium text-ink-400">
     💡 Tip: setiap <span class="font-semibold text-ink-600">Simpan</span> akan push ke
     <span class="font-bold">NotifBell</span>
-    semua user status `1` (muncul di
+    semua user status `1` (tap notif membuka
     <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px] text-ink-700"
-      >/notif?type=news</code
+      >/berita?src=manual</code
     >) & set
     <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10px] text-ink-700"
       >read_popup=0</code
