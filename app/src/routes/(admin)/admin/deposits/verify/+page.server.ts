@@ -83,15 +83,13 @@ export const actions: Actions = {
               .update(usersTbl)
               .set({ balance: sql`${usersTbl.balance} + ${Number(d.amount)}` })
               .where(eq(usersTbl.id, d.userId));
-            await tx
-              .insert(balanceLogs)
-              .values({
-                userId: d.userId,
-                type: "dep",
-                amount: Number(d.amount),
-                note: `Deposit BCA dikonfirmasi #${id} (${d.methodName})`,
-                createdAt: new Date(),
-              });
+            await tx.insert(balanceLogs).values({
+              userId: d.userId,
+              type: "dep",
+              amount: Number(d.amount),
+              note: `Deposit BCA dikonfirmasi #${id} (${d.methodName})`,
+              createdAt: new Date(),
+            });
           }
           const upd: any = await tx.execute(
             sql`UPDATE deposits SET status = 'Success', verified_by = ${Number(locals.user!.id)}, verified_at = NOW(), verification_notes = ${notes || null} WHERE id = ${id} AND status = 'Pending'`,
