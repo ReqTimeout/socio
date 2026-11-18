@@ -2,9 +2,15 @@ import { db } from "@socio/db";
 import { orders, provider } from "@socio/db/schema";
 import { eq, and, inArray, lt, or, isNull, sql } from "drizzle-orm";
 import { smmturkStatusFor, smmturkRefillStatusFor } from "@socio/core/smmturk";
-import { mapProviderStatus, nextPollIntervalMs, isFinalStatus } from "@socio/core/order-status";
+import {
+  mapProviderStatus,
+  nextPollIntervalMs,
+  isFinalStatus,
+  isCancelPending,
+} from "@socio/core/order-status";
 import { decryptSecret } from "$lib/server/crypto";
 import { notifyOrderUpdate } from "$lib/server/notification";
+import { notifyAdmins } from "$lib/server/email-templates";
 
 /** Tick: claim up to 200 orders needing a poll, batch status check
  * (multi-order endpoint) PER-PROVIDER via each provider's own API URL + key,
@@ -18,7 +24,7 @@ export async function runStatusPolling(): Promise<void> {
     .from(orders)
     .where(
       and(
-        sql`${orders.status} IN ('Pending','In progress','Processing')`,
+        sql`${orders.status} IN ('Pending','In progress','Processing','Canceling')`,
         or(isNull(orders.nextPollAt), lt(orders.nextPollAt, now)),
       ),
     )
@@ -29,6 +35,16 @@ export async function runStatusPolling(): Promise<void> {
   // Auto-error: order tanpa provider_order_id tidak bisa di-track
   const untracked = due.filter((o) => !o.providerOrderId || o.providerOrderId === "0");
   for (const o of untracked) {
+    // F12: cancel yang tak terlacak di provider → langsung Canceled (tidak ada
+    // apa-apa di provider untuk dibatalkan). Cron auto-refund yang membayar.
+    if (isCancelPending(o.status)) {
+      await db
+        .update(orders)
+        .set({ status: "Canceled" as any, updatedAt: new Date(), nextPollAt: null })
+        .where(eq(orders.id, o.id));
+      await notifyOrderUpdate(o.userId, o.id, "Canceled");
+      continue;
+    }
     // provider MANUAL (1) tetap manual — jangan auto-error, reschedule saja
     if (o.providerId === 1) {
       await db
@@ -86,6 +102,16 @@ export async function runStatusPolling(): Promise<void> {
         // Tandai Error → cron auto-refund mengembalikan dana penuh.
         // Guard usia 2 jam: order yang baru dibuat mungkin belum terlihat provider.
         if (r.error) {
+          // F12: order Canceling yang provider-nya lapor error per-order JANGAN
+          // lewat pintu stale-error → Error → auto-refund. Uang Canceling terkunci
+          // sampai provider konfirmasi batal. Reschedule 1 menit, tunggu poll lagi.
+          if (isCancelPending(o.status)) {
+            await db
+              .update(orders)
+              .set({ nextPollAt: new Date(Date.now() + 60 * 1000) })
+              .where(eq(orders.id, o.id));
+            continue;
+          }
           const ageMs = Date.now() - new Date(o.createdAt ?? Date.now()).getTime();
           if (ageMs < 2 * 60 * 60 * 1000) {
             await db
@@ -109,23 +135,49 @@ export async function runStatusPolling(): Promise<void> {
         const remains = Number(r.remains ?? o.remains);
         const startCount = Number(r.start_count ?? o.startCount);
         const wasFinal = isFinalStatus(o.status);
-        // Status yang tak dikenali provider (map → null) TIDAK boleh(dicta) ditulis;
+        // Status yang tak dikenali provider (map → null) TIDAK boleh ditulis;
         // order tetap pada status terakhir yang valid & tetap dijadwal poll ulang.
         const isFinal = isFinalStatus(newStatus);
+        // F12 — order `Canceling` sedang MENUNGGU konfirmasi provider. Status
+        // non-final (In progress/Pending/Processing) TIDAK boleh menimpa intent
+        // cancel, kalau tidak permintaan itu hilang dan order kembali diproses
+        // seperti biasa sementara user mengira sudah batal.
+        const cancelPending = isCancelPending(o.status);
+        const keepCanceling = cancelPending && !isFinal;
         const update: any = {
           remains,
           startCount,
           updatedAt: new Date(),
         };
-        if (newStatus) update.status = newStatus;
+        if (newStatus && !keepCanceling) update.status = newStatus;
         if (!isFinal) {
           update.nextPollAt = new Date(
-            Date.now() + nextPollIntervalMs(newStatus ?? o.status, o.createdAt),
+            Date.now() +
+              nextPollIntervalMs(keepCanceling ? o.status : (newStatus ?? o.status), o.createdAt),
           );
         } else {
           update.nextPollAt = null;
         }
         await db.update(orders).set(update).where(eq(orders.id, o.id));
+        // Provider SIAP mengirim walau cancel diminta → modal owner sudah dibayar
+        // dan customer dapat layanan. Tidak ada refund (betul), tapi owner HARUS
+        // tahu supaya bisa menagih provider.
+        if (cancelPending && newStatus === "Success") {
+          console.warn(
+            `[cron] status-polling: order #${o.id} dikirim provider walau cancel diminta (provId ${o.providerOrderId})`,
+          );
+          try {
+            await notifyAdmins({
+              subject: `[Cancel Ignored] Order #${o.id} dikirim provider`,
+              body: `Cancel diminta untuk order #${o.id} (provider ${o.providerId}, provId ${o.providerOrderId}) tetapi provider tetap menyelesaikannya. Tidak ada refund yang diberikan. Tagih order ini ke provider untuk memulihkan modal.`,
+              ctaText: "Lihat order",
+              ctaUrl: `/admin/orders?order=${o.id}`,
+              templateName: "admin-alert",
+            });
+          } catch {
+            /* best-effort */
+          }
+        }
         if (isFinal && !wasFinal) {
           await notifyOrderUpdate(o.userId, o.id, newStatus ?? o.status);
         }
