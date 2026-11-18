@@ -94,3 +94,35 @@ export function allowedForRouting(
   if (routed !== undefined) return routed === providerId;
   return active !== null && active === providerId;
 }
+
+/**
+ * KELAS BOCOR kategori BARU (port .my 899a5b2b, gap-plan P2.4 — MOOT routing=0):
+ * routing per-kategori hanya berisi kategori yang SUDAH ada saat aktivasi. Ketika
+ * provider menambah kategori baru yang kind-nya sudah dilayani provider lain lewat
+ * routing (contoh: SMMturk menambah "TikTok Likes | Refill Button Active" sementara
+ * seluruh likes TikTok sudah dirutekan ke provider lain), kategori baru itu tidak
+ * punya baris routing → ikut aturan satu-aktif → order lari ke provider yang sedang
+ * dihindari owner.
+ *
+ * Predikat MURNI: true bila signature kategori baru itu sudah diklaim provider
+ * LAIN lewat routing. Konservatif di jalur uang: kalau provider ini sendiri JUGA
+ * punya kategori routed ber-signature sama (owner sengaja membagikan kind itu ke
+ * dua provider), layanan barunya TIDAK disuppress.
+ *
+ * Pemanggil WAJIB hanya memakai fungsi ini untuk kategori yang tidak punya baris
+ * routing sendiri (kasus itu sudah ditangani allowedForRouting), dan tidak untuk
+ * kategori yang seluruh layanannya sudah manual-off (sudah ditangani catState).
+ * Signature "generic"/platform tidak dikenal = null → selalu false, jadi
+ * Coins/Ads/Emergency Server yang sengaja KEEP tidak pernah tersapu.
+ */
+export function coveredByOtherProviderRouting(
+  signature: string | null,
+  routedSignatures: Map<string, Set<number>>,
+  providerId: number,
+): boolean {
+  if (!signature) return false;
+  const owners = routedSignatures.get(signature);
+  if (!owners || owners.size === 0) return false;
+  if (owners.has(providerId)) return false; // kind ini juga milik kita → jangan suppress
+  return owners.size > 0; // seluruh pemilik kind = provider lain
+}

@@ -14,11 +14,12 @@
  */
 import assert from "node:assert/strict";
 
-import { kindOf } from "../src/kind-signature.ts";
+import { kindOf, kindSignature, platformOf } from "../src/kind-signature.ts";
 import {
   deriveServingState,
   planReconcile,
   allowedForRouting,
+  coveredByOtherProviderRouting,
   type ReconcileSvc,
 } from "../src/routing-policy.ts";
 
@@ -137,7 +138,10 @@ const catOverlap: ReconcileSvc[] = [
 check("(a) route→P2: enable P2 non-manual-off, disable semua P1 aktif", () => {
   const plan = planReconcile(catOverlap, 2);
   assert.deepEqual(plan.enable, [13]); // 14 punya [manual-off] → jangan hidupkan
-  assert.deepEqual(plan.disable.sort((a, b) => a - b), [11, 12]); // P1 aktif → off
+  assert.deepEqual(
+    plan.disable.sort((a, b) => a - b),
+    [11, 12],
+  ); // P1 aktif → off
 });
 
 check("(b) unassign (winner=aktif global P1): enable P1 mati, disable P2 aktif", () => {
@@ -158,7 +162,10 @@ check("(b') unassign tanpa provider aktif (winner=null): matikan semua yang akti
   ];
   const plan = planReconcile(svcs, null);
   assert.deepEqual(plan.enable, []);
-  assert.deepEqual(plan.disable.sort((a, b) => a - b), [31, 32]);
+  assert.deepEqual(
+    plan.disable.sort((a, b) => a - b),
+    [31, 32],
+  );
 });
 
 check("(d) overlap: id kategori sama, route→Y paksa X keluar dalam kategori itu", () => {
@@ -196,6 +203,71 @@ check("(c) kategori tak diroute → hanya provider aktif global yang boleh", () 
 check("(c) tak ada routing & tak ada provider aktif → tolak semua", () => {
   assert.equal(allowedForRouting(1, undefined, null), false);
   assert.equal(allowedForRouting(2, undefined, null), false);
+});
+
+// ── 5. kindSignature: kunci aturan anti-bocor layanan BARU (port .my 899a5b2b, P2.4).
+check("kindSignature platform|kind untuk nama nyata", () => {
+  assert.equal(kindSignature("TikTok Likes | Refill Button Active"), "tiktok|likes");
+  assert.equal(
+    kindSignature("TikTok Followers | Real Accounts | Almost Non Drop | Fast Speed"),
+    "tiktok|followers",
+  );
+  assert.equal(kindSignature("TikTok Live Stream Views - VIP Quality"), "tiktok|live");
+  assert.equal(kindSignature("Instagram Reels Views"), "instagram|views");
+});
+check("kindSignature null untuk kind generic (Coins/Ads/Emergency jangan tersapu)", () => {
+  assert.equal(kindSignature("TikTok Coins"), null);
+  assert.equal(kindSignature("TikTok Ads | Premium Non Drop Services"), null);
+  assert.equal(kindSignature("TikTok Update [Emergency Server] %100 Working"), null);
+  assert.equal(kindSignature("TOP IN MARKET TIKTOK"), null);
+});
+check("kindSignature null bila platform tidak dikenal", () => {
+  assert.equal(platformOf("Bazar Online Views"), null);
+  assert.equal(kindSignature("Bazar Online Views"), null);
+});
+
+// ── 6. coveredByOtherProviderRouting: layanan baru di kategori tidak diroute.
+const leakSigs = new Map<string, Set<number>>([
+  ["tiktok|likes", new Set([2])],
+  ["tiktok|followers", new Set([2])],
+  ["tiktok|views", new Set([1, 2])], // dua provider punya kategori routed sejenis
+]);
+check(
+  "kelas bocor: provider 1 menambah kategori likes yang sudah diklaim provider 2 → tertangkap",
+  () => {
+    assert.equal(
+      coveredByOtherProviderRouting(
+        kindSignature("TikTok Likes | Refill Button Active"),
+        leakSigs,
+        1,
+      ),
+      true,
+    );
+    assert.equal(
+      coveredByOtherProviderRouting(
+        kindSignature("TikTok Followers | Real Accounts | Almost Non Drop | Fast Speed"),
+        leakSigs,
+        1,
+      ),
+      true,
+    );
+  },
+);
+check("provider pemenang tidak pernah disuppress oleh kind miliknya sendiri", () => {
+  // Provider 2 syncing kategori BARU sejenis likes yang sudah dirutekan ke 2 → tetap hidup.
+  assert.equal(coveredByOtherProviderRouting("tiktok|likes", leakSigs, 2), false);
+});
+check("sig tanpa entri routing → tidak suppress (platform lain aman)", () => {
+  assert.equal(coveredByOtherProviderRouting("instagram|views", leakSigs, 1), false);
+  assert.equal(coveredByOtherProviderRouting(null, leakSigs, 1), false);
+});
+check("kind routed ke provider lain → suppress; kind yang juga milik kita → jangan", () => {
+  // views dirutekan ke 1 & 2. Provider 3 syncing kategori views baru → bukan pemilik → suppress.
+  assert.equal(coveredByOtherProviderRouting("tiktok|views", leakSigs, 3), true);
+  // Provider 1 sendiri punya kategori routed views → kategori views barunya TIDAK disuppress
+  // (konservatif: owner sengaja membagikan kind ini ke dua provider).
+  assert.equal(coveredByOtherProviderRouting("tiktok|views", leakSigs, 1), false);
+  assert.equal(coveredByOtherProviderRouting("tiktok|views", leakSigs, 2), false);
 });
 
 // ── ringkas

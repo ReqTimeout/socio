@@ -48,11 +48,16 @@ import {
   serviceChangelog,
   news,
 } from "@socio/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { logSync } from "./provider-sync";
 import { getPricingRules } from "$lib/server/pricing";
 import { whitelabel } from "$lib/format";
-import { MANUAL_OFF_TAG, allowedForRouting } from "@socio/core/routing-policy";
+import {
+  MANUAL_OFF_TAG,
+  allowedForRouting,
+  coveredByOtherProviderRouting,
+} from "@socio/core/routing-policy";
+import { kindSignature } from "@socio/core/kind-signature";
 import { getActiveProviderId, getCategoryRoutingMap } from "$lib/server/active-provider";
 
 // NOTE: konversi USD→IDR terjadi di provider-sync via getUsdToIdr() (kurs terpusat).
@@ -142,6 +147,37 @@ export async function runServiceSync(providerId: number): Promise<void> {
     const routingMap = await getCategoryRoutingMap();
     const providerAllowed = (catId: number): boolean =>
       allowedForRouting(providerId, routingMap.get(catId), activeId);
+
+    // ── Guard anti-bocor kind-claim (port .my 899a5b2b, P2.4 — MOOT routing=0).
+    // Peta signature (platform|kind) milik kategori yang SUDAH dirutekan ke provider
+    // LAIN. Dipakai hanya untuk layanan BARU di kategori yang belum punya baris
+    // routing sendiri — supaya tambahan katalog provider tidak diam-diam mengembalikan
+    // order ke provider yang sedang dihindari owner. Kategori yang target routingnya
+    // provider ini sendiri tidak dipetakan (itu pemenang, layanannya harus tetap hidup).
+    const routedSignatures = new Map<string, Set<number>>();
+    {
+      const otherRoutedIds = [...routingMap.entries()]
+        .filter(([, routedProviderId]) => routedProviderId !== providerId)
+        .map(([catId]) => catId);
+      if (otherRoutedIds.length > 0) {
+        const routedCats = await db
+          .select({ id: categories.id, name: categories.name })
+          .from(categories)
+          .where(inArray(categories.id, otherRoutedIds));
+        for (const rc of routedCats) {
+          const sig = kindSignature(rc.name);
+          if (!sig) continue;
+          const owners = routedSignatures.get(sig) ?? new Set<number>();
+          const target = routingMap.get(rc.id);
+          if (target !== undefined) owners.add(target);
+          routedSignatures.set(sig, owners);
+        }
+      }
+    }
+    // Kategori ini tidak diroute TAPI kind-nya sudah diklaim provider lain?
+    const kindClaimedElsewhere = (catId: number, catName: string): boolean =>
+      !routingMap.has(catId) &&
+      coveredByOtherProviderRouting(kindSignature(catName), routedSignatures, providerId);
 
     // Kategori: build display (whitelabel) + raw per display, lalu resolve/create.
     const catDisplayToRaw = new Map<string, string>();
@@ -259,12 +295,24 @@ export async function runServiceSync(providerId: number): Promise<void> {
 
       if (!svc) {
         // ── CREATE baru ──
+        // Kind kategori baru ini sudah diklaim provider lain lewat routing?
+        // Lahirkan MATI + tag [manual-off], JANGAN umumkan berita new_service.
+        // Tag penting: tanpa tag, cabang enable di bawah akan menghidupkan kembali
+        // layanan ini pada sync berikutnya (providerAllowed=true karena kategori
+        // baru tidak diroute). MOOT selama routing=0 (routedSignatures kosong).
+        const allowedCreate = providerAllowed(catId);
+        const bornOff = allowedCreate && kindClaimedElsewhere(catId, dispCat);
+        if (bornOff) {
+          console.log(
+            `[cron] service-sync: layanan baru "${dispName}" (kategori "${dispCat}") lahir MATI+tag — kind kategori ini sudah dilayani provider lain via routing`,
+          );
+        }
         await db.insert(services).values({
           categoryId: catId,
           type: apiType,
           serviceName: dispName,
           serviceNameRaw: rawName,
-          note: "",
+          note: bornOff ? MANUAL_OFF_TAG : "",
           price: rateIdr,
           priceApi: rateIdr,
           priceReseller: rateIdr,
@@ -274,9 +322,10 @@ export async function runServiceSync(providerId: number): Promise<void> {
           min,
           max,
           // CREATE: hanya aktif bila provider ini boleh melayani kategorinya
-          // (aktif global ATAU kategori di-route ke provider ini). Selain itu
-          // tetap tersimpan (inert) supaya bisa diaktifkan owner via /admin/routing.
-          status: providerAllowed(catId) ? 1 : 0,
+          // (aktif global ATAU kategori di-route ke provider ini) DAN kind-nya
+          // tidak diklaim provider lain. Selain itu tetap tersimpan (inert)
+          // supaya bisa diaktifkan owner via /admin/routing.
+          status: bornOff || !allowedCreate ? 0 : 1,
           providerId,
           providerServiceId: Number(pid) || 0,
           waktu: nowStr,
@@ -311,13 +360,16 @@ export async function runServiceSync(providerId: number): Promise<void> {
             newValue: dispName,
             detectedAt: now,
           });
-          newsCandidates.push({
-            kategori: "Layanan Baru",
-            // Copy compact: label event sudah ada di UI (chip), jangan ulangi prefix.
-            content: `${dispName} — Rp ${rpFmt.format(priceMember)} /1k`,
-            eventType: "new_service",
-            serviceId: newSvcId,
-          });
+          // Jangan umumkan layanan yang lahir MATI (kind diklaim provider lain).
+          if (!bornOff) {
+            newsCandidates.push({
+              kategori: "Layanan Baru",
+              // Copy compact: label event sudah ada di UI (chip), jangan ulangi prefix.
+              content: `${dispName} — Rp ${rpFmt.format(priceMember)} /1k`,
+              eventType: "new_service",
+              serviceId: newSvcId,
+            });
+          }
         }
       } else {
         // ── UPDATE / ENABLE ulang ──
