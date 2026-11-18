@@ -1,6 +1,7 @@
 import { db } from "@socio/db";
-import { provider, services } from "@socio/db/schema";
-import { sql, eq, ne } from "drizzle-orm";
+import { provider, services, orders } from "@socio/db/schema";
+import { FINAL_STATUSES } from "@socio/core/order-status";
+import { sql, eq, ne, and, notInArray } from "drizzle-orm";
 import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import { env } from "$env/dynamic/private";
@@ -183,6 +184,19 @@ export const actions: Actions = {
     if (Number(used[0]?.c ?? 0) > 0) {
       return fail(409, {
         error: `Provider dipakai ${used[0]?.c} layanan. Pindahin dulu sebelum hapus.`,
+      });
+    }
+
+    // W4: tolak hapus bila masih ada order HIDUP (non-final) di provider ini.
+    // Kalau provider dihapus saat order Pending/Processing/In progress/Refilling
+    // masih jalan, order jadi yatim — poller & refill kehilangan endpoint + key.
+    const liveOrders = await db
+      .select({ c: sql<number>`count(*)` })
+      .from(orders)
+      .where(and(eq(orders.providerId, id), notInArray(orders.status, [...FINAL_STATUSES])));
+    if (Number(liveOrders[0]?.c ?? 0) > 0) {
+      return fail(409, {
+        error: `Provider masih punya ${liveOrders[0]?.c} order aktif (non-final). Selesaikan atau cancel dulu sebelum hapus.`,
       });
     }
     await db.delete(provider).where(eq(provider.id, id));
