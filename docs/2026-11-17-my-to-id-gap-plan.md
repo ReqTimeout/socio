@@ -1,9 +1,11 @@
 # Plan Port Gap socio.my → socio.id — 17 Nov 2026
 
-> **Status dokumen: P1 + F1 + batch email P2.5–P2.8 + P3 kosmetik SELESAI DIEKSEKUSI —
-> 18 Nov 2026, live image `54c8615`** (jurnal: `docs/2026-11-18-p1-confirm-before-refund.md`,
+> **Status dokumen: P1 + F1 + batch email P2.5–P2.8 + P3 kosmetik + P2.1–P2.4 defensif
+> admin SELESAI DIEKSEKUSI — 18 Nov 2026, live image `259f866`** (jurnal:
+> `docs/2026-11-18-p1-confirm-before-refund.md`,
 > `docs/2026-11-18-f1-refund-ledger-fold-news-notif.md`,
-> `docs/2026-11-18-p2-email-p3-kosmetik-batch.md`). **P2.1–P2.4 + P4 masih RENCANA.**
+> `docs/2026-11-18-p2-email-p3-kosmetik-batch.md`,
+> `docs/2026-11-18-p2-admin-defensif-batch.md`). **P4 masih RENCANA.**
 > Audit 17 Nov = read-only, nol perubahan kode/DB; semua temuan diverifikasi langsung
 > dari kode `.id`, kode `.my`, git log, jurnal `updatememory`, dan **3 probe produksi
 > READ-ONLY**. Eksekusi item berikutnya tetap **menunggu GO owner** + gate wajib.
@@ -250,15 +252,15 @@ di-port akan LANGSUNG LIVE di `.id`** kecuali di-gate eksplisit. Item WP7/quota/
 
 ### P2 — DEFENSIF ADMIN + EMAIL
 
-> **[SELESAI SEBAGIAN — 18 Nov 2026: P2.5–P2.8 (email) live, image `54c8615`, commit
-> `4259482`. P2.1–P2.4 (defensif admin) masih RENCANA.]**
+> **[SELESAI PENUH — 18 Nov 2026: P2.5–P2.8 (email) live `54c8615` (`4259482`);
+> P2.1–P2.4 (defensif admin) live `259f866` (`69cdcde`/`d50d245`/`259f866`).]**
 
 | ID | Gap | Bukti `.id` | Sumber `.my` | Klasifikasi |
 |---|---|---|---|---|
-| **P2.1** | W1 `planCategoryToggle` provider-gated enable (pure, 3 surface) | `category-admin.ts:215-248` (ON enable **semua** manual-off tanpa filter provider) | `82b52f11`; hardening §9.2 W1; `category-toggle-policy.ts` (77) + test (263) | **PORT** |
-| **P2.2** | F13 catalog-counts pure + `CategoryHealthBadge` + `/admin/services?scope=serving` + URL-builder | `admin/services` (tanpa scope/health badge); `$lib/` belum ada `catalog-counts.ts` | `083d0271`; §12.3 F13; `catalog-counts.ts` (172) + test (354) | **ADAPT** |
-| **P2.3** | F10 message key toggle terbalik + `deleteCategory` nama/404 | `category-admin.ts` (pesan error placeholder) | `083d0271`; §11.4 F10 | **ADAPT** |
-| **P2.4** | Routing leak guard kind-claim (`kindSignature`/`coveredByOtherProviderRouting`) di service-sync CREATE | `service-sync.ts:261-278` (CREATE born inert, **tanpa** kind-claim); `routing-policy.ts` `.id` belum ada `coveredByOtherProviderRouting` | `899a5b2b`; `kind-signature.ts` (47) + routing-policy (+32) | **CONFIRM** (MOOT: routing=0) |
+| **P2.1** | W1 `planCategoryToggle` provider-gated enable (pure, 3 surface) | `category-admin.ts:215-248` (ON enable **semua** manual-off tanpa filter provider) | `82b52f11`; hardening §9.2 W1; `category-toggle-policy.ts` (77) + test (263) | **PORT** ✅ SELESAI 18 Nov (`d50d245`, integrasi `259f866`) |
+| **P2.2** | F13 catalog-counts pure + `CategoryHealthBadge` + `/admin/services?scope=serving` + URL-builder | `admin/services` (tanpa scope/health badge); `$lib/` belum ada `catalog-counts.ts` | `083d0271`; §12.3 F13; `catalog-counts.ts` (172) + test (354) | **ADAPT** ✅ SELESAI 18 Nov (`259f866`) |
+| **P2.3** | F10 message key toggle terbalik + `deleteCategory` nama/404 | `category-admin.ts` (pesan error placeholder) | `083d0271`; §11.4 F10 | **ADAPT** ✅ SELESAI 18 Nov (`259f866`) |
+| **P2.4** | Routing leak guard kind-claim (`kindSignature`/`coveredByOtherProviderRouting`) di service-sync CREATE | `service-sync.ts:261-278` (CREATE born inert, **tanpa** kind-claim); `routing-policy.ts` `.id` belum ada `coveredByOtherProviderRouting` | `899a5b2b`; `kind-signature.ts` (47) + routing-policy (+32) | **CONFIRM** (MOOT: routing=0) ✅ SELESAI 18 Nov (`69cdcde`, defensif) |
 | **P2.5** | Email `quota.ts` lanes + provider cap (Resend protection) | `email-lifecycle.ts:25-60` (`ACTIVE_TRIGGERS=["activation"]`, **tanpa** quota); `$lib/server/email/` belum ada `quota.ts` | `9e000248`; `email/quota.ts` (116) + test (122) | **ADAPT** ✅ SELESAI 18 Nov (`4259482`) |
 | **P2.6** | Operator-only `notifyAdmins` (stop email semua akun Admin) | `email-templates.ts:94-141` (`eq(users.level,"Admin")` → email **semua** admin) | `95d9d78f`; jurnal 2026-11-10-admin-email-operator-only | **CONFIRM** ✅ SELESAI 18 Nov (`4259482`, operator-only) |
 | **P2.7** | WP7 deposit-aware activation + lane `deposit_canceled`/`reseller_unpaid` | `segments.ts:40-100` (activation = createdAt≤-3d AND NOT ORDERED, **tanpa** deposit-aware; **tanpa** 2 lane baru) | `d8e531ef`; WP7; segments (+68) + templates (+163) + test (199) | **CONFIRM** (gate ON) ✅ SELESAI 18 Nov (`4259482`, lane baru OFF per-lane) |
@@ -546,6 +548,11 @@ Sebelum eksekusi item CONFIRM, tanya owner (AskUserQuestion), jangan asumsi:
      keputusan GO owner terpisah. WP6 nudge + welcome + mid-life live.
 4. **P2.4 routing kind-claim**: routing=0 (MOOT). Port defensif sekarang, atau tunggu
    sampai owner hidupkan multi-provider?
+   - **[GO DIBERIKAN + SELESAI 18 Nov 2026 — live `259f866`.]** Owner pilih port
+     defensif sekarang (commit `69cdcde`): layanan baru yang kind-nya diklaim provider
+     lain via routing lahir MATI + tag [manual-off], tanpa berita new_service. MOOT
+     selama routing=0 → nol perubahan perilaku prod; guard aktif bila owner hidupkan
+     multi-provider nanti.
 5. **P3 kosmetik**: GO CouponTicket strip publik / SaldoHero gold+pulse / ResellerArt / WP1 ?mode?
    - **[GO DIBERIKAN + SELESAI 18 Nov 2026 — live `54c8615`.]** Keempat item live
      (commit `e322797`); strip kupon hanya bagian publik (personal/H3 tetap SKIP,
@@ -599,4 +606,5 @@ Sebelum eksekusi item CONFIRM, tanya owner (AskUserQuestion), jangan asumsi:
 deploy, 4 gate lulus, live `23ef2b3`. F1 perf + notif news ala .my SELESAI 18 Nov (live
 `37bb77a`). Batch email P2.5–P2.8 + P3 kosmetik SELESAI 18 Nov (live `54c8615`; lane baru
 OFF per-lane menunggu GO aktivasi owner). Jangan salin migration `.my` mentah (utf8mb4 = rebuild
-tabel live = MDL convoy). Berikutnya P2.1–P2.4 (defensif admin) → P4; item CONFIRM tunggu owner.**
+tabel live = MDL convoy). P2.1–P2.4 defensif admin SELESAI 18 Nov (live `259f866`; P2.4
+MOOT routing=0, nol email, nol DB write). Berikutnya P4 (dormant); item CONFIRM tunggu owner.**
