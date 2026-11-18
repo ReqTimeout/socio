@@ -1,6 +1,6 @@
 # Plan Implementasi — Cleanup SMMfollows + Invariant Manual-Off + Port Sistem Berita .my
 
-> **Tanggal:** 18 November 2026 · **Status:** P1 (data prod) + P3 (kode) SELESAI & terverifikasi lokal; menunggu instruksi eksplisit deploy.
+> **Tanggal:** 18 November 2026 · **Status:** P1 (data prod) + P3 (kode) SELESAI, terverifikasi lokal, dan LIVE di prod (deploy `7828a5a`, L3 0 findings).
 > **Arahan owner (verbatim):**
 > 1. "https://app.socio.id/admin/categories ini semua pastikan pakai smmturk, smmfollowe hapus aja."
 > 2. "kalau sy disable kategori dan layanan jika provider sync tetap disable kan nanti?"
@@ -236,7 +236,7 @@ Komponen pendukung .id sudah ada: `Sheet`, `Icon` (glyph `info/tag/settings/mega
 - [x] GO owner §5 (1,2,3)
 - [x] P1: backup snapshot 4 tabel (terverifikasi 1/1/7554/1, kategori id 37678)
 - [x] P1: transaksi hapus SMMfollows + verifikasi §1.6 (provider/services/mirror/kategori=0; orders p10=1 Success utuh, service_name denormalized selamat; categories 911→910) — EKSEKUSI 18 Nov
-- [ ] P1: cek `/admin/categories` & `/admin/providers` bersih (verifikasi UI saat deploy)
+- [x] P1: `/admin/categories` & `/admin/providers` bersih — verifikasi prod DB: provider = MANUAL + Provider Utama (SMMturk), 0 layanan follows; route 303→/login sehat
 - [x] P3-1: backup news + ALTER ADD title (INSTANT) + schema Drizzle — EKSEKUSI prod 18 Nov (news_bak_20261118, 2866 baris; title posisi 3, semua '')
 - [x] P3-2: news-meta NEWS_CATEGORIES/isNewsCategoryKey/newsCategory (Indonesia) + selftest 58/58
 - [x] P3-3: NewsDetailSheet.svelte (Indonesia)
@@ -245,5 +245,5 @@ Komponen pendukung .id sudah ada: `Sheet`, `Icon` (glyph `info/tag/settings/mega
 - [x] P3-8/9: dashboard server + UI (Update sync-only, box Pengumuman, NewsDetailSheet)
 - [x] P3-10: semua i18n → inline Indonesia; CJK-scan bersih
 - [x] Gerbang lint/typecheck/build + manual mobile (360/768/1280 Playwright) + audit design — lihat §3.5
-- [ ] Commit granular (instruksi eksplisit) → L3 gate → push → deploy
-- [ ] Verifikasi prod end-to-end + rencana rollback siap
+- [x] Commit granular (5: 4 kode P3 + 1 docs) → L3 qodersec 0 findings → push `594d7eb..7828a5a` HEAD:main → Coolify deploy `i8hxsmceafw6wlzsc0ni5fxc` finished
+- [x] Verifikasi prod: image tag `7828a5a…`, marker `Pengumuman`+`pickDiverseNews` di build, route / · /berita · /admin/news · /admin/categories 303 sehat, `news.title` live, provider bersih. Rollback siap (§5.6)
