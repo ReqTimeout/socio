@@ -15,6 +15,7 @@
   } from "@socio/ui";
   import { haptic } from "@socio/ui";
   import { copy } from "@socio/core/copy";
+  import { isCancelableStatus } from "@socio/core/order-status";
   import { formatRupiah, serviceDisplayName, formatDateShort } from "$lib/format";
   import { goto } from "$app/navigation";
   import { navigating } from "$app/state";
@@ -57,7 +58,9 @@
   );
   const checkedIds = $derived([...checked]);
   const massRefundable = $derived(
-    orders.filter((o) => checked.has(o.id) && o.status === "Pending" && o.allowCancel),
+    // F11 — Processing/In progress pun bisa dimohon cancel (provider akan tolak
+    // kalau sudah jalan). F12 — hasil = permintaan cancel, BUKAN refund instan.
+    orders.filter((o) => checked.has(o.id) && isCancelableStatus(o.status) && o.allowCancel),
   );
   const massRefundTotal = $derived(massRefundable.reduce((s, o) => s + Number(o.price), 0));
 
@@ -739,7 +742,7 @@
         if (result.type === "failure") {
           toast((result.data as any)?.error ?? "Gagal", "error");
         } else if (result.type === "success") {
-          toast((result.data as any)?.success ?? "Refund massal berhasil", "success");
+          toast((result.data as any)?.success ?? "Cancel massal diminta", "success");
           const warn = (result.data as any)?.warning;
           if (warn) toast(warn, "error");
           checked = new Set();
@@ -757,12 +760,12 @@
     >
       <div class="mx-auto flex max-w-lg items-center gap-3">
         <div class="text-xs font-medium text-ink-600">
-          {massRefundable.length} order · refund
+          {massRefundable.length} order · total
           <span class="font-bold text-primary">{formatRupiah(massRefundTotal)}</span>
         </div>
         <Button type="submit" variant="danger" full disabled={!massRefundable.length}>
           <Icon name="x" size={16} />
-          Batalkan & Refund
+          Batalkan Order
         </Button>
       </div>
     </div>
@@ -880,7 +883,7 @@
             <span>{refillInfo(detail).reason}</span>
           </div>
         {/if}
-        {#if detail.status === "Pending" && detail.allowCancel}
+        {#if isCancelableStatus(detail.status) && detail.allowCancel}
           <form
             method="POST"
             action="?/cancel"
@@ -888,9 +891,15 @@
               return async ({ result }) => {
                 if (result.type === "failure") {
                   toast((result.data as any)?.error ?? "Gagal", "error");
-                } else {
-                  toast("Order dibatalkan, saldo dikembalikan", "success");
+                } else if (result.type === "success") {
+                  // F12 — pakai pesan server: refund BELUM terjadi selama provider
+                  // belum konfirmasi. Toast lama menjanjikan "saldo dikembalikan".
+                  toast((result.data as any)?.success ?? "Cancel diminta ke provider", "success");
                   sheetOpen = false;
+                  await applyAction(result);
+                } else {
+                  // redirect / error — jangan klaim berhasil.
+                  toast("Gagal", "error");
                   await applyAction(result);
                 }
               };

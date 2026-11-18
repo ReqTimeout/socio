@@ -5,6 +5,8 @@ import { redirect, fail } from "@sveltejs/kit";
 import { logAudit, assertAdmin, assertAdminRate, assertAdminCan } from "$lib/server/admin";
 import { notifyOrderUpdate } from "$lib/server/notification";
 import { modalAmountFor } from "@socio/core/pricing";
+import { isLiveAtProvider } from "@socio/core/order-status";
+import { requestOrderCancel } from "$lib/server/order-cancel";
 import {
   ledgerRefundAmount,
   ledgerRefundAt,
@@ -14,6 +16,10 @@ import {
 import type { PageServerLoad, Actions } from "./$types";
 
 const UPDATABLE_FROM = ["Pending", "Processing", "In progress"];
+// F11/F12 — "Canceled" SENGAJA tidak ditambah ke sini. Override status mentah
+// akan melangkahi provider dan mengulangi kebocoran modal (customer refund,
+// provider masih menagih). Jalan yang benar ialah action `cancel` di bawah,
+// yang mengirim permintaan ke provider dan menunggu konfirmasi.
 const UPDATABLE_TO = ["Success", "Error", "Partial", "Processing", "Pending"];
 const EDITABLE_STATUS = ["Pending", "Processing", "In progress", "Error", "Partial"];
 const REFUNDABLE_STATUS = ["Pending", "Processing", "In progress", "Error", "Partial", "Canceled"];
@@ -100,8 +106,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         successTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} = 'Success' THEN ${orders.price} ELSE 0 END),0)`,
         pendingCount: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} = 'Pending' THEN 1 ELSE 0 END),0)`,
         pendingTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} = 'Pending' THEN ${orders.price} ELSE 0 END),0)`,
-        processingCount: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Processing','In progress','Refilling') THEN 1 ELSE 0 END),0)`,
-        processingTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Processing','In progress','Refilling') THEN ${orders.price} ELSE 0 END),0)`,
+        // F12 — 'Canceling' = masih hidup di provider, jadi tergolong in-flight.
+        // Tanpanya empat kartu KPI tidak mencakup semua status dan jumlahnya tidak
+        // relate dengan total. Band cancelWatch di bawah = subset.
+        processingCount: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Processing','In progress','Refilling','Canceling') THEN 1 ELSE 0 END),0)`,
+        processingTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Processing','In progress','Refilling','Canceling') THEN ${orders.price} ELSE 0 END),0)`,
         errorCount: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Canceled','Error','Partial') THEN 1 ELSE 0 END),0)`,
         errorTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Canceled','Error','Partial') THEN ${orders.price} ELSE 0 END),0)`,
         // Refund stats: pakai flag is_refund (indexed, O(1) per baris) untuk
@@ -113,6 +122,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         // WAJIB 0. Kalau >0: ada order batal/gagal yang saldonya belum kembali
         // → cron auto-refund (*/15 menit) macet atau order di-escape manual.
         refundPending: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} IN ('Canceled','Error','Partial') AND ${orders.isRefund} = 0 THEN 1 ELSE 0 END),0)`,
+        // F12 — cancel sudah dikirim ke provider tetapi belum dikonfirmasi. Uang
+        // customer BELUM kembali dan modal owner masih di provider. Kalau angka
+        // ini kekal >0 lama, provider tidak memproses cancel → tagih provider.
+        cancelPendingCount: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} = 'Canceling' THEN 1 ELSE 0 END),0)`,
+        cancelPendingTotal: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} = 'Canceling' THEN ${orders.price} ELSE 0 END),0)`,
       })
       .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
@@ -152,6 +166,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         refundedLedger: refunded,
       }),
       charged: charged(paid, refunded),
+      // F12/H5 — order masih hidup di provider? UI pakai ini untuk menampilkan
+      // checkbox override `ackProvider` + band peringatan sebelum refund manual.
+      liveAtProvider: isLiveAtProvider(o.status),
     };
   });
 
@@ -170,6 +187,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       error: { count: Number(s.errorCount), total: Number(s.errorTotal) },
       refunded: { count: Number(s.refundedCount), total: Number(s.refundedTotal) },
       refundPending: Number(s.refundPending),
+      cancelPending: {
+        count: Number(s.cancelPendingCount),
+        total: Number(s.cancelPendingTotal),
+      },
     },
   };
 };
@@ -253,6 +274,50 @@ export const actions: Actions = {
   },
 
   /**
+   * F12/F11 — cancel order DI PROVIDER, bukan cancel lokal. Helper bersama dengan
+   * user /pesanan supaya hanya ada SATU jalur cancel. Tidak ada refund di sini:
+   * cron auto-refund membayar setelah provider konfirmasi Canceled/Error/Partial.
+   * Ini juga jalan keluar untuk order `In progress` yang sebelumnya terjebak.
+   */
+  cancel: async ({ request, locals }) => {
+    assertAdmin(locals);
+    const _g = await assertAdminCan(locals, "orders:edit");
+    if (_g) return _g;
+    const _rate = await assertAdminRate("order-cancel", (locals as any).ip ?? "0.0.0.0", 20, 60);
+    if (_rate) return _rate;
+    const form = await request.formData();
+    const id = Number(form.get("id"));
+    if (!Number.isFinite(id) || id <= 0) return fail(400, { error: "ID order tidak valid." });
+
+    const r = await requestOrderCancel(id, {
+      adminId: Number(locals.user.id),
+      ip: (locals as any).ip,
+    });
+    if (!r.ok) {
+      switch (r.reason) {
+        case "not_found":
+          return fail(404, { error: "Order tidak ditemukan." });
+        case "not_supported":
+          return fail(400, { error: "Layanan ini tidak bisa dibatalkan setelah di-order." });
+        case "rejected":
+          return fail(409, { error: "Provider menolak cancel — order sudah mulai diproses." });
+        case "unreachable":
+          return fail(503, { error: "Provider tidak terjangkau. Order TIDAK dibatalkan dan TIDAK di-refund — coba lagi sebentar." });
+        case "already":
+          return fail(409, { error: "Cancel order ini sudah diminta, sedang menunggu konfirmasi provider." });
+        default:
+          return fail(400, { error: "Order status ini tidak bisa dibatalkan." });
+      }
+    }
+    return {
+      success:
+        r.state === "canceling"
+          ? `Cancel order #${id} dikirim ke provider. Menunggu konfirmasi — belum ada refund.`
+          : `Order #${id} dibatalkan (tak terlacak di provider). Cron auto-refund akan mengembalikan dana.`,
+    };
+  },
+
+  /**
    * Refund manual per order — LANGSUNG dieksekusi ke saldo konsumen (tanpa approval kedua).
    * Tetap dijaga: assertAdmin + rate-limit + audit_log + CAS is_refund (anti refund ganda).
    */
@@ -286,6 +351,15 @@ export const actions: Actions = {
       return fail(400, { error: `Order status "${o.status}" tidak bisa di-refund.` });
     if (!o.userId) return fail(400, { error: "Order tidak punya user (API/anonim)." });
 
+    // F12/H5 — order masih hidup di provider: refund di sini mengembalikan uang
+    // customer sementara provider masih menagih modal owner. Wajib Cancel dulu,
+    // kecuali admin menandai override secara sadar (checkbox ackProvider → audit).
+    if (isLiveAtProvider(o.status) && String(form.get("ackProvider") ?? "") !== "1") {
+      return fail(409, {
+        error: `Order #${id} masih hidup di provider (${o.status}). Cancel dulu di provider — cron auto-refund membayar setelah provider konfirmasi. Untuk override sadar, centang "Saya paham provider masih menagih" lalu ulangi.`,
+      });
+    }
+
     const price = Number(o.price) || 0;
     const want = rawAmount > 0 ? rawAmount : price;
     const refundAmount = Math.min(want, price);
@@ -300,6 +374,9 @@ export const actions: Actions = {
         reason,
         requestedBy: Number(locals.user.id),
         ip: (locals as any).ip,
+        // Override sadar admin (checkbox di UI). Choke point executeRefund
+        // merekamnya di audit_log + note ledger supaya bisa dilacak.
+        ackProvider: String(form.get("ackProvider")) === "1",
       });
       const done = Number(res?.amount ?? refundAmount);
       return {

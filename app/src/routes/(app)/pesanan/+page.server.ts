@@ -1,14 +1,13 @@
 import { db } from "@socio/db";
-import { orders, services, users, balanceLogs } from "@socio/db/schema";
+import { orders, services } from "@socio/db/schema";
 import { eq, desc, sql, and, inArray, or, like } from "drizzle-orm";
 import { fail } from "@sveltejs/kit";
-import { smmturkCancel, isProviderRejection } from "@socio/core/smmturk";
+import { isCancelableStatus } from "@socio/core/order-status";
 import { requestOrderRefill } from "$lib/server/refill-request";
+import { requestOrderCancel } from "$lib/server/order-cancel";
 import { refillServerMsgs } from "$lib/refill-copy";
 import { baseForLevel, effectivePer1k, type UserLevel } from "@socio/core/pricing";
 import { getPricingRules } from "$lib/server/pricing";
-import { notifyOrderCancel } from "$lib/server/notification";
-import { notifyAdmins } from "$lib/server/email-templates";
 import {
   ledgerRefundAmount,
   ledgerRefundAt,
@@ -312,86 +311,45 @@ export const actions: Actions = {
     const orderId = Number(form.get("id"));
     if (!orderId) return fail(400, { error: "ID order tidak valid" });
 
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(and(eq(orders.id, orderId), eq(orders.userId, Number(locals.user!.id))))
-      .limit(1);
-    if (!order) return fail(404, { error: "Order tidak ditemukan" });
-    if (order.status !== "Pending")
-      return fail(400, { error: "Hanya order Pending yang bisa dibatalkan" });
-
-    // Guard ganda: layanan harus support cancel (flag SMMturk tersimpan di
-    // services.allow_cancel). UI sudah gate tombolnya — ini jaga-jaga request
-    // lama/cache/direct POST supaya tidak bocor refund-butal seperti order #74.
-    const [svc] = await db
-      .select({ allowCancel: services.allowCancel })
-      .from(services)
-      .where(eq(services.id, Number(order.serviceId)))
-      .limit(1);
-    if (!svc || svc.allowCancel !== 1)
-      return fail(400, { error: "Layanan ini tidak bisa dibatalkan setelah di-order." });
-
-    // Try cancel di provider — HANYA proceed lokal kalau provider berhasil cancel
-    // ATAU terjadi network error (proteksi saldo user). Kalau provider MENOLAK
-    // secara eksplisit (order sudah mulai diproses), batalkan intent & beri tahu
-    // user — kalau tetap refund, Socio bayar provider DAN kembalikan saldo (rugi).
-    if (order.providerOrderId && order.providerOrderId !== "0") {
-      try {
-        await smmturkCancel([order.providerOrderId]);
-      } catch (e: any) {
-        if (isProviderRejection(e)) {
-          // Provider eksplisit menolak (order sudah jalan/pending di SMMturk).
-          // JANGAN cancel lokal — order masih diproses.
-          console.warn(
-            `[cancel] provider menolak cancel order #${orderId} (provId ${order.providerOrderId}): ${e.message}`,
-          );
-          return fail(400, { error: "Order sudah mulai diproses provider, tidak bisa dibatalkan." });
-        }
-        // Network/API failure → proceed cancel lokal untuk lindungi saldo user.
-        console.error(
-          `[cancel] provider tidak terjangkau utk order #${orderId}, lanjut cancel lokal:`,
-          e,
-        );
+    // F12 — SATU jalur cancel (helper bersama, dipakai juga oleh admin).
+    // TIDAK ada uang ditulis di sini: permintaan dikirim ke provider MILIK order,
+    // dan refund hanya dibayar cron auto-refund setelah provider konfirmasi
+    // Canceled/Error/Partial. Dulu "unreachable" pun refund (modal owner hangus)
+    // dan "ok" cuma berarti permintaan DITERIMA, bukan order sudah batal.
+    const r = await requestOrderCancel(orderId, { userId: Number(locals.user!.id) });
+    if (!r.ok) {
+      switch (r.reason) {
+        case "not_found":
+          return fail(404, { error: "Order tidak ditemukan" });
+        case "not_supported":
+          return fail(400, { error: "Layanan ini tidak bisa dibatalkan setelah di-order." });
+        case "rejected":
+          return fail(400, {
+            error: "Order sudah mulai diproses provider, tidak bisa dibatalkan.",
+          });
+        case "unreachable":
+          return fail(503, {
+            error:
+              "Provider tidak terjangkau. Order TIDAK dibatalkan — coba lagi sebentar. Saldo kamu aman (tidak di-refund sampai provider konfirmasi).",
+          });
+        case "already":
+          return fail(409, {
+            error: "Cancel order ini sudah diminta, sedang menunggu konfirmasi provider.",
+          });
+        case "race":
+          return fail(400, { error: "Order sedang diproses, tidak bisa dibatalkan" });
+        default:
+          return fail(400, {
+            error: "Order ini tidak bisa dibatalkan (status sudah final / sedang diproses).",
+          });
       }
     }
-
-    // Update status + refund saldo (CAS: hanya 1 cancel yang lolos → idempotent).
-    // Sekaligus set is_refund=1 supaya cron auto-refund TIDAK refund dua kali
-    // (refund manual di sini sudah menandai order selesai-nya-refund).
-    const res: any = await db
-      .update(orders)
-      .set({ status: "Canceled", isRefund: 1, updatedAt: new Date() })
-      .where(and(eq(orders.id, orderId), eq(orders.status, "Pending")));
-    const claimed = Array.isArray(res) ? res[0]?.affectedRows : res?.affectedRows;
-    if (Number(claimed ?? 1) === 0)
-      return fail(400, { error: "Order sedang diproses, tidak bisa dibatalkan" });
-
-    // Refund saldo atomik (fix P0-1: bukan read-then-write)
-    await db
-      .update(users)
-      .set({ balance: sql`${users.balance} + ${Number(order.price)}` })
-      .where(eq(users.id, Number(locals.user!.id)));
-
-    await db.insert(balanceLogs).values({
-      userId: Number(locals.user!.id),
-      type: "ref",
-      amount: Number(order.price),
-      note: `Refund cancel order #${orderId}`,
-      createdAt: new Date(),
-    });
-
-    // Notif user (in-app + push) + alert admin (email + admin_notifications).
-    await notifyOrderCancel(Number(locals.user!.id), orderId, Number(order.price));
-    await notifyAdmins({
-      subject: `[Cancel User] Order #${orderId}`,
-      body: `User membatalkan order #${orderId} (status Pending). Refund ${new Intl.NumberFormat("id-ID").format(Number(order.price))} ke saldo user.`,
-      ctaText: "Lihat Order",
-      ctaUrl: `/admin/orders?order=${orderId}`,
-      templateName: "admin-alert",
-    });
-
-    return { success: `Order dibatalkan. Saldo dikembalikan Rp ${order.price}` };
+    return {
+      success:
+        r.state === "canceling"
+          ? "Cancel diminta ke provider. Order menunggu konfirmasi batal — saldo BELUM dikembalikan. Dana otomatis kembali setelah provider konfirmasi."
+          : "Order dibatalkan (tak terlacak di provider). Saldo akan dikembalikan oleh cron auto-refund.",
+    };
   },
 
   massCancel: async ({ request, locals }) => {
@@ -404,95 +362,50 @@ export const actions: Actions = {
 
     const userId = Number(locals.user!.id);
     const targets = await db
-      .select()
+      .select({ id: orders.id, status: orders.status })
       .from(orders)
       .where(and(eq(orders.userId, userId), inArray(orders.id, ids)));
 
-    const pending = targets.filter((o) => o.status === "Pending");
-    if (!pending.length)
-      return fail(400, { error: "Tidak ada order Pending yang bisa dibatalkan" });
-
-    // Prefilter: hanya order dengan service yang allowCancel=1 boleh dibatalkan
-    // (flag SMMturk per-service). Lainnya dihitung rejected tanpa dipanggil API —
-    // cegah Socio bayar provider DAN kembalikan saldo user (rugi ganda).
-    const pendingSvcIds = [...new Set(pending.map((o) => Number(o.serviceId)))];
-    const pendingSvcRows = pendingSvcIds.length
-      ? await db
-          .select({ id: services.id, allowCancel: services.allowCancel })
-          .from(services)
-          .where(inArray(services.id, pendingSvcIds))
-      : [];
-    const pendingCancelMap = new Map(pendingSvcRows.map((s) => [s.id, s.allowCancel === 1]));
-
-    let refunded = 0;
-    let rejectedCount = 0;
-    for (const o of pending) {
-      if (pendingCancelMap.get(Number(o.serviceId)) !== true) {
-        // Layanan tidak mendukung cancel — skip, jangan panggil provider.
-        rejectedCount++;
-        continue;
-      }
-      if (o.providerOrderId && o.providerOrderId !== "0") {
-        try {
-          await smmturkCancel([o.providerOrderId]);
-        } catch (e: any) {
-          if (isProviderRejection(e)) {
-            // Provider eksplisit menolak (order sudah jalan) — JANGAN refund lokal.
-            console.warn(
-              `[massCancel] provider menolak cancel #${o.id} (provId ${o.providerOrderId})`,
-            );
-            rejectedCount++;
-            continue;
-          }
-          // Network error → proceed lokal untuk lindungi saldo user.
-          console.error(`[massCancel] provider tidak terjangkau #${o.id}, lanjut lokal:`, e);
-        }
-      }
-      await db
-        .update(orders)
-        .set({ status: "Canceled", isRefund: 1, updatedAt: new Date() })
-        .where(and(eq(orders.id, o.id), eq(orders.status, "Pending")));
-      refunded += Number(o.price);
-    }
-
-    const cancelledCount = pending.length - rejectedCount;
-    if (cancelledCount === 0)
+    // F11 — cancelable = Pending/Processing/In progress (bukan hanya Pending).
+    const cancelable = targets.filter((o) => isCancelableStatus(o.status));
+    if (!cancelable.length)
       return fail(400, {
-        error: `Semua order (${rejectedCount}) sudah mulai diproses provider / tidak bisa dibatalkan.`,
+        error: "Tidak ada order yang bisa dibatalkan (Pending/Processing/In progress)",
       });
 
-    // Refund saldo atomik (fix P0-1: bukan read-then-write)
-    if (refunded > 0) {
-      await db
-        .update(users)
-        .set({ balance: sql`${users.balance} + ${refunded}` })
-        .where(eq(users.id, userId));
+    // F12/H4 — helper bersama mengurus allowCancel, panggilan provider dan CAS.
+    // TIDAK ada refund dan TIDAK ada baris ledger di sini: cron auto-refund
+    // membayar setelah provider konfirmasi. Dulu `refunded += price` tanpa cek
+    // affectedRows (bisa refund ganda) dan ledger ditulis walau refunded = 0
+    // (baris hantu). Sekarang hasil per order dihitung jujur.
+    let sent = 0;
+    let rejected = 0;
+    let unreachable = 0;
+    let skipped = 0;
+    for (const o of cancelable) {
+      const r = await requestOrderCancel(Number(o.id), { userId });
+      if (r.ok) sent++;
+      else if (r.reason === "rejected") rejected++;
+      else if (r.reason === "unreachable") unreachable++;
+      else skipped++;
     }
-    await db.insert(balanceLogs).values({
-      userId,
-      type: "ref",
-      amount: refunded,
-      note: `Mass refund ${cancelledCount} order dibatalkan${rejectedCount ? ` (${rejectedCount} ditolak provider)` : ""}`,
-      createdAt: new Date(),
-    });
 
-    // Alert admin mass cancel (1 email agregat; tidak spam in-app user).
-    await notifyAdmins({
-      subject: `[Mass Cancel] ${cancelledCount} order user #${userId}`,
-      body: `User melakukan pembatalan massal: ${cancelledCount} order Pending dibatalkan${rejectedCount ? `, ${rejectedCount} ditolak provider` : ""}. Total refund ${new Intl.NumberFormat("id-ID").format(refunded)}. IDs: ${pending.map((o) => o.id).join(", ")}`,
-      ctaText: "Lihat Pesanan",
-      ctaUrl: `/admin/orders`,
-      templateName: "admin-alert",
-    });
-
-    if (rejectedCount > 0) {
-      return {
-        success: `Refund ${cancelledCount} order. Saldo +Rp ${refunded.toLocaleString("id-ID")}`,
-        warning: `${rejectedCount} order ditolak provider (sudah diproses) — tidak di-refund.`,
-      };
+    if (sent === 0) {
+      if (unreachable > 0)
+        return fail(503, {
+          error: `${unreachable} order: provider tidak terjangkau — TIDAK dibatalkan, saldo aman. Coba lagi sebentar.`,
+        });
+      return fail(400, {
+        error: `Semua order (${rejected + skipped}) sudah mulai diproses provider / tidak bisa dibatalkan.`,
+      });
     }
-    return {
-      success: `Refund ${cancelledCount} order. Saldo +Rp ${refunded.toLocaleString("id-ID")}`,
-    };
+    const warning =
+      rejected + skipped > 0
+        ? `${rejected + skipped} order ditolak provider (sudah diproses) / tidak bisa dibatalkan — tidak di-refund.`
+        : unreachable > 0
+          ? `${unreachable} order: provider tidak terjangkau — belum dibatalkan, coba lagi.`
+          : undefined;
+    const success = `Cancel diminta untuk ${sent} order. Menunggu konfirmasi provider — saldo BELUM dikembalikan. Dana otomatis kembali setelah provider konfirmasi batal.`;
+    return warning ? { success, warning } : { success };
   },
 };

@@ -7,6 +7,7 @@
     | "partial"
     | "error"
     | "refilling"
+    | "canceling"
     | "processing"
     | "success"
     | "canceled"
@@ -65,6 +66,14 @@
     refilling: {
       label: "Refill",
       cls: "bg-status-progress-soft text-status-progress ring-1 ring-status-progress/15",
+    },
+    // F12 — cancel sudah dikirim ke provider, MENUNGGU konfirmasi. Bukan batal
+    // dan bukan refund: nada proses + putaran supaya jelas masih bergerak.
+    // Tanpa entri ini badge jatuh ke fallback "Pending" = menyesatkan user.
+    canceling: {
+      label: "Menunggu Batal",
+      cls: "bg-status-progress-soft text-status-progress ring-1 ring-status-progress/15",
+      motion: "status-spin-proses",
     },
   };
   const s = $derived(map[String(status).toLowerCase()] ?? map.pending);

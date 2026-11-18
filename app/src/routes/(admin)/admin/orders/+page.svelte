@@ -12,6 +12,7 @@
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { formatRupiah } from "$lib/format";
+  import { isCancelableStatus, isLiveAtProvider } from "@socio/core/order-status";
   import type { ActionData, PageData } from "./$types";
 
   type OrderRow = PageData["orders"][number];
@@ -88,6 +89,17 @@
     title: string;
     sub: string;
   } | null {
+    // F12 — cancel menunggu konfirmasi provider: uang customer BELUM kembali dan
+    // modal owner masih di provider. Bukan "refund pending" biasa.
+    if (o.status === "Canceling") {
+      return {
+        box: "border-amber-200 bg-amber-50/70",
+        tone: "bg-amber-100 text-amber-700",
+        icon: "clock",
+        title: "Cancel diminta — menunggu provider",
+        sub: "Provider menerima permintaan batal tapi belum mengonfirmasi. Tidak ada refund sampai provider melaporkan Canceled/Error/Partial; auto-refund lalu membayar dalam 15 menit.",
+      };
+    }
     switch (o.refundState) {
       case "refunded":
         return {
@@ -131,6 +143,7 @@
     "Pending",
     "Processing",
     "In progress",
+    "Canceling",
     "Success",
     "Partial",
     "Canceled",
@@ -140,6 +153,10 @@
   let confirmStatus = $state<string | null>(null); // G30: pending status target
   let confirmEditProv = $state(false);
   let confirmRefund = $state(false);
+  let confirmCancel = $state(false);
+  // F12/H5 — override sadar admin utk refund order yang masih live di provider.
+  // Reset tiap buka detail lain supaya centang tidak terbawa antar order.
+  let ackProvider = $state(false);
   let refundAmount = $state(0); // 0 = full refund
   let refundReason = $state("");
 
@@ -150,6 +167,8 @@
     rem = o.remains ?? 0;
     confirmStatus = null;
     confirmEditProv = false;
+    confirmCancel = false;
+    ackProvider = false;
   }
 
   const fmtDate = (d: unknown) =>
@@ -196,6 +215,7 @@
     canceled: "before:bg-status-canceled",
     processing: "before:bg-status-progress",
     "in progress": "before:bg-status-progress",
+    canceling: "before:bg-status-progress",
     partial: "before:bg-status-partial",
   };
 
@@ -403,6 +423,39 @@
       </div>
     </div>
   </div>
+
+  <!-- F12 — modal owner yang masih di provider: cancel sudah dikirim tetapi
+       provider belum konfirmasi. Customer BELUM dikembalikan uangnya (kontrak
+       confirm-before-refund), jadi angka ini = modal tertahan, bukan kerugian
+       yang sudah terjadi. Wajib terlihat supaya owner bisa menagih provider. -->
+  {#if data.stats.cancelPending.count > 0}
+    <div class="rounded-2xl border border-warning/30 bg-warning-soft px-3.5 py-3">
+      <div class="flex flex-wrap items-start gap-2.5">
+        <Icon name="clock" size={16} stroke={2.5} class="mt-0.5 shrink-0 text-warning" />
+        <div class="min-w-0 flex-1">
+          <div class="text-xs font-extrabold text-ink-900">Cancel dikirim — menunggu provider</div>
+          <p class="mt-1 text-[11px] leading-relaxed text-ink-600">
+            {fmt(data.stats.cancelPending.count)} order ·
+            {formatRupiah(data.stats.cancelPending.total)} modal Anda masih ditahan provider.
+            Customer TIDAK di-refund sampai provider mengonfirmasi cancel tersebut.
+          </p>
+          <p class="mt-1 text-[10px] leading-relaxed text-ink-400">
+            Polling status hanya menaikkan status saat provider memberi status final, lalu
+            auto-refund membayar. Kalau angka ini tetap tidak nol, tagih provider.
+          </p>
+        </div>
+        <a
+          href={chipHref("Canceling")}
+          aria-current={data.status === "Canceling" ? "page" : undefined}
+          class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-ink-900 px-3 text-[11px] font-bold text-ink-50 transition-all hover:bg-ink-800 active:scale-95"
+        >
+          Periksa order ini
+          <Icon name="chevron_down" size={11} stroke={2.5} class="-rotate-90" />
+        </a>
+      </div>
+    </div>
+  {/if}
+
   <p class="-mt-0.5 text-[10px] text-ink-400 sm:text-[11px]">
     Statistik mengexclude akun Admin (order internal admin tidak dihitung).
     <a
@@ -450,7 +503,7 @@
                   ? 'border-transparent bg-status-canceled text-ink-50 shadow-sm'
                   : s === 'partial'
                     ? 'border-transparent bg-status-partial text-ink-50 shadow-sm'
-                    : s === 'processing' || s === 'in progress'
+                    : s === 'processing' || s === 'in progress' || s === 'canceling'
                       ? 'border-transparent bg-status-progress text-ink-50 shadow-sm'
                       : 'border-transparent bg-ink-900 text-ink-50 shadow-sm';
           return 'border-ink-200 bg-surface text-ink-500 hover:border-ink-300 hover:text-ink-700';
@@ -466,6 +519,8 @@
           <Icon name="x" size={11} stroke={2.75} />
         {:else if f === "Partial"}
           <Icon name="alert" size={11} stroke={2.5} />
+        {:else if f === "Canceling"}
+          <Icon name="clock" size={11} stroke={2.5} />
         {:else if f === "Refilling"}
           <Icon name="refresh" size={11} stroke={2.5} />
         {:else}
@@ -995,6 +1050,26 @@
         </div>
       {/if}
 
+      <!-- F12/F11 — cancel DI PROVIDER. Tidak ada refund di sini; cron auto-refund
+           membayar setelah provider konfirmasi. Jalan keluar utk order In progress. -->
+      {#if isCancelableStatus(detail.status)}
+        <hr class="border-ink-100" />
+        <div class="space-y-2">
+          <button
+            type="button"
+            onclick={() => (confirmCancel = true)}
+            class="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-danger/30 bg-danger/5 text-sm font-bold text-danger shadow-sm transition-all hover:bg-danger/10 active:scale-95"
+          >
+            <Icon name="x" size={13} stroke={2.75} />
+            Batalkan di Provider
+          </button>
+          <p class="text-[11px] text-ink-400">
+            Refund dibayar otomatis hanya setelah provider mengonfirmasi pembatalan. Kalau
+            provider menolak, tidak ada yang berubah.
+          </p>
+        </div>
+      {/if}
+
       <!-- Refund manual (G-refund) — full atau parsial, idempotent -->
       {#if canManualRefund(detail)}
         <hr class="border-ink-100" />
@@ -1120,6 +1195,7 @@
         confirmRefund = false;
         refundAmount = 0;
         refundReason = "";
+        ackProvider = false;
         if (result.type === "failure") toast((result.data as any)?.error ?? "Gagal", "error");
         else toast((result.data as any)?.success ?? "OK", "success");
         await update();
@@ -1139,11 +1215,67 @@
       <p class="text-[11px] text-ink-400">
         Refund langsung dikembalikan ke saldo konsumen (tanpa approval kedua).
       </p>
+      <!-- F12/H5 — order masih hidup di provider: refund tanpa cancel = modal
+           owner hangus. Wajib tandai override secara sadar (tercatat di audit). -->
+      {#if isLiveAtProvider(detail.status)}
+        <label
+          class="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 p-2.5 text-[11px] font-semibold text-danger"
+        >
+          <input
+            type="checkbox"
+            name="ackProvider"
+            value="1"
+            bind:checked={ackProvider}
+            class="mt-0.5 h-4 w-4 shrink-0 accent-current"
+          />
+          <span>Saya paham provider mungkin masih menagih biaya order ini</span>
+        </label>
+      {/if}
       <div class="flex gap-3">
         <Button type="button" variant="ghost" full onclick={() => (confirmRefund = false)}
           >Batal</Button
         >
-        <Button type="submit" variant="danger" full>Ya, Refund</Button>
+        <Button
+          type="submit"
+          variant="danger"
+          full
+          disabled={isLiveAtProvider(detail.status) && !ackProvider}>Ya, Refund</Button
+        >
+      </div>
+    </form>
+  </ConfirmDialog>
+{/if}
+
+<!-- F12: confirm dialog — cancel di provider (tidak ada refund sampai dikonfirmasi) -->
+{#if detail && confirmCancel}
+  <ConfirmDialog
+    open={true}
+    danger={true}
+    title="Batalkan Order di Provider"
+    message="Permintaan batal untuk order #{detail.id} akan dikirim ke provider-nya. Order menjadi Canceling dan BELUM ada refund."
+  >
+    <form
+      method="POST"
+      action="?/cancel"
+      use:enhance={() => async (input: any) => {
+        const { result, update } = input;
+        confirmCancel = false;
+        if (result.type === "failure") toast((result.data as any)?.error ?? "Gagal", "error");
+        else toast((result.data as any)?.success ?? "OK", "success");
+        await update();
+      }}
+      class="space-y-3"
+    >
+      <input type="hidden" name="id" value={detail.id} />
+      <p class="text-[11px] text-ink-400">
+        Refund dibayar otomatis hanya setelah provider mengonfirmasi pembatalan. Kalau provider
+        menolak, tidak ada yang berubah.
+      </p>
+      <div class="flex gap-3">
+        <Button type="button" variant="ghost" full onclick={() => (confirmCancel = false)}
+          >Batal</Button
+        >
+        <Button type="submit" variant="danger" full>Ya, Kirim Cancel</Button>
       </div>
     </form>
   </ConfirmDialog>
