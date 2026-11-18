@@ -181,14 +181,46 @@ export async function smmturkCancel(ids: string[]): Promise<any> {
 }
 
 /**
- * Klasifikasi error dari `smmturkCancel`/`smmturkRefill` untuk keputusan refund.
+ * Cancel pada provider TERTENTU (endpoint + key milik provider itu).
+ * Wajib setelah routing per-kategori (mis. TikTok → SMMfollows): `smmturkCancel`
+ * hardcoded pakai endpoint+key SMMturk saja, jadi cancel order provider lain
+ * selalu ditolak SMMturk dan user tidak bisa membatalkan order yang masih
+ * Pending. Semantik respons identik `smmturkCancel` — caller wajib membedakan
+ * "Provider error" (penolakan eksplisit) vs network error (tak sampai).
+ *
+ * F12 — POLA LAMA "network error → cancel lokal + refund saldo" SUDAH DIHAPUS.
+ * Respons OK dari action=cancel hanya berarti permintaan DITERIMA, bukan order
+ * sudah batal; provider bisa terus memproses dan menagih modal owner. Kedua
+ * jenis kegagalan kini TIDAK menulis DB dan TIDAK refund. Hanya
+ * `requestOrderCancel` (lib/server/order-cancel.ts) yang menulis status
+ * `Canceling`, dan hanya cron auto-refund yang membayar setelah provider
+ * mengonfirmasi. Jangan hidupkan lagi refund-di-sini. Pola sama dengan
+ * `smmturkRefillFor`.
+ */
+export async function smmturkCancelFor(
+  endpoint: string,
+  key: string,
+  ids: string[],
+): Promise<any> {
+  return postForm({ action: "cancel", orders: ids.join(",") }, endpoint, key);
+}
+
+/**
+ * Klasifikasi error dari `smmturkCancelFor`/`smmturkRefillFor` untuk keputusan
+ * cancel/refill.
  *
  * `postForm` melempar `Error("Provider error: ...")` bila SMMturk membalas body
  * berisi `error` — artinya provider MENOLAK secara eksplisit (order sudah mulai
- * diproses). Kasus ini caller TIDAK BOLEH refund lokal (kalau iya: Socio bayar
- * provider DAN kembalikan saldo user → rugi ganda). Sebaliknya error lain
- * (network/timeout/non-JSON) = provider tidak terkonfirmasi → caller boleh
- * refund lokal untuk lindungi saldo user.
+ * diproses). Error lain (network/timeout/non-JSON) = provider tidak terjangkau /
+ * tidak terkonfirmasi.
+ *
+ * F12 — DUA-DUANYA kini TIDAK BOLEH refund lokal dan TIDAK menulis DB. Respons
+ * "OK" dari action=cancel cuma berarti permintaan DITERIMA, bukan order sudah
+ * batal; provider bisa terus memproses dan menagih modal owner. Kalau unreachable
+ * lalu refund lokal, Socio bayar provider DAN kembalikan saldo user → rugi ganda
+ * (bocor modal owner). Order tetap di provider; hanya cron auto-refund yang
+ * membayar setelah provider mengonfirmasi cancel. Jangan hidupkan lagi ajaran
+ * lama "network error → refund lokal".
  *
  * Pure, tanpa DB/network — aman di-unit-test offline.
  */

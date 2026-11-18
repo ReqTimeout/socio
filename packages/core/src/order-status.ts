@@ -12,7 +12,8 @@ export type OrderStatus =
   | "Success"
   | "In progress"
   | "Canceled"
-  | "Refilling";
+  | "Refilling"
+  | "Canceling";
 
 /** Statuses that will never change again → stop polling. */
 export const FINAL_STATUSES: readonly OrderStatus[] = [
@@ -24,6 +25,57 @@ export const FINAL_STATUSES: readonly OrderStatus[] = [
 
 export function isFinalStatus(status: string | null | undefined): boolean {
   return !!status && (FINAL_STATUSES as readonly string[]).includes(status);
+}
+
+/**
+ * Status yang BOLEH dimohon cancel (F12). Provider adalah pihak berwenang:
+ * kalau order sudah mulai diproses, provider akan MENOLAK dan kita tidak
+ * mengubah apa-apa. Sebelumnya user hanya boleh cancel `Pending`, jadi order
+ * `In progress` terjebak tanpa jalan keluar (F11).
+ */
+export const CANCELABLE_STATUS: readonly OrderStatus[] = [
+  "Pending",
+  "Processing",
+  "In progress",
+];
+
+export function isCancelableStatus(status: string | null | undefined): boolean {
+  return !!status && (CANCELABLE_STATUS as readonly string[]).includes(status);
+}
+
+/**
+ * `Canceling` = permintaan cancel sudah dikirim ke provider tetapi provider
+ * BELUM mengonfirmasi. Bukan final — harus terus di-poll. Uang customer tidak
+ * boleh bergerak selama status ini (lihat lib/server/order-cancel.ts).
+ */
+export function isCancelPending(status: string | null | undefined): boolean {
+  return status === "Canceling";
+}
+
+/**
+ * Status yang berarti order MASIH HIDUP di provider — modal owner sudah dibayar
+ * dan provider masih bisa menyelesaikan layanan itu.
+ *
+ * KENAPA konstanta ini ada (F12/H5): refund manual atas order dalam daftar ini
+ * mengembalikan uang customer sementara provider masih menagih modal owner. Itu
+ * kerugian owner secara langsung. Setiap pintu refund HARUS memeriksa ini, bukan
+ * hanya satu route — kalau tidak, pintu kedua (admin/refunds → approveRefund →
+ * executeRefund) membuka kebocoran yang sama walau pintu pertama sudah dijaga.
+ *
+ * `Canceling` termasuk: permintaan cancel sudah dikirim tetapi provider BELUM
+ * mengonfirmasi, jadi modal masih di provider. `Refilling` termasuk: provider
+ * sedang mengisi ulang jumlah yang jatuh.
+ */
+export const LIVE_AT_PROVIDER: readonly OrderStatus[] = [
+  "Pending",
+  "Processing",
+  "In progress",
+  "Canceling",
+  "Refilling",
+];
+
+export function isLiveAtProvider(status: string | null | undefined): boolean {
+  return !!status && (LIVE_AT_PROVIDER as readonly string[]).includes(status);
 }
 
 /**
@@ -50,7 +102,29 @@ export function mapProviderStatus(s?: string | null): OrderStatus | null {
   // ("partial" also contains no other key, but "refunded" must not fall into
   // "error" etc.).
   if (v.includes("complete") || v.includes("success")) return "Success";
-  if (v.includes("cancel")) return "Canceled";
+  if (v.includes("cancel")) {
+    // F12/H6 — kata "cancel" TIDAK selalu berarti order SUDAH batal. Panel bisa
+    // melaporkan "Canceling"/"Cancelling"/"Cancellation requested" selagi masih
+    // memproses permintaan itu, atau "cancel failed" saat MENOLAK batal.
+    // Memetakan salah satunya ke `Canceled` (final) akan memicu cron auto-refund
+    // padahal provider belum mengonfirmasi → customer dapat uang sementara modal
+    // owner masih di provider. Itu kebocoran yang sama lewat pintu polling, bukan
+    // pintu cancel.
+    //
+    // null = "tak dikenali" → poller TETAP pada status sekarang (Canceling) dan
+    // terus poll 1 menit. Uang tidak bergerak. Band cancelWatch di /admin/orders
+    // memberi tahu owner agar menagih provider.
+    if (
+      v.includes("canceling") ||
+      v.includes("cancelling") ||
+      v.includes("cancel pending") ||
+      v.includes("cancel in progress") ||
+      v.includes("requested") ||
+      v.includes("fail")
+    )
+      return null;
+    return "Canceled";
+  }
   if (v.includes("partial")) return "Partial";
   if (v.includes("error") || v.includes("fail")) return "Error";
   // "processing" AND "in progress" AND "running" AND "processing/done" variants
@@ -72,6 +146,8 @@ export function nextPollIntervalMs(
 ): number {
   const MIN = 60 * 1000;
   if (isFinalStatus(status)) return 0;
+  // Cancel menunggu konfirmasi → poll paling rapat supaya refund tidak tertunda.
+  if (isCancelPending(status)) return 1 * MIN;
   if (status === "In progress" || status === "Processing") return 5 * MIN;
 
   const ageMs = now.getTime() - createdAt.getTime();
