@@ -48,6 +48,9 @@ docs/screenshots/
 
 # Scratch/temp design artifacts
 .tmp_*
+.tmp-*/
+.c-*.mjs
+.vision/
 .qoder/
 .kilo/
 .screenshots/
