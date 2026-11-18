@@ -535,6 +535,14 @@ Sebelum eksekusi item CONFIRM, tanya owner (AskUserQuestion), jangan asumsi:
 8. **P4.3 H3 Coupon Loop**: GO engine personal + tabel `user_coupons` (kill switch OFF)?
 9. **F1 audit lama** (per-row REGEXP ~7s di pesanan/admin/orders): fix sekarang? P1.2/P1-C
    menyentuh area `refund.ts` yang sama → **gabungkan sadar** bila GO (hindari konflik).
+   - **[GO DIBERIKAN + SELESAI 18 Nov 2026 — live `37bb77a`.]** P1 sudah selesai duluan →
+     tidak ada konflik. REGEXP per-baris diganti `ledgerRefundProofs` (satu query ber-index
+     `user_id` + fold pure `@socio/core/refund-ledger`, selftest 15/15). Semantik identik &
+     ledger-first tetap: probe prod `mismatch_user=0` (semua penulis ref = pemilik order),
+     batas non-digit + collation ci ditiru persis. Timing prod 25 baris: ~2,4s → ~0,09s.
+     Commit `0cc7746`; jalur tulis uang (`executeRefund`/`ledgerRefundSum`/cron) tak disentuh;
+     aggregate stats tetap flag `is_refund` (4bda2e1). Jurnal:
+     `docs/2026-11-18-f1-refund-ledger-fold-news-notif.md`.
 
 ---
 
@@ -568,5 +576,6 @@ Sebelum eksekusi item CONFIRM, tanya owner (AskUserQuestion), jangan asumsi:
 | **P4** | GA4/content_activation/H3/SEO-J | Rendah (dormant) | Sedang (DDL + eksternal) | Ya (CONFIRM) |
 
 **Inti: P1 (uang) SELESAI 18 Nov 2026 — migration utf8mb3 BENAR (§1.4), backup → migration →
-deploy, 4 gate lulus, live `23ef2b3`. Jangan salin migration `.my` mentah (utf8mb4 = rebuild
+deploy, 4 gate lulus, live `23ef2b3`. F1 perf + notif news ala .my SELESAI 18 Nov (live
+`37bb77a`). Jangan salin migration `.my` mentah (utf8mb4 = rebuild
 tabel live = MDL convoy). Berikutnya P2 (sebagian CONFIRM) → P3 → P4; item CONFIRM tunggu owner.**
