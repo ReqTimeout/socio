@@ -1,9 +1,10 @@
 # Plan Port Gap socio.my → socio.id — 17 Nov 2026
 
-> **Status dokumen: RENCANA (read-only audit selesai). BUKAN eksekusi.**
-> Sesi ini **nol perubahan kode/DB** di kedua repo. Semua temuan di bawah diverifikasi
-> langsung dari kode `.id`, kode `.my`, git log, jurnal `updatememory`, dan **3 probe
-> produksi READ-ONLY** (17 Nov). Eksekusi tiap item **menunggu GO owner** + gate wajib.
+> **Status dokumen: P1 SELESAI DIEKSEKUSI — 18 Nov 2026, live image `23ef2b3`**
+> (jurnal: `docs/2026-11-18-p1-confirm-before-refund.md`). **P2–P4 masih RENCANA.**
+> Audit 17 Nov = read-only, nol perubahan kode/DB; semua temuan diverifikasi langsung
+> dari kode `.id`, kode `.my`, git log, jurnal `updatememory`, dan **3 probe produksi
+> READ-ONLY**. Eksekusi item berikutnya tetap **menunggu GO owner** + gate wajib.
 >
 > **Kenapa hati-hati: user MASIH LIVE di `app.socio.id`.** Salah port jalur uang =
 > saldo customer bocor / modal owner hilang / tabel terkunci. Dokumen ini mengunci
@@ -107,8 +108,8 @@ ALTER TABLE orders
 - Guard idempotent `information_schema` + `PREPARE/EXECUTE` tetap dipakai (pola `.my`),
   tapi **isi ALTER-nya pin utf8mb3**, bukan utf8mb4.
 
-> Catatan terkait: `balance_logs.note` juga **utf8mb3** (komentar `.my` refund.ts:129
-> "ASCII sahaja: note = utf8mb3"). Marker override `[provider-live override]` = ASCII → aman.
+> Catatan terkait: `balance_logs.note` juga **utf8mb3** (komentar `.my` refund.ts:129,
+> diterjemahkan: "ASCII saja: note = utf8mb3"). Marker override `[provider-live override]` = ASCII → aman.
 
 ---
 
@@ -196,17 +197,18 @@ di-port akan LANGSUNG LIVE di `.id`** kecuali di-gate eksplisit. Item WP7/quota/
 ### P1 — JALUR UANG (wajib, paling urgen)
 
 > **Kontrak tunggal F12: uang customer bergerak HANYA setelah provider konfirmasi cancel.**
-> Saat ini `.id` masih refund lokal saat provider unreachable / saat respons "OK" diterima
-> (bukan saat order benar-benar batal). Itu bocor modal owner.
+> **[SELESAI — 18 Nov 2026, P1.1–P1.6 live, image `23ef2b3`.]** Sebelumnya `.id` refund
+> lokal saat provider unreachable / saat respons "OK" diterima (bukan saat order benar-benar
+> batal) = bocor modal owner. Kini cancel → `Canceling`, uang terkunci sampai provider lapor.
 
 | ID | Gap | Bukti `.id` (file:baris) | Sumber `.my` | Klasifikasi |
 |---|---|---|---|---|
-| **P1.1** | F12 confirm-before-refund: status `Canceling` + helper `order-cancel.ts` + poller/refund/UI | `pesanan/+page.server.ts:351-353` (network→refund lokal), `:321-322` (hanya Pending), `order-status.ts` (8 nilai, tanpa Canceling/CANCELABLE/LIVE_AT_PROVIDER) | `083d0271`; jurnal hardening §11.5/§12; `order-cancel.ts` (194), migration SQL | **ADAPT** |
-| **P1.2** | H5 guard provider-live di **chokepoint** `executeRefund` + `approveRefund` (sebelum flip) + override `ackProvider`→audit | `refund.ts:54-126` (executeRefund **tanpa** guard live), `:128-165` (approveRefund flip dulu tanpa guard), `admin/orders/+page.server.ts:19,285` (REFUNDABLE_STATUS boleh live) | `083d0271`; §12.7 H5; `refund.ts:100-183` | **ADAPT** |
-| **P1.3** | H6 `mapProviderStatus`: varian cancel in-progress/denied → **null** (bukan `Canceled`) | `order-status.ts:53` `if (v.includes("cancel")) return "Canceled";` ← BUG | `083d0271`; §12.7 H6; `order-status.ts:105-127` | **PORT** |
-| **P1.4** | H4 `massCancel`: cek `affectedRows` per CAS; jangan tulis `balance_logs` bila `refunded===0` | `pesanan/+page.server.ts:451-455` (CAS tapi `refunded += price` **unconditional**), `:471-477` (ledger insert unconditional) | `083d0271`; §12.2 H4 | **ADAPT** |
-| **P1.5** | Provider-safe cancel (`smmturkCancelFor`) + api/v1 refill (`smmturkRefillFor` + simpan `refill_id`) | `smmturk.ts:140-200` (`smmturkCancel` env-hardcoded, **tanpa** CancelFor), `api/v1/+server.ts:428-435` (`smmturkRefill` hardcoded + INSERT **tanpa refill_id**) | `de84bd8c`; jurnal 2026-11-08-fix-cancel-refill-provider-safe | **ADAPT** |
-| **P1.6** | W4 `deleteProvider`: tambah guard **order hidup** (selain guard services-count) | `admin/providers/+page.server.ts:168-197` (guard services-count **saja**) | `82b52f11`; hardening §9.3 W4 | **PORT** |
+| **P1.1** | F12 confirm-before-refund: status `Canceling` + helper `order-cancel.ts` + poller/refund/UI | `pesanan/+page.server.ts:351-353` (network→refund lokal), `:321-322` (hanya Pending), `order-status.ts` (8 nilai, tanpa Canceling/CANCELABLE/LIVE_AT_PROVIDER) | `083d0271`; jurnal hardening §11.5/§12; `order-cancel.ts` (194), migration SQL | **ADAPT** ✅ SELESAI 18 Nov (`23ef2b3`) |
+| **P1.2** | H5 guard provider-live di **chokepoint** `executeRefund` + `approveRefund` (sebelum flip) + override `ackProvider`→audit | `refund.ts:54-126` (executeRefund **tanpa** guard live), `:128-165` (approveRefund flip dulu tanpa guard), `admin/orders/+page.server.ts:19,285` (REFUNDABLE_STATUS boleh live) | `083d0271`; §12.7 H5; `refund.ts:100-183` | **ADAPT** ✅ SELESAI 18 Nov (`23ef2b3`) |
+| **P1.3** | H6 `mapProviderStatus`: varian cancel in-progress/denied → **null** (bukan `Canceled`) | `order-status.ts:53` `if (v.includes("cancel")) return "Canceled";` ← BUG | `083d0271`; §12.7 H6; `order-status.ts:105-127` | **PORT** ✅ SELESAI 18 Nov (`23ef2b3`) |
+| **P1.4** | H4 `massCancel`: cek `affectedRows` per CAS; jangan tulis `balance_logs` bila `refunded===0` | `pesanan/+page.server.ts:451-455` (CAS tapi `refunded += price` **unconditional**), `:471-477` (ledger insert unconditional) | `083d0271`; §12.2 H4 | **ADAPT** ✅ SELESAI 18 Nov (`23ef2b3`) |
+| **P1.5** | Provider-safe cancel (`smmturkCancelFor`) + api/v1 refill (`smmturkRefillFor` + simpan `refill_id`) | `smmturk.ts:140-200` (`smmturkCancel` env-hardcoded, **tanpa** CancelFor), `api/v1/+server.ts:428-435` (`smmturkRefill` hardcoded + INSERT **tanpa refill_id**) | `de84bd8c`; jurnal 2026-11-08-fix-cancel-refill-provider-safe | **ADAPT** ✅ SELESAI 18 Nov (`23ef2b3`) |
+| **P1.6** | W4 `deleteProvider`: tambah guard **order hidup** (selain guard services-count) | `admin/providers/+page.server.ts:168-197` (guard services-count **saja**) | `82b52f11`; hardening §9.3 W4 | **PORT** ✅ SELESAI 18 Nov (`31fd0da`) |
 
 **Invariant P1 yang wajib dikunci test (port `order-cancel-money.test.ts`):**
 1. `LIVE_AT_PROVIDER` = `[Pending, Processing, In progress, Canceling, Refilling]`.
@@ -378,6 +380,9 @@ di-port akan LANGSUNG LIVE di `.id`** kecuali di-gate eksplisit. Item WP7/quota/
      ganti "unreachable → JANGAN refund, order tetap di provider".
 3. Port test `order-cancel-money.test.ts` + `order-status.test.ts` (existing) → `core/test/`,
    adaptasi path `APP_ROOT`/import. **Gate 1-3** (check/core-test/build). Belum deploy.
+   - **[SELESAI — 18 Nov 2026, commit `33ffcf0` (core) + `23ef2b3` (test+chain), live image
+     `23ef2b3`].** Money selftest 29/29 + order-status 23/23; assertion charset adaptasi
+     utf8mb3 LIVE (bukan utf8mb4 + default `.my`).
 
 ### Fase P1-B — Migration DB (backup dulu, manual, SEBELUM deploy kode server)
 4. **Backup** tabel `orders` prod (snapshot, mis. `CREATE TABLE orders_bak_20261117 AS SELECT * FROM orders`
@@ -390,6 +395,11 @@ di-port akan LANGSUNG LIVE di `.id`** kecuali di-gate eksplisit. Item WP7/quota/
      `SELECT status, COUNT(*) GROUP BY status` **tak berubah** (invariant: nol baris berubah).
 6. Update Drizzle schema `orders.ts:35-44`: tambah `"Canceling"` di ujung array enum
    (code-only; **biarkan** drift `default("Pending")` — jangan sentuh).
+   - **[SELESAI — migration prod 18 Nov ~04:55 UTC SEBELUM deploy, commit `5171d62`].**
+     Backup `orders_bak_20261118` 26.534 = orders 26.534; distribusi identik; utf8mb3 tetap;
+     INPLACE LOCK=NONE diterima. Adaptasi: `SET SESSION sql_mode` longgar khusus backup —
+     `orders.date` legacy memuat '0000-00-00' (ERROR 1292 percobaan 1; atomic DDL rollback,
+     nol efek samping). Lapis kedua: mysqldump `/tmp/orders_bak_20261118.sql` di VPS.
 
 ### Fase P1-C — Server helper + chokepoint (deploy SETELAH migration sukses)
 7. `app/src/lib/server/order-cancel.ts` (**baru**, ADAPT dari `.my` 194 baris):
@@ -407,6 +417,8 @@ di-port akan LANGSUNG LIVE di `.id`** kecuali di-gate eksplisit. Item WP7/quota/
      (tanpa override di jalur ini).
    - `requestRefund`: teruskan `ackProvider` bila dipanggil dari admin/orders.
 9. `notification.ts:14` `STATUS_LABEL`: tambah `Canceling` (Indonesia jujur).
+   - **[SELESAI — 18 Nov 2026, commit `f7af4f1`, live image `23ef2b3`].** Guard H5 di DUA
+     pintu (executeRefund + approveRefund sebelum flip); helper nol tulisan uang.
 
 ### Fase P1-D — Cron poller (adaptasi `.id` spesifik)
 10. `app/src/cron/status-polling.ts`:
@@ -419,6 +431,8 @@ di-port akan LANGSUNG LIVE di `.id`** kecuali di-gate eksplisit. Item WP7/quota/
     - Provider `Success` meski cancel → alert `[Cancel Ignored]`, **nol refund**.
     - **Biarkan** `providerId===1` manual-reschedule (itu MANUAL dorman `.id`, bukan SMMturk).
     - **Jangan** port hook `maybeIssueNextCoupon` (H3 absent di `.id`).
+    - **[SELESAI — 18 Nov 2026, commit `33d16c5`, live image `23ef2b3`].** Merge .id-specific:
+      `providerId===1` + stale-error `4a798e9` dipertahankan; Canceling kebal stale-error.
 
 ### Fase P1-E — Routes (user + admin)
 11. `pesanan/+page.server.ts`:
@@ -436,11 +450,17 @@ di-port akan LANGSUNG LIVE di `.id`** kecuali di-gate eksplisit. Item WP7/quota/
     - Tambah KPI `cancelPending` (count/total `Canceling`) + band `cancelWatch`.
 13. `admin/refunds/+page.server.ts`: approve → `approveRefund` (guard sebelum flip, P1.2).
 14. `StatusBadge.svelte`: tambah entri `canceling` (label "Menunggu Batal", cls progress).
+    - **[SELESAI — 18 Nov 2026, commit `4d41638`, live image `23ef2b3`].** admin/refunds tanpa
+      perubahan (approve sudah try/catch → error guard H5 tersurface). UI: band cancelWatch,
+      checkbox ackProvider, dialog jujur, reset state antar order.
 
 ### Fase P1-F — Provider-safe refill + deleteProvider guard
 15. `api/v1/+server.ts:428-435` `handleRefill`: `smmturkRefill([...])` → `smmturkRefillFor(endpoint, key, [...])`
     (resolve provider row). INSERT refill **simpan `refill_id`** dari respons + `api_log='api'`
     supaya `runRefillPolling` bisa track.
+    - **[SELESAI — 18 Nov 2026, commit `20d7488`, live image `23ef2b3`].** Plus `api_log_status`
+      + set order `Refilling` (parity `refill-request.ts`) supaya poller benar-benar track;
+      guard `providerOrderId` tak terlacak → tolak jujur.
 16. `admin/providers/+page.server.ts:168-197` `deleteProvider`: **tambah** guard order hidup
     `notInArray(orders.status, [...FINAL_STATUSES])` (spread!) besides services-count guard.
     Tolak hapus bila ada order non-final di provider itu.
@@ -457,6 +477,14 @@ di-port akan LANGSUNG LIVE di `.id`** kecuali di-gate eksplisit. Item WP7/quota/
 19. Push SSH → deploy Coolify UUID `nqsjafrei6k8dkup1pxkcuwf` → **verify image-tag = SHA**.
 20. Verifikasi runtime pasif: order cancel baru → status `Canceling`, **saldo tak bergerak**;
     poller naikkan ke final → cron refund bayar. Cek `processlist` bersih (tak ada MDL convoy).
+    - **[SELESAI — 18 Nov 2026.]** Gate: svelte-check 0 error/54 warning baseline, core chain
+      lulus (money 29/29), build sukses, L3 **0 findings** (pre-GO + pre-push), CJK/Malay bersih.
+      Push FF `b00b7ec..23ef2b3` → main. Deploy Coolify `b3xbr6htgwurphwbczutobwh` finished;
+      image tag = `23ef2b393b2f25c2b632183ba995bb1078bf0cbf` = SHA push. Marker terverifikasi:
+      "Menunggu Batal" (client), "Cancel Ignored" + "cancel_order_at_provider" + "provider-live
+      override" (server), "ackProvider" (client admin). Boot: 12 cron job, 0 ALTER. Route
+      unauth 303 → /login. Processlist bersih; distribusi bergerak alami (poller aktif).
+      Cancel pertama user pasca-deploy: observasi pasif (0 baris Canceling saat jurnal ditulis).
 
 > **Urutan commit granular** (jangan satu commit raksasa): P1-A core+test → P1-B schema+migration
 > script → P1-C order-cancel+refund+notif → P1-D poller → P1-E routes+badge → P1-F refill+provider.
@@ -491,6 +519,8 @@ Sebelum eksekusi item CONFIRM, tanya owner (AskUserQuestion), jangan asumsi:
 1. **P1 (uang)**: GO port F12 confirm-before-refund + H5/H6/H4 + provider-safe cancel/refill +
    W4 guard? (Ini mengubah perilaku cancel user: refund **menunggu konfirmasi provider**,
    tidak lagi instan. User perlu tahu.)
+   - **[GO DIBERIKAN + SELESAI 18 Nov 2026 — live `23ef2b3`.]** Perilaku baru aktif: refund
+     menunggu konfirmasi provider. Sisa: sosialisasi ke user bila perlu (di luar scope kode).
 2. **P2.6 operator-only**: `.id` punya 2 akun admin (`aramadhi92` + `info@beriklan`).
    Mau email alert **hanya** ke `aramadhi92@gmail.com` (seperti `.my`), bell tetap ke semua?
    Atau biarkan email ke kedua admin?
@@ -537,6 +567,6 @@ Sebelum eksekusi item CONFIRM, tanya owner (AskUserQuestion), jangan asumsi:
 | **P3** | CouponTicket/SaldoHero/ResellerArt/WP1 | Rendah (kosmetik) | Rendah | Ya (CONFIRM) |
 | **P4** | GA4/content_activation/H3/SEO-J | Rendah (dormant) | Sedang (DDL + eksternal) | Ya (CONFIRM) |
 
-**Inti: kerjakan P1 dulu (uang), dengan migration utf8mb3 yang BENAR (§1.4), backup →
-migration → deploy, 4 gate per item. Jangan salin migration `.my` mentah (utf8mb4 = rebuild
-tabel live 26.507 baris = MDL convoy). Item CONFIRM tunggu owner. Nol perubahan dibuat sesi ini.**
+**Inti: P1 (uang) SELESAI 18 Nov 2026 — migration utf8mb3 BENAR (§1.4), backup → migration →
+deploy, 4 gate lulus, live `23ef2b3`. Jangan salin migration `.my` mentah (utf8mb4 = rebuild
+tabel live = MDL convoy). Berikutnya P2 (sebagian CONFIRM) → P3 → P4; item CONFIRM tunggu owner.**
