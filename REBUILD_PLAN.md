@@ -908,14 +908,14 @@ Sudah di-clone ke `/Users/maabook/Desktop/socio.id/landing`. Bagusnya: section f
 - [ ] **XSS**: Svelte auto-escape `{expr}`. `{@html}` hanya untuk konten trusted/sanitized (blog MDX → rehype-sanitize).
 - [ ] **Password**: bcryptjs (kompatibel PHP). Rehash-on-login untuk hash lama.
 - [ ] **Session**: HttpOnly + Secure + SameSite. Rotate session ID setelah login.
-- [ ] **Rate-limit**: per-IP per-endpoint, DB store. Login 5/menit, signup 5/15menit, API publik 60/menit.
+- [x] **Rate-limit**: per-IP per-endpoint, DB store. Login 30/5menit (kebijakan live), signup 5/15menit, API publik 60/menit sliding-window fail-closed ✅ 19 Nov (jurnal `docs/2026-11-19-api-publik-paritas-my.md`).
 - [ ] **Turnstile**: gate signup/signin/forgot (env-gated `SOCIO_TURNSTILE_*`).
 - [ ] **Security headers**: HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, CSP (SvelteKit hook).
 - [ ] **SSL verify**: semua outbound HTTP (provider API, Midtrans, Resend) verify peer.
 - [ ] **Secrets**: env via Fly secrets + Cloudflare Pages env. No hardcoded.
 - [ ] **Disposable email block** (port).
 - [ ] **Email suppression**: bounced/complained (port `email_bounces`).
-- [ ] **API publik**: API key per user, rate-limit, Zod validation, doc OpenAPI.
+- [x] **API publik**: API key per user, rate-limit, 14 action parity socio.my — validasi manual + HMAC signature + nonce anti-replay + idempotensi (pengganti Zod), doc `/api-docs` Indonesia (pengganti OpenAPI); parity disetujui owner ✅ LIVE 19 Nov `59260b4` (jurnal `docs/2026-11-19-api-publik-paritas-my.md`).
 - [ ] **Audit log**: admin action (delete user, approve deposit, refund) → tabel `audit_log`.
 - [ ] **Backup DB**: otomatis harian (TiDB snapshot atau `mysqldump` cron ke R2).
 
