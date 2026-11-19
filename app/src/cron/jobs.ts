@@ -16,6 +16,9 @@ import { runLightCron } from "./light";
 import { runBackup } from "../lib/server/backup";
 import { refreshFxRate } from "../lib/server/fx";
 import { runReconcile } from "./reconcile";
+import { runApiWebhookDeliveries } from "../lib/server/api-webhook";
+import { cleanupApiReplay } from "../lib/server/api-replay";
+import { cleanupRateLimits } from "../lib/server/rate-limit";
 
 export interface CronJobDef {
   key: string;
@@ -68,6 +71,15 @@ export const CRON_JOBS: CronJobDef[] = [
     intervalMin: 5,
     note: "Cek status refill order Refilling",
     run: () => runRefillPolling(),
+  },
+  {
+    key: "api-webhooks",
+    label: "API Webhooks",
+    expr: "* * * * *",
+    scheduleLabel: "Tiap menit",
+    intervalMin: 1,
+    note: "Kirim callback webhook status order ke URL reseller (HMAC, retry backoff)",
+    run: () => runApiWebhookDeliveries(),
   },
   {
     key: "auto-refund",
@@ -141,6 +153,18 @@ export const CRON_JOBS: CronJobDef[] = [
     intervalMin: 1440,
     note: "Cek unrefunded + saldo negatif (alert only)",
     run: () => runReconcile(),
+  },
+  {
+    key: "api-hygiene",
+    label: "API Hygiene",
+    expr: "20 * * * *",
+    scheduleLabel: "Tiap jam (mnt 20)",
+    intervalMin: 60,
+    note: "Bersihkan nonce api_replay kedaluwarsa + window rate_limits — anti-bloat",
+    run: async () => {
+      await cleanupApiReplay();
+      await cleanupRateLimits();
+    },
   },
 ];
 

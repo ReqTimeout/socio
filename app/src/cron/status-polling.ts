@@ -11,6 +11,7 @@ import {
 import { decryptSecret } from "$lib/server/crypto";
 import { notifyOrderUpdate } from "$lib/server/notification";
 import { notifyAdmins } from "$lib/server/email-templates";
+import { enqueueOrderWebhook } from "$lib/server/api-webhook";
 
 /** Tick: claim up to 200 orders needing a poll, batch status check
  * (multi-order endpoint) PER-PROVIDER via each provider's own API URL + key,
@@ -43,6 +44,7 @@ export async function runStatusPolling(): Promise<void> {
         .set({ status: "Canceled" as any, updatedAt: new Date(), nextPollAt: null })
         .where(eq(orders.id, o.id));
       await notifyOrderUpdate(o.userId, o.id, "Canceled");
+      void enqueueOrderWebhook(o, "Canceled");
       continue;
     }
     // provider MANUAL (1) tetap manual — jangan auto-error, reschedule saja
@@ -58,6 +60,7 @@ export async function runStatusPolling(): Promise<void> {
       .set({ status: "Error" as any, updatedAt: new Date(), nextPollAt: null })
       .where(eq(orders.id, o.id));
     await notifyOrderUpdate(o.userId, o.id, "Error");
+    void enqueueOrderWebhook(o, "Error");
   }
 
   const trackable = due.filter((o) => o.providerOrderId && o.providerOrderId !== "0");
@@ -129,6 +132,7 @@ export async function runStatusPolling(): Promise<void> {
           } catch {
             // notif best-effort
           }
+          void enqueueOrderWebhook(o, "Error");
           continue;
         }
         const newStatus = mapProviderStatus(r.status);
@@ -180,6 +184,8 @@ export async function runStatusPolling(): Promise<void> {
         }
         if (isFinal && !wasFinal) {
           await notifyOrderUpdate(o.userId, o.id, newStatus ?? o.status);
+          // Webhook API publik: kirim status final + remains/startCount terbaru.
+          void enqueueOrderWebhook({ ...o, remains, startCount }, newStatus ?? o.status);
         }
       }
     } catch (e) {
@@ -205,7 +211,8 @@ export async function runStatusPolling(): Promise<void> {
 export async function runRefillPolling(): Promise<void> {
   const res: any = await db.execute(sql`
     SELECT o.id, o.provider_id AS providerId, o.provider_order_id AS providerOrderId,
-           o.user_id AS userId, r.refill_id AS refillId
+           o.user_id AS userId, o.oid, o.price, o.remains, o.start_count AS startCount,
+           r.refill_id AS refillId
     FROM orders o
     JOIN refill r ON r.order_id = o.id
     WHERE o.status = 'Refilling'
@@ -243,6 +250,17 @@ export async function runRefillPolling(): Promise<void> {
           .update(orders)
           .set({ status: "Success" as any, updatedAt: new Date() })
           .where(eq(orders.id, Number(row.id)));
+        // Refill selesai = order akhirnya Success → webhook parity status-poll.
+        void enqueueOrderWebhook(
+          {
+            userId: Number(row.userId),
+            oid: String(row.oid),
+            price: Number(row.price),
+            remains: Number(row.remains),
+            startCount: Number(row.startCount),
+          },
+          "Success",
+        );
       }
     } catch (e) {
       console.error(`[cron] refill-polling order ${row.id} error:`, e);
