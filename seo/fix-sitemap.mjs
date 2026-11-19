@@ -76,13 +76,16 @@ for (const f of files) {
   const xml = readFileSync(p, 'utf8');
   // @astrojs/sitemap default TIDAK menulis <lastmod> — sisipkan yang jujur
   // untuk artikel blog + money pages; URL lain dibiarkan tanpa lastmod.
+  // Elemen anak lain (mis. <image:image> dari serializer banner J4) ikut
+  // dipertahankan apa adanya, hanya <lastmod> lama yang diganti.
   const out = xml.replace(
-    /<url>\s*<loc>(https:\/\/socio\.id([^<]*))<\/loc>\s*(?:<lastmod>[^<]*<\/lastmod>)?\s*<\/url>/g,
-    (full, loc, pathname) => {
+    /<url>\s*<loc>(https:\/\/socio\.id([^<]*))<\/loc>([\s\S]*?)<\/url>/g,
+    (full, loc, pathname, rest) => {
       const honest = lastmodFor(pathname.replace(/\/$/, '') || '/');
       if (!honest) return full;
       changed++;
-      return `<url><loc>${loc}</loc><lastmod>${honest}</lastmod></url>`;
+      const keep = rest.replace(/<lastmod>[^<]*<\/lastmod>/g, '').trim();
+      return `<url><loc>${loc}</loc><lastmod>${honest}</lastmod>${keep}</url>`;
     },
   );
   if (out !== xml) writeFileSync(p, out);

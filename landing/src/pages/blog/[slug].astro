@@ -1,6 +1,6 @@
 ---
 import { totalLayanan } from '../../data/siteStats';
-import { heroFor, thumbFor } from '../../data/blogHeroes';
+import { heroFor, thumbFor, ogFor } from '../../data/blogHeroes';
 import { tagCloud } from '../../data/blogTags';
 import { getCollection, render } from 'astro:content';
 import { moneyLinksFor, FALLBACK_HREF } from '../../lib/money-links';
@@ -10,9 +10,10 @@ import NextArticleDock from '../../components/NextArticleDock.svelte';
 import Footer from '../../components/Footer.astro';
 import AdsenseSlot from '../../components/AdsenseSlot.astro';
 
-// Single post — playful premium: mesh hero, foto Unsplash topikal dalam
-// bingkai sticker, drop-cap + H2 bernomor, FAQ bernomor, tanpa section
-// "Kesimpulan" (artikel ditutup CTA maju, bukan rangkuman kaku).
+// Single post — playful premium: mesh hero, banner EN socio.id dalam
+// bingkai sticker (fallback foto Unsplash), drop-cap + H2 bernomor, FAQ
+// bernomor, tanpa section "Kesimpulan" (artikel ditutup CTA maju, bukan
+// rangkuman kaku).
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft);
   return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
@@ -41,6 +42,8 @@ async function getEntryById(id: string) {
 const cat = post.data.category;
 const readMin = Math.max(3, Math.round((post.body ?? '').split(/\s+/).length / 200));
 const hero = heroFor(post.id, cat);
+// OG 1200x630 (rasio sosial) untuk meta + schema; null = fallback Unsplash.
+const og = ogFor(post.id, cat);
 
 const fmtDate = (d: Date) =>
   new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
@@ -85,7 +88,7 @@ const articleSchema = {
   '@type': 'Article',
   headline: post.data.title,
   description: post.data.description,
-  image: hero.src,
+  image: og ?? hero.src,
   datePublished: iso,
   dateModified: updatedDate.toISOString(),
   inLanguage: 'id-ID',
@@ -129,7 +132,7 @@ const breadcrumbSchema = {
   title={`${post.data.title} | Blog Socio.id`}
   description={post.data.description}
   adsense
-  ogImageOverride={hero.src}
+  ogImageOverride={og ?? hero.src}
 >
   <Navbar client:load />
   {next && <NextArticleDock client:load href={`/blog/${next.id}`} title={next.data.title} />}
@@ -239,7 +242,7 @@ const breadcrumbSchema = {
             class="aspect-[16/9] w-full object-cover"
           />
         </div>
-        <figcaption class="mt-2.5 text-right text-[12px] font-medium text-ink-3">Foto: Unsplash</figcaption>
+        <figcaption class="mt-2.5 text-right text-[12px] font-medium text-ink-3">{og ? 'Ilustrasi: Socio.id' : 'Foto: Unsplash'}</figcaption>
       </figure>
       <AdsenseSlot slot={adTop} placement="top" />
     </div>
