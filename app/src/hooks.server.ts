@@ -9,6 +9,7 @@ import { db } from "@socio/db";
 import { users, sessions } from "@socio/db/schema";
 import { eq } from "drizzle-orm";
 import { sequence } from "@sveltejs/kit/hooks";
+import { json, text } from "@sveltejs/kit";
 import { getSetting } from "$lib/server/admin";
 import { ensureAdminSchema } from "@socio/db/ensure";
 import { startCron } from "./cron";
@@ -22,6 +23,52 @@ if (process.env.SOCIO_CRON_ENABLED === "1") {
   } catch {
     // cron scheduling failure must not block app boot
   }
+}
+
+// Proteksi CSRF dipindah dari framework (kit.csrf.checkOrigin = false) ke hook
+// ini supaya /api/v1 — API mesin berbasis key, bukan cookie — bisa menerima
+// POST form-urlencoded tanpa header Origin (klien panel SMM server-to-server).
+// Route lain mereplikasi persis kondisi bawaan SvelteKit (respond.js):
+// content-type form + method mutasi + origin tidak cocok → 403. Hook ini
+// ditaruh pertama agar request terlarang ditolak sebelum menyentuh DB/session.
+const FORM_CONTENT_TYPES = [
+  "application/x-www-form-urlencoded",
+  "multipart/form-data",
+  "text/plain",
+  "application/x-sveltekit-formdata",
+];
+
+function isFormContentType(request: Request): boolean {
+  const type = request.headers.get("content-type")?.split(";")[0].trim() ?? "";
+  return FORM_CONTENT_TYPES.includes(type.toLowerCase());
+}
+
+function csrfGuardHook({ event, resolve }: Parameters<Handle>[0]) {
+  const path = event.url.pathname;
+  const isMachineApi = path === "/api/v1" || path.startsWith("/api/v1/");
+  if (!isMachineApi) {
+    const { request } = event;
+    const origin = request.headers.get("origin");
+    // kit.csrf.trustedOrigins tidak dipakai app ini, sehingga kondisi kit
+    // (origin !== url.origin && (!origin || !trusted.includes(origin)))
+    // ekuivalen dengan (origin !== url.origin).
+    const forbidden =
+      isFormContentType(request) &&
+      (request.method === "POST" ||
+        request.method === "PUT" ||
+        request.method === "PATCH" ||
+        request.method === "DELETE") &&
+      origin !== event.url.origin;
+    if (forbidden) {
+      // Pesan & format respons identik dengan bawaan framework (parity).
+      const message = `Cross-site ${request.method} form submissions are forbidden`;
+      if (request.headers.get("accept") === "application/json") {
+        return json({ message }, { status: 403 });
+      }
+      return text(message, { status: 403 });
+    }
+  }
+  return resolve(event);
 }
 
 // Session cookie name lives in $lib/server/session.ts (single source of truth).
@@ -196,4 +243,4 @@ async function securityHeadersHook({ event, resolve }: Parameters<Handle>[0]) {
   return response;
 }
 
-export const handle = sequence(authHook, maintenanceHook, securityHeadersHook);
+export const handle = sequence(csrfGuardHook, authHook, maintenanceHook, securityHeadersHook);
