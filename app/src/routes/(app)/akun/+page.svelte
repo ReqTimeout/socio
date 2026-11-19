@@ -76,6 +76,8 @@
   $effect(() => {
     if (!apiKey) apiKey = data.user.apiKey ?? "";
   });
+  // Preview masked supaya key KELIHATAN di row collapsed (klik mata untuk penuh).
+  let maskedKey = $derived(apiKey ? `${apiKey.slice(0, 6)}…${apiKey.slice(-4)}` : "");
   let keyBusy = $state(false);
   let confirmRegen = $state(false);
   let confirmLogout = $state(false);
@@ -424,6 +426,12 @@
               >Tutup</Button
             >
           </div>
+          <a
+            href="/api-docs"
+            class="mt-2 inline-block text-xs font-medium text-violet-700 hover:underline"
+          >
+            Dokumentasi API →
+          </a>
           <div class="mt-2 flex items-center justify-between rounded-lg bg-ink-50 px-3 py-2">
             <p class="text-[10px] font-bold text-ink-500">
               Key lama akan langsung nonaktif setelah regenerate
@@ -433,7 +441,17 @@
             </Button>
           </div>
         {:else}
-          <p class="text-xs text-ink-500">Integrasi dengan tools & bot kamu</p>
+          {#if maskedKey}
+            <p class="mt-0.5 truncate font-mono text-xs text-ink-700" aria-label="API key">
+              {maskedKey}
+            </p>
+          {/if}
+          <p class="text-xs text-ink-500">
+            Integrasi dengan tools & bot kamu ·
+            <a href="/api-docs" class="font-medium text-violet-700 hover:underline"
+              >Dokumentasi API</a
+            >
+          </p>
         {/if}
       </div>
       {#if editMode !== "apikey"}

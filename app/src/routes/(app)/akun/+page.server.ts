@@ -11,6 +11,14 @@ export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.user) throw redirect(303, "/login");
   const userId = Number(locals.user.id);
   const cdn = process.env.R2_PUBLIC_URL ?? "https://cdn.socio.id";
+  // locals.user (session) TIDAK membawa apiKey/theme → ambil langsung dari DB
+  // (port Susulan 51 .my). Bug sebelumnya: apiKey selalu "" karena session user
+  // tidak punya field itu, jadi key tidak pernah terlihat di /akun padahal DB ada.
+  const [u] = await db
+    .select({ apiKey: users.apiKey, theme: users.theme })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
   return {
     user: {
       id: userId,
@@ -19,8 +27,8 @@ export const load: PageServerLoad = async ({ locals }) => {
       email: locals.user.email,
       level: locals.user.level,
       balance: locals.user.balance ?? 0,
-      apiKey: (locals.user as any).apiKey ?? "",
-      theme: (locals.user as any).theme ?? "light",
+      apiKey: u?.apiKey ?? "",
+      theme: u?.theme ?? "light",
     },
     avatarUrl: `${cdn}/avatars/${userId}`,
   };
