@@ -20,17 +20,9 @@ async function tryExec(stmt: ReturnType<typeof sql>) {
   } catch (e) {
     // Drizzle wraps MySQL errors in DrizzleQueryError → kode asli ada di e.cause.code.
     const code =
-      (e as { code?: string })?.code ??
-      (e as { cause?: { code?: string } })?.cause?.code;
+      (e as { code?: string })?.code ?? (e as { cause?: { code?: string } })?.cause?.code;
     // 1060 dup column, 1061 dup key, 1826 dup FK, 1091 can't drop
-    if (
-      code &&
-      [
-        "ER_DUP_FIELDNAME",
-        "ER_DUP_KEYNAME",
-        "ER_CANT_DROP_FIELD_OR_KEY",
-      ].includes(code)
-    )
+    if (code && ["ER_DUP_FIELDNAME", "ER_DUP_KEYNAME", "ER_CANT_DROP_FIELD_OR_KEY"].includes(code))
       return;
     throw e;
   }
@@ -97,11 +89,7 @@ async function ensureTableUtf8mb4(table: string, probeColumn: string) {
       sql`SELECT CHARACTER_SET_NAME cs FROM information_schema.COLUMNS
           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ${table} AND COLUMN_NAME = ${probeColumn}`,
     );
-    const rows = Array.isArray(res?.[0])
-      ? res[0]
-      : Array.isArray(res)
-        ? res
-        : [];
+    const rows = Array.isArray(res?.[0]) ? res[0] : Array.isArray(res) ? res : [];
     const cs = (rows[0] as { cs?: string } | undefined)?.cs;
     if (!cs || cs === "utf8mb4") return; // kolom tak ada / sudah utf8mb4
     await db.execute(
@@ -204,10 +192,22 @@ export async function ensureAdminSchema() {
   `);
   // Add polling columns to orders if missing (guard information_schema —
   // bukan ALTER buta tiap boot, lihat catatan MDL convoy di atas).
-  await addColumn("orders", "next_poll_at", "ALTER TABLE orders ADD COLUMN next_poll_at DATETIME DEFAULT NULL");
-  await addColumn("orders", "poll_priority", "ALTER TABLE orders ADD COLUMN poll_priority INT NOT NULL DEFAULT 5");
+  await addColumn(
+    "orders",
+    "next_poll_at",
+    "ALTER TABLE orders ADD COLUMN next_poll_at DATETIME DEFAULT NULL",
+  );
+  await addColumn(
+    "orders",
+    "poll_priority",
+    "ALTER TABLE orders ADD COLUMN poll_priority INT NOT NULL DEFAULT 5",
+  );
   // Provider balance column (used by sync)
-  await addColumn("provider", "balance_provider", "ALTER TABLE provider ADD COLUMN balance_provider DOUBLE NOT NULL DEFAULT 0");
+  await addColumn(
+    "provider",
+    "balance_provider",
+    "ALTER TABLE provider ADD COLUMN balance_provider DOUBLE NOT NULL DEFAULT 0",
+  );
   // Widen provider_services.category — SMMturk category names can exceed 128 chars
   // (cron provider-sync threw ER_DATA_TOO_LONG on long Instagram category labels).
   const psCat = await columnInfo("provider_services", "category");
@@ -283,8 +283,16 @@ export async function ensureAdminSchema() {
       WHERE NOT EXISTS (SELECT 1 FROM coupons)
   `);
   // Record coupon on order (I-U1)
-  await addColumn("orders", "coupon_code", "ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(40) DEFAULT NULL");
-  await addColumn("orders", "discount", "ALTER TABLE orders ADD COLUMN discount DOUBLE NOT NULL DEFAULT 0");
+  await addColumn(
+    "orders",
+    "coupon_code",
+    "ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(40) DEFAULT NULL",
+  );
+  await addColumn(
+    "orders",
+    "discount",
+    "ALTER TABLE orders ADD COLUMN discount DOUBLE NOT NULL DEFAULT 0",
+  );
   // Affiliate withdrawal approval queue (M3 Task #3). Extend status enum
   // non-destruktif — 'Withdraw' legacy (auto-credit lama) tetap valid.
   // Guard: MODIFY hanya kalau enum belum memuat 'Requested' (MDL convoy).
@@ -320,21 +328,73 @@ export async function ensureAdminSchema() {
   `);
 
   // ─── PRD Service Sync v2 — kolom audit + raw + flag API provider ───
-  await addColumn("categories", "name_raw", "ALTER TABLE categories ADD COLUMN name_raw VARCHAR(512) NOT NULL DEFAULT ''");
-  await addColumn("services", "service_name_raw", "ALTER TABLE services ADD COLUMN service_name_raw VARCHAR(255) NOT NULL DEFAULT ''");
-  await addColumn("services", "description", "ALTER TABLE services ADD COLUMN description TEXT NULL");
-  await addColumn("services", "description_locked", "ALTER TABLE services ADD COLUMN description_locked TINYINT NOT NULL DEFAULT 0");
-  await addColumn("services", "allow_cancel", "ALTER TABLE services ADD COLUMN allow_cancel TINYINT NOT NULL DEFAULT 0");
-  await addColumn("services", "is_dripfeed", "ALTER TABLE services ADD COLUMN is_dripfeed TINYINT NOT NULL DEFAULT 0");
-  await addColumn("services", "created_at", "ALTER TABLE services ADD COLUMN created_at DATETIME NULL");
-  await addColumn("services", "updated_at", "ALTER TABLE services ADD COLUMN updated_at DATETIME NULL");
-  await addColumn("services", "price_changed_at", "ALTER TABLE services ADD COLUMN price_changed_at DATETIME NULL");
+  await addColumn(
+    "categories",
+    "name_raw",
+    "ALTER TABLE categories ADD COLUMN name_raw VARCHAR(512) NOT NULL DEFAULT ''",
+  );
+  await addColumn(
+    "services",
+    "service_name_raw",
+    "ALTER TABLE services ADD COLUMN service_name_raw VARCHAR(255) NOT NULL DEFAULT ''",
+  );
+  await addColumn(
+    "services",
+    "description",
+    "ALTER TABLE services ADD COLUMN description TEXT NULL",
+  );
+  await addColumn(
+    "services",
+    "description_locked",
+    "ALTER TABLE services ADD COLUMN description_locked TINYINT NOT NULL DEFAULT 0",
+  );
+  await addColumn(
+    "services",
+    "allow_cancel",
+    "ALTER TABLE services ADD COLUMN allow_cancel TINYINT NOT NULL DEFAULT 0",
+  );
+  await addColumn(
+    "services",
+    "is_dripfeed",
+    "ALTER TABLE services ADD COLUMN is_dripfeed TINYINT NOT NULL DEFAULT 0",
+  );
+  await addColumn(
+    "services",
+    "created_at",
+    "ALTER TABLE services ADD COLUMN created_at DATETIME NULL",
+  );
+  await addColumn(
+    "services",
+    "updated_at",
+    "ALTER TABLE services ADD COLUMN updated_at DATETIME NULL",
+  );
+  await addColumn(
+    "services",
+    "price_changed_at",
+    "ALTER TABLE services ADD COLUMN price_changed_at DATETIME NULL",
+  );
 
   // news integrasi sync (PRD §10)
-  await addColumn("news", "event_type", "ALTER TABLE news ADD COLUMN event_type VARCHAR(32) NOT NULL DEFAULT 'manual'");
-  await addColumn("news", "source", "ALTER TABLE news ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT 'manual'");
-  await addColumn("news", "service_id", "ALTER TABLE news ADD COLUMN service_id INT NOT NULL DEFAULT 0");
-  await addColumn("news", "is_hidden", "ALTER TABLE news ADD COLUMN is_hidden TINYINT NOT NULL DEFAULT 0");
+  await addColumn(
+    "news",
+    "event_type",
+    "ALTER TABLE news ADD COLUMN event_type VARCHAR(32) NOT NULL DEFAULT 'manual'",
+  );
+  await addColumn(
+    "news",
+    "source",
+    "ALTER TABLE news ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT 'manual'",
+  );
+  await addColumn(
+    "news",
+    "service_id",
+    "ALTER TABLE news ADD COLUMN service_id INT NOT NULL DEFAULT 0",
+  );
+  await addColumn(
+    "news",
+    "is_hidden",
+    "ALTER TABLE news ADD COLUMN is_hidden TINYINT NOT NULL DEFAULT 0",
+  );
 
   // service_changelog (PRD §6.3) — tabel baru
   await db.execute(sql`
@@ -417,13 +477,21 @@ export async function ensureAdminSchema() {
   // ── G2 retire-verify — pemisahan status aktivasi reseller dari kolom
   // `verify` (overload). Prod sudah di-backfill manual (56 reseller aktif);
   // tryExec ini cuma menjamin env lain (dev/lokal) ikut punya kolomnya.
-  await addColumn("users", "reseller_activated", "ALTER TABLE users ADD COLUMN reseller_activated TINYINT NOT NULL DEFAULT 0");
+  await addColumn(
+    "users",
+    "reseller_activated",
+    "ALTER TABLE users ADD COLUMN reseller_activated TINYINT NOT NULL DEFAULT 0",
+  );
 
   // ── Multi-provider (item I) — switcher satu-aktif + routing per-kategori.
   // `provider.status` = 1 → provider aktif global (satu-satunya yang melayani
   // kategori TANPA routing). Backfill: aktifkan provider utama (SMMturk) HANYA
   // kalau belum ada provider aktif — menjaga invariant "tepat satu aktif".
-  await addColumn("provider", "status", "ALTER TABLE provider ADD COLUMN status TINYINT NOT NULL DEFAULT 0");
+  await addColumn(
+    "provider",
+    "status",
+    "ALTER TABLE provider ADD COLUMN status TINYINT NOT NULL DEFAULT 0",
+  );
   await db.execute(sql`
     UPDATE provider SET status = 1
     WHERE api_url_order LIKE ${"https://smmturk.org%"}
@@ -450,9 +518,7 @@ export async function ensureAdminSchema() {
   // eksklusif tiap boot → convoy kalau ada query lama (insiden 17 Nov 2026).
   const svcName = await columnInfo("services", "service_name");
   if (!svcName || Number(svcName.len) < 1024 || svcName.nullable === "YES") {
-    await db.execute(
-      sql`ALTER TABLE services MODIFY COLUMN service_name VARCHAR(1024) NOT NULL`,
-    );
+    await db.execute(sql`ALTER TABLE services MODIFY COLUMN service_name VARCHAR(1024) NOT NULL`);
   }
   const svcNameRaw = await columnInfo("services", "service_name_raw");
   if (!svcNameRaw || Number(svcNameRaw.len) < 1024 || svcNameRaw.nullable === "YES") {
@@ -479,4 +545,81 @@ export async function ensureAdminSchema() {
   await ensureTableUtf8mb4("categories", "name_raw");
   await ensureTableUtf8mb4("services", "service_name_raw");
   await ensureTableUtf8mb4("news", "content");
+
+  // ── API publik /api/v1 (port socio.my — Socio Reseller API 14 action).
+  // api_idempotency: klaim key idempotensi action `add` SEBELUM deduct/provider
+  // supaya replay key sama tidak membuat order kedua (race-safe via UNIQUE).
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS api_idempotency (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      idem_key VARCHAR(100) NOT NULL,
+      oid VARCHAR(50) DEFAULT NULL,
+      status ENUM('processing','done') NOT NULL DEFAULT 'processing',
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY ai_user_key_uq (user_id, idem_key),
+      KEY ai_created_idx (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  // Kolom users: webhook callback (Tier 2) + secret HMAC request (Tier 3).
+  // addColumn = probe information_schema dulu (doktrin MDL convoy di atas).
+  await addColumn(
+    "users",
+    "webhook_url",
+    "ALTER TABLE users ADD COLUMN webhook_url VARCHAR(500) NOT NULL DEFAULT ''",
+  );
+  await addColumn(
+    "users",
+    "webhook_secret",
+    "ALTER TABLE users ADD COLUMN webhook_secret VARCHAR(100) NOT NULL DEFAULT ''",
+  );
+  await addColumn(
+    "users",
+    "api_secret",
+    "ALTER TABLE users ADD COLUMN api_secret VARCHAR(100) NOT NULL DEFAULT ''",
+  );
+  await addColumn(
+    "users",
+    "api_sign_required",
+    "ALTER TABLE users ADD COLUMN api_sign_required TINYINT NOT NULL DEFAULT 0",
+  );
+
+  // Antrian delivery webhook — worker cron `api-webhooks` (pola email-queue).
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS api_webhook_deliveries (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      oid VARCHAR(50) NOT NULL,
+      event VARCHAR(40) NOT NULL DEFAULT 'order.status',
+      url VARCHAR(500) NOT NULL,
+      payload TEXT NOT NULL,
+      signature VARCHAR(64) NOT NULL DEFAULT '',
+      status ENUM('pending','delivered','failed') NOT NULL DEFAULT 'pending',
+      attempts INT NOT NULL DEFAULT 0,
+      max_attempts INT NOT NULL DEFAULT 5,
+      last_error VARCHAR(255) DEFAULT NULL,
+      next_run_at DATETIME NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      delivered_at DATETIME DEFAULT NULL,
+      KEY awd_status_run_idx (status, next_run_at),
+      KEY awd_user_idx (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  // api_replay: nonce anti-replay request bertanda tangan HMAC (Susulan 50).
+  // Signature dicatat segera setelah checkApiSignature lolos; UNIQUE(user_id,
+  // nonce) menolak replay dalam window timestamp ±300s. TTL 600s, dibersihkan
+  // cron `api-hygiene`.
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS api_replay (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      nonce VARCHAR(128) NOT NULL,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY ar_user_nonce_uq (user_id, nonce),
+      KEY ar_expires_idx (expires_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
 }

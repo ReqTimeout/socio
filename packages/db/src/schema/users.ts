@@ -71,6 +71,12 @@ export const users = mysqlTable(
     totpSecret: varchar("totp_secret", { length: 255 }).notNull().default(""),
     totpEnabled: boolean("totp_enabled").notNull().default(false),
     totpBackupCodes: text("totp_backup_codes"),
+    // ── API publik /api/v1 (port socio.my): webhook callback + HMAC signing.
+    // Default kosong/0 = auth API key polos (kompatibel konsumen lama).
+    webhookUrl: varchar("webhook_url", { length: 500 }).notNull().default(""),
+    webhookSecret: varchar("webhook_secret", { length: 100 }).notNull().default(""),
+    apiSecret: varchar("api_secret", { length: 100 }).notNull().default(""),
+    apiSignRequired: tinyint("api_sign_required").notNull().default(0),
   },
   (t) => ({
     usernameIdx: index("username_idx").on(t.username),
