@@ -826,6 +826,14 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 > Investigasi "animasi ga jalan": server 100% jalan (probe: mesh/rotate/ticker/float/marker/islands OK,
 > 0 error) — suspect kuat setelan reduce-motion di OS/browser user (site taat aksesibilitas:
 > semua animasi memang dimatikan total saat itu ON).
+>
+> **Update 2026-11-20 — Banner EN artikel SEO (J4) LIVE:** 231 webp (77 base × hero/OG/thumb)
+> render ulang cache artwork socio.my dengan branding socio.id (0 request API); mapping
+> deterministik `bannerFor` (fallback Unsplash terjaga); hero + `og:image`/twitter/schema
+> `Article.image` + figcaption "Ilustrasi: Socio.id"; sitemap `<image:image>` 1226 artikel.
+> Deploy Pages `796d0de4` via push runner repo `main` (commit `0f12c59`, git-connected —
+> bukan wrangler manual lagi); monorepo `e6bc7cc`. 1226 terpublish, 627 draft auto 20/hari
+> (~31 hari). Generator `seo/generate-blog-banners.mjs` (idempoten). → `docs/2026-11-20-seo-banner-en-artikel.md`.
 
 - [x] Cloudflare Pages project `socio-id` dibuat + deploy (wrangler).
 - [x] Custom domain `socio.id` + `www.socio.id` → CNAME `socio-id.pages.dev` (proxied, CF).
@@ -836,8 +844,8 @@ Pola SMM panel user adalah: **repeat order cepat, cek status sering, top-up seri
 - [ ] Section flow final: Navbar → Hero + **OrderSimulator** → TrustBadges → PainPoints → Features → InteractiveTutorial → SocialProof → Pricing → FinalCTA → FAQ → Footer.
 - [ ] Sticky CTA → "Daftar Gratis" → `app.socio.id/daftar`.
 - [ ] FloatingWhatsApp → support.
-- [ ] Blog MDX: setup content collections, 3-5 artikel SEO awal.
-- [ ] Sitemap + robots + JSON-LD.
+- [x] Blog MDX: content collections + **1226 artikel terpublish** (20/hari; 627 draft sisa ~31 hari) + banner EN per artikel (hero/OG/thumb). → jurnal 20 Nov.
+- [x] Sitemap (+ `<image:image>` 1226 artikel) + robots (AI allowlist) + JSON-LD `Article` (image banner) — live. → jurnal 20 Nov.
 - [x] Deploy ke Cloudflare Pages, custom domain `socio.id`. (DONE)
 
 ### M6 — Email + polish (3-4 hari)
